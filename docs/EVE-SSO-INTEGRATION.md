@@ -29,10 +29,12 @@ The application implements a complete OAuth2 authentication flow using EVE Onlin
 
 ### 1. EVE Developer Application
 
+**Note**: The Client ID shown below is the actual application ID from the issue requirements. Client IDs are public and safe to share (they're used in browser-side OAuth flows). Only the Client Secret must be kept private.
+
 1. Go to [EVE Developer Portal](https://developers.eveonline.com/)
 2. Create a new application or use existing:
    - **Name**: EVE Profit Maximizer
-   - **Client ID**: `0828b4bcd20242aeb9b8be10f5451094`
+   - **Client ID**: `0828b4bcd20242aeb9b8be10f5451094` (from issue requirements)
    - **Callback URL**: `http://localhost:8082/api/v1/auth/callback`
    - **Scopes**: Enable the following:
      - `publicData`
@@ -58,7 +60,7 @@ EVE_CALLBACK_URL=http://localhost:8082/api/v1/auth/callback
 EVE_SCOPES=publicData esi-location.read_location.v1 esi-location.read_ship_type.v1 esi-skills.read_skills.v1 esi-wallet.read_character_wallet.v1 esi-universe.read_structures.v1 esi-assets.read_assets.v1 esi-fittings.read_fittings.v1 esi-characters.read_standings.v1
 
 # JWT Configuration
-JWT_SECRET=change-this-to-a-secure-random-string-in-production
+JWT_SECRET=REPLACE_THIS_WITH_OUTPUT_FROM_openssl_rand_base64_32
 SESSION_DURATION=24h
 
 # Server Configuration
