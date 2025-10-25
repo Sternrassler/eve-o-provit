@@ -1,7 +1,7 @@
 # Makefile – Zentrale Orchestrierung für Projekt-Automationen
 # Referenz: copilot-instructions.md Abschnitt 3.1
 
-.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json pr-check release ci-local clean ensure-trivy push-ci pr-quality-gates-ci
+.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json pr-check release ci-local clean ensure-trivy push-ci pr-quality-gates-ci docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-restart docker-shell-api docker-shell-db docker-shell-redis
 
 # Standardwerte
 TRIVY_FAIL_ON ?= HIGH,CRITICAL
@@ -9,6 +9,8 @@ TRIVY_JSON_REPORT ?= tmp/trivy-fs-report.json
 VERSION ?=
 BACKEND_DIR ?= backend
 FRONTEND_DIR ?= frontend
+COMPOSE_FILE ?= deployments/docker-compose.yml
+DOCKER_COMPOSE ?= $(shell command -v docker-compose 2>/dev/null || echo "docker compose")
 
 .DEFAULT_GOAL := help
 
@@ -49,6 +51,11 @@ help: ## Zeigt verfügbare Targets (gruppiert)
 	@echo ""
 	@echo "┌─ Utility ─────────────────────────────────────────────────────────────────────────────────────────────"
 	@grep -E '^(clean|ensure-trivy|help).*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
+	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
+	@echo ""
+	@echo "┌─ Docker & Compose ────────────────────────────────────────────────────────────────────────────────────"
+	@grep -E '^docker.*:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
 	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
 	@echo ""
@@ -229,5 +236,56 @@ ensure-trivy: ## Stellt sicher, dass Trivy verfügbar ist
 			curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin || true; \
 		fi; \
 	fi
+
+# Docker & Compose Targets
+
+docker-up: ## Startet alle Services (PostgreSQL, Redis, Backend)
+	@echo "[make docker-up] Starte Docker Compose Services..."
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d
+	@echo "[make docker-up] ✅ Services gestartet"
+	@echo ""
+	@echo "Services verfügbar unter:"
+	@echo "  - Backend API:  http://localhost:8082"
+	@echo "  - PostgreSQL:   localhost:5432 (User: eveprovit, DB: eveprovit)"
+	@echo "  - Redis:        localhost:6379"
+	@echo ""
+	@echo "Logs anzeigen: make docker-logs"
+	@echo "Status prüfen: make docker-ps"
+
+docker-down: ## Stoppt alle Services
+	@echo "[make docker-down] Stoppe Docker Compose Services..."
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) down
+	@echo "[make docker-down] ✅ Services gestoppt"
+
+docker-logs: ## Zeigt Logs aller Services (oder SERVICE=api für einzelnen Service)
+	@if [ -z "$(SERVICE)" ]; then \
+		$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) logs -f; \
+	else \
+		$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) logs -f $(SERVICE); \
+	fi
+
+docker-ps: ## Zeigt Status aller Services
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) ps
+
+docker-build: ## Baut alle Docker Images neu
+	@echo "[make docker-build] Baue Docker Images..."
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build --no-cache
+	@echo "[make docker-build] ✅ Images gebaut"
+
+docker-clean: ## Entfernt alle Container, Volumes und Images
+	@echo "[make docker-clean] Räume Docker Ressourcen auf..."
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) down -v --rmi all
+	@echo "[make docker-clean] ✅ Cleanup abgeschlossen"
+
+docker-restart: docker-down docker-up ## Neustart aller Services
+
+docker-shell-api: ## Shell im Backend Container
+	@docker exec -it eve-o-provit-api /bin/sh
+
+docker-shell-db: ## Shell in PostgreSQL Container
+	@docker exec -it eve-o-provit-postgres psql -U eveprovit -d eveprovit
+
+docker-shell-redis: ## Redis CLI
+	@docker exec -it eve-o-provit-redis redis-cli
 
 

@@ -1,4 +1,4 @@
-version: '3.8'
+name: eve-o-provit
 
 services:
   # PostgreSQL (Market + User Data)
@@ -13,16 +13,20 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U eveprovit"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - eve-network
 
   # Redis (Cache Layer)
   redis:
     image: redis:7-alpine
     container_name: eve-o-provit-redis
+    command: redis-server --appendonly yes
     ports:
       - "6379:6379"
     volumes:
@@ -32,6 +36,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - eve-network
 
   # Go Backend API
   api:
@@ -40,23 +46,33 @@ services:
       dockerfile: Dockerfile
     container_name: eve-o-provit-api
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
-      PORT: 8080
+      PORT: "8080"
       DATABASE_URL: postgres://eveprovit:devpassword@postgres:5432/eveprovit?sslmode=disable
-      REDIS_URL: redis:6379
-      SDE_DB_PATH: /data/sde/sde.sqlite
-      CORS_ORIGINS: http://localhost:3000
+      REDIS_URL: redis://redis:6379/0
+      SDE_DB_PATH: /data/sde/eve-sde.db
+      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      LOG_LEVEL: debug
+      ENV: development
     volumes:
-      - ../data/sde:/data/sde:ro
+      - ../backend/data/sde:/data/sde:ro
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - eve-network
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
-  # Next.js Frontend (TODO)
+  # Frontend (Placeholder - wird später aktiviert)
   # frontend:
   #   build:
   #     context: ../frontend
@@ -66,10 +82,19 @@ services:
   #     - "3000:3000"
   #   environment:
   #     NEXT_PUBLIC_API_URL: http://localhost:8080
+  #     NODE_ENV: development
   #   depends_on:
   #     - api
   #   restart: unless-stopped
+  #   networks:
+  #     - eve-network
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
+
+networks:
+  eve-network:
+    driver: bridge

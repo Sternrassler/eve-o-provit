@@ -1,0 +1,26 @@
+{
+  "total_seconds": 555.1523131562108,
+  "total_minutes": 9.252538552603513,
+  "jumps": 11,
+  "avg_seconds_per_jump": 50.46839210511007,
+  "route": [
+    30000142,
+    30000138,
+    30000132,
+    30000134,
+    30005196,
+    30005192,
+    30004083,
+    30004078,
+    30004079,
+    30004080,
+    30002282,
+    30002187
+  ],
+  "parameters_used": {
+    "align_time": 6,
+    "formula": "exact_3phase",
+    "source": "provided",
+    "warp_speed": 3
+  }
+}
