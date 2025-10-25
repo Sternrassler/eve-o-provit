@@ -1,0 +1,11 @@
+# SDE SQLite Database Directory
+
+Place eve-sde generated SQLite database here:
+- sde.sqlite (from eve-sde project)
+
+## Usage
+
+```bash
+# Link from eve-sde project
+ln -s /path/to/eve-sde/data/sqlite/sde.sqlite ./sde.sqlite
+```

@@ -19,3 +19,22 @@ Thumbs.db
 # Editor settings
 .vscode/
 .idea/
+
+# Backend (Go)
+backend/bin/
+*.exe
+*.test
+*.out
+
+# Frontend (Next.js)
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+
+# Data
+data/sde/*.sqlite
+data/sde/*.db
+
+# Docker
+.dockerignore
+
