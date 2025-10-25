@@ -1,12 +1,14 @@
 # Makefile – Zentrale Orchestrierung für Projekt-Automationen
 # Referenz: copilot-instructions.md Abschnitt 3.1
 
-.PHONY: help test lint lint-ci adr-ref commit-lint release-check security-blockers scan scan-json pr-check release ci-local clean ensure-trivy push-ci pr-quality-gates-ci
+.PHONY: help test test-backend test-backend-unit test-backend-integration test-backend-bench test-frontend lint lint-backend lint-frontend lint-ci adr-ref commit-lint release-check security-blockers scan scan-json pr-check release ci-local clean ensure-trivy push-ci pr-quality-gates-ci
 
 # Standardwerte
 TRIVY_FAIL_ON ?= HIGH,CRITICAL
 TRIVY_JSON_REPORT ?= tmp/trivy-fs-report.json
 VERSION ?=
+BACKEND_DIR ?= backend
+FRONTEND_DIR ?= frontend
 
 help: ## Zeigt verfügbare Targets
 	@echo "Projekt Automations – Make Targets"
@@ -14,14 +16,43 @@ help: ## Zeigt verfügbare Targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-test: ## Führt die definierte Test-Suite aus (Platzhalter)
-	@echo "[make test] Keine Tests konfiguriert – bitte projektspezifische Testbefehle ergänzen"
+test: test-backend ## Führt alle Tests aus (Backend + Frontend)
+	@echo "[make test] ✅ Alle Tests abgeschlossen"
 
-lint: ## Statische Analysen / Format / Stil (Platzhalter, bitte anpassen)
-	@echo "[make lint] Kein Lint-Tool definiert – bitte projektspezifische Checks ergänzen"
+test-backend: ## Führt alle Backend-Tests aus (Unit + Integration)
+	@echo "[make test-backend] Führe Backend Tests aus..."
+	@cd $(BACKEND_DIR) && go test -v -race -coverprofile=coverage.out ./...
+	@echo "[make test-backend] ✅ Backend Tests erfolgreich"
 
-lint-ci: ## Statische Analysen (CI-Modus, Platzhalter)
-	@echo "[make lint-ci] Kein Lint-Tool definiert – bitte projektspezifische Checks ergänzen"
+test-backend-unit: ## Führt nur Backend Unit-Tests aus (ohne Integration)
+	@echo "[make test-backend-unit] Führe Backend Unit-Tests aus..."
+	@cd $(BACKEND_DIR) && go test -v -race -short ./...
+
+test-backend-integration: ## Führt nur Backend Integration-Tests aus
+	@echo "[make test-backend-integration] Führe Backend Integration-Tests aus..."
+	@cd $(BACKEND_DIR) && go test -v -race -run Integration ./...
+
+test-backend-bench: ## Führt Backend Benchmarks aus
+	@echo "[make test-backend-bench] Führe Backend Benchmarks aus..."
+	@cd $(BACKEND_DIR) && go test -bench=. -benchmem ./pkg/evedb/navigation/
+
+test-frontend: ## Führt Frontend-Tests aus (Platzhalter)
+	@echo "[make test-frontend] Keine Frontend-Tests konfiguriert – Platzhalter für zukünftige Implementierung"
+
+lint: lint-backend ## Führt alle Linting-Checks aus (Backend + Frontend)
+	@echo "[make lint] ✅ Alle Linting-Checks abgeschlossen"
+
+lint-backend: ## Führt Backend Linting aus (gofmt, go vet)
+	@echo "[make lint-backend] Prüfe Backend Code-Stil..."
+	@cd $(BACKEND_DIR) && gofmt -l . | tee /dev/stderr | (! grep .)
+	@cd $(BACKEND_DIR) && go vet ./...
+	@echo "[make lint-backend] ✅ Backend Linting erfolgreich"
+
+lint-frontend: ## Führt Frontend Linting aus (Platzhalter)
+	@echo "[make lint-frontend] Kein Frontend Linting konfiguriert – Platzhalter für zukünftige Implementierung"
+
+lint-ci: lint-backend ## Statische Analysen (CI-Modus)
+	@echo "[make lint-ci] ✅ CI Linting abgeschlossen"
 
 adr-ref: ## Erzwingt ADR-Referenzen für Governance-Änderungen (CI-kompatibel)
 	@echo "[make adr-ref] Prüfe ADR Referenz-Anforderungen..."; \
