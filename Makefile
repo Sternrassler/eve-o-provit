@@ -1,7 +1,7 @@
 # Makefile – Zentrale Orchestrierung für Projekt-Automationen
 # Referenz: copilot-instructions.md Abschnitt 3.1
 
-.PHONY: help test test-backend test-backend-unit test-backend-integration test-backend-bench test-frontend lint lint-backend lint-frontend lint-ci adr-ref commit-lint release-check security-blockers scan scan-json pr-check release ci-local clean ensure-trivy push-ci pr-quality-gates-ci
+.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json pr-check release ci-local clean ensure-trivy push-ci pr-quality-gates-ci
 
 # Standardwerte
 TRIVY_FAIL_ON ?= HIGH,CRITICAL
@@ -10,48 +10,97 @@ VERSION ?=
 BACKEND_DIR ?= backend
 FRONTEND_DIR ?= frontend
 
-help: ## Zeigt verfügbare Targets
-	@echo "Projekt Automations – Make Targets"
-	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+.DEFAULT_GOAL := help
 
-test: test-backend ## Führt alle Tests aus (Backend + Frontend)
+help: ## Zeigt verfügbare Targets (gruppiert)
+	@echo "════════════════════════════════════════════════════════════════════════════════════════════════════════"
+	@echo "  Projekt Automations – Make Targets"
+	@echo "════════════════════════════════════════════════════════════════════════════════════════════════════════"
+	@echo ""
+	@echo "┌─ Tests ───────────────────────────────────────────────────────────────────────────────────────────────"
+	@grep -E '^test.*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
+	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
+	@echo ""
+	@echo "┌─ Linting & Code-Qualität ─────────────────────────────────────────────────────────────────────────────"
+	@grep -E '^lint.*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
+	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
+	@echo ""
+	@echo "┌─ Security & Scans ────────────────────────────────────────────────────────────────────────────────────"
+	@grep -E '^(scan|security-blockers).*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
+	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
+	@echo ""
+	@echo "┌─ CI/CD & Quality Gates ───────────────────────────────────────────────────────────────────────────────"
+	@grep -E '^(pr-check|push-ci|ci-local|pr-quality-gates-ci).*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
+	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
+	@echo ""
+	@echo "┌─ Release & Versioning ────────────────────────────────────────────────────────────────────────────────"
+	@grep -E '^(release|release-check).*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
+	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
+	@echo ""
+	@echo "┌─ Governance & Validation ─────────────────────────────────────────────────────────────────────────────"
+	@grep -E '^(adr-ref|commit-lint).*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
+	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
+	@echo ""
+	@echo "┌─ Utility ─────────────────────────────────────────────────────────────────────────────────────────────"
+	@grep -E '^(clean|ensure-trivy|help).*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
+	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
+	@echo ""
+
+test: test-be ## Führt alle Tests aus (Backend + Frontend)
 	@echo "[make test] ✅ Alle Tests abgeschlossen"
 
-test-backend: ## Führt alle Backend-Tests aus (Unit + Integration)
-	@echo "[make test-backend] Führe Backend Tests aus..."
+test-be: ## Führt alle Backend-Tests aus (Unit + Integration)
+	@echo "[make test-be] Führe Backend Tests aus..."
 	@cd $(BACKEND_DIR) && go test -v -race -coverprofile=coverage.out ./...
-	@echo "[make test-backend] ✅ Backend Tests erfolgreich"
+	@echo "[make test-be] ✅ Backend Tests erfolgreich"
 
-test-backend-unit: ## Führt nur Backend Unit-Tests aus (ohne Integration)
-	@echo "[make test-backend-unit] Führe Backend Unit-Tests aus..."
+test-be-unit: ## Führt nur Backend Unit-Tests aus (ohne Integration)
+	@echo "[make test-be-unit] Führe Backend Unit-Tests aus..."
 	@cd $(BACKEND_DIR) && go test -v -race -short ./...
 
-test-backend-integration: ## Führt nur Backend Integration-Tests aus
-	@echo "[make test-backend-integration] Führe Backend Integration-Tests aus..."
+test-be-int: ## Führt nur Backend Integration-Tests aus
+	@echo "[make test-be-int] Führe Backend Integration-Tests aus..."
 	@cd $(BACKEND_DIR) && go test -v -race -run Integration ./...
 
-test-backend-bench: ## Führt Backend Benchmarks aus
-	@echo "[make test-backend-bench] Führe Backend Benchmarks aus..."
+test-be-bench: ## Führt Backend Benchmarks aus
+	@echo "[make test-be-bench] Führe Backend Benchmarks aus..."
 	@cd $(BACKEND_DIR) && go test -bench=. -benchmem ./pkg/evedb/navigation/
 
-test-frontend: ## Führt Frontend-Tests aus (Platzhalter)
-	@echo "[make test-frontend] Keine Frontend-Tests konfiguriert – Platzhalter für zukünftige Implementierung"
+test-be-examples: test-be-ex-cargo test-be-ex-nav ## Führt alle Backend-Examples aus
 
-lint: lint-backend ## Führt alle Linting-Checks aus (Backend + Frontend)
+test-be-ex-cargo: ## Führt Cargo-Example aus (Badger + Tritanium)
+	@echo "[make test-be-ex-cargo] Führe Cargo-Example aus..."
+	@cd $(BACKEND_DIR)/examples/cargo && go run main.go -ship 648 -item 34 -racial-hauler 5 -ship-info
+	@echo "[make test-be-ex-cargo] ✅ Cargo-Example erfolgreich"
+
+test-be-ex-nav: ## Führt Navigation-Example aus (Jita → Amarr)
+	@echo "[make test-be-ex-nav] Führe Navigation-Example aus..."
+	@cd $(BACKEND_DIR)/examples/navigation && go run main.go -from 30000142 -to 30002187 -exact
+	@echo "[make test-be-ex-nav] ✅ Navigation-Example erfolgreich"
+
+test-fe: ## Führt Frontend-Tests aus (Platzhalter)
+	@echo "[make test-fe] Keine Frontend-Tests konfiguriert – Platzhalter für zukünftige Implementierung"
+
+lint: lint-be ## Führt alle Linting-Checks aus (Backend + Frontend)
 	@echo "[make lint] ✅ Alle Linting-Checks abgeschlossen"
 
-lint-backend: ## Führt Backend Linting aus (gofmt, go vet)
-	@echo "[make lint-backend] Prüfe Backend Code-Stil..."
+lint-be: ## Führt Backend Linting aus (gofmt, go vet)
+	@echo "[make lint-be] Prüfe Backend Code-Stil..."
 	@cd $(BACKEND_DIR) && gofmt -l . | tee /dev/stderr | (! grep .)
 	@cd $(BACKEND_DIR) && go vet ./...
-	@echo "[make lint-backend] ✅ Backend Linting erfolgreich"
+	@echo "[make lint-be] ✅ Backend Linting erfolgreich"
 
-lint-frontend: ## Führt Frontend Linting aus (Platzhalter)
-	@echo "[make lint-frontend] Kein Frontend Linting konfiguriert – Platzhalter für zukünftige Implementierung"
+lint-fe: ## Führt Frontend Linting aus (Platzhalter)
+	@echo "[make lint-fe] Kein Frontend Linting konfiguriert – Platzhalter für zukünftige Implementierung"
 
-lint-ci: lint-backend ## Statische Analysen (CI-Modus)
+lint-ci: lint-be ## Statische Analysen (CI-Modus)
 	@echo "[make lint-ci] ✅ CI Linting abgeschlossen"
 
 adr-ref: ## Erzwingt ADR-Referenzen für Governance-Änderungen (CI-kompatibel)
