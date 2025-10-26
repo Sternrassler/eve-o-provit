@@ -20,28 +20,13 @@ fi
 # 3. Commit Message Check (wird von Git Hook commit-msg erledigt – hier nur Info)
 echo "[pre-commit] Hinweis: Commit Message wird nach diesem Hook geprüft (commit-msg Hook)"
 
-# 4. Secret Scanning mit Gitleaks (nur Staging Area)
+# 4. Secret Scanning mit Gitleaks (via Make Target)
 echo "[pre-commit] Prüfe Staging Area auf Secrets (Gitleaks)..."
-if command -v gitleaks >/dev/null 2>&1; then
-    if ! gitleaks protect --staged --verbose --exit-code 1 2>&1 | grep -v "^$"; then
-        echo "[pre-commit] ❌ FEHLER: Secrets gefunden! Commit blockiert."
-        echo "Verwende 'git commit --no-verify' nur wenn absolut sicher (nicht empfohlen)"
-        exit 1
-    fi
-    echo "[pre-commit] ✅ Keine Secrets gefunden (Gitleaks)"
-else
-    echo "[pre-commit] ⚠️ Gitleaks nicht installiert – führe make ensure-gitleaks aus"
-    echo "[pre-commit] Fallback: Einfacher Regex-Check..."
-    # Fallback auf einfachen Regex-Check (nur für echte Assignments in Code)
-    STAGED_CODE=$(git diff --cached --name-only | grep -E '\.(go|ts|tsx|js|jsx|env|yaml|yml)$' || true)
-    if [ -n "$STAGED_CODE" ]; then
-        if echo "$STAGED_CODE" | xargs grep -HnE '(password|secret|api[_-]?key|token)\s*[:=]\s*["\x27][^"\x27]{8,}' -- 2>/dev/null; then
-            echo "[pre-commit] ❌ FEHLER: Potenzielle Secrets gefunden!"
-            echo "Bitte installiere Gitleaks für bessere Detection: make ensure-gitleaks"
-            exit 1
-        fi
-    fi
-    echo "[pre-commit] ⚠️ Regex-Fallback: Keine offensichtlichen Secrets"
+if ! make secrets-check >/dev/null 2>&1; then
+    echo "[pre-commit] ❌ FEHLER: Secret Scanning fehlgeschlagen!"
+    echo "Details anzeigen: make secrets-check"
+    echo "Verwende 'git commit --no-verify' nur wenn absolut sicher (nicht empfohlen)"
+    exit 1
 fi
 
 echo "[pre-commit] ✅ Pre-Commit Checks erfolgreich"
