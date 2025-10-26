@@ -15,9 +15,16 @@ export function CharacterSwitcher() {
   }
 
   const handleSwitchCharacter = async (characterID: number) => {
+    console.log("[CharacterSwitcher] Clicked character:", characterID, "Current:", character.character_id);
+    
     if (characterID !== character.character_id) {
+      console.log("[CharacterSwitcher] Switching character...");
       await switchCharacter(characterID);
+      console.log("[CharacterSwitcher] Switch completed");
+    } else {
+      console.log("[CharacterSwitcher] Already active character, ignoring");
     }
+    
     setIsOpen(false);
   };
 

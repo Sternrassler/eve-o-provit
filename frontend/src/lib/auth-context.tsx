@@ -211,9 +211,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const switchCharacter = async (characterID: number) => {
+    console.log("[AuthContext] Switching to character:", characterID);
     const success = MultiCharacterTokenStorage.setActiveCharacter(characterID);
+    console.log("[AuthContext] setActiveCharacter success:", success);
+    
     if (success) {
+      // Force reload session with new active character
       await checkSession();
+    } else {
+      console.error("[AuthContext] Failed to switch character - character not found");
     }
   };
 
