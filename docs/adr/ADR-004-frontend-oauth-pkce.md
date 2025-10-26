@@ -165,7 +165,7 @@ Frontend nutzt Token für direkte ESI Calls + Backend API Calls
 3. **Stateless Backend:** Keine Session Storage, einfacher zu skalieren
 4. **EVE ESI Best Practice:** PKCE ist offiziell unterstützter Standard für Public Clients
 5. **Kein Secret Management:** PKCE eliminiert Client Secret-Risiko komplett
-6. **Direkter ESI-Zugriff:** Frontend kann zukünftig direkt EVE ESI aufrufen (z.B. Market Data)
+6. **Backend Proxy Pattern:** Alle ESI Calls über Backend (Caching, Rate Limit Management)
 
 **Akzeptierte Trade-offs:**
 
@@ -192,7 +192,7 @@ Frontend nutzt Token für direkte ESI Calls + Backend API Calls
 - ✅ **Stateless Backend** - Keine Session Storage, horizontal skalierbar
 - ✅ **Kein Client Secret** - Keine Credential Leaks möglich
 - ✅ **Standard OAuth2 PKCE Flow** - Gut dokumentiert, viele Libraries
-- ✅ **Direkter ESI-Zugriff möglich** - Frontend kann zukünftig EVE Market API direkt aufrufen
+- ✅ **Token für Backend API Calls** - Bearer Token im Authorization Header
 - ✅ **Schnellere Development** - Weniger Backend-Boilerplate
 - ✅ **Einfacheres Testing** - Weniger Mock-Dependencies
 
@@ -419,10 +419,11 @@ Frontend nutzt Token für direkte ESI Calls + Backend API Calls
 - Token Storage pro Character (localStorage Array)
 - Character Switcher UI
 
-**ESI Direct Calls (Future):**
-- Frontend kann direkt EVE ESI Market API aufrufen
-- Kein Backend Proxy nötig für öffentliche ESI Endpoints
-- Reduces Backend Load
+**ESI Access Pattern:**
+- **Alle ESI Calls über Backend Proxy** (kein direkter Client-Zugriff)
+- Backend cached ESI Responses (reduziert ESI Rate Limit Impact)
+- Backend kann ESI Calls bündeln/optimieren
+- Security: Kein Exposure von Character Tokens an Third-Party ESI
 
 ---
 
@@ -432,3 +433,4 @@ Frontend nutzt Token für direkte ESI Calls + Backend API Calls
 - 2025-10-26: Implementation completed, alle Validierung Criteria erfüllt
 - 2025-10-26: Post-Mortem Analyse verlinkt (tmp/issue-3-analyse.md)
 - 2025-10-26: Umbenannt von ADR-003 zu ADR-004 (ADR-002/003 bereits in ADR-001 reserviert)
+- 2025-10-26: ESI Direct Calls entfernt - Alle ESI Calls über Backend Proxy (Security Decision)
