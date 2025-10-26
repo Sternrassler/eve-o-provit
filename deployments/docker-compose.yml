@@ -7,7 +7,7 @@ services:
     container_name: eve-o-provit-postgres
     environment:
       POSTGRES_USER: eveprovit
-      POSTGRES_PASSWORD: devpassword
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: eveprovit
     ports:
       - "5432:5432"
@@ -49,16 +49,16 @@ services:
       - "9001:8080"
     environment:
       PORT: "8080"
-      DATABASE_URL: postgres://eveprovit:devpassword@postgres:5432/eveprovit?sslmode=disable
+      DATABASE_URL: postgres://eveprovit:${POSTGRES_PASSWORD}@postgres:5432/eveprovit?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       SDE_DB_PATH: /data/sde/eve-sde.db
       CORS_ORIGINS: http://localhost:9000,http://localhost:3000
       LOG_LEVEL: debug
       ENV: development
-      EVE_CLIENT_ID: 0828b4bcd20242aeb9b8be10f5451094
-      EVE_CLIENT_SECRET: A0PjILz3VYAewR59J5jStZs52dY7jISGVLwXv5NA
-      EVE_CALLBACK_URL: http://localhost:9000/callback
-      JWT_SECRET: dev-secret-please-change-in-production-use-openssl-rand
+      EVE_CLIENT_ID: ${EVE_CLIENT_ID}
+      EVE_CLIENT_SECRET: ${EVE_CLIENT_SECRET}
+      EVE_CALLBACK_URL: ${EVE_CALLBACK_URL}
+      JWT_SECRET: ${JWT_SECRET}
     volumes:
       - ../backend/data/sde:/data/sde:ro
     depends_on:
@@ -86,8 +86,8 @@ services:
       - "9000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:9001
-      NEXT_PUBLIC_EVE_CLIENT_ID: 0828b4bcd20242aeb9b8be10f5451094
-      NEXT_PUBLIC_EVE_CALLBACK_URL: http://localhost:9000/callback
+      NEXT_PUBLIC_EVE_CLIENT_ID: ${EVE_CLIENT_ID}
+      NEXT_PUBLIC_EVE_CALLBACK_URL: ${EVE_CALLBACK_URL}
       NODE_ENV: development
     depends_on:
       api:
