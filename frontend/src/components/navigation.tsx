@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { EveLoginButton } from "@/components/eve-login-button";
-import { CharacterInfo } from "@/components/character-info";
+import { CharacterSwitcher } from "@/components/character-switcher";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -42,13 +42,13 @@ export function Navigation() {
           
           {/* Auth Section */}
           <div className="ml-4 border-l pl-4">
-            {!isLoading && (isAuthenticated ? <CharacterInfo /> : <EveLoginButton />)}
+            {!isLoading && (isAuthenticated ? <CharacterSwitcher /> : <EveLoginButton />)}
           </div>
         </div>
 
         {/* Mobile Navigation */}
         <div className="flex items-center gap-2 md:hidden">
-          {!isLoading && (isAuthenticated ? <CharacterInfo /> : <EveLoginButton />)}
+          {!isLoading && (isAuthenticated ? <CharacterSwitcher /> : <EveLoginButton />)}
           
           <Sheet open={isOpen} onOpenChange={setIsOpen}>
             <SheetTrigger asChild>
