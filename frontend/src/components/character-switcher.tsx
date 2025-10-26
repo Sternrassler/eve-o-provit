@@ -81,7 +81,7 @@ export function CharacterSwitcher() {
                   <div
                     key={char.character_id}
                     className={`
-                      flex items-center gap-3 rounded-md p-2 cursor-pointer
+                      group flex items-center gap-3 rounded-md p-2 cursor-pointer
                       ${isActive ? 'bg-accent' : 'hover:bg-accent/50'}
                       transition-colors
                     `}
