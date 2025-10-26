@@ -155,6 +155,35 @@ export async function verifyToken(
 }
 
 /**
+ * Refresh access token using refresh token
+ */
+export async function refreshAccessToken(
+  refreshToken: string,
+  clientId: string
+): Promise<EVETokenResponse> {
+  const params = new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+    client_id: clientId,
+  });
+
+  const response = await fetch(EVE_SSO_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Token refresh failed: ${response.status} - ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
  * Validate OAuth state parameter
  */
 export function validateState(receivedState: string): boolean {
@@ -187,6 +216,18 @@ export const TokenStorage = {
     const expiresAt = localStorage.getItem("eve_token_expires_at");
     if (!expiresAt) return true;
     return Date.now() >= parseInt(expiresAt, 10);
+  },
+
+  getTimeUntilExpiry(): number {
+    const expiresAt = localStorage.getItem("eve_token_expires_at");
+    if (!expiresAt) return 0;
+    return parseInt(expiresAt, 10) - Date.now();
+  },
+
+  shouldRefresh(): boolean {
+    const timeUntilExpiry = this.getTimeUntilExpiry();
+    // Refresh 3 minutes before expiry
+    return timeUntilExpiry > 0 && timeUntilExpiry < 3 * 60 * 1000;
   },
 
   clear(): void {

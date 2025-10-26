@@ -1,7 +1,12 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { buildAuthorizationUrl, TokenStorage, verifyToken } from "./eve-sso";
+import { 
+  buildAuthorizationUrl, 
+  TokenStorage, 
+  verifyToken,
+  refreshAccessToken 
+} from "./eve-sso";
 
 interface CharacterInfo {
   character_id: number;
@@ -58,6 +63,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("eve-login-success", handleLoginSuccess);
     };
   }, []);
+
+  // Background token refresh - check every 60 seconds
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        // Check if token needs refresh (3 minutes before expiry)
+        if (TokenStorage.shouldRefresh()) {
+          console.log("[AuthContext] Token expiring soon, refreshing...");
+          await performTokenRefresh();
+        }
+      } catch (error) {
+        console.error("[AuthContext] Background refresh check failed:", error);
+      }
+    }, 60 * 1000); // Check every 60 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [isAuthenticated]);
+
+  const performTokenRefresh = async () => {
+    try {
+      const refreshToken = TokenStorage.getRefreshToken();
+      
+      if (!refreshToken) {
+        console.warn("[AuthContext] No refresh token available");
+        logout();
+        return;
+      }
+
+      console.log("[AuthContext] Refreshing access token...");
+      
+      const newToken = await refreshAccessToken(refreshToken, EVE_CLIENT_ID);
+      
+      // Save new token
+      TokenStorage.save(newToken);
+      setAccessToken(newToken.access_token);
+      
+      console.log("[AuthContext] Token refreshed successfully");
+    } catch (error) {
+      console.error("[AuthContext] Token refresh failed:", error);
+      // On refresh failure, logout user
+      logout();
+    }
+  };
 
   const checkSession = async () => {
     try {
