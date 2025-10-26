@@ -1,0 +1,44 @@
+# Gitleaks Configuration
+# Referenz: https://github.com/gitleaks/gitleaks#configuration
+
+title = "EVE-O-Provit Gitleaks Config"
+
+[extend]
+# Verwende Standard-Regeln als Basis
+useDefault = true
+
+# Allowlist für bekannte False Positives
+[allowlist]
+description = "Global Allowlist"
+
+# Pfade ausschließen
+paths = [
+  '''docs/adr/.*\.md$''',           # ADR Dokumentation
+  '''tmp/.*''',                      # Temporäre Dateien
+  '''.*_test\.go$''',                # Go Tests
+  '''.*\.test\.(ts|tsx|js|jsx)$''', # Frontend Tests
+  '''tests/.*''',                    # Test Verzeichnisse
+  '''__tests__/.*''',
+]
+
+# Regex-Patterns für bekannte False Positives
+regexes = [
+  '''(Set-Cookie|session_token|Bearer)''',           # Dokumentations-Beispiele
+  '''(test-secret|mock-token|dummy-key|example-password)''', # Test Fixtures
+  '''devpassword''',                                 # Docker Compose Dev
+  '''dev-secret-please-change-in-production''',      # Explizite Dev-Warnung
+  '''(example|placeholder|your-.*|xxx|changeme)''',  # README Platzhalter
+]
+
+# Custom Rules (falls Standard-Regeln nicht ausreichen)
+[[rules]]
+id = "hardcoded-eve-client-secret"
+description = "EVE SSO Client Secret (sollte in .env sein)"
+regex = '''EVE_CLIENT_SECRET\s*[:=]\s*["'][a-zA-Z0-9]{32,}["']'''
+tags = ["secret", "EVE", "OAuth"]
+
+[[rules]]
+id = "hardcoded-jwt-secret"
+description = "JWT Secret Key (sollte in .env sein)"
+regex = '''JWT_SECRET\s*[:=]\s*["'][a-zA-Z0-9_-]{16,}["']'''
+tags = ["secret", "JWT"]

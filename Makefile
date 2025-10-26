@@ -1,7 +1,7 @@
 # Makefile – Zentrale Orchestrierung für Projekt-Automationen
 # Referenz: copilot-instructions.md Abschnitt 3.1
 
-.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json pr-check release ci-local clean ensure-trivy push-ci pr-quality-gates-ci docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-restart docker-rebuild docker-shell-api docker-shell-db docker-shell-redis
+.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json secrets-scan secrets-check pr-check release ci-local clean ensure-trivy ensure-gitleaks push-ci pr-quality-gates-ci docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-restart docker-rebuild docker-shell-api docker-shell-db docker-shell-redis
 
 # Standardwerte
 TRIVY_FAIL_ON ?= HIGH,CRITICAL
@@ -30,7 +30,7 @@ help: ## Zeigt verfügbare Targets (gruppiert)
 	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
 	@echo ""
 	@echo "┌─ Security & Scans ────────────────────────────────────────────────────────────────────────────────────"
-	@grep -E '^(scan|security-blockers).*:.*?## .*$$' $(MAKEFILE_LIST) | \
+	@grep -E '^(scan|security-blockers|secrets).*:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
 	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
 	@echo ""
@@ -183,7 +183,27 @@ scan-json: ## Security Scan mit JSON Report (für check-security-blockers.sh)
 		echo "[make scan-json] trivy nicht verfügbar – kein Report erzeugt"; \
 	fi
 
-pr-check: lint test scan ## Bündelt: lint + test + scan (für lokale PR-Vorbereitung)
+secrets-scan: ## Führt Gitleaks Scan aus (alle Commits + Staging)
+	@echo "[make secrets-scan] Prüfe Repository auf Secrets mit Gitleaks..."
+	@$(MAKE) --no-print-directory ensure-gitleaks
+	@if command -v gitleaks >/dev/null 2>&1; then \
+		gitleaks detect --source . --verbose --exit-code 1; \
+		echo "[make secrets-scan] ✅ Keine Secrets gefunden"; \
+	else \
+		echo "[make secrets-scan] ⚠️ Gitleaks nicht verfügbar – überspringe Scan"; \
+	fi
+
+secrets-check: ## Führt Gitleaks Pre-Commit Check aus (nur Staging Area)
+	@echo "[make secrets-check] Prüfe Staging Area auf Secrets..."
+	@$(MAKE) --no-print-directory ensure-gitleaks
+	@if command -v gitleaks >/dev/null 2>&1; then \
+		gitleaks protect --staged --verbose --exit-code 1; \
+		echo "[make secrets-check] ✅ Keine Secrets in Staging Area"; \
+	else \
+		echo "[make secrets-check] ⚠️ Gitleaks nicht verfügbar – überspringe Check"; \
+	fi
+
+pr-check: lint test scan secrets-check ## Bündelt: lint + test + scan + secrets (für lokale PR-Vorbereitung)
 	@echo "[make pr-check] ✅ Alle lokalen Checks erfolgreich"
 
 push-ci: ## Führt lint-ci und test in einem Rutsch aus
@@ -235,6 +255,34 @@ ensure-trivy: ## Stellt sicher, dass Trivy verfügbar ist
 		else \
 			curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin || true; \
 		fi; \
+	fi
+
+ensure-gitleaks: ## Stellt sicher, dass Gitleaks verfügbar ist
+	@if command -v gitleaks >/dev/null 2>&1; then \
+		echo "[make ensure-gitleaks] gitleaks bereits verfügbar ($$(gitleaks version))"; \
+	else \
+		echo "[make ensure-gitleaks] gitleaks nicht installiert – versuche Installation"; \
+		TEMP_DIR=$$(mktemp -d); \
+		cd $$TEMP_DIR; \
+		LATEST_VERSION=$$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/'); \
+		ARCH=$$(uname -m); \
+		OS=$$(uname -s | tr '[:upper:]' '[:lower:]'); \
+		if [ "$$ARCH" = "x86_64" ]; then ARCH="x64"; fi; \
+		if [ "$$ARCH" = "aarch64" ]; then ARCH="arm64"; fi; \
+		DOWNLOAD_URL="https://github.com/gitleaks/gitleaks/releases/download/v$$LATEST_VERSION/gitleaks_$${LATEST_VERSION}_$${OS}_$${ARCH}.tar.gz"; \
+		echo "[make ensure-gitleaks] Download: $$DOWNLOAD_URL"; \
+		curl -sSL "$$DOWNLOAD_URL" -o gitleaks.tar.gz || exit 1; \
+		tar -xzf gitleaks.tar.gz || exit 1; \
+		if command -v sudo >/dev/null 2>&1; then \
+			sudo mv gitleaks /usr/local/bin/ || exit 1; \
+			sudo chmod +x /usr/local/bin/gitleaks || exit 1; \
+		else \
+			mv gitleaks /usr/local/bin/ || exit 1; \
+			chmod +x /usr/local/bin/gitleaks || exit 1; \
+		fi; \
+		cd -; \
+		rm -rf $$TEMP_DIR; \
+		echo "[make ensure-gitleaks] ✅ Gitleaks installiert: $$(gitleaks version)"; \
 	fi
 
 # Docker & Compose Targets
