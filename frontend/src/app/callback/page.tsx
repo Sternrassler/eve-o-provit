@@ -6,6 +6,7 @@ import {
   exchangeCodeForToken,
   validateState,
   TokenStorage,
+  MultiCharacterTokenStorage,
   verifyToken,
 } from "@/lib/eve-sso";
 
@@ -53,7 +54,10 @@ function CallbackContent() {
         // Verify token and get character info
         const charInfo = await verifyToken(token.access_token);
 
-        // Save token and character info
+        // Save character to multi-character storage
+        MultiCharacterTokenStorage.saveCharacter(charInfo, token);
+        
+        // Legacy: Also save to old storage for backward compatibility
         TokenStorage.save(token);
         TokenStorage.saveCharacterInfo(charInfo);
 
