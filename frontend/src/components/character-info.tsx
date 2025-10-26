@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { LogOut } from "lucide-react";
@@ -14,19 +15,21 @@ export function CharacterInfo() {
 
   return (
     <div className="flex items-center gap-3">
-      <Image
-        src={character.portrait_url}
-        alt={character.character_name}
-        width={40}
-        height={40}
-        className="rounded-full"
-      />
-      <div className="hidden sm:block">
-        <p className="text-sm font-medium">{character.character_name}</p>
-        <p className="text-xs text-muted-foreground">
-          ID: {character.character_id}
-        </p>
-      </div>
+      <Link href="/character" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+        <Image
+          src={character.portrait_url}
+          alt={character.character_name}
+          width={40}
+          height={40}
+          className="rounded-full cursor-pointer"
+        />
+        <div className="hidden sm:block">
+          <p className="text-sm font-medium">{character.character_name}</p>
+          <p className="text-xs text-muted-foreground">
+            ID: {character.character_id}
+          </p>
+        </div>
+      </Link>
       <Button
         variant="ghost"
         size="icon"

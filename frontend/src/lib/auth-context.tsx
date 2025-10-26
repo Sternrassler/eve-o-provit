@@ -1,11 +1,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { buildAuthorizationUrl, TokenStorage, verifyToken } from "./eve-sso";
 
 interface CharacterInfo {
   character_id: number;
   character_name: string;
   scopes: string[];
+  owner_hash: string;
   portrait_url: string;
 }
 
@@ -13,99 +15,129 @@ interface AuthContextType {
   isAuthenticated: boolean;
   character: CharacterInfo | null;
   isLoading: boolean;
-  login: () => void;
-  logout: () => Promise<void>;
-  refresh: () => Promise<void>;
+  accessToken: string | null;
+  login: () => Promise<void>;
+  logout: () => void;
+  getAuthHeader: () => string | null;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8082";
+const EVE_CLIENT_ID = process.env.NEXT_PUBLIC_EVE_CLIENT_ID || "0828b4bcd20242aeb9b8be10f5451094";
+const EVE_CALLBACK_URL = process.env.NEXT_PUBLIC_EVE_CALLBACK_URL || "http://localhost:9000/callback";
+const EVE_SCOPES: string[] = []; // Add required scopes here if needed
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [character, setCharacter] = useState<CharacterInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  // Verify session on mount and periodically
+  // Check for existing session on mount
   useEffect(() => {
-    verifySession();
+    checkSession();
     
-    // Refresh session every 15 minutes
-    const interval = setInterval(() => {
-      refresh();
-    }, 15 * 60 * 1000);
+    // Listen for storage changes (e.g., after login in callback)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "eve_access_token" || e.key === "eve_character_info") {
+        checkSession();
+      }
+    };
     
-    return () => clearInterval(interval);
+    // Listen for custom event from callback page
+    const handleLoginSuccess = () => {
+      checkSession();
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("eve-login-success", handleLoginSuccess);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("eve-login-success", handleLoginSuccess);
+    };
   }, []);
 
-  const verifySession = async () => {
+  const checkSession = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/auth/verify`, {
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setIsAuthenticated(true);
-        // Fetch character info for complete data
-        await fetchCharacterInfo();
-      } else {
+      const token = TokenStorage.getAccessToken();
+      
+      console.log("[AuthContext] Checking session, token:", token ? "exists" : "none");
+      
+      if (!token || TokenStorage.isExpired()) {
+        // No valid token
+        console.log("[AuthContext] No valid token, clearing session");
         setIsAuthenticated(false);
         setCharacter(null);
+        setAccessToken(null);
+        TokenStorage.clear();
+        setIsLoading(false);
+        return;
       }
+
+      console.log("[AuthContext] Verifying token with EVE ESI...");
+      
+      // Verify token with EVE ESI
+      const charInfo = await verifyToken(token);
+      
+      console.log("[AuthContext] Token verified, character:", charInfo.CharacterName);
+      
+      // Convert to our format
+      const character: CharacterInfo = {
+        character_id: charInfo.CharacterID,
+        character_name: charInfo.CharacterName,
+        scopes: charInfo.Scopes ? charInfo.Scopes.split(" ") : [],
+        owner_hash: charInfo.CharacterOwnerHash,
+        portrait_url: `https://images.evetech.net/characters/${charInfo.CharacterID}/portrait?size=64`,
+      };
+
+      setCharacter(character);
+      setAccessToken(token);
+      setIsAuthenticated(true);
+      
+      console.log("[AuthContext] Session set, authenticated:", true);
+      
+      // Save character info
+      TokenStorage.saveCharacterInfo(charInfo);
     } catch (error) {
-      console.error("Failed to verify session:", error);
+      console.error("[AuthContext] Session verification failed:", error);
       setIsAuthenticated(false);
       setCharacter(null);
+      setAccessToken(null);
+      TokenStorage.clear();
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchCharacterInfo = async () => {
+  const login = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/auth/character`, {
-        credentials: "include",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setCharacter(data);
-      }
+      const authUrl = await buildAuthorizationUrl(
+        EVE_CLIENT_ID,
+        EVE_CALLBACK_URL,
+        EVE_SCOPES
+      );
+      window.location.href = authUrl;
     } catch (error) {
-      console.error("Failed to fetch character info:", error);
+      console.error("Failed to initiate login:", error);
     }
   };
 
-  const login = () => {
-    // Redirect to backend login endpoint
-    window.location.href = `${API_URL}/api/v1/auth/login`;
+  const logout = () => {
+    TokenStorage.clear();
+    setIsAuthenticated(false);
+    setCharacter(null);
+    setAccessToken(null);
   };
 
-  const logout = async () => {
-    try {
-      await fetch(`${API_URL}/api/v1/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
-      
-      setIsAuthenticated(false);
-      setCharacter(null);
-    } catch (error) {
-      console.error("Failed to logout:", error);
-    }
+  const getAuthHeader = (): string | null => {
+    if (!accessToken) return null;
+    return `Bearer ${accessToken}`;
   };
 
-  const refresh = async () => {
-    try {
-      await fetch(`${API_URL}/api/v1/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch (error) {
-      console.error("Failed to refresh session:", error);
-    }
+  const refreshSession = async () => {
+    await checkSession();
   };
 
   return (
@@ -114,9 +146,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated,
         character,
         isLoading,
+        accessToken,
         login,
         logout,
-        refresh,
+        getAuthHeader,
+        refreshSession,
       }}
     >
       {children}

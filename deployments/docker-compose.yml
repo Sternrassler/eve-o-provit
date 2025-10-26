@@ -46,15 +46,19 @@ services:
       dockerfile: Dockerfile
     container_name: eve-o-provit-api
     ports:
-      - "8082:8080"
+      - "9001:8080"
     environment:
       PORT: "8080"
       DATABASE_URL: postgres://eveprovit:devpassword@postgres:5432/eveprovit?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       SDE_DB_PATH: /data/sde/eve-sde.db
-      CORS_ORIGINS: http://localhost:3000,http://localhost:5173
+      CORS_ORIGINS: http://localhost:9000,http://localhost:3000
       LOG_LEVEL: debug
       ENV: development
+      EVE_CLIENT_ID: 0828b4bcd20242aeb9b8be10f5451094
+      EVE_CLIENT_SECRET: A0PjILz3VYAewR59J5jStZs52dY7jISGVLwXv5NA
+      EVE_CALLBACK_URL: http://localhost:9000/callback
+      JWT_SECRET: dev-secret-please-change-in-production-use-openssl-rand
     volumes:
       - ../backend/data/sde:/data/sde:ro
     depends_on:
@@ -79,9 +83,11 @@ services:
       dockerfile: Dockerfile
     container_name: eve-o-provit-frontend
     ports:
-      - "3000:3000"
+      - "9000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8082
+      NEXT_PUBLIC_API_URL: http://localhost:9001
+      NEXT_PUBLIC_EVE_CLIENT_ID: 0828b4bcd20242aeb9b8be10f5451094
+      NEXT_PUBLIC_EVE_CALLBACK_URL: http://localhost:9000/callback
       NODE_ENV: development
     depends_on:
       api:

@@ -154,14 +154,17 @@ func TestSkillModifiers_JSONTags(t *testing.T) {
 	if *skills.RacialHaulerLevel != 5 {
 		t.Errorf("RacialHaulerLevel = %v, want 5", *skills.RacialHaulerLevel)
 	}
+
+	// Verify all fields are set correctly
+	if *skills.FreighterLevel != 3 {
+		t.Errorf("FreighterLevel = %v, want 3", *skills.FreighterLevel)
+	}
+	if *skills.MiningBargeLevel != 4 {
+		t.Errorf("MiningBargeLevel = %v, want 4", *skills.MiningBargeLevel)
+	}
 }
 
 // Helper function to create int pointers
 func ptrInt(v int) *int {
-	return &v
-}
-
-// Helper function to create float64 pointers
-func ptrFloat64(v float64) *float64 {
 	return &v
 }

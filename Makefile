@@ -1,7 +1,7 @@
 # Makefile – Zentrale Orchestrierung für Projekt-Automationen
 # Referenz: copilot-instructions.md Abschnitt 3.1
 
-.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json pr-check release ci-local clean ensure-trivy push-ci pr-quality-gates-ci docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-restart docker-shell-api docker-shell-db docker-shell-redis
+.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json pr-check release ci-local clean ensure-trivy push-ci pr-quality-gates-ci docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-restart docker-rebuild docker-shell-api docker-shell-db docker-shell-redis
 
 # Standardwerte
 TRIVY_FAIL_ON ?= HIGH,CRITICAL
@@ -245,7 +245,8 @@ docker-up: ## Startet alle Services (PostgreSQL, Redis, Backend)
 	@echo "[make docker-up] ✅ Services gestartet"
 	@echo ""
 	@echo "Services verfügbar unter:"
-	@echo "  - Backend API:  http://localhost:8082"
+	@echo "  - Frontend:     http://localhost:9000"
+	@echo "  - Backend API:  http://localhost:9001"
 	@echo "  - PostgreSQL:   localhost:5432 (User: eveprovit, DB: eveprovit)"
 	@echo "  - Redis:        localhost:6379"
 	@echo ""
@@ -277,7 +278,9 @@ docker-clean: ## Entfernt alle Container, Volumes und Images
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) down -v --rmi all
 	@echo "[make docker-clean] ✅ Cleanup abgeschlossen"
 
-docker-restart: docker-down docker-up ## Neustart aller Services
+docker-restart: docker-down docker-up ## Neustart aller Services (ohne Rebuild)
+
+docker-rebuild: docker-down docker-build docker-up ## Kompletter Rebuild: Down → Build → Up
 
 docker-shell-api: ## Shell im Backend Container
 	@docker exec -it eve-o-provit-api /bin/sh
