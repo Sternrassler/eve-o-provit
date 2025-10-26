@@ -11,6 +11,7 @@ import { CharacterSwitcher } from "@/components/character-switcher";
 
 const navItems = [
   { href: "/", label: "Home" },
+  { href: "/character", label: "Character" },
   { href: "/navigation", label: "Navigation" },
   { href: "/cargo", label: "Cargo" },
   { href: "/market", label: "Market" },

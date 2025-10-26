@@ -10,6 +10,8 @@ export function CharacterSwitcher() {
   const { character, allCharacters, switchCharacter, logoutCharacter, login } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
+  console.log("[CharacterSwitcher] Render - Current character:", character?.character_name, "ID:", character?.character_id);
+
   if (!character || allCharacters.length === 0) {
     return null;
   }
