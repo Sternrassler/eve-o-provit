@@ -419,3 +419,43 @@ export const MultiCharacterTokenStorage = {
     localStorage.removeItem(STORAGE_KEY);
   },
 };
+
+/**
+ * Revoke token at EVE SSO
+ * @param token - Access or refresh token to revoke
+ * @param clientId - EVE SSO Client ID
+ * @returns Promise that resolves when revocation is complete
+ */
+export async function revokeToken(
+  token: string,
+  clientId: string
+): Promise<void> {
+  const EVE_SSO_REVOKE_URL = "https://login.eveonline.com/v2/oauth/revoke";
+
+  try {
+    const response = await fetch(EVE_SSO_REVOKE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${btoa(`${clientId}:`)}`,
+      },
+      body: new URLSearchParams({
+        token: token,
+        token_type_hint: "access_token",
+      }),
+    });
+
+    // EVE SSO returns 200 on success, even if token was already invalid
+    if (!response.ok) {
+      console.warn(
+        `[revokeToken] EVE SSO revocation failed: ${response.status} ${response.statusText}`
+      );
+      // Don't throw - we still want to logout locally
+    } else {
+      console.log("[revokeToken] Token successfully revoked at EVE SSO");
+    }
+  } catch (error) {
+    console.error("[revokeToken] Failed to revoke token:", error);
+    // Don't throw - we still want to logout locally even if revocation fails
+  }
+}

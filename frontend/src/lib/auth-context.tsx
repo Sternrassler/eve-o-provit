@@ -6,7 +6,8 @@ import {
   TokenStorage,
   MultiCharacterTokenStorage,
   verifyToken,
-  refreshAccessToken 
+  refreshAccessToken,
+  revokeToken
 } from "./eve-sso";
 
 interface CharacterInfo {
@@ -24,8 +25,8 @@ interface AuthContextType {
   isLoading: boolean;
   accessToken: string | null;
   login: () => Promise<void>;
-  logout: () => void;
-  logoutCharacter: (characterID: number) => void;
+  logout: () => Promise<void>;
+  logoutCharacter: (characterID: number) => Promise<void>;
   switchCharacter: (characterID: number) => Promise<void>;
   getAuthHeader: () => string | null;
   refreshSession: () => Promise<void>;
@@ -230,16 +231,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    console.log("[AuthContext] Logout initiated");
+    
+    // Revoke all tokens at EVE SSO before clearing locally
+    const allChars = MultiCharacterTokenStorage.getAllCharacters();
+    
+    if (allChars.length > 0) {
+      console.log(`[AuthContext] Revoking tokens for ${allChars.length} character(s)...`);
+      
+      // Revoke all access tokens (parallel)
+      const revocationPromises = allChars.map(async (char) => {
+        try {
+          // Revoke access token
+          await revokeToken(char.accessToken, EVE_CLIENT_ID);
+          
+          // Revoke refresh token if exists
+          if (char.refreshToken) {
+            await revokeToken(char.refreshToken, EVE_CLIENT_ID);
+          }
+          
+          console.log(`[AuthContext] Revoked tokens for ${char.characterName}`);
+        } catch (error) {
+          console.error(`[AuthContext] Failed to revoke tokens for ${char.characterName}:`, error);
+          // Continue with logout even if revocation fails
+        }
+      });
+      
+      // Wait for all revocations (max 5s timeout)
+      await Promise.race([
+        Promise.all(revocationPromises),
+        new Promise((resolve) => setTimeout(resolve, 5000)),
+      ]);
+    }
+    
+    // Clear local storage
     MultiCharacterTokenStorage.clear();
     TokenStorage.clear(); // Legacy cleanup
+    
+    // Clear state
     setIsAuthenticated(false);
     setCharacter(null);
     setAllCharacters([]);
     setAccessToken(null);
+    
+    console.log("[AuthContext] Logout complete");
   };
 
-  const logoutCharacter = (characterID: number) => {
+  const logoutCharacter = async (characterID: number) => {
+    console.log("[AuthContext] Logging out character:", characterID);
+    
+    // Get character data before removal for revocation
+    const allChars = MultiCharacterTokenStorage.getAllCharacters();
+    const charToRevoke = allChars.find(c => c.characterID === characterID);
+    
+    if (charToRevoke) {
+      try {
+        // Revoke tokens at EVE SSO
+        console.log(`[AuthContext] Revoking tokens for ${charToRevoke.characterName}...`);
+        await revokeToken(charToRevoke.accessToken, EVE_CLIENT_ID);
+        
+        if (charToRevoke.refreshToken) {
+          await revokeToken(charToRevoke.refreshToken, EVE_CLIENT_ID);
+        }
+        
+        console.log(`[AuthContext] Tokens revoked for ${charToRevoke.characterName}`);
+      } catch (error) {
+        console.error(`[AuthContext] Failed to revoke tokens for ${charToRevoke.characterName}:`, error);
+        // Continue with local logout even if revocation fails
+      }
+    }
+    
+    // Remove character from local storage
     MultiCharacterTokenStorage.removeCharacter(characterID);
     
     // Reload all characters

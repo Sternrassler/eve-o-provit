@@ -30,10 +30,12 @@ export function CharacterSwitcher() {
     setIsOpen(false);
   };
 
-  const handleRemoveCharacter = (characterID: number, event: React.MouseEvent) => {
+  const handleRemoveCharacter = async (characterID: number, event: React.MouseEvent) => {
     event.stopPropagation();
-    if (confirm(`Remove ${allCharacters.find(c => c.character_id === characterID)?.character_name}?`)) {
-      logoutCharacter(characterID);
+    const characterName = allCharacters.find(c => c.character_id === characterID)?.character_name;
+    
+    if (confirm(`Remove ${characterName}? This will revoke tokens at EVE SSO.`)) {
+      await logoutCharacter(characterID);
     }
   };
 
