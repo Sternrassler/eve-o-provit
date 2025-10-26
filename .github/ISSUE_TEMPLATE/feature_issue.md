@@ -9,6 +9,70 @@ labels: feat
 ## Kontext
 <!-- Kurzbeschreibung des Problems oder der Gelegenheit -->
 
+## Architektur-Kontext
+
+**Betroffene Schicht(en):** (mehrfach auswählbar)
+- [ ] Frontend (Next.js)
+- [ ] Backend (Go API)
+- [ ] Datenbank (PostgreSQL)
+- [ ] Infrastructure (Docker)
+- [ ] Sonstiges: _______________
+
+**Architektur-Entscheidungen erforderlich:**
+- [ ] Nein - Standard-Pattern anwendbar
+- [ ] Ja - Neue ADR muss erstellt werden
+
+**Falls "Ja", beschreibe Architektur-Frage:**
+<!-- Beispiel: "Wo soll OAuth implementiert werden? Frontend (PKCE) vs Backend (Client Secret)?" -->
+
+**Relevante bestehende ADRs:**
+<!-- z. B. ADR-001 (Tech Stack), ADR-003 (Frontend OAuth) -->
+- (keine) oder ADR-XXX: [Titel]
+
+## Technische Alternativen (falls mehrere Ansätze möglich)
+
+**Gibt es mehrere Implementierungsansätze?**
+- [ ] Nein - Klarer Standard-Ansatz
+- [ ] Ja - Alternativen dokumentiert unten
+
+<!-- Falls "Ja", beschreibe Alternativen: -->
+
+<details>
+<summary>Option A: [Titel]</summary>
+
+**Beschreibung:**  
+<!-- Kurze Beschreibung des Ansatzes -->
+
+**Vorteile:**
+- 
+
+**Nachteile:**
+- 
+
+**Code-Aufwand:** ~ Zeilen / ~ Stunden
+
+</details>
+
+<details>
+<summary>Option B: [Titel]</summary>
+
+**Beschreibung:**  
+<!-- Kurze Beschreibung des Ansatzes -->
+
+**Vorteile:**
+- 
+
+**Nachteile:**
+- 
+
+**Code-Aufwand:** ~ Zeilen / ~ Stunden
+
+</details>
+
+**Empfohlene Option:** [ ] A / [ ] B - Begründung: ...
+
+---
+
 ## Ziel / Nutzen
 <!-- Welchen Mehrwert schafft das Feature? -->
 
@@ -23,7 +87,9 @@ labels: feat
 
 ## Relevante ADR Referenzen
 
-- (z. B. ADR-005, ADR-008)
+<!-- z. B. ADR-005, ADR-008 -->
+<!-- Bei Architektur-Entscheidungen: ADR muss ZUERST erstellt werden -->
+- (keine) oder ADR-XXX: [Titel]
 
 ## Daten / Schnittstellen / Domäne (Kurzdesign)
 

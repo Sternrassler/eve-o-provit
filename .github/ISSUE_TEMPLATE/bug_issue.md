@@ -15,6 +15,13 @@ labels: fix
 - Umgebung (lokal / CI / Prod):
 - Betriebssystem / Runtime Version:
 
+**Betroffene Komponente(n):**
+- [ ] Frontend (Next.js)
+- [ ] Backend (Go API)
+- [ ] Datenbank (PostgreSQL)
+- [ ] Infrastructure (Docker)
+- [ ] Sonstiges: _______________
+
 ## Reproduktionsschritte
 
 1.
@@ -44,6 +51,14 @@ labels: fix
 
 ## Vermutete Ursache (optional)
 <!-- Erste Hypothese falls vorhanden -->
+
+**Architektur-Implikationen:**
+- [ ] Kein Architektur-Impact (lokaler Bug)
+- [ ] Architektur-Flaw (ADR Review nötig)
+
+**Falls Architektur-Flaw, beschreibe:**
+<!-- Beispiel: "Backend OAuth Design führt zu Session-Problemen" -->
+<!-- Action: ADR supersession oder neue ADR erstellen -->
 
 ## Bereits getestete Ansätze
 
