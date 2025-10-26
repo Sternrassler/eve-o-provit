@@ -24,6 +24,21 @@ interface EVECharacterInfo {
   IntellectualProperty: string;
 }
 
+interface StoredCharacter {
+  characterID: number;
+  characterName: string;
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: number;
+  ownerHash: string;
+  scopes: string;
+}
+
+interface MultiCharacterStorage {
+  characters: StoredCharacter[];
+  activeCharacterID: number | null;
+}
+
 /**
  * Generate random state for CSRF protection
  */
@@ -192,7 +207,7 @@ export function validateState(receivedState: string): boolean {
 }
 
 /**
- * Token storage utilities
+ * Token storage utilities (Legacy - for backward compatibility)
  */
 export const TokenStorage = {
   save(token: EVETokenResponse): void {
@@ -244,5 +259,163 @@ export const TokenStorage = {
   getCharacterInfo(): EVECharacterInfo | null {
     const data = localStorage.getItem("eve_character_info");
     return data ? JSON.parse(data) : null;
+  },
+};
+
+/**
+ * Multi-Character Token Storage
+ */
+const STORAGE_KEY = "eve_multi_characters";
+
+export const MultiCharacterTokenStorage = {
+  /**
+   * Get all stored characters
+   */
+  getStorage(): MultiCharacterStorage {
+    const data = localStorage.getItem(STORAGE_KEY);
+    if (!data) {
+      return { characters: [], activeCharacterID: null };
+    }
+    return JSON.parse(data);
+  },
+
+  /**
+   * Save storage to localStorage
+   */
+  saveStorage(storage: MultiCharacterStorage): void {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storage));
+  },
+
+  /**
+   * Add or update character
+   */
+  saveCharacter(charInfo: EVECharacterInfo, token: EVETokenResponse): void {
+    const storage = this.getStorage();
+    const expiresAt = Date.now() + token.expires_in * 1000;
+
+    const character: StoredCharacter = {
+      characterID: charInfo.CharacterID,
+      characterName: charInfo.CharacterName,
+      accessToken: token.access_token,
+      refreshToken: token.refresh_token || "",
+      expiresAt,
+      ownerHash: charInfo.CharacterOwnerHash,
+      scopes: charInfo.Scopes,
+    };
+
+    // Remove existing character with same ID
+    storage.characters = storage.characters.filter(
+      (c) => c.characterID !== charInfo.CharacterID
+    );
+
+    // Add new/updated character
+    storage.characters.push(character);
+
+    // Set as active if first character or no active character
+    if (storage.activeCharacterID === null) {
+      storage.activeCharacterID = charInfo.CharacterID;
+    }
+
+    this.saveStorage(storage);
+  },
+
+  /**
+   * Get active character
+   */
+  getActiveCharacter(): StoredCharacter | null {
+    const storage = this.getStorage();
+    if (storage.activeCharacterID === null) return null;
+
+    return (
+      storage.characters.find(
+        (c) => c.characterID === storage.activeCharacterID
+      ) || null
+    );
+  },
+
+  /**
+   * Set active character by ID
+   */
+  setActiveCharacter(characterID: number): boolean {
+    const storage = this.getStorage();
+    const character = storage.characters.find((c) => c.characterID === characterID);
+
+    if (!character) return false;
+
+    storage.activeCharacterID = characterID;
+    this.saveStorage(storage);
+    return true;
+  },
+
+  /**
+   * Get all characters
+   */
+  getAllCharacters(): StoredCharacter[] {
+    return this.getStorage().characters;
+  },
+
+  /**
+   * Remove character by ID
+   */
+  removeCharacter(characterID: number): void {
+    const storage = this.getStorage();
+    storage.characters = storage.characters.filter(
+      (c) => c.characterID !== characterID
+    );
+
+    // If removed character was active, set first remaining as active
+    if (storage.activeCharacterID === characterID) {
+      storage.activeCharacterID =
+        storage.characters.length > 0 ? storage.characters[0].characterID : null;
+    }
+
+    this.saveStorage(storage);
+  },
+
+  /**
+   * Update character token (for refresh)
+   */
+  updateCharacterToken(characterID: number, token: EVETokenResponse): boolean {
+    const storage = this.getStorage();
+    const character = storage.characters.find((c) => c.characterID === characterID);
+
+    if (!character) return false;
+
+    character.accessToken = token.access_token;
+    if (token.refresh_token) {
+      character.refreshToken = token.refresh_token;
+    }
+    character.expiresAt = Date.now() + token.expires_in * 1000;
+
+    this.saveStorage(storage);
+    return true;
+  },
+
+  /**
+   * Check if active character token is expired
+   */
+  isExpired(): boolean {
+    const character = this.getActiveCharacter();
+    if (!character) return true;
+    return Date.now() >= character.expiresAt;
+  },
+
+  /**
+   * Check if active character token should be refreshed
+   */
+  shouldRefresh(): boolean {
+    const character = this.getActiveCharacter();
+    if (!character) return false;
+
+    const timeUntilExpiry = character.expiresAt - Date.now();
+    // Refresh 3 minutes before expiry
+    return timeUntilExpiry > 0 && timeUntilExpiry < 3 * 60 * 1000;
+  },
+
+  /**
+   * Clear all characters
+   */
+  clear(): void {
+    localStorage.removeItem(STORAGE_KEY);
   },
 };
