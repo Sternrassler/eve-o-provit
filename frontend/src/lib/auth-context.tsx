@@ -3,7 +3,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { 
   buildAuthorizationUrl, 
-  TokenStorage, 
+  TokenStorage,
+  MultiCharacterTokenStorage,
   verifyToken,
   refreshAccessToken 
 } from "./eve-sso";
@@ -19,10 +20,13 @@ interface CharacterInfo {
 interface AuthContextType {
   isAuthenticated: boolean;
   character: CharacterInfo | null;
+  allCharacters: CharacterInfo[];
   isLoading: boolean;
   accessToken: string | null;
   login: () => Promise<void>;
   logout: () => void;
+  logoutCharacter: (characterID: number) => void;
+  switchCharacter: (characterID: number) => Promise<void>;
   getAuthHeader: () => string | null;
   refreshSession: () => Promise<void>;
 }
@@ -36,6 +40,7 @@ const EVE_SCOPES: string[] = []; // Add required scopes here if needed
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [character, setCharacter] = useState<CharacterInfo | null>(null);
+  const [allCharacters, setAllCharacters] = useState<CharacterInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
@@ -45,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Listen for storage changes (e.g., after login in callback)
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "eve_access_token" || e.key === "eve_character_info") {
+      if (e.key === "eve_multi_characters" || e.key === "eve_access_token" || e.key === "eve_character_info") {
         checkSession();
       }
     };
@@ -71,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const refreshInterval = setInterval(async () => {
       try {
         // Check if token needs refresh (3 minutes before expiry)
-        if (TokenStorage.shouldRefresh()) {
+        if (MultiCharacterTokenStorage.shouldRefresh()) {
           console.log("[AuthContext] Token expiring soon, refreshing...");
           await performTokenRefresh();
         }
@@ -85,20 +90,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const performTokenRefresh = async () => {
     try {
-      const refreshToken = TokenStorage.getRefreshToken();
+      const activeChar = MultiCharacterTokenStorage.getActiveCharacter();
       
-      if (!refreshToken) {
+      if (!activeChar || !activeChar.refreshToken) {
         console.warn("[AuthContext] No refresh token available");
         logout();
         return;
       }
 
-      console.log("[AuthContext] Refreshing access token...");
+      console.log("[AuthContext] Refreshing access token for", activeChar.characterName);
       
-      const newToken = await refreshAccessToken(refreshToken, EVE_CLIENT_ID);
+      const newToken = await refreshAccessToken(activeChar.refreshToken, EVE_CLIENT_ID);
       
-      // Save new token
-      TokenStorage.save(newToken);
+      // Update token in multi-character storage
+      MultiCharacterTokenStorage.updateCharacterToken(activeChar.characterID, newToken);
       setAccessToken(newToken.access_token);
       
       console.log("[AuthContext] Token refreshed successfully");
@@ -109,19 +114,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const toCharacterInfo = (stored: any): CharacterInfo => ({
+    character_id: stored.characterID,
+    character_name: stored.characterName,
+    scopes: stored.scopes ? stored.scopes.split(" ") : [],
+    owner_hash: stored.ownerHash,
+    portrait_url: `https://images.evetech.net/characters/${stored.characterID}/portrait?size=64`,
+  });
+
   const checkSession = async () => {
     try {
-      const token = TokenStorage.getAccessToken();
+      const activeChar = MultiCharacterTokenStorage.getActiveCharacter();
       
-      console.log("[AuthContext] Checking session, token:", token ? "exists" : "none");
+      console.log("[AuthContext] Checking session, character:", activeChar ? activeChar.characterName : "none");
       
-      if (!token || TokenStorage.isExpired()) {
+      if (!activeChar || MultiCharacterTokenStorage.isExpired()) {
         // No valid token
         console.log("[AuthContext] No valid token, clearing session");
         setIsAuthenticated(false);
         setCharacter(null);
+        setAllCharacters([]);
         setAccessToken(null);
-        TokenStorage.clear();
         setIsLoading(false);
         return;
       }
@@ -129,12 +142,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("[AuthContext] Verifying token with EVE ESI...");
       
       // Verify token with EVE ESI
-      const charInfo = await verifyToken(token);
+      const charInfo = await verifyToken(activeChar.accessToken);
       
       console.log("[AuthContext] Token verified, character:", charInfo.CharacterName);
       
-      // Convert to our format
-      const character: CharacterInfo = {
+      // Convert active character to CharacterInfo
+      const activeCharacterInfo: CharacterInfo = {
         character_id: charInfo.CharacterID,
         character_name: charInfo.CharacterName,
         scopes: charInfo.Scopes ? charInfo.Scopes.split(" ") : [],
@@ -142,20 +155,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         portrait_url: `https://images.evetech.net/characters/${charInfo.CharacterID}/portrait?size=64`,
       };
 
-      setCharacter(character);
-      setAccessToken(token);
+      setCharacter(activeCharacterInfo);
+      setAccessToken(activeChar.accessToken);
       setIsAuthenticated(true);
       
-      console.log("[AuthContext] Session set, authenticated:", true);
+      // Load all characters
+      const allStored = MultiCharacterTokenStorage.getAllCharacters();
+      setAllCharacters(allStored.map(toCharacterInfo));
       
-      // Save character info
-      TokenStorage.saveCharacterInfo(charInfo);
+      console.log("[AuthContext] Session set, authenticated:", true, "Total characters:", allStored.length);
     } catch (error) {
       console.error("[AuthContext] Session verification failed:", error);
       setIsAuthenticated(false);
       setCharacter(null);
+      setAllCharacters([]);
       setAccessToken(null);
-      TokenStorage.clear();
     } finally {
       setIsLoading(false);
     }
@@ -175,10 +189,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    TokenStorage.clear();
+    MultiCharacterTokenStorage.clear();
+    TokenStorage.clear(); // Legacy cleanup
     setIsAuthenticated(false);
     setCharacter(null);
+    setAllCharacters([]);
     setAccessToken(null);
+  };
+
+  const logoutCharacter = (characterID: number) => {
+    MultiCharacterTokenStorage.removeCharacter(characterID);
+    
+    // Reload all characters
+    const remaining = MultiCharacterTokenStorage.getAllCharacters();
+    setAllCharacters(remaining.map(toCharacterInfo));
+    
+    // If removed character was active, check session to load new active
+    if (character?.character_id === characterID) {
+      checkSession();
+    }
+  };
+
+  const switchCharacter = async (characterID: number) => {
+    const success = MultiCharacterTokenStorage.setActiveCharacter(characterID);
+    if (success) {
+      await checkSession();
+    }
   };
 
   const getAuthHeader = (): string | null => {
@@ -195,10 +231,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         isAuthenticated,
         character,
+        allCharacters,
         isLoading,
         accessToken,
         login,
         logout,
+        logoutCharacter,
+        switchCharacter,
         getAuthHeader,
         refreshSession,
       }}
