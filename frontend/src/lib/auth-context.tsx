@@ -131,9 +131,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("[AuthContext] Active character from storage:", activeChar ? `${activeChar.characterName} (ID: ${activeChar.characterID})` : "none");
       console.log("[AuthContext] All characters in storage:", allChars.map(c => `${c.characterName} (ID: ${c.characterID})`));
       
-      if (!activeChar || MultiCharacterTokenStorage.isExpired()) {
-        // No valid token
-        console.log("[AuthContext] No valid token, clearing session");
+      if (!activeChar) {
+        // No active character selected
+        console.log("[AuthContext] No active character selected");
+        setIsAuthenticated(false);
+        setCharacter(null);
+        setAllCharacters([]);
+        setAccessToken(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if token is expired - if yes, try to refresh
+      if (MultiCharacterTokenStorage.isExpired()) {
+        console.log("[AuthContext] Token expired, attempting refresh...");
+        try {
+          await performTokenRefresh();
+          // After refresh, re-check session
+          const refreshedChar = MultiCharacterTokenStorage.getActiveCharacter();
+          if (!refreshedChar) {
+            console.log("[AuthContext] Refresh failed, clearing session");
+            setIsAuthenticated(false);
+            setCharacter(null);
+            setAllCharacters([]);
+            setAccessToken(null);
+            setIsLoading(false);
+            return;
+          }
+          // Continue with refreshed token
+        } catch (error) {
+          console.error("[AuthContext] Token refresh failed:", error);
+          setIsAuthenticated(false);
+          setCharacter(null);
+          setAllCharacters([]);
+          setAccessToken(null);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      const currentChar = MultiCharacterTokenStorage.getActiveCharacter();
+      if (!currentChar) {
         setIsAuthenticated(false);
         setCharacter(null);
         setAllCharacters([]);
@@ -145,22 +183,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("[AuthContext] Verifying token with EVE ESI...");
       
       // Verify token with EVE ESI to check if it's still valid
-      const charInfo = await verifyToken(activeChar.accessToken);
+      const charInfo = await verifyToken(currentChar.accessToken);
       
       console.log("[AuthContext] Token verified, character:", charInfo.CharacterName);
       
       // Use character info from storage (not from token verification)
       // This ensures we display the correct character that was selected
       const activeCharacterInfo: CharacterInfo = {
-        character_id: activeChar.characterID,
-        character_name: activeChar.characterName,
-        scopes: activeChar.scopes ? activeChar.scopes.split(" ") : [],
-        owner_hash: activeChar.ownerHash,
-        portrait_url: `https://images.evetech.net/characters/${activeChar.characterID}/portrait?size=64`,
+        character_id: currentChar.characterID,
+        character_name: currentChar.characterName,
+        scopes: currentChar.scopes ? currentChar.scopes.split(" ") : [],
+        owner_hash: currentChar.ownerHash,
+        portrait_url: `https://images.evetech.net/characters/${currentChar.characterID}/portrait?size=64`,
       };
 
       setCharacter(activeCharacterInfo);
-      setAccessToken(activeChar.accessToken);
+      setAccessToken(currentChar.accessToken);
       setIsAuthenticated(true);
       
       // Load all characters
