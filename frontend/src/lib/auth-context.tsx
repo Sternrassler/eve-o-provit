@@ -144,18 +144,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log("[AuthContext] Verifying token with EVE ESI...");
       
-      // Verify token with EVE ESI
+      // Verify token with EVE ESI to check if it's still valid
       const charInfo = await verifyToken(activeChar.accessToken);
       
       console.log("[AuthContext] Token verified, character:", charInfo.CharacterName);
       
-      // Convert active character to CharacterInfo
+      // Use character info from storage (not from token verification)
+      // This ensures we display the correct character that was selected
       const activeCharacterInfo: CharacterInfo = {
-        character_id: charInfo.CharacterID,
-        character_name: charInfo.CharacterName,
-        scopes: charInfo.Scopes ? charInfo.Scopes.split(" ") : [],
-        owner_hash: charInfo.CharacterOwnerHash,
-        portrait_url: `https://images.evetech.net/characters/${charInfo.CharacterID}/portrait?size=64`,
+        character_id: activeChar.characterID,
+        character_name: activeChar.characterName,
+        scopes: activeChar.scopes ? activeChar.scopes.split(" ") : [],
+        owner_hash: activeChar.ownerHash,
+        portrait_url: `https://images.evetech.net/characters/${activeChar.characterID}/portrait?size=64`,
       };
 
       setCharacter(activeCharacterInfo);
