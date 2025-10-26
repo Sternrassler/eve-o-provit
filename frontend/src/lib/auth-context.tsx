@@ -125,8 +125,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkSession = async () => {
     try {
       const activeChar = MultiCharacterTokenStorage.getActiveCharacter();
+      const allChars = MultiCharacterTokenStorage.getAllCharacters();
       
-      console.log("[AuthContext] Checking session, character:", activeChar ? activeChar.characterName : "none");
+      console.log("[AuthContext] Checking session");
+      console.log("[AuthContext] Active character from storage:", activeChar ? `${activeChar.characterName} (ID: ${activeChar.characterID})` : "none");
+      console.log("[AuthContext] All characters in storage:", allChars.map(c => `${c.characterName} (ID: ${c.characterID})`));
       
       if (!activeChar || MultiCharacterTokenStorage.isExpired()) {
         // No valid token
