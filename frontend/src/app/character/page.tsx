@@ -24,7 +24,7 @@ export default function CharacterPage() {
     if (isAuthenticated && character) {
       fetchCharacterDetails();
     }
-  }, [isAuthenticated, character?.character_id]); // Re-fetch when character changes
+  }, [isAuthenticated, character]);
 
   const fetchCharacterDetails = async () => {
     setLoading(true);
