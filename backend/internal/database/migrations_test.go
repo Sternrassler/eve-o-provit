@@ -136,7 +136,7 @@ func TestMigrationIdempotency(t *testing.T) {
 
 	// Run UP twice
 	runMigration(t, connStr, "up")
-	
+
 	// Second UP should be a no-op (already at latest version)
 	// This tests idempotency - migrate should handle this gracefully
 	cmd := buildMigrateCommand(t, connStr, "up")
