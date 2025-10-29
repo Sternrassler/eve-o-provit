@@ -36,45 +36,77 @@ tech stack festlegen# EVE Online Profit Calculator
 - **Tables:** TanStack Table
 
 ### Backend
-- **Language:** Go 1.21+
+- **Language:** Go 1.24+
 - **Framework:** Fiber (Fast HTTP Router)
-- **Database ORM:** sqlc (Type-safe SQL)
-- **API:** tRPC-Go / OpenAPI
-- **Caching:** Redis (Market Data Cache)
+- **Database:** 
+  - PostgreSQL 16+ (Dynamic Market Data)
+  - SQLite (Read-Only SDE from eve-sde)
+- **ORM/Query:** pgx/v5, database/sql
+- **API:** REST (tRPC/OpenAPI geplant)
+- **Caching:** Redis (ESI Cache & Rate Limiting)
+- **ESI Client:** [eve-esi-client](https://github.com/Sternrassler/eve-esi-client) v0.2.0
+- **Migrations:** golang-migrate
 - **Auth:** JWT (EVE SSO Integration)
 
 ### Datenbank
-- **Primary:** PostgreSQL 16+
-- **Optional:** TimescaleDB (Time-Series Market Data)
+- **Dynamic Data:** PostgreSQL 16+ (Market Orders, Price History, User Data)
+- **Static Data:** SQLite (Read-Only SDE from [eve-sde](https://github.com/Sternrassler/eve-sde))
+- **Optional:** TimescaleDB Extension (Time-Series Market Data)
 
 ### Infrastructure
 - **Containerization:** Docker + Docker Compose
-- **Reverse Proxy:** Caddy (Auto-HTTPS)
-- **Monitoring:** Prometheus + Grafana
+- **Reverse Proxy:** Caddy (Auto-HTTPS) - geplant
+- **Monitoring:** Prometheus + Grafana - geplant
 
 ### Datenquellen
-- **EVE SDE:** SQLite DB (via eve-sde Projekt)
-- **EVE ESI API:** Live Market Orders/History
-- **Cache Layer:** Redis (ESI Rate Limiting)
+- **EVE SDE:** SQLite DB (via [eve-sde](https://github.com/Sternrassler/eve-sde) Projekt, Read-Only)
+- **EVE ESI API:** Live Market Orders/History via [eve-esi-client](https://github.com/Sternrassler/eve-esi-client)
+- **Cache Layer:** Redis (ESI Response Cache + Rate Limit Tracking)
 
 > Siehe [ADR-001](docs/adr/ADR-001-tech-stack.md) für detaillierte Entscheidungsbegründung
 
 ## Projekt-Status
 
-🚧 **Early Development** - Grundstruktur wird aufgebaut
+🚀 **Backend Foundation Complete** 
+- ✅ Dual-DB Architecture (PostgreSQL + SQLite SDE)
+- ✅ ESI Client Integration (eve-esi-client v0.2.0)
+- ✅ Basic API Endpoints (Health, Version, Types, Market)
+- ✅ Docker Compose Setup
+- ✅ Database Migrations
+- 🚧 Frontend (Next.js) - In Planung
+- 🚧 Advanced Trading Features - In Planung
 
 ## Verwandte Projekte
 
 - [eve-sde](https://github.com/Sternrassler/eve-sde) - EVE Static Data Export Tools
+- [eve-esi-client](https://github.com/Sternrassler/eve-esi-client) - Go Client Library for EVE ESI API
+
+## API Endpoints
+
+### Public Endpoints
+
+- `GET /health` - Health check (with database status)
+- `GET /version` - API version information
+- `GET /api/v1/types/:id` - SDE type lookup (Items, Ships, etc.)
+- `GET /api/v1/market/:region/:type` - Market orders for region and type
+  - Query param: `?refresh=true` to fetch fresh data from ESI
+
+### Protected Endpoints (EVE SSO required)
+
+- `GET /api/v1/character` - Character information
+- `GET /api/v1/trading/profit-margins` - Profit margin calculations (TODO)
+- `GET /api/v1/manufacturing/blueprints` - Blueprint data (TODO)
+
+Weitere Details zur API-Nutzung und Authentifizierung siehe [docs/EVE-SSO-INTEGRATION.md](docs/EVE-SSO-INTEGRATION.md)
 
 ## Getting Started
 
 ### Prerequisites
 
-- **Go 1.21+**
+- **Go 1.24+**
 - **Docker & Docker Compose**
 - **Node.js 18+** (für Frontend, später)
-- **eve-sde** SQLite Database
+- **eve-sde** SQLite Database (optional für lokale Entwicklung)
 
 ### Quick Start
 
@@ -89,39 +121,112 @@ tech stack festlegen# EVE Online Profit Calculator
    git config core.hooksPath .githooks
    ```
 
-3. **SDE Database verlinken**
-   ```bash
-   # Aus eve-sde Projekt
-   ln -s /path/to/eve-sde/data/sqlite/sde.sqlite data/sde/sde.sqlite
-   ```
-
-4. **Backend Dependencies installieren**
+3. **Environment-Datei erstellen**
    ```bash
    cd backend
-   go mod download
-   cd ..
+   cp .env.example .env
+   # Bearbeite .env und passe Werte an (vor allem SDE_PATH)
    ```
 
-5. **Dev-Umgebung starten**
+4. **Docker Services starten**
    ```bash
-   cd deployments
-   docker-compose up -d
+   # Von Repository-Root
+   make docker-up
+   ```
+   
+   Dies startet:
+   - PostgreSQL (Port 5432)
+   - Redis (Port 6379)
+   - Backend API (Port 9001)
+   - Frontend (Port 9000)
+
+5. **Datenbank Migrations ausführen**
+   ```bash
+   make migrate
    ```
 
-6. **API testen**
+6. **SDE Database verlinken (optional für lokale Entwicklung)**
    ```bash
-   curl http://localhost:8080/health
+   # Falls du das Backend lokal (ohne Docker) entwickeln möchtest
+   ln -s /path/to/eve-sde/data/sqlite/sde.sqlite backend/data/sde/sde.sqlite
+   ```
+
+7. **API testen**
+   ```bash
+   # Health Check
+   curl http://localhost:9001/health
+   
+   # Version Info
+   curl http://localhost:9001/version
+   
+   # SDE Type Lookup (Tritanium = 34)
+   curl http://localhost:9001/api/v1/types/34
+   
+   # Market Orders (Jita = 10000002, Tritanium = 34)
+   curl "http://localhost:9001/api/v1/market/10000002/34?refresh=true"
    ```
 
 ### Development
 
-**Backend entwickeln:**
+**Backend lokal entwickeln (ohne Docker):**
 ```bash
 cd backend
+
+# Stelle sicher, dass PostgreSQL und Redis laufen
+make docker-up  # Oder starte sie separat
+
+# Environment-Variablen setzen (siehe .env.example)
+export DATABASE_URL="postgresql://eveprovit:dev@localhost:5432/eveprovit?sslmode=disable"
+export REDIS_URL="redis://localhost:6379/0"
+export SDE_PATH="../eve-sde/data/sqlite/sde.sqlite"
+export ESI_USER_AGENT="eve-o-provit/0.1.0 (your-email@example.com)"
+
+# API starten
 go run ./cmd/api
 ```
 
-**Frontend entwickeln (TODO):**
+**Tests ausführen:**
+```bash
+# Alle Tests
+make test
+
+# Nur Backend Unit-Tests
+make test-be-unit
+
+# Linting
+make lint
+```
+
+**Docker Commands:**
+```bash
+# Alle Services starten
+make docker-up
+
+# Logs anzeigen
+make docker-logs
+
+# Services stoppen
+make docker-down
+
+# In Container-Shell wechseln
+make docker-shell-api    # Backend API
+make docker-shell-db     # PostgreSQL
+make docker-shell-redis  # Redis CLI
+```
+
+**Datenbank Migrations:**
+```bash
+# Migrations ausführen
+make migrate
+
+# Neue Migration erstellen
+make migrate-create NAME=add_new_table
+
+# Letzte Migration zurückrollen
+make migrate-down
+```
+
+### Frontend entwickeln (TODO):**
 ```bash
 cd frontend
 npm run dev
