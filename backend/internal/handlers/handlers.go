@@ -100,7 +100,8 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 		// Fetch fresh data from ESI
 		if err := h.esiClient.FetchMarketOrders(c.Context(), regionID); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "failed to fetch market data",
+				"error":   "failed to fetch market data",
+				"details": err.Error(),
 			})
 		}
 	}

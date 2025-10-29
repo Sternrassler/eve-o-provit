@@ -105,8 +105,25 @@ Weitere Details zur API-Nutzung und Authentifizierung siehe [docs/EVE-SSO-INTEGR
 
 - **Go 1.24+**
 - **Docker & Docker Compose**
+- **golang-migrate** (für Datenbank-Migrationen)
 - **Node.js 18+** (für Frontend, später)
 - **eve-sde** SQLite Database (optional für lokale Entwicklung)
+
+**golang-migrate Installation:**
+```bash
+# macOS (Homebrew)
+brew install golang-migrate
+
+# Linux
+curl -L https://github.com/golang-migrate/migrate/releases/download/v4.17.0/migrate.linux-amd64.tar.gz | tar xvz
+sudo mv migrate /usr/local/bin/
+
+# Windows (Scoop)
+scoop install migrate
+
+# Oder via Go
+go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+```
 
 ### Quick Start
 
