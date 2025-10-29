@@ -226,7 +226,7 @@ make migrate-create NAME=add_new_table
 make migrate-down
 ```
 
-### Frontend entwickeln (TODO):**
+**Frontend entwickeln (TODO):**
 ```bash
 cd frontend
 npm run dev
