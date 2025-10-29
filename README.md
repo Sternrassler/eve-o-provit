@@ -210,9 +210,14 @@ make test
 # Nur Backend Unit-Tests
 make test-be-unit
 
+# Migration Integration Tests (mit Testcontainers)
+make test-migrations
+
 # Linting
 make lint
 ```
+
+> **Migration Testing:** Siehe [docs/testing/migrations.md](docs/testing/migrations.md) für ausführliche Dokumentation zu Migration Tests mit Testcontainers.
 
 **Docker Commands:**
 ```bash

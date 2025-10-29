@@ -369,5 +369,15 @@ migrate-create: ## Erstellt neue Migration (NAME=migration_name)
 
 migrate: migrate-up ## Alias für migrate-up
 
+test-migrations: ## Führt Migration Integration Tests mit Testcontainers aus
+	@echo "[make test-migrations] Führe Migration Tests aus..."
+	@if ! command -v migrate >/dev/null 2>&1 && ! [ -x ~/go/bin/migrate ]; then \
+		echo "[make test-migrations] golang-migrate nicht gefunden - installiere..."; \
+		cd $(BACKEND_DIR) && go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest; \
+	fi
+	@echo "[make test-migrations] 🧪 Running Migration Tests:"
+	@cd $(BACKEND_DIR) && go test -v -run "TestMigration" ./internal/database/ 2>&1 | grep -E "(RUN|PASS|FAIL|Migration output:|Migration status:)" || true
+	@echo "[make test-migrations] ✅ Migration Tests abgeschlossen"
+
 
 

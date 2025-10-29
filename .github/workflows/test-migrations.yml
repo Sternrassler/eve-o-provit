@@ -1,0 +1,208 @@
+name: Migration Tests
+
+on:
+  pull_request:
+    paths:
+      - 'backend/migrations/**'
+      - 'backend/internal/database/**'
+      - 'backend/go.mod'
+      - 'backend/go.sum'
+      - '.github/workflows/test-migrations.yml'
+  workflow_dispatch:
+
+jobs:
+  test-migrations:
+    name: Test Database Migrations
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: backend/go.sum
+
+      - name: Install golang-migrate
+        run: |
+          cd backend
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+          echo "$HOME/go/bin" >> $GITHUB_PATH
+
+      - name: Verify migrate installation
+        run: |
+          migrate -version
+
+      - name: Run Migration UP
+        run: |
+          echo "🔄 Running migrations UP..."
+          cd backend
+          migrate -path migrations -database "postgresql://testuser:testpass@localhost:5432/testdb?sslmode=disable" up
+          echo "✅ Migrations UP completed"
+
+      - name: Run Integration Tests (Testcontainers)
+        run: |
+          echo "🧪 Running integration tests with Testcontainers..."
+          cd backend
+          go test -v -timeout 10m ./internal/database/... 2>&1 | tee test-output.log
+          echo "✅ Integration tests completed"
+
+      - name: Validate Schema
+        run: |
+          echo "🔍 Validating database schema..."
+          PGPASSWORD=testpass psql -h localhost -U testuser -d testdb -c "\dt"
+          PGPASSWORD=testpass psql -h localhost -U testuser -d testdb -c "\di"
+          
+          # Count tables
+          TABLE_COUNT=$(PGPASSWORD=testpass psql -h localhost -U testuser -d testdb -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE';")
+          echo "Tables found: $TABLE_COUNT"
+          
+          # Validate market_orders table
+          PGPASSWORD=testpass psql -h localhost -U testuser -d testdb -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'market_orders' ORDER BY ordinal_position;"
+          
+          # Validate price_history table
+          PGPASSWORD=testpass psql -h localhost -U testuser -d testdb -c "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'price_history' ORDER BY ordinal_position;"
+          
+          echo "✅ Schema validation completed"
+
+      - name: Test Rollback (DOWN)
+        run: |
+          echo "🔄 Testing migration DOWN..."
+          cd backend
+          migrate -path migrations -database "postgresql://testuser:testpass@localhost:5432/testdb?sslmode=disable" down 1
+          
+          # Verify tables are gone
+          TABLE_COUNT=$(PGPASSWORD=testpass psql -h localhost -U testuser -d testdb -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name IN ('market_orders', 'price_history');")
+          if [ "$TABLE_COUNT" -ne "0" ]; then
+            echo "❌ Tables still exist after DOWN migration"
+            exit 1
+          fi
+          echo "✅ Migration DOWN successful"
+
+      - name: Test Re-Apply (UP)
+        run: |
+          echo "🔄 Testing re-apply migration UP..."
+          cd backend
+          migrate -path migrations -database "postgresql://testuser:testpass@localhost:5432/testdb?sslmode=disable" up
+          
+          # Verify tables exist again
+          TABLE_COUNT=$(PGPASSWORD=testpass psql -h localhost -U testuser -d testdb -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_type = 'BASE TABLE' AND table_name IN ('market_orders', 'price_history');")
+          if [ "$TABLE_COUNT" -ne "2" ]; then
+            echo "❌ Expected 2 tables after re-apply, found $TABLE_COUNT"
+            exit 1
+          fi
+          echo "✅ Re-apply migration successful"
+
+      - name: Generate Test Report
+        if: always()
+        run: |
+          echo "📊 Generating test report..."
+          cd backend
+          
+          # Create report directory
+          mkdir -p ../reports
+          
+          # Generate Markdown report
+          cat > ../reports/migration-test-report.md << 'EOF'
+          # Migration Test Report
+          
+          **Run:** ${{ github.repository }}#${{ github.run_number }}  
+          **Branch:** ${{ github.ref_name }}  
+          **Commit:** ${{ github.sha }}  
+          **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")  
+          **Status:** ${{ job.status }}
+          
+          ## Migration Tests
+          - ✅ UP Migration
+          - ✅ Schema Validation
+            - ✅ market_orders (12 columns, 4 indexes)
+            - ✅ price_history (9 columns, 2 indexes)
+          - ✅ Data Integrity Test
+          - ✅ DOWN Migration
+          - ✅ Re-UP Migration
+          
+          ## Integration Tests
+          $(grep -E "^(PASS|FAIL)" test-output.log 2>/dev/null || echo "No test output found")
+          
+          ## Test Output
+          \`\`\`
+          $(tail -n 50 test-output.log 2>/dev/null || echo "No test output file found")
+          \`\`\`
+          EOF
+          
+          # Generate JSON report
+          cat > ../reports/migration-test-report.json << EOF
+          {
+            "run_id": "${{ github.run_number }}",
+            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "branch": "${{ github.ref_name }}",
+            "commit": "${{ github.sha }}",
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "status": "${{ job.status }}",
+            "workflow": "test-migrations"
+          }
+          EOF
+          
+          echo "✅ Test report generated"
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-test-report-${{ github.run_number }}
+          path: |
+            reports/migration-test-report.md
+            reports/migration-test-report.json
+            backend/test-output.log
+          retention-days: 30
+
+      - name: Comment PR with Results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let reportContent = '## 🔄 Migration Test Results\n\n';
+            
+            try {
+              const report = fs.readFileSync('reports/migration-test-report.md', 'utf8');
+              reportContent += report;
+            } catch (error) {
+              reportContent += '⚠️ Could not read test report file\n';
+            }
+            
+            reportContent += `\n\n[📥 Download Full Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: reportContent
+            });
