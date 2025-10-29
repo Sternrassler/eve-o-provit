@@ -1,7 +1,7 @@
 # Makefile – Zentrale Orchestrierung für Projekt-Automationen
 # Referenz: copilot-instructions.md Abschnitt 3.1
 
-.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json secrets-scan secrets-check pr-check release ci-local clean ensure-trivy ensure-gitleaks push-ci pr-quality-gates-ci docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-restart docker-rebuild docker-shell-api docker-shell-db docker-shell-redis
+.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json secrets-scan secrets-check pr-check release ci-local clean ensure-trivy ensure-gitleaks push-ci pr-quality-gates-ci docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-restart docker-rebuild docker-shell-api docker-shell-db docker-shell-redis migrate migrate-up migrate-down migrate-create
 
 # Standardwerte
 TRIVY_FAIL_ON ?= HIGH,CRITICAL
@@ -11,6 +11,8 @@ BACKEND_DIR ?= backend
 FRONTEND_DIR ?= frontend
 COMPOSE_FILE ?= deployments/docker-compose.yml
 DOCKER_COMPOSE ?= $(shell command -v docker-compose 2>/dev/null || echo "docker compose")
+DATABASE_URL ?= postgresql://eveprovit:dev@localhost:5432/eveprovit?sslmode=disable
+MIGRATIONS_DIR ?= $(BACKEND_DIR)/migrations
 
 .DEFAULT_GOAL := help
 
@@ -56,6 +58,11 @@ help: ## Zeigt verfügbare Targets (gruppiert)
 	@echo ""
 	@echo "┌─ Docker & Compose ────────────────────────────────────────────────────────────────────────────────────"
 	@grep -E '^docker.*:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
+	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
+	@echo ""
+	@echo "┌─ Database Migrations ─────────────────────────────────────────────────────────────────────────────────"
+	@grep -E '^migrate.*:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
 	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
 	@echo ""
@@ -338,5 +345,29 @@ docker-shell-db: ## Shell in PostgreSQL Container
 
 docker-shell-redis: ## Redis CLI
 	@docker exec -it eve-o-provit-redis redis-cli
+
+# Database Migration Targets
+
+migrate-up: ## Führt alle ausstehenden Migrations aus
+	@echo "[make migrate-up] Führe Database Migrations aus..."
+	@cd $(BACKEND_DIR) && migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" up
+	@echo "[make migrate-up] ✅ Migrations abgeschlossen"
+
+migrate-down: ## Rollt letzte Migration zurück
+	@echo "[make migrate-down] Rollback letzte Migration..."
+	@cd $(BACKEND_DIR) && migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" down 1
+	@echo "[make migrate-down] ✅ Rollback abgeschlossen"
+
+migrate-create: ## Erstellt neue Migration (NAME=migration_name)
+	@if [ -z "$(NAME)" ]; then \
+		echo "[make migrate-create] ERROR: NAME Parameter fehlt (Beispiel: make migrate-create NAME=add_users_table)" >&2; \
+		exit 1; \
+	fi
+	@echo "[make migrate-create] Erstelle neue Migration: $(NAME)"
+	@cd $(BACKEND_DIR) && migrate create -ext sql -dir $(MIGRATIONS_DIR) -seq $(NAME)
+	@echo "[make migrate-create] ✅ Migration erstellt"
+
+migrate: migrate-up ## Alias für migrate-up
+
 
 
