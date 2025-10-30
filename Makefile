@@ -67,7 +67,7 @@ help: ## Zeigt verfügbare Targets (gruppiert)
 	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
 	@echo ""
 
-test: test-be ## Führt alle Tests aus (Backend + Frontend)
+test: test-be test-fe ## Führt alle Tests aus (Backend + Frontend)
 	@echo "[make test] ✅ Alle Tests abgeschlossen"
 
 test-be: ## Führt alle Backend-Tests aus (Unit + Integration)
