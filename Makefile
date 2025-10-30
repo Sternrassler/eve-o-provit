@@ -294,6 +294,11 @@ ensure-gitleaks: ## Stellt sicher, dass Gitleaks verfügbar ist
 
 # Docker & Compose Targets
 
+db-load: ## Lädt EVE SDE SQLite DB vom offiziellen GitHub Release
+	@echo "[make db-load] Lade EVE SDE Datenbank..."
+	@bash scripts/download-sde.sh
+	@echo "[make db-load] ✅ SDE Datenbank geladen"
+
 docker-up: ## Startet alle Services (PostgreSQL, Redis, Backend)
 	@echo "[make docker-up] Starte Docker Compose Services..."
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d

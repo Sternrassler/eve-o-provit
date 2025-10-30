@@ -22,6 +22,10 @@ go.work
 .env
 .env.local
 
+# Downloaded SDE Database (managed via make db-load)
+data/sde/*.sqlite
+data/sde/*.db
+
 # IDE
 .vscode/
 .idea/
