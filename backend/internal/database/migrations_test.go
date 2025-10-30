@@ -14,11 +14,31 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+// checkMigrateBinary checks if the migrate binary is available and skips the test if not
+func checkMigrateBinary(t *testing.T) {
+	t.Helper()
+
+	migrateBin := "migrate"
+	if homePath, err := os.UserHomeDir(); err == nil {
+		goBinPath := filepath.Join(homePath, "go", "bin", "migrate")
+		if _, err := os.Stat(goBinPath); err == nil {
+			migrateBin = goBinPath
+		}
+	}
+
+	if _, err := exec.LookPath(migrateBin); err != nil {
+		t.Skip("migrate binary not found in PATH - install with: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest")
+	}
+}
+
 // TestMigrationUp tests that migrations create tables and indexes correctly
 func TestMigrationUp(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	// Check if migrate binary is available
+	checkMigrateBinary(t)
 
 	ctx := context.Background()
 
@@ -49,6 +69,9 @@ func TestMigrationDown(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	// Check if migrate binary is available
+	checkMigrateBinary(t)
 
 	ctx := context.Background()
 
@@ -97,6 +120,9 @@ func TestMigrationReUp(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Check if migrate binary is available
+	checkMigrateBinary(t)
+
 	ctx := context.Background()
 
 	pgContainer, connStr := setupPostgresContainer(t, ctx)
@@ -124,6 +150,9 @@ func TestMigrationIdempotency(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	// Check if migrate binary is available
+	checkMigrateBinary(t)
 
 	ctx := context.Background()
 
@@ -163,6 +192,9 @@ func TestSchemaValidation(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	// Check if migrate binary is available
+	checkMigrateBinary(t)
+
 	ctx := context.Background()
 
 	pgContainer, connStr := setupPostgresContainer(t, ctx)
@@ -189,6 +221,9 @@ func TestDataIntegrity(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	// Check if migrate binary is available
+	checkMigrateBinary(t)
 
 	ctx := context.Background()
 
@@ -258,6 +293,9 @@ func TestMigrationStatus(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	// Check if migrate binary is available
+	checkMigrateBinary(t)
 
 	ctx := context.Background()
 
@@ -375,6 +413,20 @@ func buildMigrateCommand(t *testing.T, connStr string, args ...string) *exec.Cmd
 
 func runMigration(t *testing.T, connStr string, args ...string) {
 	t.Helper()
+
+	// Check if migrate binary exists
+	migrateBin := "migrate"
+	if homePath, err := os.UserHomeDir(); err == nil {
+		goBinPath := filepath.Join(homePath, "go", "bin", "migrate")
+		if _, err := os.Stat(goBinPath); err == nil {
+			migrateBin = goBinPath
+		}
+	}
+
+	if _, err := exec.LookPath(migrateBin); err != nil {
+		t.Skip("migrate binary not found in PATH - install with: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest")
+		return
+	}
 
 	cmd := buildMigrateCommand(t, connStr, args...)
 	output, err := cmd.CombinedOutput()
