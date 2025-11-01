@@ -62,6 +62,12 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if we have a timeout warning (partial results)
+	if result.Warning != "" {
+		c.Set("Warning", `199 - "`+result.Warning+`"`)
+		return c.Status(fiber.StatusPartialContent).JSON(result)
+	}
+
 	return c.JSON(result)
 }
 

@@ -44,6 +44,7 @@ type RouteCalculationResponse struct {
 	CargoCapacity     float64        `json:"cargo_capacity"`
 	CalculationTimeMS int64          `json:"calculation_time_ms"`
 	Routes            []TradingRoute `json:"routes"`
+	Warning           string         `json:"warning,omitempty"`
 }
 
 // ItemPair represents a profitable buy/sell opportunity for an item
