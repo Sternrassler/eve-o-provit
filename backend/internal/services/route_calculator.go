@@ -219,10 +219,10 @@ func (rc *RouteCalculator) findProfitableItems(ctx context.Context, orders []dat
 			ItemName:      itemInfo.Name,
 			ItemVolume:    itemVol.Volume,
 			BuyStationID:  lowestSell.LocationID, // Buy from sell orders
-			BuySystemID:   rc.getSystemIDFromLocation(lowestSell.LocationID),
+			BuySystemID:   rc.getSystemIDFromLocation(ctx, lowestSell.LocationID),
 			BuyPrice:      lowestSell.Price,
 			SellStationID: highestBuy.LocationID, // Sell to buy orders
-			SellSystemID:  rc.getSystemIDFromLocation(highestBuy.LocationID),
+			SellSystemID:  rc.getSystemIDFromLocation(ctx, highestBuy.LocationID),
 			SellPrice:     highestBuy.Price,
 			SpreadPercent: spread,
 		})
@@ -308,9 +308,9 @@ func (rc *RouteCalculator) getRegionName(ctx context.Context, regionID int) (str
 	return name, nil
 }
 
-func (rc *RouteCalculator) getSystemIDFromLocation(locationID int64) int64 {
+func (rc *RouteCalculator) getSystemIDFromLocation(ctx context.Context, locationID int64) int64 {
 	// Use repository method to query SDE database
-	systemID, err := rc.sdeRepo.GetSystemIDForLocation(context.Background(), locationID)
+	systemID, err := rc.sdeRepo.GetSystemIDForLocation(ctx, locationID)
 	if err != nil {
 		// Log warning but don't fail the entire calculation
 		log.Printf("Warning: failed to get system ID for location %d: %v", locationID, err)
