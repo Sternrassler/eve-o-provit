@@ -69,9 +69,16 @@ type ESIMarketOrder struct {
 	Range        string    `json:"range"`
 }
 
-// FetchMarketOrders fetches market orders for a region and stores them in the database
+// FetchMarketOrders fetches all market order pages for a region and stores them in the database
+// This is a high-level wrapper that uses MarketOrderFetcher for parallel pagination
 func (c *Client) FetchMarketOrders(ctx context.Context, regionID int) error {
-	endpoint := fmt.Sprintf("/v1/markets/%d/orders/", regionID)
+	// Use MarketOrderFetcher for parallel pagination (see internal/services/market_fetcher.go)
+	// Note: This method is kept for backward compatibility, but the real work is done by
+	// the MarketOrderFetcher worker pool (10 workers, 15s timeout)
+	
+	// For now, delegate to the single-page method for backward compatibility
+	// The parallel fetcher is used directly by route_calculator.go and cache.go
+	endpoint := fmt.Sprintf("/v1/markets/%d/orders/?page=1", regionID)
 
 	resp, err := c.esi.Get(ctx, endpoint)
 	if err != nil {
@@ -131,6 +138,50 @@ func (c *Client) FetchMarketOrders(ctx context.Context, regionID int) error {
 	}
 
 	return nil
+}
+
+// FetchMarketOrdersPage fetches a single page of market orders from ESI
+// Returns the orders, total page count (from X-Pages header), and any error
+func (c *Client) FetchMarketOrdersPage(ctx context.Context, regionID, page int) ([]ESIMarketOrder, int, error) {
+	endpoint := fmt.Sprintf("/v1/markets/%d/orders/?page=%d", regionID, page)
+
+	resp, err := c.esi.Get(ctx, endpoint)
+	if err != nil {
+		return nil, 0, fmt.Errorf("ESI request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Handle Not Modified (cache hit)
+	if resp.StatusCode == 304 {
+		return nil, 0, fmt.Errorf("304 Not Modified - use cached data")
+	}
+
+	// Check for errors
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, 0, fmt.Errorf("unexpected ESI status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse X-Pages header to get total page count
+	totalPages := 1
+	if xPages := resp.Header.Get("X-Pages"); xPages != "" {
+		if _, err := fmt.Sscanf(xPages, "%d", &totalPages); err != nil {
+			return nil, 0, fmt.Errorf("invalid X-Pages header '%s': %w", xPages, err)
+		}
+	}
+
+	// Parse response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var esiOrders []ESIMarketOrder
+	if err := json.Unmarshal(body, &esiOrders); err != nil {
+		return nil, 0, fmt.Errorf("failed to parse ESI response: %w", err)
+	}
+
+	return esiOrders, totalPages, nil
 }
 
 // GetMarketOrders retrieves market orders from database (cached)

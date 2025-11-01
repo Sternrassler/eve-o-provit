@@ -4,6 +4,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -33,14 +34,19 @@ func (f *MarketOrderFetcher) FetchAllPages(ctx context.Context, regionID int) ([
 	fetchCtx, cancel := context.WithTimeout(ctx, f.timeout)
 	defer cancel()
 
+	start := time.Now()
+
 	// Get first page to determine total page count
 	firstPage, totalPages, err := f.getFirstPageAndCount(fetchCtx, regionID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get first page: %w", err)
 	}
 
+	log.Printf("ESI Pagination: Region %d has %d total pages (first page: %d orders)", regionID, totalPages, len(firstPage))
+
 	if totalPages == 1 {
 		// Only one page, return early
+		log.Printf("ESI Pagination: Region %d complete (1 page, %d orders) in %.2fs", regionID, len(firstPage), time.Since(start).Seconds())
 		return firstPage, nil
 	}
 
@@ -59,13 +65,15 @@ func (f *MarketOrderFetcher) FetchAllPages(ctx context.Context, regionID int) ([
 	}
 	close(pageQueue)
 
+	log.Printf("ESI Pagination: Starting %d workers for %d remaining pages", f.workerCount, totalPages-1)
+
 	// Start workers
 	var wg sync.WaitGroup
 	for i := 0; i < f.workerCount; i++ {
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			f.worker(fetchCtx, regionID, pageQueue, results, errors)
+			f.worker(fetchCtx, regionID, pageQueue, results, errors, workerID)
 		}(i)
 	}
 
@@ -77,34 +85,47 @@ func (f *MarketOrderFetcher) FetchAllPages(ctx context.Context, regionID int) ([
 	}()
 
 	// Collect results
+	fetchedPages := 1 // First page already fetched
 	for pageOrders := range results {
 		allOrders = append(allOrders, pageOrders...)
+		fetchedPages++
+		
+		// Log progress every 50 pages
+		if fetchedPages%50 == 0 {
+			log.Printf("ESI Pagination: Progress %d/%d pages (%.1f%%)", fetchedPages, totalPages, float64(fetchedPages)/float64(totalPages)*100)
+		}
 	}
 
 	// Check for errors
 	select {
 	case err := <-errors:
 		if err != nil {
-			return allOrders, fmt.Errorf("worker error: %w", err)
+			log.Printf("ESI Pagination: Warning - worker error (partial data): %v", err)
+			log.Printf("ESI Pagination: Returning partial results (%d/%d pages, %d orders) in %.2fs", fetchedPages, totalPages, len(allOrders), time.Since(start).Seconds())
+			return allOrders, fmt.Errorf("worker error (partial data): %w", err)
 		}
 	default:
 	}
 
+	log.Printf("ESI Pagination: Region %d complete (%d/%d pages, %d orders) in %.2fs", regionID, fetchedPages, totalPages, len(allOrders), time.Since(start).Seconds())
 	return allOrders, nil
 }
 
 // worker processes pages from the queue
-func (f *MarketOrderFetcher) worker(ctx context.Context, regionID int, pageQueue <-chan int, results chan<- []database.MarketOrder, errors chan<- error) {
+func (f *MarketOrderFetcher) worker(ctx context.Context, regionID int, pageQueue <-chan int, results chan<- []database.MarketOrder, errors chan<- error, workerID int) {
+	pagesProcessed := 0
 	for page := range pageQueue {
 		// Check for context cancellation
 		select {
 		case <-ctx.Done():
+			log.Printf("ESI Pagination: Worker %d stopping (context cancelled, processed %d pages)", workerID, pagesProcessed)
 			return
 		default:
 		}
 
 		orders, err := f.fetchPage(ctx, regionID, page)
 		if err != nil {
+			log.Printf("ESI Pagination: Worker %d failed page %d: %v", workerID, page, err)
 			// Non-blocking error send
 			select {
 			case errors <- err:
@@ -113,66 +134,90 @@ func (f *MarketOrderFetcher) worker(ctx context.Context, regionID int, pageQueue
 			return
 		}
 
+		pagesProcessed++
+
 		// Send results
 		select {
 		case results <- orders:
 		case <-ctx.Done():
+			log.Printf("ESI Pagination: Worker %d stopping (context cancelled after %d pages)", workerID, pagesProcessed)
 			return
 		}
+	}
+	
+	if pagesProcessed > 0 {
+		log.Printf("ESI Pagination: Worker %d completed (%d pages)", workerID, pagesProcessed)
 	}
 }
 
 // getFirstPageAndCount fetches the first page and extracts total page count from headers
 func (f *MarketOrderFetcher) getFirstPageAndCount(ctx context.Context, regionID int) ([]database.MarketOrder, int, error) {
-	// For now, we'll use a simplified approach
-	// In production, this would parse the X-Pages header from ESI
-
-	// Fetch first page
-	orders, err := f.fetchPage(ctx, regionID, 1)
+	// Fetch first page from ESI (page 1)
+	esiOrders, totalPages, err := f.esiClient.FetchMarketOrdersPage(ctx, regionID, 1)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("fetch first page: %w", err)
 	}
 
-	// TODO: Parse X-Pages header from ESI response
-	// For now, assume a reasonable default based on region
-	// The Forge typically has ~383 pages
-	totalPages := estimateTotalPages(regionID, len(orders))
+	// Convert ESI orders to database models
+	fetchedAt := time.Now()
+	dbOrders := make([]database.MarketOrder, 0, len(esiOrders))
+	for _, esiOrder := range esiOrders {
+		var minVolume *int
+		if esiOrder.MinVolume > 0 {
+			minVolume = &esiOrder.MinVolume
+		}
 
-	return orders, totalPages, nil
+		dbOrders = append(dbOrders, database.MarketOrder{
+			OrderID:      esiOrder.OrderID,
+			TypeID:       esiOrder.TypeID,
+			RegionID:     regionID,
+			LocationID:   esiOrder.LocationID,
+			IsBuyOrder:   esiOrder.IsBuyOrder,
+			Price:        esiOrder.Price,
+			VolumeTotal:  esiOrder.VolumeTotal,
+			VolumeRemain: esiOrder.VolumeRemain,
+			MinVolume:    minVolume,
+			Issued:       esiOrder.Issued,
+			Duration:     esiOrder.Duration,
+			FetchedAt:    fetchedAt,
+		})
+	}
+
+	return dbOrders, totalPages, nil
 }
 
 // fetchPage fetches a single page of market orders
 func (f *MarketOrderFetcher) fetchPage(ctx context.Context, regionID, page int) ([]database.MarketOrder, error) {
-	// This is a simplified implementation
-	// In production, this would make a direct ESI call with page parameter
-
-	// For now, delegate to existing ESI client
-	// Note: The existing client doesn't support pagination yet
-	// This is a placeholder that needs integration with the ESI client
-
-	// TODO: Implement pagination support in ESI client
-	// endpoint := fmt.Sprintf("/v1/markets/%d/orders/?page=%d", regionID, page)
-
-	return nil, fmt.Errorf("pagination not yet implemented in ESI client")
-}
-
-// estimateTotalPages estimates total pages based on region and first page size
-func estimateTotalPages(regionID int, firstPageSize int) int {
-	// The Forge (10000002) is the largest region
-	if regionID == 10000002 {
-		return 383 // Known from issue requirements
+	// Fetch page from ESI
+	esiOrders, _, err := f.esiClient.FetchMarketOrdersPage(ctx, regionID, page)
+	if err != nil {
+		return nil, fmt.Errorf("fetch page %d: %w", page, err)
 	}
 
-	// For other regions, estimate based on first page
-	// Typical page size is ~1000 orders
-	if firstPageSize < 100 {
-		return 1
-	} else if firstPageSize < 500 {
-		return 5
-	} else if firstPageSize < 900 {
-		return 10
+	// Convert ESI orders to database models
+	fetchedAt := time.Now()
+	dbOrders := make([]database.MarketOrder, 0, len(esiOrders))
+	for _, esiOrder := range esiOrders {
+		var minVolume *int
+		if esiOrder.MinVolume > 0 {
+			minVolume = &esiOrder.MinVolume
+		}
+
+		dbOrders = append(dbOrders, database.MarketOrder{
+			OrderID:      esiOrder.OrderID,
+			TypeID:       esiOrder.TypeID,
+			RegionID:     regionID,
+			LocationID:   esiOrder.LocationID,
+			IsBuyOrder:   esiOrder.IsBuyOrder,
+			Price:        esiOrder.Price,
+			VolumeTotal:  esiOrder.VolumeTotal,
+			VolumeRemain: esiOrder.VolumeRemain,
+			MinVolume:    minVolume,
+			Issued:       esiOrder.Issued,
+			Duration:     esiOrder.Duration,
+			FetchedAt:    fetchedAt,
+		})
 	}
 
-	// Default to 50 pages for medium-sized regions
-	return 50
+	return dbOrders, nil
 }
