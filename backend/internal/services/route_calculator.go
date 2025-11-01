@@ -29,20 +29,22 @@ const (
 
 // RouteCalculator handles trading route calculations
 type RouteCalculator struct {
-	esiClient *esi.Client
-	sdeDB     *sql.DB
-	sdeRepo   *database.SDERepository
-	cache     map[string]*models.CachedData
-	cacheMu   sync.RWMutex
+	esiClient  *esi.Client
+	marketRepo *database.MarketRepository
+	sdeDB      *sql.DB
+	sdeRepo    *database.SDERepository
+	cache      map[string]*models.CachedData
+	cacheMu    sync.RWMutex
 }
 
 // NewRouteCalculator creates a new route calculator instance
-func NewRouteCalculator(esiClient *esi.Client, sdeDB *sql.DB, sdeRepo *database.SDERepository) *RouteCalculator {
+func NewRouteCalculator(esiClient *esi.Client, sdeDB *sql.DB, sdeRepo *database.SDERepository, marketRepo *database.MarketRepository) *RouteCalculator {
 	return &RouteCalculator{
-		esiClient: esiClient,
-		sdeDB:     sdeDB,
-		sdeRepo:   sdeRepo,
-		cache:     make(map[string]*models.CachedData),
+		esiClient:  esiClient,
+		marketRepo: marketRepo,
+		sdeDB:      sdeDB,
+		sdeRepo:    sdeRepo,
+		cache:      make(map[string]*models.CachedData),
 	}
 }
 
@@ -128,19 +130,16 @@ func (rc *RouteCalculator) fetchMarketOrders(ctx context.Context, regionID int) 
 	}
 	rc.cacheMu.RUnlock()
 
-	// Fetch from ESI
+	// Fetch fresh data from ESI (this stores in DB)
 	if err := rc.esiClient.FetchMarketOrders(ctx, regionID); err != nil {
 		return nil, err
 	}
 
-	// Get all orders from database (simplified: get all types)
-	// In a real implementation, we'd fetch only specific types or paginate
-	var allOrders []database.MarketOrder
-
-	// For simplification, we'll get orders for multiple common trade items
-	// This is a simplified approach - in reality we'd need a better strategy
-	// For now, just return empty to avoid complexity - the actual implementation
-	// would need to query all unique type_ids from market_orders table
+	// Get all orders from database for this region
+	allOrders, err := rc.marketRepo.GetAllMarketOrdersForRegion(ctx, regionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get orders from database: %w", err)
+	}
 
 	// Cache the result
 	rc.cacheMu.Lock()

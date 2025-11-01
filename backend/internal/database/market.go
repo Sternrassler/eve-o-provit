@@ -146,6 +146,54 @@ func (r *MarketRepository) GetMarketOrders(ctx context.Context, regionID, typeID
 	return orders, nil
 }
 
+// GetAllMarketOrdersForRegion retrieves all market orders for a region (for route calculation)
+func (r *MarketRepository) GetAllMarketOrdersForRegion(ctx context.Context, regionID int) ([]MarketOrder, error) {
+	query := `
+		SELECT 
+			order_id, type_id, region_id, location_id, is_buy_order,
+			price, volume_total, volume_remain, min_volume,
+			issued, duration, fetched_at
+		FROM market_orders
+		WHERE region_id = $1
+		ORDER BY type_id, is_buy_order, price
+	`
+
+	rows, err := r.db.Query(ctx, query, regionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query market orders: %w", err)
+	}
+	defer rows.Close()
+
+	var orders []MarketOrder
+	for rows.Next() {
+		var order MarketOrder
+		err := rows.Scan(
+			&order.OrderID,
+			&order.TypeID,
+			&order.RegionID,
+			&order.LocationID,
+			&order.IsBuyOrder,
+			&order.Price,
+			&order.VolumeTotal,
+			&order.VolumeRemain,
+			&order.MinVolume,
+			&order.Issued,
+			&order.Duration,
+			&order.FetchedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan market order: %w", err)
+		}
+		orders = append(orders, order)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return orders, nil
+}
+
 // CleanOldMarketOrders removes market orders older than the specified duration
 func (r *MarketRepository) CleanOldMarketOrders(ctx context.Context, olderThan time.Duration) (int64, error) {
 	query := `

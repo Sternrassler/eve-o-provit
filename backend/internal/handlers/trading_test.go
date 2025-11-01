@@ -53,7 +53,7 @@ func TestCalculateRoutes_ValidationErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			app := fiber.New()
-			
+
 			// Create a mock handler (we don't need actual calculator for validation tests)
 			handler := &TradingHandler{}
 			app.Post("/test", handler.CalculateRoutes)
@@ -91,7 +91,7 @@ func TestCalculateRoutes_ValidRequest(t *testing.T) {
 	}`
 
 	app := fiber.New()
-	
+
 	var capturedRequest models.RouteCalculationRequest
 	app.Post("/test", func(c *fiber.Ctx) error {
 		if err := c.BodyParser(&capturedRequest); err != nil {
@@ -133,7 +133,7 @@ func TestCalculateRoutes_OptionalCargoCapacity(t *testing.T) {
 	}`
 
 	app := fiber.New()
-	
+
 	var capturedRequest models.RouteCalculationRequest
 	app.Post("/test", func(c *fiber.Ctx) error {
 		if err := c.BodyParser(&capturedRequest); err != nil {
@@ -179,16 +179,16 @@ func TestResponseStructures(t *testing.T) {
 			CalculationTimeMS: 1234,
 			Routes: []models.TradingRoute{
 				{
-					ItemTypeID:        34,
-					ItemName:          "Tritanium",
-					BuyPrice:          5.0,
-					SellPrice:         6.0,
-					Quantity:          1000,
-					ProfitPerUnit:     1.0,
-					TotalProfit:       1000.0,
-					SpreadPercent:     20.0,
-					ISKPerHour:        100000.0,
-					Jumps:             5,
+					ItemTypeID:    34,
+					ItemName:      "Tritanium",
+					BuyPrice:      5.0,
+					SellPrice:     6.0,
+					Quantity:      1000,
+					ProfitPerUnit: 1.0,
+					TotalProfit:   1000.0,
+					SpreadPercent: 20.0,
+					ISKPerHour:    100000.0,
+					Jumps:         5,
 				},
 			},
 		}

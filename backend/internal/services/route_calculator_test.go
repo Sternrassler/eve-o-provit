@@ -19,7 +19,7 @@ func TestISKPerHourCalculation(t *testing.T) {
 			name:             "Basic calculation",
 			profitPerUnit:    1000.0,
 			quantity:         100,
-			roundTripSeconds: 600.0, // 10 minutes
+			roundTripSeconds: 600.0,    // 10 minutes
 			wantISKPerHour:   600000.0, // (1000 * 100 / 600) * 3600
 		},
 		{
@@ -63,9 +63,9 @@ func TestISKPerHourCalculation(t *testing.T) {
 // TestSpreadCalculation tests the spread percentage calculation
 func TestSpreadCalculation(t *testing.T) {
 	tests := []struct {
-		name      string
-		buyPrice  float64
-		sellPrice float64
+		name       string
+		buyPrice   float64
+		sellPrice  float64
 		wantSpread float64
 	}{
 		{
