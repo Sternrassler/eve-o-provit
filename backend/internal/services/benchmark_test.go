@@ -30,7 +30,7 @@ func BenchmarkWorkerPoolProcessing(b *testing.B) {
 
 	// This is a simplified benchmark without actual RouteCalculator
 	// In real scenario, you would use a real calculator with mocked dependencies
-	
+
 	b.Run("Sequential", func(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -57,7 +57,7 @@ func BenchmarkWorkerPoolProcessing(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			ctx := context.Background()
 			results := make(chan models.TradingRoute, len(items))
-			
+
 			// Simplified parallel processing
 			sem := make(chan struct{}, 10) // 10 workers
 			for _, item := range items {
@@ -80,13 +80,13 @@ func BenchmarkWorkerPoolProcessing(b *testing.B) {
 					}
 				}(item)
 			}
-			
+
 			// Wait for all workers
 			for i := 0; i < 10; i++ {
 				sem <- struct{}{}
 			}
 			close(results)
-			
+
 			// Collect results
 			routes := make([]models.TradingRoute, 0, len(items))
 			for route := range results {
@@ -100,7 +100,7 @@ func BenchmarkWorkerPoolProcessing(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			ctx := context.Background()
 			results := make(chan models.TradingRoute, len(items))
-			
+
 			// Simplified parallel processing
 			sem := make(chan struct{}, 50) // 50 workers
 			for _, item := range items {
@@ -123,13 +123,13 @@ func BenchmarkWorkerPoolProcessing(b *testing.B) {
 					}
 				}(item)
 			}
-			
+
 			// Wait for all workers
 			for i := 0; i < 50; i++ {
 				sem <- struct{}{}
 			}
 			close(results)
-			
+
 			// Collect results
 			routes := make([]models.TradingRoute, 0, len(items))
 			for route := range results {
