@@ -1,4 +1,5 @@
 // Package handlers - Integration tests for trading endpoints
+//go:build integration
 // +build integration
 
 package handlers

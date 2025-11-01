@@ -185,10 +185,10 @@ func (rc *RouteCalculator) findProfitableItems(ctx context.Context, orders []dat
 			continue
 		}
 
-		// Calculate spread
-		spread := ((lowestSell.Price - highestBuy.Price) / highestBuy.Price) * 100
+		// Calculate spread (sell to buy orders at highestBuy.Price, buy from sell orders at lowestSell.Price)
+		spread := ((highestBuy.Price - lowestSell.Price) / lowestSell.Price) * 100
 
-		// Skip if spread is too low
+		// Skip if spread is too low or negative
 		if spread < MinSpreadPercent {
 			continue
 		}
@@ -209,10 +209,10 @@ func (rc *RouteCalculator) findProfitableItems(ctx context.Context, orders []dat
 			TypeID:        typeID,
 			ItemName:      itemInfo.Name,
 			ItemVolume:    itemVol.Volume,
-			BuyStationID:  lowestSell.LocationID,
+			BuyStationID:  lowestSell.LocationID, // Buy from sell orders
 			BuySystemID:   rc.getSystemIDFromLocation(lowestSell.LocationID),
 			BuyPrice:      lowestSell.Price,
-			SellStationID: highestBuy.LocationID,
+			SellStationID: highestBuy.LocationID, // Sell to buy orders
 			SellSystemID:  rc.getSystemIDFromLocation(highestBuy.LocationID),
 			SellPrice:     highestBuy.Price,
 			SpreadPercent: spread,
@@ -301,9 +301,24 @@ func (rc *RouteCalculator) getRegionName(ctx context.Context, regionID int) (str
 
 func (rc *RouteCalculator) getSystemIDFromLocation(locationID int64) int64 {
 	// Station IDs are 60000000 - 64000000 range
-	// For simplicity, we'll need to query the SDE
-	// This is a placeholder - real implementation would query mapDenormalize
-	return locationID
+	// Query SDE to get system ID for this station
+	query := `SELECT solarSystemID FROM staStations WHERE stationID = ?`
+	var systemID int64
+	err := rc.sdeDB.QueryRow(query, locationID).Scan(&systemID)
+	if err != nil {
+		// If not a station, try denormalize table for structures/citadels
+		query = `SELECT solarSystemID FROM mapDenormalize WHERE itemID = ? LIMIT 1`
+		err = rc.sdeDB.QueryRow(query, locationID).Scan(&systemID)
+		if err != nil {
+			// Fallback: assume it's already a system ID or return 0
+			// This handles cases where location might be a system ID already
+			if locationID >= 30000000 && locationID < 40000000 {
+				return locationID
+			}
+			return 0
+		}
+	}
+	return systemID
 }
 
 func (rc *RouteCalculator) getLocationNames(ctx context.Context, systemID, stationID int64) (string, string) {

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
@@ -69,6 +70,11 @@ func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
 
 	// Get access token from locals (set by middleware)
 	authHeader := c.Get("Authorization")
+	if len(authHeader) < 7 || !strings.HasPrefix(authHeader, "Bearer ") {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid Authorization header",
+		})
+	}
 	accessToken := authHeader[7:] // Remove "Bearer " prefix
 
 	// Call ESI
@@ -94,6 +100,11 @@ func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
 
 	// Get access token
 	authHeader := c.Get("Authorization")
+	if len(authHeader) < 7 || !strings.HasPrefix(authHeader, "Bearer ") {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid Authorization header",
+		})
+	}
 	accessToken := authHeader[7:]
 
 	// Call ESI
@@ -119,6 +130,11 @@ func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
 
 	// Get access token
 	authHeader := c.Get("Authorization")
+	if len(authHeader) < 7 || !strings.HasPrefix(authHeader, "Bearer ") {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Invalid Authorization header",
+		})
+	}
 	accessToken := authHeader[7:]
 
 	// Call ESI
@@ -306,16 +322,21 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 			continue
 		}
 
-		// Check if it's a ship (categoryID = 6)
+		// Get type info to check category
 		typeInfo, err := h.handler.sdeRepo.GetTypeInfo(ctx, int(asset.TypeID))
 		if err != nil {
 			continue
 		}
 
-		// Simple category check - in production would query categoryID from SDE
-		// For now, check if it has cargo capacity (ships have cargo)
+		// Check if it's a ship (categoryID = 6)
+		if typeInfo.CategoryID == nil || *typeInfo.CategoryID != 6 {
+			continue
+		}
+
+		// Get cargo capacity
 		capacities, err := cargo.GetShipCapacities(h.handler.db.SDE, asset.TypeID, nil)
 		if err != nil {
+			// Skip if we can't get ship capacities (probably not a ship)
 			continue
 		}
 
