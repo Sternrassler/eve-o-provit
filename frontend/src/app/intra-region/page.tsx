@@ -35,26 +35,51 @@ export default function IntraRegionPage() {
   const [sortBy, setSortBy] = useState<
     "isk_per_hour" | "profit" | "spread_percent" | "travel_time_seconds"
   >("isk_per_hour");
+  const [apiRoutes, setApiRoutes] = useState<any[]>([]);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const handleCalculate = async () => {
     setIsCalculating(true);
     setHasCalculated(false);
+    setApiError(null);
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const response = await fetch("http://localhost:9001/api/v1/trading/routes/calculate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          region_id: parseInt(selectedRegion),
+          ship_type_id: parseInt(selectedShip),
+        }),
+      });
 
-    setIsCalculating(false);
-    setHasCalculated(true);
-    setDisplayedRoutes(10);
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setApiRoutes(data.routes || []);
+      setHasCalculated(true);
+    } catch (error) {
+      console.error("Failed to calculate routes:", error);
+      setApiError(error instanceof Error ? error.message : "Unknown error");
+      setApiRoutes([]);
+    } finally {
+      setIsCalculating(false);
+      setDisplayedRoutes(10);
+    }
   };
 
   const filteredRoutes = useMemo(() => {
     if (!hasCalculated) return [];
 
-    const routes = mockTradingRoutes.filter((route) => {
+    const routes = apiRoutes.filter((route) => {
       const travelTimeMinutes = route.travel_time_seconds / 60;
       return (
         route.spread_percent >= filters.minSpread &&
-        route.profit >= filters.minProfit &&
+        route.total_profit >= filters.minProfit &&
         travelTimeMinutes <= filters.maxTravelTime
       );
     });
@@ -64,7 +89,7 @@ export default function IntraRegionPage() {
         case "isk_per_hour":
           return b.isk_per_hour - a.isk_per_hour;
         case "profit":
-          return b.profit - a.profit;
+          return b.total_profit - a.total_profit;
         case "spread_percent":
           return b.spread_percent - a.spread_percent;
         case "travel_time_seconds":
@@ -75,7 +100,7 @@ export default function IntraRegionPage() {
     });
 
     return routes;
-  }, [hasCalculated, filters, sortBy]);
+  }, [hasCalculated, apiRoutes, filters, sortBy]);
 
   const visibleRoutes = filteredRoutes.slice(0, displayedRoutes);
   const hasMoreRoutes = displayedRoutes < filteredRoutes.length && displayedRoutes < MAX_DISPLAYED_ROUTES;
@@ -162,7 +187,8 @@ export default function IntraRegionPage() {
           <TradingRouteList
             routes={visibleRoutes}
             loading={isCalculating}
-            error={undefined}
+            error={apiError || undefined}
+            onRetry={handleCalculate}
           />
 
           {hasCalculated && hasMoreRoutes && (

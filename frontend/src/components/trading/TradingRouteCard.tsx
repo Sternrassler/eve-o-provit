@@ -49,9 +49,9 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
       <CardContent className="space-y-3">
         {/* Route Path */}
         <div className="flex items-center gap-2 text-sm">
-          <span className="font-medium">{route.origin_system_name}</span>
+          <span className="font-medium">{route.buy_system_name || route.origin_system_name}</span>
           <ArrowRight className="size-4 text-muted-foreground" />
-          <span className="font-medium">{route.destination_system_name}</span>
+          <span className="font-medium">{route.sell_system_name || route.destination_system_name}</span>
         </div>
 
         {/* Quantity */}
@@ -75,7 +75,7 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
         <div className="grid grid-cols-2 gap-4 border-t pt-3">
           <div>
             <div className="text-sm text-muted-foreground">Gewinn</div>
-            <div className="text-lg font-bold">{formatISK(route.profit)}</div>
+            <div className="text-lg font-bold">{formatISK(route.total_profit || route.profit || 0)}</div>
           </div>
           <div>
             <div className="text-sm text-muted-foreground">Spread</div>

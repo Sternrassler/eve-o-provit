@@ -53,10 +53,12 @@ func New(ctx context.Context, cfg Config) (*DB, error) {
 	db.Postgres = pgPool
 
 	// Connect to SQLite SDE (read-only)
-	sdeDB, err := sql.Open("sqlite3", fmt.Sprintf("file:%s?mode=ro", cfg.SDEPath))
+	// Use absolute path with immutable mode for read-only access
+	sdeURI := fmt.Sprintf("file:%s?mode=ro&immutable=1", cfg.SDEPath)
+	sdeDB, err := sql.Open("sqlite3", sdeURI)
 	if err != nil {
 		pgPool.Close()
-		return nil, fmt.Errorf("failed to open SQLite SDE: %w", err)
+		return nil, fmt.Errorf("failed to open SQLite SDE (path: %s): %w", cfg.SDEPath, err)
 	}
 
 	// Test SQLite connection

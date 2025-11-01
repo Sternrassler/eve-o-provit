@@ -5,6 +5,7 @@ Lokales Entwicklungs-Setup mit PostgreSQL, Redis und Backend API.
 ## Services
 
 ### PostgreSQL 16
+
 - **Port**: 5432
 - **User**: `eveprovit`
 - **Password**: `devpassword`
@@ -12,6 +13,7 @@ Lokales Entwicklungs-Setup mit PostgreSQL, Redis und Backend API.
 - **Volume**: `postgres_data` (persistent)
 
 **Schema**:
+
 - Users & Authentication
 - Market Orders (cached from ESI)
 - Market History
@@ -19,17 +21,20 @@ Lokales Entwicklungs-Setup mit PostgreSQL, Redis und Backend API.
 - Profit Calculations
 
 ### Redis 7
+
 - **Port**: 6379
 - **Persistence**: AOF enabled
 - **Volume**: `redis_data` (persistent)
 
 **Use Cases**:
+
 - API Response Caching
 - Session Storage
 - Rate Limiting
 - Market Data Cache
 
 ### Backend API (Go + Fiber)
+
 - **Port**: 8080
 - **Health Check**: `http://localhost:8080/health`
 - **Dependencies**:
@@ -38,24 +43,34 @@ Lokales Entwicklungs-Setup mit PostgreSQL, Redis und Backend API.
   - SDE SQLite (static game data via symlink)
 
 **Environment Variables**:
+
 ```bash
 PORT=8080
 DATABASE_URL=postgres://eveprovit:devpassword@postgres:5432/eveprovit?sslmode=disable
 REDIS_URL=redis://redis:6379/0
-SDE_DB_PATH=/data/sde/eve-sde.db
+SDE_PATH=/data/sde/eve-sde.db
 CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 LOG_LEVEL=debug
 ENV=development
 ```
 
+**SDE Database Mount** (siehe ADR-010):
+
+- Host: `backend/data/sde/eve-sde.db` (lokal im eve-o-provit Projekt)
+- Container: `/data/sde/eve-sde.db` (read-only)
+- Volume: `../backend/data/sde:/data/sde:ro`
+- Download: `scripts/download-sde.sh` (lädt neueste Release von GitHub)
+
 ## Quick Start
 
 ### 1. Starte alle Services
+
 ```bash
 make docker-up
 ```
 
 **Output**:
+
 ```
 Services verfügbar unter:
   - Backend API:  http://localhost:8080
@@ -64,11 +79,13 @@ Services verfügbar unter:
 ```
 
 ### 2. Prüfe Status
+
 ```bash
 make docker-ps
 ```
 
 ### 3. Zeige Logs
+
 ```bash
 # Alle Services
 make docker-logs
@@ -81,11 +98,13 @@ make docker-logs SERVICE=postgres
 ```
 
 ### 4. Teste Backend Health
+
 ```bash
 curl http://localhost:8080/health
 ```
 
 **Expected Response**:
+
 ```json
 {
   "status": "ok",
@@ -96,16 +115,19 @@ curl http://localhost:8080/health
 ## Development Workflow
 
 ### Rebuild nach Code-Änderungen
+
 ```bash
 make docker-restart
 ```
 
 ### Database Shell
+
 ```bash
 make docker-shell-db
 ```
 
 **SQL Queries**:
+
 ```sql
 -- Alle Tabellen anzeigen
 \dt
@@ -118,11 +140,13 @@ SELECT * FROM watchlists;
 ```
 
 ### Redis CLI
+
 ```bash
 make docker-shell-redis
 ```
 
 **Redis Commands**:
+
 ```bash
 # Keys anzeigen
 KEYS *
@@ -135,6 +159,7 @@ FLUSHALL
 ```
 
 ### Backend Container Shell
+
 ```bash
 make docker-shell-api
 ```
@@ -142,11 +167,13 @@ make docker-shell-api
 ## Cleanup
 
 ### Services stoppen
+
 ```bash
 make docker-down
 ```
 
 ### Alles entfernen (inkl. Volumes!)
+
 ```bash
 make docker-clean
 ```
@@ -156,6 +183,7 @@ make docker-clean
 ## Troubleshooting
 
 ### Port bereits belegt
+
 ```bash
 # Prüfe welche Ports belegt sind
 lsof -i :8080  # Backend
@@ -164,6 +192,7 @@ lsof -i :6379  # Redis
 ```
 
 ### Container startet nicht
+
 ```bash
 # Logs prüfen
 make docker-logs SERVICE=api
@@ -174,6 +203,7 @@ make docker-up
 ```
 
 ### Database Migration fehlgeschlagen
+
 ```bash
 # PostgreSQL Logs prüfen
 make docker-logs SERVICE=postgres
@@ -184,17 +214,33 @@ make docker-shell-db
 ```
 
 ### SDE Database nicht gefunden
+
 ```bash
-# Symlink prüfen
+# Volume Mount prüfen (docker-compose.yml)
+# Host:      backend/data/sde/eve-sde.db (im eve-o-provit Projekt)
+# Container: /data/sde/eve-sde.db
+
+# Datei existiert lokal?
 ls -lh backend/data/sde/eve-sde.db
 
-# Sollte zeigen:
-# eve-sde.db -> ../../../eve-sde/data/sqlite/eve-sde.db
+# Container sieht Datei?
+docker exec eve-o-provit-api ls -lh /data/sde/eve-sde.db
+
+# Falls fehlend: SDE von GitHub Release herunterladen
+scripts/download-sde.sh
+# Oder manuell:
+# gh release download --repo Sternrassler/eve-sde --pattern "eve-sde.db.gz"
+# gunzip eve-sde.db.gz
+# mv eve-sde.db backend/data/sde/
 ```
+
+**Wichtig**: ADR-010 definiert `eve-sde.db` als kanonischen Namen.
+Alte Dateinamen (`sde.sqlite`, `sde.db`) sind deprecated.
 
 ## Network
 
 Alle Services laufen im gleichen Docker Network `eve-network`:
+
 - Interne DNS-Resolution funktioniert (z.B. `postgres:5432`)
 - Services können sich gegenseitig erreichen
 - Frontend (wenn aktiviert) kann Backend über `api:8080` erreichen
@@ -202,12 +248,14 @@ Alle Services laufen im gleichen Docker Network `eve-network`:
 ## Production Differences
 
 **Development (docker-compose.yml)**:
+
 - Ports exposed (für lokalen Zugriff)
 - Debug Logging
 - Schwache Passwords
 - Volume Mounts für Live-Reload
 
 **Production (TODO: docker-compose.prod.yml)**:
+
 - Keine Port-Exposition außer Reverse Proxy
 - Error Logging only
 - Starke Secrets (via Environment/Secrets)

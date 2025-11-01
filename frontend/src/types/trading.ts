@@ -1,22 +1,36 @@
 // types/trading.ts
 export interface TradingRoute {
-  rank: number;
+  rank?: number; // Optional for API responses
   item_type_id: number;
   item_name: string;
-  origin_system_id: number;
-  origin_system_name: string;
-  destination_system_id: number;
-  destination_system_name: string;
+  // API fields
+  buy_system_id?: number;
+  buy_system_name?: string;
+  buy_station_id?: number;
+  buy_station_name?: string;
+  sell_system_id?: number;
+  sell_system_name?: string;
+  sell_station_id?: number;
+  sell_station_name?: string;
+  // Mock data fields (for backward compatibility)
+  origin_system_id?: number;
+  origin_system_name?: string;
+  destination_system_id?: number;
+  destination_system_name?: string;
   quantity: number;
   buy_price: number;
   sell_price: number;
-  total_investment: number;
-  total_revenue: number;
-  profit: number;
+  total_investment?: number;
+  total_revenue?: number;
+  profit?: number; // Mock data
+  total_profit?: number; // API field
   spread_percent: number;
   travel_time_seconds: number;
   round_trip_seconds: number;
   isk_per_hour: number;
+  jumps?: number; // API field
+  item_volume?: number; // API field
+  profit_per_unit?: number; // API field
 }
 
 export interface Region {

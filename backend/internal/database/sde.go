@@ -127,15 +127,16 @@ func (r *SDERepository) SearchTypes(ctx context.Context, searchTerm string, limi
 
 // GetSystemIDForLocation retrieves the solar system ID for a given location ID (station/structure)
 func (r *SDERepository) GetSystemIDForLocation(ctx context.Context, locationID int64) (int64, error) {
-	// Try staStations table first (for NPC stations)
-	query := `SELECT solarSystemID FROM staStations WHERE stationID = ?`
+	// Try npcStations table first (for NPC stations)
+	// Note: Table uses _key for station ID (consistent with SDE schema)
+	query := `SELECT solarSystemID FROM npcStations WHERE _key = ?`
 	var systemID int64
 	err := r.db.QueryRowContext(ctx, query, locationID).Scan(&systemID)
 	if err == nil {
 		return systemID, nil
 	}
 
-	// If not found in staStations, try mapDenormalize (for structures/citadels)
+	// If not found in npcStations, try mapDenormalize (for structures/citadels)
 	if err == sql.ErrNoRows {
 		query = `SELECT solarSystemID FROM mapDenormalize WHERE itemID = ? LIMIT 1`
 		err = r.db.QueryRowContext(ctx, query, locationID).Scan(&systemID)

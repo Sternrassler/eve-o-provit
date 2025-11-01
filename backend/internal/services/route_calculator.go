@@ -4,6 +4,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sort"
@@ -85,6 +86,7 @@ func (rc *RouteCalculator) Calculate(ctx context.Context, regionID, shipTypeID i
 	if err != nil {
 		return nil, fmt.Errorf("failed to find profitable items: %w", err)
 	}
+	log.Printf("DEBUG: Found %d orders, %d profitable items", len(orders), len(profitableItems))
 
 	// Calculate routes for each profitable item
 	routes := make([]models.TradingRoute, 0, len(profitableItems))
@@ -202,17 +204,25 @@ func (rc *RouteCalculator) findProfitableItems(ctx context.Context, orders []dat
 			continue
 		}
 
+		log.Printf("DEBUG: Checking profitable item - TypeID=%d, Spread=%.2f%%, LowestSell=%.2f, HighestBuy=%.2f",
+			typeID, spread, lowestSell.Price, highestBuy.Price)
+
 		// Get item info
 		itemInfo, err := rc.sdeRepo.GetTypeInfo(ctx, typeID)
 		if err != nil {
+			log.Printf("DEBUG: Skipped typeID %d - GetTypeInfo failed: %v", typeID, err)
 			continue
 		}
 
 		// Get item volume
 		itemVol, err := cargo.GetItemVolume(rc.sdeDB, int64(typeID))
 		if err != nil {
+			log.Printf("DEBUG: Skipped typeID %d (%s) - GetItemVolume failed: %v", typeID, itemInfo.Name, err)
 			continue
 		}
+
+		log.Printf("DEBUG: Added profitable item - TypeID=%d (%s), Volume=%.2f, Spread=%.2f%%",
+			typeID, itemInfo.Name, itemVol.Volume, spread)
 
 		profitableItems = append(profitableItems, models.ItemPair{
 			TypeID:        typeID,
@@ -298,14 +308,27 @@ func (rc *RouteCalculator) calculateRoute(ctx context.Context, item models.ItemP
 // Helper functions
 
 func (rc *RouteCalculator) getRegionName(ctx context.Context, regionID int) (string, error) {
-	// Query SDE for region name
-	query := `SELECT regionName FROM mapRegions WHERE regionID = ?`
-	var name string
-	err := rc.sdeDB.QueryRowContext(ctx, query, regionID).Scan(&name)
+	// Query SDE for region name (name is JSON with language codes)
+	query := `SELECT name FROM mapRegions WHERE _key = ?`
+	var nameJSON string
+	err := rc.sdeDB.QueryRowContext(ctx, query, regionID).Scan(&nameJSON)
 	if err != nil {
 		return "", fmt.Errorf("region %d not found", regionID)
 	}
-	return name, nil
+
+	// Parse JSON to get English name
+	// Format: {"en":"The Forge","de":"..."}
+	// Simple extraction for "en" key
+	var nameMap map[string]string
+	if err := json.Unmarshal([]byte(nameJSON), &nameMap); err != nil {
+		return fmt.Sprintf("Region-%d", regionID), nil
+	}
+
+	if name, ok := nameMap["en"]; ok {
+		return name, nil
+	}
+
+	return fmt.Sprintf("Region-%d", regionID), nil
 }
 
 func (rc *RouteCalculator) getSystemIDFromLocation(ctx context.Context, locationID int64) int64 {

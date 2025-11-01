@@ -64,8 +64,8 @@ export function TradingRouteList({
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      {routes.map((route) => (
-        <TradingRouteCard key={route.rank} route={route} />
+      {routes.map((route, index) => (
+        <TradingRouteCard key={route.item_type_id || route.rank || index} route={route} />
       ))}
     </div>
   );

@@ -9,7 +9,7 @@ import (
 
 func main() {
 	// Open SDE database
-	db, err := evedb.Open("../data/sde/sde.sqlite")
+	db, err := evedb.Open("../data/sde/eve-sde.db")
 	if err != nil {
 		log.Fatalf("Failed to open SDE database: %v", err)
 	}

@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 # Download EVE SDE SQLite Database from Official Release
 # Quelle: https://github.com/Sternrassler/eve-sde/releases
+#
+# Lädt die neueste eve-sde.db.gz Release in backend/data/sde/
+# Docker mountet dieses Verzeichnis nach /data/sde im Container
+# Siehe ADR-010 für SDE Path Convention
 
 set -euo pipefail
 
 # Konfiguration
 GITHUB_REPO="Sternrassler/eve-sde"
+# Lokales Verzeichnis im eve-o-provit Projekt
 TARGET_DIR="backend/data/sde"
-TARGET_FILE="sde.sqlite"
+TARGET_FILE="eve-sde.db"
 TEMP_DIR=$(mktemp -d)
 
 # Farben für Output

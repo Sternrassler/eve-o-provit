@@ -51,7 +51,7 @@ services:
       PORT: "8080"
       DATABASE_URL: postgres://eveprovit:${POSTGRES_PASSWORD}@postgres:5432/eveprovit?sslmode=disable
       REDIS_URL: redis://redis:6379/0
-      SDE_PATH: /data/sde/sde.sqlite
+      SDE_PATH: /data/sde/eve-sde.db
       CORS_ORIGINS: http://localhost:9000,http://localhost:3000
       LOG_LEVEL: debug
       ENV: development
@@ -60,7 +60,7 @@ services:
       EVE_CALLBACK_URL: ${EVE_CALLBACK_URL}
       JWT_SECRET: ${JWT_SECRET}
     volumes:
-      - ../backend/data/sde:/data/sde
+      - ../backend/data/sde:/data/sde:ro
     depends_on:
       postgres:
         condition: service_healthy

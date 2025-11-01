@@ -41,10 +41,11 @@ for adr in "$ADR_DIR"/ADR-*.md; do
     done
     
     # Prüfe Status (muss ein gültiger Wert sein, flexibles Format)
-    # Format 1: Status: Accepted (inline)
-    # Format 2: # Status \n Accepted (separate Zeile)
+    # Format 1: **Status:** Accepted (bold inline)
+    # Format 2: Status: Accepted (inline)
+    # Format 3: # Status \n Accepted (separate Zeile)
     valid_statuses=("Proposed" "Accepted" "Superseded" "Deprecated" "Rejected")
-    status_content=$(grep -iE "^(Status:|#+ Status)" "$adr" -A1 || echo "")
+    status_content=$(grep -iE '^(\*\*)?Status(\*\*)?:|^#+ Status' "$adr" -A1 || echo "")
     status_found=false
     for valid_status in "${valid_statuses[@]}"; do
         if echo "$status_content" | grep -qi "$valid_status"; then

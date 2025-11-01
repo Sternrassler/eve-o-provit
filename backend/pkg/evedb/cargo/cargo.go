@@ -60,20 +60,22 @@ type CargoFitResult struct {
 
 // GetItemVolume retrieves volume information for an item
 func GetItemVolume(db *sql.DB, itemTypeID int64) (*ItemVolume, error) {
+	// Query directly from types table in SDE
+	// Note: SDE doesn't have packagedVolume - using volume for all items
 	query := `
 		SELECT 
-			type_id,
-			item_name,
-			COALESCE(volume, 0) as volume,
-			COALESCE(capacity, 0) as capacity,
-			COALESCE(packagedVolume, 0) as packagedVolume,
-			COALESCE(basePrice, 0) as basePrice,
-			category_id,
-			COALESCE(category_name, '') as category_name,
+			_key,
+			json_extract(name, '$.en'),
+			COALESCE(volume, 0),
+			COALESCE(capacity, 0),
+			COALESCE(volume, 0) as packaged_volume,
+			COALESCE(basePrice, 0),
+			groupID,
+			'' as category_name,
 			marketGroupID,
-			COALESCE(isk_per_m3, 0) as isk_per_m3
-		FROM v_item_volumes
-		WHERE type_id = ?
+			0.0 as isk_per_m3
+		FROM types
+		WHERE _key = ?
 	`
 
 	var item ItemVolume

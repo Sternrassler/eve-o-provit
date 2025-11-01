@@ -40,7 +40,7 @@ func main() {
 	// Initialize Database
 	dbConfig := database.Config{
 		PostgresURL: getEnv("DATABASE_URL", "postgresql://eveprovit:dev@localhost:5432/eveprovit?sslmode=disable"),
-		SDEPath:     getEnv("SDE_PATH", "../eve-sde/data/sqlite/sde.sqlite"),
+		SDEPath:     getEnv("SDE_PATH", "data/sde/eve-sde.db"),
 	}
 
 	db, err := database.New(ctx, dbConfig)

@@ -1,0 +1,203 @@
+import { test, expect } from '@playwright/test';
+
+/**
+ * Navigation Feature E2E Tests
+ * 
+ * Tests für Route Planning und System Navigation
+ * 
+ * Voraussetzungen:
+ * - make docker-rebuild (Services laufen)
+ * - Navigation Backend API verfügbar
+ */
+
+test.describe('Navigation Feature', () => {
+  
+  // Helper to check if navigation UI is implemented
+  async function isNavigationUIImplemented(page) {
+    const response = await page.goto('/navigation');
+    if (response?.status() === 404) return false;
+    
+    // Check for origin input field (main UI element)
+    const originInput = page.getByLabel(/origin|start|from/i);
+    return await originInput.isVisible({ timeout: 2000 }).catch(() => false);
+  }
+  
+  test('Navigation page loads and displays route calculator', async ({ page }) => {
+    const response = await page.goto('/navigation');
+    
+    // Skip if page not implemented (404)
+    if (response?.status() === 404) {
+      test.skip();
+      return;
+    }
+    
+    // Check page title
+    await expect(page.locator('h1')).toContainText(/navigation/i);
+    
+    // Screenshot für Debugging
+    await page.screenshot({ path: 'tests/screenshots/navigation-page.png' });
+  });
+  
+  test('Route calculation between two systems', async ({ page }) => {
+    if (!await isNavigationUIImplemented(page)) {
+      test.skip();
+      return;
+    }
+    
+    // Fill in origin system
+    const originInput = page.getByLabel(/origin|start|from/i);
+    await originInput.fill('Jita');
+    
+    // Fill in destination system
+    const destInput = page.getByLabel(/destination|to|target/i);
+    await destInput.fill('Amarr');
+    
+    // Click calculate button
+    const calculateBtn = page.getByRole('button', { name: /calculate|find route/i });
+    await calculateBtn.click();
+    
+    // Wait for results
+    await page.waitForSelector('[data-testid="route-result"]', { timeout: 10000 });
+    
+    // Verify route is displayed
+    const routeResult = page.locator('[data-testid="route-result"]');
+    await expect(routeResult).toBeVisible();
+    
+    // Verify route contains jumps
+    await expect(page.locator('[data-testid="jump-count"]')).toBeVisible();
+    
+    await page.screenshot({ path: 'tests/screenshots/navigation-route-result.png' });
+  });
+  
+  test('Security filter toggle works', async ({ page }) => {
+    await page.goto('/navigation');
+    
+    // Find security filter checkbox/toggle
+    const securityFilter = page.getByLabel(/high.?sec only|safe route/i);
+    
+    if (await securityFilter.isVisible()) {
+      // Toggle security filter
+      await securityFilter.click();
+      
+      // Fill route
+      await page.getByLabel(/origin/i).fill('Jita');
+      await page.getByLabel(/destination/i).fill('Amarr');
+      
+      // Calculate
+      await page.getByRole('button', { name: /calculate/i }).click();
+      
+      // Wait for result
+      await page.waitForSelector('[data-testid="route-result"]', { timeout: 10000 });
+      
+      // Verify all systems are high-sec
+      const securityValues = page.locator('[data-testid="system-security"]');
+      const count = await securityValues.count();
+      
+      for (let i = 0; i < count; i++) {
+        const secText = await securityValues.nth(i).textContent();
+        const secValue = parseFloat(secText || '0');
+        expect(secValue).toBeGreaterThanOrEqual(0.5);
+      }
+    } else {
+      test.skip();
+    }
+  });
+  
+  test('Trade hub shortcuts work', async ({ page }) => {
+    await page.goto('/navigation');
+    
+    // Look for trade hub quick buttons
+    const jitaBtn = page.getByRole('button', { name: /jita/i }).first();
+    
+    if (await jitaBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await jitaBtn.click();
+      
+      // Verify Jita is filled in origin
+      const originInput = page.getByLabel(/origin/i);
+      await expect(originInput).toHaveValue(/jita/i);
+      
+      await page.screenshot({ path: 'tests/screenshots/navigation-trade-hub-selected.png' });
+    } else {
+      test.skip();
+    }
+  });
+  
+  test('Route displays travel time estimate', async ({ page }) => {
+    await page.goto('/navigation');
+    
+    await page.getByLabel(/origin/i).fill('Jita');
+    await page.getByLabel(/destination/i).fill('Dodixie');
+    await page.getByRole('button', { name: /calculate/i }).click();
+    
+    await page.waitForSelector('[data-testid="route-result"]', { timeout: 10000 });
+    
+    // Look for travel time indicator
+    const travelTime = page.locator('[data-testid="travel-time"]');
+    
+    if (await travelTime.isVisible()) {
+      // Verify time format (e.g., "5m 30s" or "0:05:30")
+      const timeText = await travelTime.textContent();
+      expect(timeText).toMatch(/\d+[ms]|\d+:\d+/);
+    }
+  });
+  
+  test('System autocomplete suggestions appear', async ({ page }) => {
+    await page.goto('/navigation');
+    
+    const originInput = page.getByLabel(/origin/i);
+    await originInput.fill('Ji');
+    
+    // Wait for autocomplete dropdown
+    await page.waitForTimeout(500); // Debounce delay
+    
+    // Check if suggestions appear
+    const suggestions = page.locator('[role="listbox"], [data-testid="autocomplete-list"]');
+    
+    if (await suggestions.isVisible({ timeout: 2000 }).catch(() => false)) {
+      // Verify Jita appears in suggestions
+      const jitaSuggestion = suggestions.locator('text=/jita/i').first();
+      await expect(jitaSuggestion).toBeVisible();
+      
+      // Click suggestion
+      await jitaSuggestion.click();
+      
+      // Verify input is filled
+      await expect(originInput).toHaveValue(/jita/i);
+    }
+  });
+  
+  test('Invalid system shows error', async ({ page }) => {
+    await page.goto('/navigation');
+    
+    await page.getByLabel(/origin/i).fill('InvalidSystemXYZ123');
+    await page.getByLabel(/destination/i).fill('Jita');
+    await page.getByRole('button', { name: /calculate/i }).click();
+    
+    // Wait for error message
+    const errorMsg = page.locator('[role="alert"], [data-testid="error-message"]');
+    
+    if (await errorMsg.isVisible({ timeout: 3000 }).catch(() => false)) {
+      await expect(errorMsg).toContainText(/not found|invalid|error/i);
+      await page.screenshot({ path: 'tests/screenshots/navigation-error.png' });
+    }
+  });
+  
+  test('Navigation works on mobile viewport', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+    
+    await page.goto('/navigation');
+    
+    // Verify page is responsive
+    await expect(page.locator('h1')).toBeVisible();
+    
+    // Fill and calculate route
+    await page.getByLabel(/origin/i).fill('Jita');
+    await page.getByLabel(/destination/i).fill('Amarr');
+    await page.getByRole('button', { name: /calculate/i }).click();
+    
+    await page.waitForSelector('[data-testid="route-result"]', { timeout: 10000 });
+    
+    await page.screenshot({ path: 'tests/screenshots/navigation-mobile.png', fullPage: true });
+  });
+});
