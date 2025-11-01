@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
@@ -172,7 +173,9 @@ func (h *TradingHandler) fetchESICharacterLocation(ctx context.Context, characte
 
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -234,7 +237,9 @@ func (h *TradingHandler) fetchESICharacterShip(ctx context.Context, characterID 
 
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -294,7 +299,9 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 
-	client := &http.Client{}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

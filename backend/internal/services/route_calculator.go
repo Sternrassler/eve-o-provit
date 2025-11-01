@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"sort"
 	"sync"
 	"time"
@@ -88,9 +89,17 @@ func (rc *RouteCalculator) Calculate(ctx context.Context, regionID, shipTypeID i
 	// Calculate routes for each profitable item
 	routes := make([]models.TradingRoute, 0, len(profitableItems))
 	for _, item := range profitableItems {
+		// Check for context cancellation
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
 		route, err := rc.calculateRoute(ctx, item, cargoCapacity)
 		if err != nil {
 			// Log error but continue with other items
+			log.Printf("Warning: skipped route for item %d (%s): %v", item.TypeID, item.ItemName, err)
 			continue
 		}
 		routes = append(routes, route)
@@ -322,7 +331,9 @@ func (rc *RouteCalculator) getSystemIDFromLocation(locationID int64) int64 {
 }
 
 func (rc *RouteCalculator) getLocationNames(ctx context.Context, systemID, stationID int64) (string, string) {
-	// Simplified - would query SDE for actual names
+	// TODO(Phase 2): Implement actual SDE lookups for system/station names
+	// Current: Returns placeholder IDs until SDE queries are added
+	// Impact: Frontend displays "System-30000142" instead of "Jita"
 	systemName := fmt.Sprintf("System-%d", systemID)
 	stationName := fmt.Sprintf("Station-%d", stationID)
 	return systemName, stationName
