@@ -23,8 +23,8 @@ func TestGetSystemIDForLocation(t *testing.T) {
 
 	// Create test schema
 	schema := `
-		CREATE TABLE staStations (
-			stationID INTEGER PRIMARY KEY,
+		CREATE TABLE npcStations (
+			_key INTEGER PRIMARY KEY,
 			stationName TEXT,
 			solarSystemID INTEGER
 		);
@@ -43,7 +43,7 @@ func TestGetSystemIDForLocation(t *testing.T) {
 	// Insert test data
 	testData := `
 		-- NPC Stations (ID range 60000000 - 64000000)
-		INSERT INTO staStations (stationID, stationName, solarSystemID) VALUES
+		INSERT INTO npcStations (_key, stationName, solarSystemID) VALUES
 			(60003760, 'Jita IV - Moon 4 - Caldari Navy Assembly Plant', 30000142),
 			(60008494, 'Amarr VIII (Oris) - Emperor Family Academy', 30002187);
 
@@ -148,8 +148,8 @@ func TestGetSystemIDForLocation_EdgeCases(t *testing.T) {
 
 	// Create minimal schema
 	schema := `
-		CREATE TABLE staStations (
-			stationID INTEGER PRIMARY KEY,
+		CREATE TABLE npcStations (
+			_key INTEGER PRIMARY KEY,
 			solarSystemID INTEGER
 		);
 

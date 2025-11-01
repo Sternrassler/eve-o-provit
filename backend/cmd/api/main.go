@@ -72,7 +72,7 @@ func main() {
 	log.Println("ESI client initialized")
 
 	// Initialize services
-	routeCalculator := services.NewRouteCalculator(esiClient, db.SDE, sdeRepo, marketRepo)
+	routeCalculator := services.NewRouteCalculator(esiClient, db.SDE, sdeRepo, marketRepo, redisClient)
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
