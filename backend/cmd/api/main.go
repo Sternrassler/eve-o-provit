@@ -9,6 +9,7 @@ import (
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/handlers"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evesso"
 	"github.com/gofiber/fiber/v2"
@@ -70,8 +71,12 @@ func main() {
 
 	log.Println("ESI client initialized")
 
+	// Initialize services
+	routeCalculator := services.NewRouteCalculator(esiClient, db.SDE, sdeRepo)
+
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
+	tradingHandler := handlers.NewTradingHandler(routeCalculator, h)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -99,11 +104,19 @@ func main() {
 	// Public market endpoints
 	api.Get("/market/:region/:type", h.GetMarketOrders)
 
+	// Public trading routes (unauthenticated)
+	api.Post("/trading/routes/calculate", tradingHandler.CalculateRoutes)
+
 	// Protected routes (require Bearer token)
 	protected := api.Group("", evesso.AuthMiddleware)
 
 	// Character info endpoint
 	protected.Get("/character", handleCharacterInfo)
+
+	// Character context endpoints
+	protected.Get("/character/location", tradingHandler.GetCharacterLocation)
+	protected.Get("/character/ship", tradingHandler.GetCharacterShip)
+	protected.Get("/character/ships", tradingHandler.GetCharacterShips)
 
 	// Trading endpoints
 	trading := protected.Group("/trading")
