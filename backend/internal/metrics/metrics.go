@@ -20,33 +20,21 @@ var (
 		Help: "Cache hit ratio for market orders",
 	})
 
-	// ESIRequestsTotal counts ESI requests by status code
-	ESIRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "esi_requests_total",
-		Help: "Total ESI requests by status code",
-	}, []string{"status_code"})
-
-	// ESIRateLimitErrorsTotal counts 429 errors
-	ESIRateLimitErrorsTotal = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "esi_rate_limit_errors_total",
-		Help: "Total ESI rate limit errors (429)",
+	// TradingCacheHitsTotal counts cache hits
+	TradingCacheHitsTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "trading_cache_hits_total",
+		Help: "Total trading cache hits",
 	})
 
-	// WorkerPoolQueueSize tracks worker pool queue size
-	WorkerPoolQueueSize = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "worker_pool_queue_size",
-		Help: "Current worker pool queue size",
+	// TradingCacheMissesTotal counts cache misses
+	TradingCacheMissesTotal = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "trading_cache_misses_total",
+		Help: "Total trading cache misses",
+	})
+
+	// TradingWorkerPoolQueueSize tracks worker pool queue size
+	TradingWorkerPoolQueueSize = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "trading_worker_pool_queue_size",
+		Help: "Current trading worker pool queue size",
 	}, []string{"pool_type"})
-
-	// CacheHitsTotal counts cache hits
-	CacheHitsTotal = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "cache_hits_total",
-		Help: "Total cache hits",
-	})
-
-	// CacheMissesTotal counts cache misses
-	CacheMissesTotal = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "cache_misses_total",
-		Help: "Total cache misses",
-	})
 )

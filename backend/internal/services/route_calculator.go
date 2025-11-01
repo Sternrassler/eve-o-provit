@@ -36,17 +36,17 @@ const (
 
 // RouteCalculator handles trading route calculations
 type RouteCalculator struct {
-	esiClient      *esi.Client
-	marketRepo     *database.MarketRepository
-	sdeDB          *sql.DB
-	sdeRepo        *database.SDERepository
-	cache          map[string]*models.CachedData
-	cacheMu        sync.RWMutex
-	marketCache    *MarketOrderCache
-	navCache       *NavigationCache
-	workerPool     *RouteWorkerPool
-	rateLimiter    *ESIRateLimiter
-	redisClient    *redis.Client
+	esiClient   *esi.Client
+	marketRepo  *database.MarketRepository
+	sdeDB       *sql.DB
+	sdeRepo     *database.SDERepository
+	cache       map[string]*models.CachedData
+	cacheMu     sync.RWMutex
+	marketCache *MarketOrderCache
+	navCache    *NavigationCache
+	workerPool  *RouteWorkerPool
+	rateLimiter *ESIRateLimiter
+	redisClient *redis.Client
 }
 
 // NewRouteCalculator creates a new route calculator instance
@@ -177,11 +177,11 @@ func (rc *RouteCalculator) fetchMarketOrders(ctx context.Context, regionID int) 
 	if rc.marketCache != nil {
 		orders, err := rc.marketCache.Get(ctx, regionID)
 		if err == nil {
-			metrics.CacheHitsTotal.Inc()
+			metrics.TradingCacheHitsTotal.Inc()
 			log.Printf("Cache hit for region %d market orders", regionID)
 			return orders, nil
 		}
-		metrics.CacheMissesTotal.Inc()
+		metrics.TradingCacheMissesTotal.Inc()
 		log.Printf("Cache miss for region %d market orders", regionID)
 	}
 
@@ -190,12 +190,12 @@ func (rc *RouteCalculator) fetchMarketOrders(ctx context.Context, regionID int) 
 	rc.cacheMu.RLock()
 	if cached, exists := rc.cache[cacheKey]; exists && time.Now().Before(cached.ExpiresAt) {
 		rc.cacheMu.RUnlock()
-		metrics.CacheHitsTotal.Inc()
+		metrics.TradingCacheHitsTotal.Inc()
 		return cached.Data.([]database.MarketOrder), nil
 	}
 	rc.cacheMu.RUnlock()
 
-	metrics.CacheMissesTotal.Inc()
+	metrics.TradingCacheMissesTotal.Inc()
 
 	// Fetch fresh data from ESI (this stores in DB)
 	if err := rc.esiClient.FetchMarketOrders(ctx, regionID); err != nil {

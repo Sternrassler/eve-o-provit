@@ -126,7 +126,7 @@ func (f *MarketOrderFetcher) worker(ctx context.Context, regionID int, pageQueue
 func (f *MarketOrderFetcher) getFirstPageAndCount(ctx context.Context, regionID int) ([]database.MarketOrder, int, error) {
 	// For now, we'll use a simplified approach
 	// In production, this would parse the X-Pages header from ESI
-	
+
 	// Fetch first page
 	orders, err := f.fetchPage(ctx, regionID, 1)
 	if err != nil {
@@ -145,14 +145,14 @@ func (f *MarketOrderFetcher) getFirstPageAndCount(ctx context.Context, regionID 
 func (f *MarketOrderFetcher) fetchPage(ctx context.Context, regionID, page int) ([]database.MarketOrder, error) {
 	// This is a simplified implementation
 	// In production, this would make a direct ESI call with page parameter
-	
+
 	// For now, delegate to existing ESI client
 	// Note: The existing client doesn't support pagination yet
 	// This is a placeholder that needs integration with the ESI client
-	
+
 	// TODO: Implement pagination support in ESI client
 	// endpoint := fmt.Sprintf("/v1/markets/%d/orders/?page=%d", regionID, page)
-	
+
 	return nil, fmt.Errorf("pagination not yet implemented in ESI client")
 }
 
