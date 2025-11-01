@@ -6,15 +6,23 @@ import { ShipSelect } from "@/components/trading/ShipSelect";
 import { TradingRouteList } from "@/components/trading/TradingRouteList";
 import { TradingFilters } from "@/components/trading/TradingFilters";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TradingFilters as TradingFiltersType } from "@/types/trading";
 import { mockTradingRoutes } from "@/lib/mock-data/trading-routes";
 import { Loader2 } from "lucide-react";
+
+const MAX_DISPLAYED_ROUTES = 50;
 
 const defaultFilters: TradingFiltersType = {
   minSpread: 5,
   minProfit: 100000,
   maxTravelTime: 30,
-  minVolumeFill: 10,
 };
 
 export default function IntraRegionPage() {
@@ -70,10 +78,10 @@ export default function IntraRegionPage() {
   }, [hasCalculated, filters, sortBy]);
 
   const visibleRoutes = filteredRoutes.slice(0, displayedRoutes);
-  const hasMoreRoutes = displayedRoutes < filteredRoutes.length && displayedRoutes < 50;
+  const hasMoreRoutes = displayedRoutes < filteredRoutes.length && displayedRoutes < MAX_DISPLAYED_ROUTES;
 
   const handleShowMore = () => {
-    setDisplayedRoutes((prev) => Math.min(prev + 10, 50));
+    setDisplayedRoutes((prev) => Math.min(prev + 10, MAX_DISPLAYED_ROUTES));
   };
 
   const isCalculateDisabled = !selectedRegion || !selectedShip || isCalculating;
@@ -124,24 +132,17 @@ export default function IntraRegionPage() {
           {hasCalculated && filteredRoutes.length > 0 && (
             <div className="space-y-2 rounded-lg border p-4">
               <label className="text-sm font-medium">Sortieren nach</label>
-              <select
-                value={sortBy}
-                onChange={(e) =>
-                  setSortBy(
-                    e.target.value as
-                      | "isk_per_hour"
-                      | "profit"
-                      | "spread_percent"
-                      | "travel_time_seconds"
-                  )
-                }
-                className="flex h-9 w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]"
-              >
-                <option value="isk_per_hour">ISK/Hour</option>
-                <option value="profit">Gewinn</option>
-                <option value="spread_percent">Spread</option>
-                <option value="travel_time_seconds">Reisezeit</option>
-              </select>
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="isk_per_hour">ISK/Hour</SelectItem>
+                  <SelectItem value="profit">Gewinn</SelectItem>
+                  <SelectItem value="spread_percent">Spread</SelectItem>
+                  <SelectItem value="travel_time_seconds">Reisezeit</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>

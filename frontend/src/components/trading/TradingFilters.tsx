@@ -17,7 +17,6 @@ const defaultFilters: TradingFiltersType = {
   minSpread: 5,
   minProfit: 100000,
   maxTravelTime: 30,
-  minVolumeFill: 10,
 };
 
 export function TradingFilters({ filters, onChange }: TradingFiltersProps) {
@@ -44,7 +43,7 @@ export function TradingFilters({ filters, onChange }: TradingFiltersProps) {
             </Button>
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="sm"
               onClick={() => setIsCollapsed(!isCollapsed)}
             >
               {isCollapsed ? (
@@ -106,25 +105,6 @@ export function TradingFilters({ filters, onChange }: TradingFiltersProps) {
               }
               min={0}
               max={60}
-              step={5}
-            />
-          </div>
-
-          {/* Min Volume Fill */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Min. Füllung</label>
-              <span className="text-sm text-muted-foreground">
-                {filters.minVolumeFill}%
-              </span>
-            </div>
-            <Slider
-              value={[filters.minVolumeFill]}
-              onValueChange={(value) =>
-                onChange({ ...filters, minVolumeFill: value[0] })
-              }
-              min={1}
-              max={100}
               step={5}
             />
           </div>

@@ -34,5 +34,4 @@ export interface TradingFilters {
   minSpread: number;
   minProfit: number;
   maxTravelTime: number;
-  minVolumeFill: number;
 }
