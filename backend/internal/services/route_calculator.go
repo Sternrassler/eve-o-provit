@@ -219,10 +219,10 @@ func (rc *RouteCalculator) findProfitableItems(ctx context.Context, orders []dat
 			ItemName:      itemInfo.Name,
 			ItemVolume:    itemVol.Volume,
 			BuyStationID:  lowestSell.LocationID, // Buy from sell orders
-			BuySystemID:   rc.getSystemIDFromLocation(lowestSell.LocationID),
+			BuySystemID:   rc.getSystemIDFromLocation(ctx, lowestSell.LocationID),
 			BuyPrice:      lowestSell.Price,
 			SellStationID: highestBuy.LocationID, // Sell to buy orders
-			SellSystemID:  rc.getSystemIDFromLocation(highestBuy.LocationID),
+			SellSystemID:  rc.getSystemIDFromLocation(ctx, highestBuy.LocationID),
 			SellPrice:     highestBuy.Price,
 			SpreadPercent: spread,
 		})
@@ -308,24 +308,13 @@ func (rc *RouteCalculator) getRegionName(ctx context.Context, regionID int) (str
 	return name, nil
 }
 
-func (rc *RouteCalculator) getSystemIDFromLocation(locationID int64) int64 {
-	// Station IDs are 60000000 - 64000000 range
-	// Query SDE to get system ID for this station
-	query := `SELECT solarSystemID FROM staStations WHERE stationID = ?`
-	var systemID int64
-	err := rc.sdeDB.QueryRow(query, locationID).Scan(&systemID)
+func (rc *RouteCalculator) getSystemIDFromLocation(ctx context.Context, locationID int64) int64 {
+	// Use repository method to query SDE database
+	systemID, err := rc.sdeRepo.GetSystemIDForLocation(ctx, locationID)
 	if err != nil {
-		// If not a station, try denormalize table for structures/citadels
-		query = `SELECT solarSystemID FROM mapDenormalize WHERE itemID = ? LIMIT 1`
-		err = rc.sdeDB.QueryRow(query, locationID).Scan(&systemID)
-		if err != nil {
-			// Fallback: assume it's already a system ID or return 0
-			// This handles cases where location might be a system ID already
-			if locationID >= 30000000 && locationID < 40000000 {
-				return locationID
-			}
-			return 0
-		}
+		// Log warning but don't fail the entire calculation
+		log.Printf("Warning: failed to get system ID for location %d: %v", locationID, err)
+		return 0
 	}
 	return systemID
 }
