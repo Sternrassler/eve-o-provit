@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,15 +25,7 @@ export default function CharacterPage() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [shipError, setShipError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isAuthenticated && character) {
-      fetchCharacterDetails();
-      fetchCharacterLocation();
-      fetchCharacterShip();
-    }
-  }, [isAuthenticated, character]);
-
-  const fetchCharacterDetails = async () => {
+  const fetchCharacterDetails = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -62,9 +54,9 @@ export default function CharacterPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getAuthHeader]);
 
-  const fetchCharacterLocation = async () => {
+  const fetchCharacterLocation = useCallback(async () => {
     setLocationError(null);
 
     try {
@@ -90,9 +82,9 @@ export default function CharacterPage() {
       console.error("Failed to fetch character location:", err);
       setLocationError("Keine Daten verfügbar");
     }
-  };
+  }, [getAuthHeader]);
 
-  const fetchCharacterShip = async () => {
+  const fetchCharacterShip = useCallback(async () => {
     setShipError(null);
 
     try {
@@ -118,7 +110,15 @@ export default function CharacterPage() {
       console.error("Failed to fetch character ship:", err);
       setShipError("Keine Daten verfügbar");
     }
-  };
+  }, [getAuthHeader]);
+
+  useEffect(() => {
+    if (isAuthenticated && character) {
+      fetchCharacterDetails();
+      fetchCharacterLocation();
+      fetchCharacterShip();
+    }
+  }, [isAuthenticated, character, fetchCharacterDetails, fetchCharacterLocation, fetchCharacterShip]);
 
   if (isLoading) {
     return (
