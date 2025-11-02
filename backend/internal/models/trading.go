@@ -28,6 +28,10 @@ type TradingRoute struct {
 	ISKPerHour         float64 `json:"isk_per_hour"`
 	Jumps              int     `json:"jumps"`
 	ItemVolume         float64 `json:"item_volume"`
+	// Multi-tour fields
+	NumberOfTours    int     `json:"number_of_tours"`
+	ProfitPerTour    float64 `json:"profit_per_tour"`
+	TotalTimeMinutes float64 `json:"total_time_minutes"`
 }
 
 // RouteCalculationRequest represents the request to calculate trading routes
@@ -51,16 +55,18 @@ type RouteCalculationResponse struct {
 
 // ItemPair represents a profitable buy/sell opportunity for an item
 type ItemPair struct {
-	TypeID        int     `json:"type_id"`
-	ItemName      string  `json:"item_name"`
-	ItemVolume    float64 `json:"item_volume"`
-	BuyStationID  int64   `json:"buy_station_id"`
-	BuySystemID   int64   `json:"buy_system_id"`
-	BuyPrice      float64 `json:"buy_price"`
-	SellStationID int64   `json:"sell_station_id"`
-	SellSystemID  int64   `json:"sell_system_id"`
-	SellPrice     float64 `json:"sell_price"`
-	SpreadPercent float64 `json:"spread_percent"`
+	TypeID             int     `json:"type_id"`
+	ItemName           string  `json:"item_name"`
+	ItemVolume         float64 `json:"item_volume"`
+	BuyStationID       int64   `json:"buy_station_id"`
+	BuySystemID        int64   `json:"buy_system_id"`
+	BuyPrice           float64 `json:"buy_price"`
+	SellStationID      int64   `json:"sell_station_id"`
+	SellSystemID       int64   `json:"sell_system_id"`
+	SellPrice          float64 `json:"sell_price"`
+	SpreadPercent      float64 `json:"spread_percent"`
+	AvailableVolumeM3  float64 `json:"available_volume_m3"`  // Total m³ available from sell orders
+	AvailableQuantity  int     `json:"available_quantity"`   // Total items available
 }
 
 // CharacterLocation represents character location information

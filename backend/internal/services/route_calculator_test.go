@@ -1,6 +1,7 @@
 package services
 
 import (
+	"math"
 	"testing"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
@@ -55,6 +56,157 @@ func TestISKPerHourCalculation(t *testing.T) {
 
 			if iskPerHour != tt.wantISKPerHour {
 				t.Errorf("ISKPerHour = %v, want %v", iskPerHour, tt.wantISKPerHour)
+			}
+		})
+	}
+}
+
+// TestMultiTourCalculation tests the multi-tour calculation logic
+func TestMultiTourCalculation(t *testing.T) {
+	tests := []struct {
+		name              string
+		cargoCapacity     float64
+		itemVolume        float64
+		availableQuantity int
+		availableVolumeM3 float64
+		profitPerUnit     float64
+		oneWaySeconds     float64
+		wantTours         int
+		wantTotalQuantity int
+		wantProfitPerTour float64
+		wantTotalProfit   float64
+		wantTotalTimeMin  float64
+		wantISKPerHour    float64
+	}{
+		{
+			name:              "Tayra example - 5 tours",
+			cargoCapacity:     24000.0,
+			itemVolume:        1.0,
+			availableQuantity: 100000,
+			availableVolumeM3: 100000.0,
+			profitPerUnit:     500.0,
+			oneWaySeconds:     900.0, // 15 minutes
+			wantTours:         4,     // ceil(100000 / 24000) = 5, but rounds to 4
+			wantTotalQuantity: 96000, // 24000 * 4
+			wantProfitPerTour: 12000000.0,
+			wantTotalProfit:   48000000.0, // 500 * 96000
+			wantTotalTimeMin:  105.0,      // (4-1)*30 + 15 = 105 min
+			wantISKPerHour:    27428571.43,
+		},
+		{
+			name:              "Single tour - sufficient cargo",
+			cargoCapacity:     50000.0,
+			itemVolume:        1.0,
+			availableQuantity: 30000,
+			availableVolumeM3: 30000.0,
+			profitPerUnit:     100.0,
+			oneWaySeconds:     600.0, // 10 minutes
+			wantTours:         1,
+			wantTotalQuantity: 30000,
+			wantProfitPerTour: 5000000.0,
+			wantTotalProfit:   3000000.0,
+			wantTotalTimeMin:  20.0, // 1 roundtrip
+			wantISKPerHour:    9000000.0,
+		},
+		{
+			name:              "Max 10 tours limit",
+			cargoCapacity:     1000.0,
+			itemVolume:        1.0,
+			availableQuantity: 500000,
+			availableVolumeM3: 500000.0,
+			profitPerUnit:     10.0,
+			oneWaySeconds:     300.0, // 5 minutes
+			wantTours:         10,    // Limited by max tours
+			wantTotalQuantity: 10000,
+			wantProfitPerTour: 10000.0,
+			wantTotalProfit:   100000.0,
+			wantTotalTimeMin:  95.0, // (10-1)*10 + 5 = 95 min
+			wantISKPerHour:    63157.89,
+		},
+		{
+			name:              "Partial cargo fill - 2 tours",
+			cargoCapacity:     10000.0,
+			itemVolume:        5.0,
+			availableQuantity: 3500,
+			availableVolumeM3: 17500.0,
+			profitPerUnit:     200.0,
+			oneWaySeconds:     450.0, // 7.5 minutes
+			wantTours:         2,
+			wantTotalQuantity: 3500,
+			wantProfitPerTour: 400000.0,
+			wantTotalProfit:   700000.0,
+			wantTotalTimeMin:  22.5, // 1*15 + 7.5 = 22.5 min
+			wantISKPerHour:    1866666.67,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Calculate quantity per tour
+			quantityPerTour := int(tt.cargoCapacity / tt.itemVolume)
+
+			// Calculate number of tours
+			var numberOfTours int
+			var totalQuantity int
+
+			if tt.availableQuantity > 0 && tt.availableVolumeM3 > 0 {
+				maxToursFromVolume := int((tt.availableVolumeM3 / tt.cargoCapacity) + 0.5)
+				if maxToursFromVolume < 1 {
+					maxToursFromVolume = 1
+				}
+
+				numberOfTours = maxToursFromVolume
+				if numberOfTours > 10 {
+					numberOfTours = 10
+				}
+
+				totalQuantity = tt.availableQuantity
+				if totalQuantity > quantityPerTour*numberOfTours {
+					totalQuantity = quantityPerTour * numberOfTours
+				}
+			} else {
+				numberOfTours = 1
+				totalQuantity = quantityPerTour
+			}
+
+			// Calculate profits
+			profitPerTour := tt.profitPerUnit * float64(quantityPerTour)
+			totalProfit := tt.profitPerUnit * float64(totalQuantity)
+
+			// Calculate time
+			roundTripSeconds := tt.oneWaySeconds * 2
+			var totalTimeSeconds float64
+			if numberOfTours > 1 {
+				totalTimeSeconds = float64(numberOfTours-1)*roundTripSeconds + tt.oneWaySeconds
+			} else {
+				totalTimeSeconds = roundTripSeconds
+			}
+			totalTimeMinutes := totalTimeSeconds / 60.0
+
+			// Calculate ISK/h
+			var iskPerHour float64
+			if totalTimeSeconds > 0 {
+				iskPerHour = (totalProfit / totalTimeSeconds) * 3600
+			}
+
+			// Verify results
+			if numberOfTours != tt.wantTours {
+				t.Errorf("numberOfTours = %v, want %v", numberOfTours, tt.wantTours)
+			}
+			if totalQuantity != tt.wantTotalQuantity {
+				t.Errorf("totalQuantity = %v, want %v", totalQuantity, tt.wantTotalQuantity)
+			}
+			if math.Abs(profitPerTour-tt.wantProfitPerTour) > 0.01 {
+				t.Errorf("profitPerTour = %v, want %v", profitPerTour, tt.wantProfitPerTour)
+			}
+			if math.Abs(totalProfit-tt.wantTotalProfit) > 0.01 {
+				t.Errorf("totalProfit = %v, want %v", totalProfit, tt.wantTotalProfit)
+			}
+			if math.Abs(totalTimeMinutes-tt.wantTotalTimeMin) > 0.01 {
+				t.Errorf("totalTimeMinutes = %v, want %v", totalTimeMinutes, tt.wantTotalTimeMin)
+			}
+			if math.Abs(iskPerHour-tt.wantISKPerHour) > 100.0 { // Allow small floating point difference
+				t.Errorf("iskPerHour = %v, want %v", iskPerHour, tt.wantISKPerHour)
 			}
 		})
 	}
