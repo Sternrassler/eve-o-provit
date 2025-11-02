@@ -66,7 +66,8 @@ export default function CharacterPage() {
         return;
       }
 
-      const response = await fetch("http://localhost:9001/api/v1/character/location", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
+      const response = await fetch(`${apiUrl}/api/v1/character/location`, {
         headers: {
           Authorization: authHeader,
         },
@@ -94,7 +95,8 @@ export default function CharacterPage() {
         return;
       }
 
-      const response = await fetch("http://localhost:9001/api/v1/character/ship", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
+      const response = await fetch(`${apiUrl}/api/v1/character/ship`, {
         headers: {
           Authorization: authHeader,
         },
