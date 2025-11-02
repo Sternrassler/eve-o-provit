@@ -1,0 +1,242 @@
+name: Load Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      region_id:
+        description: 'Region ID to test (default: 10000002 = The Forge)'
+        required: false
+        default: '10000002'
+      skip_cold_cache:
+        description: 'Skip cold cache test (faster CI run)'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  load-tests:
+    name: Performance Load Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: backend/go.sum
+
+      - name: Download SDE Database
+        run: |
+          echo "📥 Downloading SDE Database..."
+          bash scripts/download-sde.sh
+          
+          # Verify download
+          if [ ! -f backend/data/sde/eve-sde.db ]; then
+            echo "❌ SDE Database download failed"
+            exit 1
+          fi
+          
+          echo "✅ SDE Database ready ($(du -h backend/data/sde/eve-sde.db | cut -f1))"
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          go mod download
+          go mod verify
+
+      - name: Run Load Tests
+        env:
+          REDIS_ADDR: localhost:6379
+          REGION_ID: ${{ github.event.inputs.region_id }}
+          SKIP_COLD_CACHE: ${{ github.event.inputs.skip_cold_cache }}
+        run: |
+          echo "🧪 Running Load Tests..."
+          echo "  Region ID: $REGION_ID"
+          echo "  Skip Cold Cache: $SKIP_COLD_CACHE"
+          
+          cd backend
+          
+          if [ "$SKIP_COLD_CACHE" = "true" ]; then
+            echo "⏩ Skipping cold cache test (faster run)"
+            go test -v -timeout 15m -tags=load \
+              -run 'TestLoadTheForge_WarmCache|TestLoadConcurrent|TestLoadCacheHitRatio' \
+              ./internal/services/ 2>&1 | tee load-test-output.log
+          else
+            echo "🔄 Running all load tests (including cold cache)"
+            go test -v -timeout 15m -tags=load \
+              ./internal/services/ 2>&1 | tee load-test-output.log
+          fi
+
+      - name: Run Benchmarks
+        run: |
+          echo "📊 Running Performance Benchmarks..."
+          cd backend
+          go test -bench=BenchmarkTheForge -benchtime=3x -tags=load \
+            ./internal/services/ 2>&1 | tee benchmark-output.log
+
+      - name: Parse Test Results
+        if: always()
+        run: |
+          echo "📋 Parsing test results..."
+          cd backend
+          
+          # Extract metrics
+          COLD_CACHE_TIME=$(grep "Cold cache fetch must complete" load-test-output.log | grep -oP '\d+\.\d+s' | head -1 || echo "N/A")
+          WARM_CACHE_TIME=$(grep "Warm cache fetch must complete" load-test-output.log | grep -oP '\d+\.\d+s' | head -1 || echo "N/A")
+          CONCURRENT_MAX=$(grep "Max Individual Time:" load-test-output.log | grep -oP '\d+\.\d+s' | head -1 || echo "N/A")
+          CACHE_HIT_RATIO=$(grep "Hit Ratio:" load-test-output.log | grep -oP '\d+\.\d+%' | head -1 || echo "N/A")
+          
+          echo "📊 Performance Metrics:"
+          echo "  - Cold Cache: $COLD_CACHE_TIME"
+          echo "  - Warm Cache: $WARM_CACHE_TIME"
+          echo "  - Concurrent Max: $CONCURRENT_MAX"
+          echo "  - Cache Hit Ratio: $CACHE_HIT_RATIO"
+          
+          # Store for report
+          mkdir -p ../reports
+          cat > ../reports/load-test-metrics.txt << EOF
+          Cold Cache Time: $COLD_CACHE_TIME
+          Warm Cache Time: $WARM_CACHE_TIME
+          Concurrent Max Time: $CONCURRENT_MAX
+          Cache Hit Ratio: $CACHE_HIT_RATIO
+          EOF
+
+      - name: Generate Test Report
+        if: always()
+        run: |
+          echo "📄 Generating load test report..."
+          cd backend
+          
+          mkdir -p ../reports
+          
+          # Count test results
+          TOTAL_TESTS=$(grep -c "^=== RUN" load-test-output.log 2>/dev/null || echo 0)
+          PASSED_TESTS=$(grep -c "^--- PASS:" load-test-output.log 2>/dev/null || echo 0)
+          FAILED_TESTS=$(grep -c "^--- FAIL:" load-test-output.log 2>/dev/null || echo 0)
+          
+          # Read metrics
+          METRICS=$(cat ../reports/load-test-metrics.txt 2>/dev/null || echo "Metrics not available")
+          
+          # Generate Markdown report
+          cat > ../reports/load-test-report.md << 'EOFMD'
+          # Load Test Report
+          
+          **Run:** ${{ github.repository }}#${{ github.run_number }}  
+          **Branch:** ${{ github.ref_name }}  
+          **Commit:** ${{ github.sha }}  
+          **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")  
+          **Status:** ${{ job.status }}
+          **Region ID:** ${{ github.event.inputs.region_id }}
+          
+          ## Test Results
+          EOFMD
+          
+          echo "- **Total Tests:** ${TOTAL_TESTS}" >> ../reports/load-test-report.md
+          echo "- **Passed:** ${PASSED_TESTS} ✅" >> ../reports/load-test-report.md
+          echo "- **Failed:** ${FAILED_TESTS} ❌" >> ../reports/load-test-report.md
+          echo "" >> ../reports/load-test-report.md
+          echo "## Performance Metrics" >> ../reports/load-test-report.md
+          echo '```' >> ../reports/load-test-report.md
+          cat ../reports/load-test-metrics.txt >> ../reports/load-test-report.md
+          echo '```' >> ../reports/load-test-report.md
+          echo "" >> ../reports/load-test-report.md
+          echo "## Test Output (Last 100 Lines)" >> ../reports/load-test-report.md
+          echo '```' >> ../reports/load-test-report.md
+          tail -n 100 load-test-output.log >> ../reports/load-test-report.md
+          echo '```' >> ../reports/load-test-report.md
+          echo "" >> ../reports/load-test-report.md
+          echo "## Benchmark Results" >> ../reports/load-test-report.md
+          echo '```' >> ../reports/load-test-report.md
+          cat benchmark-output.log >> ../reports/load-test-report.md
+          echo '```' >> ../reports/load-test-report.md
+          
+          echo "✅ Load test report generated"
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-report-${{ github.run_number }}
+          path: |
+            reports/load-test-report.md
+            reports/load-test-metrics.txt
+            backend/load-test-output.log
+            backend/benchmark-output.log
+          retention-days: 30
+
+      - name: Check Performance Targets
+        if: success()
+        run: |
+          echo "🎯 Checking performance targets..."
+          cd backend
+          
+          # Parse cold cache time (if run)
+          if [ "${{ github.event.inputs.skip_cold_cache }}" != "true" ]; then
+            COLD_TIME=$(grep "Total Time:" load-test-output.log | head -1 | grep -oP '\d+\.\d+' || echo "999")
+            if (( $(echo "$COLD_TIME > 30" | bc -l) )); then
+              echo "❌ Cold cache test failed: ${COLD_TIME}s > 30s"
+              exit 1
+            else
+              echo "✅ Cold cache test passed: ${COLD_TIME}s < 30s"
+            fi
+          fi
+          
+          # Parse warm cache time
+          WARM_TIME=$(grep "Cache Hit Time:" load-test-output.log | head -1 | grep -oP '\d+\.\d+' || echo "999")
+          if (( $(echo "$WARM_TIME > 5" | bc -l) )); then
+            echo "⚠️ Warm cache test warning: ${WARM_TIME}s > 5s (non-blocking)"
+          else
+            echo "✅ Warm cache test passed: ${WARM_TIME}s < 5s"
+          fi
+          
+          # Parse cache hit ratio
+          HIT_RATIO=$(grep "Hit Ratio:" load-test-output.log | head -1 | grep -oP '\d+\.\d+' || echo "0")
+          if (( $(echo "$HIT_RATIO < 95" | bc -l) )); then
+            echo "⚠️ Cache hit ratio warning: ${HIT_RATIO}% < 95% (non-blocking)"
+          else
+            echo "✅ Cache hit ratio passed: ${HIT_RATIO}% > 95%"
+          fi
+          
+          echo "✅ All performance targets met"
+
+      - name: Comment Summary (if PR)
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let reportContent = '## 🚀 Load Test Results\n\n';
+            
+            try {
+              const report = fs.readFileSync('reports/load-test-report.md', 'utf8');
+              reportContent += report;
+            } catch (error) {
+              reportContent += '⚠️ Could not read load test report\n';
+            }
+            
+            reportContent += `\n\n[📥 Download Full Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: reportContent
+            });

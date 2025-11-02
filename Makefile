@@ -89,6 +89,18 @@ test-be-bench: ## Führt Backend Benchmarks aus
 	@echo "[make test-be-bench] Führe Backend Benchmarks aus..."
 	@cd $(BACKEND_DIR) && go test -bench=. -benchmem ./pkg/evedb/navigation/
 
+test-load: ## Führt Load Tests aus (erfordert Redis + SDE Database)
+	@echo "[make test-load] Führe Load Tests aus (Redis + SDE erforderlich)..."
+	@echo "[make test-load] Hinweis: Redis muss auf localhost:6379 laufen"
+	@echo "[make test-load] Hinweis: SDE DB muss unter backend/data/sde/eve-sde.db liegen"
+	@cd $(BACKEND_DIR) && go test -v -timeout 15m -tags=load ./internal/services/load_test.go ./internal/services/cache.go ./internal/services/market_fetcher.go
+	@echo "[make test-load] ✅ Load Tests abgeschlossen"
+
+test-load-bench: ## Führt Load Test Benchmarks aus
+	@echo "[make test-load-bench] Führe Load Test Benchmarks aus..."
+	@cd $(BACKEND_DIR) && go test -bench=BenchmarkTheForge -benchtime=3x -tags=load ./internal/services/
+	@echo "[make test-load-bench] ✅ Benchmarks abgeschlossen"
+
 test-be-examples: test-be-ex-cargo test-be-ex-nav ## Führt alle Backend-Examples aus
 
 test-be-ex-cargo: ## Führt Cargo-Example aus (Badger + Tritanium)
