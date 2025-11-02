@@ -48,10 +48,19 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Route Path */}
-        <div className="flex items-center gap-2 text-sm">
-          <span className="font-medium">{route.buy_system_name || route.origin_system_name}</span>
-          <ArrowRight className="size-4 text-muted-foreground" />
-          <span className="font-medium">{route.sell_system_name || route.destination_system_name}</span>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium">{route.buy_system_name || route.origin_system_name}</span>
+            <ArrowRight className="size-4 text-muted-foreground" />
+            <span className="font-medium">{route.sell_system_name || route.destination_system_name}</span>
+          </div>
+          {(route.buy_station_name || route.sell_station_name) && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground/80">
+              <span className="truncate">{route.buy_station_name}</span>
+              <ArrowRight className="size-3.5" />
+              <span className="truncate">{route.sell_station_name}</span>
+            </div>
+          )}
         </div>
 
         {/* Quantity */}
