@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TradingRoute } from "@/types/trading";
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { ArrowRight, TrendingUp, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TradingRouteCardProps {
@@ -50,6 +50,8 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
     }
   };
 
+  const isMultiTour = route.number_of_tours && route.number_of_tours > 1;
+
   return (
     <Card className={cn("transition-all hover:shadow-lg hover:border-primary/50", getSecurityBackground())}>
       <CardHeader>
@@ -57,6 +59,12 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
           <div className="flex items-center gap-2 text-base">
             <span className="text-muted-foreground">#{route.rank}</span>
             <span>{route.item_name}</span>
+            {isMultiTour && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                <Repeat className="size-3" />
+                {route.number_of_tours}x
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1 text-lg font-bold text-primary">
             <TrendingUp className="size-5" />
@@ -84,6 +92,7 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
         {/* Quantity */}
         <div className="text-sm text-muted-foreground">
           Menge: {route.quantity.toLocaleString("de-DE")}
+          {isMultiTour && route.number_of_tours && ` (≈${Math.ceil(route.quantity / route.number_of_tours).toLocaleString("de-DE")} pro Tour)`}
         </div>
 
         {/* Prices */}
@@ -98,24 +107,53 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
           </div>
         </div>
 
-        {/* Profit and Spread */}
-        <div className="grid grid-cols-2 gap-4 border-t pt-3">
-          <div>
-            <div className="text-sm text-muted-foreground">Gewinn</div>
-            <div className="text-lg font-bold">{formatISK(route.total_profit || route.profit || 0)}</div>
-          </div>
-          <div>
-            <div className="text-sm text-muted-foreground">Spread</div>
-            <div className={cn("text-lg font-bold", getSpreadColor(route.spread_percent))}>
-              {route.spread_percent.toFixed(1)}%
+        {/* Multi-tour Profit Display */}
+        {isMultiTour ? (
+          <div className="space-y-2 border-t pt-3">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-muted-foreground">Pro Tour</div>
+                <div className="font-bold">{formatISK(route.profit_per_tour || 0)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Gesamt</div>
+                <div className="text-lg font-bold">{formatISK(route.total_profit || route.profit || 0)}</div>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4 border-t pt-3">
+            <div>
+              <div className="text-sm text-muted-foreground">Gewinn</div>
+              <div className="text-lg font-bold">{formatISK(route.total_profit || route.profit || 0)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Spread</div>
+              <div className={cn("text-lg font-bold", getSpreadColor(route.spread_percent))}>
+                {route.spread_percent.toFixed(1)}%
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Spread for multi-tour (moved below profit) */}
+        {isMultiTour && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Spread</span>
+            <span className={cn("font-bold", getSpreadColor(route.spread_percent))}>
+              {route.spread_percent.toFixed(1)}%
+            </span>
+          </div>
+        )}
 
         {/* Travel Time */}
         <div className="border-t pt-3 text-sm">
           <div className="text-muted-foreground">Reisezeit</div>
-          <div className="font-medium">{formatTime(route.travel_time_seconds)}</div>
+          <div className="font-medium">
+            {isMultiTour && route.total_time_minutes
+              ? `${Math.round(route.total_time_minutes)} min (${route.number_of_tours} Touren)`
+              : formatTime(route.travel_time_seconds)}
+          </div>
         </div>
       </CardContent>
     </Card>

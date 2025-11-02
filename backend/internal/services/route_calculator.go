@@ -298,17 +298,23 @@ func (rc *RouteCalculator) findProfitableItems(ctx context.Context, orders []dat
 			continue
 		}
 
+		// Calculate available volume from sell orders at the lowest price
+		availableQuantity := lowestSell.VolumeRemain
+		availableVolumeM3 := float64(availableQuantity) * itemVol.Volume
+
 		profitableItems = append(profitableItems, models.ItemPair{
-			TypeID:        typeID,
-			ItemName:      itemInfo.Name,
-			ItemVolume:    itemVol.Volume,
-			BuyStationID:  lowestSell.LocationID, // Buy from sell orders
-			BuySystemID:   rc.getSystemIDFromLocation(ctx, lowestSell.LocationID),
-			BuyPrice:      lowestSell.Price,
-			SellStationID: highestBuy.LocationID, // Sell to buy orders
-			SellSystemID:  rc.getSystemIDFromLocation(ctx, highestBuy.LocationID),
-			SellPrice:     highestBuy.Price,
-			SpreadPercent: spread,
+			TypeID:            typeID,
+			ItemName:          itemInfo.Name,
+			ItemVolume:        itemVol.Volume,
+			BuyStationID:      lowestSell.LocationID, // Buy from sell orders
+			BuySystemID:       rc.getSystemIDFromLocation(ctx, lowestSell.LocationID),
+			BuyPrice:          lowestSell.Price,
+			SellStationID:     highestBuy.LocationID, // Sell to buy orders
+			SellSystemID:      rc.getSystemIDFromLocation(ctx, highestBuy.LocationID),
+			SellPrice:         highestBuy.Price,
+			SpreadPercent:     spread,
+			AvailableVolumeM3: availableVolumeM3,
+			AvailableQuantity: availableQuantity,
 		})
 	}
 
@@ -319,18 +325,48 @@ func (rc *RouteCalculator) findProfitableItems(ctx context.Context, orders []dat
 func (rc *RouteCalculator) calculateRoute(ctx context.Context, item models.ItemPair, cargoCapacity float64) (models.TradingRoute, error) {
 	var route models.TradingRoute
 
-	// Calculate quantity that fits in cargo
+	// Calculate quantity that fits in cargo (per tour)
 	if item.ItemVolume <= 0 {
 		return route, fmt.Errorf("invalid item volume: %f", item.ItemVolume)
 	}
-	quantity := int(cargoCapacity / item.ItemVolume)
-	if quantity <= 0 {
+	quantityPerTour := int(cargoCapacity / item.ItemVolume)
+	if quantityPerTour <= 0 {
 		return route, fmt.Errorf("item too large for cargo")
 	}
 
-	// Calculate profit
+	// Multi-tour calculation
+	// Calculate number of tours based on available volume
+	var numberOfTours int
+	var totalQuantity int
+
+	if item.AvailableQuantity > 0 && item.AvailableVolumeM3 > 0 {
+		// Calculate max tours based on available volume
+		maxToursFromVolume := int((item.AvailableVolumeM3 / cargoCapacity) + 0.5) // Round up
+		if maxToursFromVolume < 1 {
+			maxToursFromVolume = 1
+		}
+
+		// Limit to max 10 tours (practical limit)
+		numberOfTours = maxToursFromVolume
+		if numberOfTours > 10 {
+			numberOfTours = 10
+		}
+
+		// Calculate total quantity across all tours
+		totalQuantity = item.AvailableQuantity
+		if totalQuantity > quantityPerTour*numberOfTours {
+			totalQuantity = quantityPerTour * numberOfTours
+		}
+	} else {
+		// Fallback: single tour
+		numberOfTours = 1
+		totalQuantity = quantityPerTour
+	}
+
+	// Calculate profit per tour and total profit
 	profitPerUnit := item.SellPrice - item.BuyPrice
-	totalProfit := profitPerUnit * float64(quantity)
+	profitPerTour := profitPerUnit * float64(quantityPerTour)
+	totalProfit := profitPerUnit * float64(totalQuantity)
 
 	// Calculate travel time
 	travelResult, err := navigation.ShortestPath(rc.sdeDB, item.BuySystemID, item.SellSystemID, false)
@@ -339,13 +375,23 @@ func (rc *RouteCalculator) calculateRoute(ctx context.Context, item models.ItemP
 	}
 
 	// Calculate travel time in seconds (simplified)
-	travelTimeSeconds := float64(travelResult.Jumps) * 30.0 // ~30 seconds per jump average
-	roundTripSeconds := travelTimeSeconds * 2
+	oneWaySeconds := float64(travelResult.Jumps) * 30.0 // ~30 seconds per jump average
+	roundTripSeconds := oneWaySeconds * 2
 
-	// Calculate ISK per hour
+	// Multi-tour time calculation
+	// (numberOfTours - 1) full roundtrips + 1 one-way trip
+	var totalTimeSeconds float64
+	if numberOfTours > 1 {
+		totalTimeSeconds = float64(numberOfTours-1)*roundTripSeconds + oneWaySeconds
+	} else {
+		totalTimeSeconds = roundTripSeconds
+	}
+	totalTimeMinutes := totalTimeSeconds / 60.0
+
+	// Calculate ISK per hour with multi-tour time
 	var iskPerHour float64
-	if roundTripSeconds > 0 {
-		iskPerHour = (totalProfit / roundTripSeconds) * 3600
+	if totalTimeSeconds > 0 {
+		iskPerHour = (totalProfit / totalTimeSeconds) * 3600
 	}
 
 	// Get system and station names
@@ -371,15 +417,19 @@ func (rc *RouteCalculator) calculateRoute(ctx context.Context, item models.ItemP
 		SellPrice:          item.SellPrice,
 		BuySecurityStatus:  buySecurityStatus,
 		SellSecurityStatus: sellSecurityStatus,
-		Quantity:           quantity,
+		Quantity:           totalQuantity,
 		ProfitPerUnit:      profitPerUnit,
 		TotalProfit:        totalProfit,
 		SpreadPercent:      item.SpreadPercent,
-		TravelTimeSeconds:  travelTimeSeconds,
+		TravelTimeSeconds:  oneWaySeconds,
 		RoundTripSeconds:   roundTripSeconds,
 		ISKPerHour:         iskPerHour,
 		Jumps:              travelResult.Jumps,
 		ItemVolume:         item.ItemVolume,
+		// Multi-tour fields
+		NumberOfTours:    numberOfTours,
+		ProfitPerTour:    profitPerTour,
+		TotalTimeMinutes: totalTimeMinutes,
 	}
 
 	return route, nil
