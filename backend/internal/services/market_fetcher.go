@@ -89,7 +89,7 @@ func (f *MarketOrderFetcher) FetchAllPages(ctx context.Context, regionID int) ([
 	for pageOrders := range results {
 		allOrders = append(allOrders, pageOrders...)
 		fetchedPages++
-		
+
 		// Log progress every 50 pages
 		if fetchedPages%50 == 0 {
 			log.Printf("ESI Pagination: Progress %d/%d pages (%.1f%%)", fetchedPages, totalPages, float64(fetchedPages)/float64(totalPages)*100)
@@ -144,7 +144,7 @@ func (f *MarketOrderFetcher) worker(ctx context.Context, regionID int, pageQueue
 			return
 		}
 	}
-	
+
 	if pagesProcessed > 0 {
 		log.Printf("ESI Pagination: Worker %d completed (%d pages)", workerID, pagesProcessed)
 	}

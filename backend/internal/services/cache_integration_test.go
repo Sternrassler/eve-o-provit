@@ -1,4 +1,5 @@
 // Package services - Redis Cache Integration Tests
+//go:build integration
 // +build integration
 
 package services

@@ -75,7 +75,7 @@ func (c *Client) FetchMarketOrders(ctx context.Context, regionID int) error {
 	// Use MarketOrderFetcher for parallel pagination (see internal/services/market_fetcher.go)
 	// Note: This method is kept for backward compatibility, but the real work is done by
 	// the MarketOrderFetcher worker pool (10 workers, 15s timeout)
-	
+
 	// For now, delegate to the single-page method for backward compatibility
 	// The parallel fetcher is used directly by route_calculator.go and cache.go
 	endpoint := fmt.Sprintf("/v1/markets/%d/orders/?page=1", regionID)
