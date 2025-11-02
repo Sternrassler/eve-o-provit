@@ -79,9 +79,11 @@ test-be-unit: ## Führt nur Backend Unit-Tests aus (ohne Integration)
 	@echo "[make test-be-unit] Führe Backend Unit-Tests aus..."
 	@cd $(BACKEND_DIR) && go test -v -race -short ./...
 
-test-be-int: ## Führt nur Backend Integration-Tests aus
+test-be-int: ## Führt nur Backend Integration-Tests aus (mit Redis/Testcontainers)
 	@echo "[make test-be-int] Führe Backend Integration-Tests aus..."
-	@cd $(BACKEND_DIR) && go test -v -race -run Integration ./...
+	@cd $(BACKEND_DIR) && go test -v -race -tags=integration ./...
+
+test-integration: test-be-int ## Alias für test-be-int (Redis/Testcontainers Integration Tests)
 
 test-be-bench: ## Führt Backend Benchmarks aus
 	@echo "[make test-be-bench] Führe Backend Benchmarks aus..."

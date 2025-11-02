@@ -5,16 +5,8 @@
 package handlers
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
-	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
-	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
-	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/gofiber/fiber/v2"
 )
 

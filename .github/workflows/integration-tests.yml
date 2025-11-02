@@ -1,0 +1,196 @@
+name: Integration Tests
+
+on:
+  pull_request:
+    paths:
+      - 'backend/internal/services/cache*.go'
+      - 'backend/pkg/esi/**'
+      - 'backend/go.mod'
+      - 'backend/go.sum'
+      - '.github/workflows/integration-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  integration-tests:
+    name: Redis Cache Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: backend/go.sum
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          go mod download
+          go mod verify
+
+      - name: Run Integration Tests
+        run: |
+          echo "🧪 Running Redis Cache Integration Tests with Testcontainers..."
+          cd backend
+          go test -v -timeout 10m -tags=integration ./internal/services/... 2>&1 | tee integration-test-output.log
+          echo "✅ Integration tests completed"
+
+      - name: Generate Coverage Report
+        if: success()
+        run: |
+          echo "📊 Generating coverage report for cache.go..."
+          cd backend
+          go test -tags=integration -coverprofile=coverage-integration.out -covermode=atomic ./internal/services/...
+          go tool cover -func=coverage-integration.out | grep cache.go || echo "No cache.go coverage found"
+          
+          # Calculate total coverage percentage
+          TOTAL_COVERAGE=$(go tool cover -func=coverage-integration.out | grep total | awk '{print $3}')
+          echo "Total Coverage: $TOTAL_COVERAGE"
+          
+          # Store coverage for reporting
+          echo "$TOTAL_COVERAGE" > coverage-percentage.txt
+
+      - name: Validate Coverage Threshold
+        if: success()
+        run: |
+          echo "🎯 Validating coverage threshold (>80% for cache.go)..."
+          cd backend
+          
+          # Extract cache.go coverage
+          CACHE_COVERAGE=$(go tool cover -func=coverage-integration.out | grep cache.go | awk '{sum+=$3; count++} END {if (count>0) print sum/count; else print 0}')
+          echo "Cache.go Coverage: ${CACHE_COVERAGE}%"
+          
+          # Check if coverage meets threshold
+          if (( $(echo "$CACHE_COVERAGE < 80" | bc -l) )); then
+            echo "❌ Coverage for cache.go is below 80%: ${CACHE_COVERAGE}%"
+            exit 1
+          else
+            echo "✅ Coverage threshold met: ${CACHE_COVERAGE}%"
+          fi
+
+      - name: Generate Test Report
+        if: always()
+        run: |
+          echo "📊 Generating integration test report..."
+          cd backend
+          
+          mkdir -p ../reports
+          
+          # Count test results
+          TOTAL_TESTS=$(grep -c "^=== RUN" integration-test-output.log 2>/dev/null || echo 0)
+          PASSED_TESTS=$(grep -c "^--- PASS:" integration-test-output.log 2>/dev/null || echo 0)
+          FAILED_TESTS=$(grep -c "^--- FAIL:" integration-test-output.log 2>/dev/null || echo 0)
+          
+          # Read coverage if available
+          COVERAGE="N/A"
+          if [ -f coverage-percentage.txt ]; then
+            COVERAGE=$(cat coverage-percentage.txt)
+          fi
+          
+          # Generate Markdown report
+          cat > ../reports/integration-test-report.md << EOF
+          # Redis Cache Integration Test Report
+          
+          **Run:** ${{ github.repository }}#${{ github.run_number }}  
+          **Branch:** ${{ github.ref_name }}  
+          **Commit:** ${{ github.sha }}  
+          **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")  
+          **Status:** ${{ job.status }}
+          
+          ## Test Results
+          - **Total Tests:** ${TOTAL_TESTS}
+          - **Passed:** ${PASSED_TESTS} ✅
+          - **Failed:** ${FAILED_TESTS} ❌
+          - **Coverage:** ${COVERAGE}
+          
+          ## Test Scenarios Covered
+          - ✅ Cache Set/Get with Gzip Compression
+          - ✅ Cache Miss Handling (redis.Nil)
+          - ✅ TTL Expiration (1s timeout)
+          - ✅ Gzip Compression Ratio (<20% for 100k orders)
+          - ✅ Concurrent Access (10 goroutines)
+          - ✅ Navigation Cache Set/Get
+          - ✅ Navigation Cache TTL Expiration
+          
+          ## Infrastructure
+          - **Testcontainers:** Redis 7-alpine
+          - **Build Tag:** \`-tags=integration\`
+          - **Timeout:** 10 minutes
+          
+          ## Test Output (Last 100 Lines)
+          \`\`\`
+          $(tail -n 100 integration-test-output.log 2>/dev/null || echo "No test output found")
+          \`\`\`
+          EOF
+          
+          # Generate JSON report
+          cat > ../reports/integration-test-report.json << EOF
+          {
+            "run_id": "${{ github.run_number }}",
+            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "branch": "${{ github.ref_name }}",
+            "commit": "${{ github.sha }}",
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "status": "${{ job.status }}",
+            "total_tests": ${TOTAL_TESTS},
+            "passed_tests": ${PASSED_TESTS},
+            "failed_tests": ${FAILED_TESTS},
+            "coverage": "${COVERAGE}",
+            "workflow": "integration-tests"
+          }
+          EOF
+          
+          echo "✅ Integration test report generated"
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-report-${{ github.run_number }}
+          path: |
+            reports/integration-test-report.md
+            reports/integration-test-report.json
+            backend/integration-test-output.log
+            backend/coverage-integration.out
+          retention-days: 30
+
+      - name: Upload Coverage to Codecov (Optional)
+        if: success()
+        uses: codecov/codecov-action@v5
+        continue-on-error: true
+        with:
+          files: backend/coverage-integration.out
+          flags: integration
+          name: integration-tests
+
+      - name: Comment PR with Results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let reportContent = '## 🧪 Redis Cache Integration Test Results\n\n';
+            
+            try {
+              const report = fs.readFileSync('reports/integration-test-report.md', 'utf8');
+              reportContent += report;
+            } catch (error) {
+              reportContent += '⚠️ Could not read integration test report file\n';
+            }
+            
+            reportContent += `\n\n[📥 Download Full Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: reportContent
+            });
