@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CharacterLocation, CharacterShip } from "@/types/character";
 
 interface CharacterDetails {
   character_id: number;
@@ -17,12 +18,18 @@ interface CharacterDetails {
 export default function CharacterPage() {
   const { character, isAuthenticated, isLoading, getAuthHeader } = useAuth();
   const [details, setDetails] = useState<CharacterDetails | null>(null);
+  const [location, setLocation] = useState<CharacterLocation | null>(null);
+  const [ship, setShip] = useState<CharacterShip | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [shipError, setShipError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAuthenticated && character) {
       fetchCharacterDetails();
+      fetchCharacterLocation();
+      fetchCharacterShip();
     }
   }, [isAuthenticated, character]);
 
@@ -54,6 +61,62 @@ export default function CharacterPage() {
       setError(err instanceof Error ? err.message : "Failed to load character details");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCharacterLocation = async () => {
+    setLocationError(null);
+
+    try {
+      const authHeader = getAuthHeader();
+      if (!authHeader) {
+        setLocationError("No authentication token available");
+        return;
+      }
+
+      const response = await fetch("http://localhost:9001/api/v1/character/location", {
+        headers: {
+          Authorization: authHeader,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch location: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setLocation(data);
+    } catch (err) {
+      console.error("Failed to fetch character location:", err);
+      setLocationError("Keine Daten verfügbar");
+    }
+  };
+
+  const fetchCharacterShip = async () => {
+    setShipError(null);
+
+    try {
+      const authHeader = getAuthHeader();
+      if (!authHeader) {
+        setShipError("No authentication token available");
+        return;
+      }
+
+      const response = await fetch("http://localhost:9001/api/v1/character/ship", {
+        headers: {
+          Authorization: authHeader,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ship: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setShip(data);
+    } catch (err) {
+      console.error("Failed to fetch character ship:", err);
+      setShipError("Keine Daten verfügbar");
     }
   };
 
@@ -103,7 +166,7 @@ export default function CharacterPage() {
                 height={128}
                 className="rounded-lg"
               />
-              <div className="space-y-2">
+              <div className="space-y-3 flex-1">
                 <div>
                   <p className="text-sm text-muted-foreground">Name</p>
                   <p className="text-xl font-bold">{character.character_name}</p>
@@ -112,6 +175,35 @@ export default function CharacterPage() {
                   <p className="text-sm text-muted-foreground">Character ID</p>
                   <p className="font-mono">{character.character_id}</p>
                 </div>
+                
+                {/* Clone Standort */}
+                <div>
+                  <p className="text-sm text-muted-foreground">Clone Standort</p>
+                  {locationError ? (
+                    <p className="text-sm text-muted-foreground">{locationError}</p>
+                  ) : location ? (
+                    <p className="font-medium">
+                      {location.station_name || "Unbekannte Station"} ({location.solar_system_name})
+                    </p>
+                  ) : (
+                    <Skeleton className="h-5 w-48" />
+                  )}
+                </div>
+
+                {/* Aktuelles Schiff */}
+                <div>
+                  <p className="text-sm text-muted-foreground">Aktuelles Schiff</p>
+                  {shipError ? (
+                    <p className="text-sm text-muted-foreground">{shipError}</p>
+                  ) : ship ? (
+                    <p className="font-medium">
+                      {ship.ship_name} ({ship.ship_type_name})
+                    </p>
+                  ) : (
+                    <Skeleton className="h-5 w-48" />
+                  )}
+                </div>
+
                 {character.scopes && character.scopes.length > 0 && (
                   <div>
                     <p className="text-sm text-muted-foreground">Scopes</p>
