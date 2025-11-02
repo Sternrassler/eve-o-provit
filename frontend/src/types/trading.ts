@@ -12,6 +12,8 @@ export interface TradingRoute {
   sell_system_name?: string;
   sell_station_id?: number;
   sell_station_name?: string;
+  buy_security_status?: number; // Security status of buy system (0.0 - 1.0)
+  sell_security_status?: number; // Security status of sell system (0.0 - 1.0)
   // Mock data fields (for backward compatibility)
   origin_system_id?: number;
   origin_system_name?: string;
@@ -48,4 +50,7 @@ export interface TradingFilters {
   minSpread: number;
   minProfit: number;
   maxTravelTime: number;
+  allowHighSec: boolean;
+  allowLowSec: boolean;
+  allowNullSec: boolean;
 }

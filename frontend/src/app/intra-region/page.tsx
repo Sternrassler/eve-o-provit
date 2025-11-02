@@ -26,6 +26,9 @@ const defaultFilters: TradingFiltersType = {
   minSpread: 5,
   minProfit: 100000,
   maxTravelTime: 30,
+  allowHighSec: true,
+  allowLowSec: false,
+  allowNullSec: false,
 };
 
 export default function IntraRegionPage() {
@@ -116,11 +119,26 @@ export default function IntraRegionPage() {
     const routes = apiRoutes.filter((route) => {
       const travelTimeMinutes = route.travel_time_seconds / 60;
       const totalProfit = route.total_profit ?? route.profit ?? 0;
-      return (
-        route.spread_percent >= filters.minSpread &&
-        totalProfit >= filters.minProfit &&
-        travelTimeMinutes <= filters.maxTravelTime
-      );
+      
+      // Check basic filters
+      if (route.spread_percent < filters.minSpread) return false;
+      if (totalProfit < filters.minProfit) return false;
+      if (travelTimeMinutes > filters.maxTravelTime) return false;
+
+      // Check security zone filters
+      const buySecStatus = route.buy_security_status ?? 1.0;
+      const sellSecStatus = route.sell_security_status ?? 1.0;
+      const minSecStatus = Math.min(buySecStatus, sellSecStatus);
+
+      const isHighSec = minSecStatus >= 0.5;
+      const isLowSec = minSecStatus > 0.0 && minSecStatus < 0.5;
+      const isNullSec = minSecStatus <= 0.0;
+
+      if (isHighSec && !filters.allowHighSec) return false;
+      if (isLowSec && !filters.allowLowSec) return false;
+      if (isNullSec && !filters.allowNullSec) return false;
+
+      return true;
     });
 
     routes.sort((a, b) => {

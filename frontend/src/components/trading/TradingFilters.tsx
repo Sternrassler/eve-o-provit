@@ -5,6 +5,7 @@ import { TradingFilters as TradingFiltersType } from "@/types/trading";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 
@@ -17,6 +18,9 @@ const defaultFilters: TradingFiltersType = {
   minSpread: 5,
   minProfit: 100000,
   maxTravelTime: 30,
+  allowHighSec: true,
+  allowLowSec: false,
+  allowNullSec: false,
 };
 
 export function TradingFilters({ filters, onChange }: TradingFiltersProps) {
@@ -107,6 +111,58 @@ export function TradingFilters({ filters, onChange }: TradingFiltersProps) {
               max={60}
               step={5}
             />
+          </div>
+
+          {/* Security Zones */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium">Sicherheitszonen</label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="high-sec"
+                  checked={filters.allowHighSec}
+                  onCheckedChange={(checked) =>
+                    onChange({ ...filters, allowHighSec: checked === true })
+                  }
+                />
+                <label
+                  htmlFor="high-sec"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  High Sec (≥0.5)
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="low-sec"
+                  checked={filters.allowLowSec}
+                  onCheckedChange={(checked) =>
+                    onChange({ ...filters, allowLowSec: checked === true })
+                  }
+                />
+                <label
+                  htmlFor="low-sec"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Low Sec (0.1-0.4)
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="null-sec"
+                  checked={filters.allowNullSec}
+                  onCheckedChange={(checked) =>
+                    onChange({ ...filters, allowNullSec: checked === true })
+                  }
+                />
+                <label
+                  htmlFor="null-sec"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Null Sec (≤0.0)
+                </label>
+              </div>
+            </div>
           </div>
         </CardContent>
       )}

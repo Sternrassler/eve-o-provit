@@ -12,12 +12,14 @@ Alle `pkg/evedb` Funktionen wurden erfolgreich von `eve-sde` nach `eve-o-provit/
 ### 1. Cargo Package (`pkg/evedb/cargo`)
 
 **Funktionen (4/4):**
+
 - ✅ `GetItemVolume(db, itemTypeID)` - Item-Volumen und Preis-Info
 - ✅ `GetShipCapacities(db, shipTypeID, skills)` - Schiffs-Laderaum mit Skills
 - ✅ `CalculateCargoFit(db, shipTypeID, itemTypeID, skills)` - Max. Items berechnen
 - ✅ `ApplySkillModifiers(baseCapacity, skills)` - Skill-Boni anwenden
 
 **Structs:**
+
 - `SkillModifiers` - Optionale Skill-Level
 - `ItemVolume` - Item-Informationen (Volume, BasePrice, IskPerM3)
 - `ShipCapacities` - Schiffs-Laderäume (Cargo, Fleet Hangar, Ore Hold)
@@ -28,6 +30,7 @@ Alle `pkg/evedb` Funktionen wurden erfolgreich von `eve-sde` nach `eve-o-provit/
 ### 2. Navigation Package (`pkg/evedb/navigation`)
 
 **Funktionen (10/10):**
+
 - ✅ `CalculateAlignTime(mass, inertiaModifier)` - Ausricht-Zeit berechnen
 - ✅ `CalculateWarpTime(distanceAU, warpSpeedAU)` - Exakte Warp-Zeit (3-Phasen-Formel)
 - ✅ `CalculateSimplifiedWarpTime(distanceAU, warpSpeedAU)` - Vereinfachte Warp-Zeit
@@ -40,6 +43,7 @@ Alle `pkg/evedb` Funktionen wurden erfolgreich von `eve-sde` nach `eve-o-provit/
 - ✅ `CalculateTravelTimeExact(db, fromSystemID, toSystemID, params)` - Reisezeit exakt
 
 **Structs:**
+
 - `NavigationParams` - Optionale Parameter (WarpSpeed, AlignTime, AvoidLowSec)
 - `RouteResult` - Route mit Zeitberechnung
 - `PathResult` - Nur Pfad-Informationen
@@ -50,6 +54,7 @@ Alle `pkg/evedb` Funktionen wurden erfolgreich von `eve-sde` nach `eve-o-provit/
 ### 3. Database Package (`pkg/evedb`)
 
 **Funktionen (5/5):**
+
 - ✅ `Open(dbPath)` - Datenbank öffnen (read-only)
 - ✅ `Close()` - Datenbank schließen
 - ✅ `Conn()` - Rohen *sql.DB Connection zurückgeben
@@ -78,6 +83,7 @@ package cargo
 ```
 
 **eve-sde Status nach Migration:**
+
 - `eve-sde/pkg/evedb/cargo/cargo.go`: 4 Zeilen (DEPRECATED Hinweis)
 - `eve-sde/pkg/evedb/cargo/cargo_test.go`: 4 Zeilen (DEPRECATED Hinweis)
 - `eve-sde/pkg/evedb/cargo/integration_test.go`: 4 Zeilen (DEPRECATED Hinweis)
@@ -90,6 +96,7 @@ package cargo
 - `eve-sde/examples/README.md`: 11 Zeilen (DEPRECATED Hinweis)
 
 **eve-o-provit Status nach Migration:**
+
 - `backend/pkg/evedb/cargo/cargo.go`: 229 Zeilen
 - `backend/pkg/evedb/cargo/cargo_test.go`: 167 Zeilen
 - `backend/pkg/evedb/cargo/integration_test.go`: 393 Zeilen
@@ -109,10 +116,12 @@ package cargo
 **Erforderliche SQL Views:**
 
 ### Cargo Views
+
 - `v_item_volumes` - Item-Volumen und Preis-Daten
 - `v_ship_cargo_capacities` - Schiffs-Laderaum-Kapazitäten
 
 ### Navigation Views
+
 - `v_stargate_graph` - Stargate-Verbindungen für Pathfinding
 
 **Siehe:** `backend/sql/views/cargo.sql` für View-Definitionen
@@ -120,6 +129,7 @@ package cargo
 ## Änderungen gegenüber Original
 
 ### Cargo Package
+
 1. **Vereinfachte ApplySkillModifiers:**
    - Kein `holdType` Parameter mehr (eve-o-provit Version)
    - Fokus auf Cargo-Hold und Freighter Skills
@@ -130,10 +140,12 @@ package cargo
    - Fokus auf Standard-Cargo für Trading-Anwendung
 
 ### Navigation Package
+
 - Keine Änderungen - 1:1 Migration
 - Alle Formeln und Algorithmen identisch
 
 ### Database Package
+
 - Keine Änderungen - 1:1 Migration
 
 ## Tests
@@ -141,10 +153,12 @@ package cargo
 **Migrierte Tests:**
 
 ### Cargo Tests
+
 - ✅ `backend/pkg/evedb/cargo/cargo_test.go` - Unit Tests für ApplySkillModifiers (8 Tests)
 - ✅ `backend/pkg/evedb/cargo/integration_test.go` - Integration Tests mit In-Memory DB (4 Test-Suites, 12 Subtests)
 
 ### Navigation Tests
+
 - ✅ `backend/pkg/evedb/navigation/navigation_test.go` - Unit Tests für Berechnungen (4 Test-Suites, 13 Subtests)
 - ✅ `backend/pkg/evedb/navigation/benchmark_test.go` - Performance Benchmarks (4 Benchmarks)
 - ✅ `backend/pkg/evedb/navigation/integration_test.go` - Integration Tests mit In-Memory DB (3 Tests)
@@ -152,6 +166,7 @@ package cargo
 **Test-Statistik:**
 
 ### Cargo Package
+
 - **Unit Tests:** 8 Tests (alle ✅ PASS)
   - NoSkills, RacialHauler (I/III/V), Freighter (I/III/V), CombinedSkills, CustomMultiplier, ZeroLevel, ComplexCombination, JSONTags
 - **Integration Tests:** 4 Test-Suites, 12 Subtests (alle ✅ PASS)
@@ -161,6 +176,7 @@ package cargo
   - TestIntegrationCalculateCargoFit (badger_tritanium_no_skills, badger_tritanium_with_skills, badger_carrying_badger)
 
 ### Navigation Package
+
 - **Unit Tests:** 4 Test-Suites, 13 Subtests (alle ✅ PASS)
   - TestCalculateAlignTime (frigate, cruiser, freighter)
   - TestCalculateWarpTime (short, medium, long, extreme)
@@ -177,12 +193,14 @@ package cargo
   - BenchmarkCalculateTravelTime
 
 **Gesamt-Statistik:**
+
 - **Cargo:** 20 Tests (8 Unit + 12 Integration)
 - **Navigation:** 20 Tests (13 Unit + 3 Integration + 4 Benchmarks)
 - **Total:** 40 Tests, alle ✅ PASS
 - **Test-Code:** 1279 Zeilen (560 Cargo + 719 Navigation)
 
 **Ausführung:**
+
 ```bash
 # Alle Tests (schnell, ohne Integration)
 go test ./pkg/evedb/... -short
@@ -201,6 +219,7 @@ go test -bench=. ./pkg/evedb/navigation/...
 ```
 
 **Existierende Tests:**
+
 - ✅ `backend/pkg/evedb/db_test.go` - Database Connection Test
 - ✅ `backend/cmd/test-cargo/main.go` - Cargo Funktionalitäts-Test
 
@@ -216,6 +235,7 @@ go test -bench=. ./pkg/evedb/navigation/...
 ## Migrierte Examples
 
 ### Beispiel-Programme (konsolidiert)
+
 - ✅ `backend/examples/cargo/main.go` - Cargo Calculator CLI (242 Zeilen)
   - Vollständiges CLI-Tool mit Flags
   - Skills, Ship-Info, View-Initialisierung
@@ -228,6 +248,7 @@ go test -bench=. ./pkg/evedb/navigation/...
 - ✅ `backend/cmd/README.md` - Commands Documentation (verweist auf examples/)
 
 **Verwendung:**
+
 ```bash
 # Cargo Calculator
 cd backend

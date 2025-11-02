@@ -352,28 +352,34 @@ func (rc *RouteCalculator) calculateRoute(ctx context.Context, item models.ItemP
 	buySystemName, buyStationName := rc.getLocationNames(ctx, item.BuySystemID, item.BuyStationID)
 	sellSystemName, sellStationName := rc.getLocationNames(ctx, item.SellSystemID, item.SellStationID)
 
+	// Get security status for both systems
+	buySecurityStatus := rc.getSystemSecurityStatus(ctx, item.BuySystemID)
+	sellSecurityStatus := rc.getSystemSecurityStatus(ctx, item.SellSystemID)
+
 	route = models.TradingRoute{
-		ItemTypeID:        item.TypeID,
-		ItemName:          item.ItemName,
-		BuySystemID:       item.BuySystemID,
-		BuySystemName:     buySystemName,
-		BuyStationID:      item.BuyStationID,
-		BuyStationName:    buyStationName,
-		BuyPrice:          item.BuyPrice,
-		SellSystemID:      item.SellSystemID,
-		SellSystemName:    sellSystemName,
-		SellStationID:     item.SellStationID,
-		SellStationName:   sellStationName,
-		SellPrice:         item.SellPrice,
-		Quantity:          quantity,
-		ProfitPerUnit:     profitPerUnit,
-		TotalProfit:       totalProfit,
-		SpreadPercent:     item.SpreadPercent,
-		TravelTimeSeconds: travelTimeSeconds,
-		RoundTripSeconds:  roundTripSeconds,
-		ISKPerHour:        iskPerHour,
-		Jumps:             travelResult.Jumps,
-		ItemVolume:        item.ItemVolume,
+		ItemTypeID:         item.TypeID,
+		ItemName:           item.ItemName,
+		BuySystemID:        item.BuySystemID,
+		BuySystemName:      buySystemName,
+		BuyStationID:       item.BuyStationID,
+		BuyStationName:     buyStationName,
+		BuyPrice:           item.BuyPrice,
+		SellSystemID:       item.SellSystemID,
+		SellSystemName:     sellSystemName,
+		SellStationID:      item.SellStationID,
+		SellStationName:    sellStationName,
+		SellPrice:          item.SellPrice,
+		BuySecurityStatus:  buySecurityStatus,
+		SellSecurityStatus: sellSecurityStatus,
+		Quantity:           quantity,
+		ProfitPerUnit:      profitPerUnit,
+		TotalProfit:        totalProfit,
+		SpreadPercent:      item.SpreadPercent,
+		TravelTimeSeconds:  travelTimeSeconds,
+		RoundTripSeconds:   roundTripSeconds,
+		ISKPerHour:         iskPerHour,
+		Jumps:              travelResult.Jumps,
+		ItemVolume:         item.ItemVolume,
 	}
 
 	return route, nil
@@ -432,4 +438,16 @@ func (rc *RouteCalculator) getLocationNames(ctx context.Context, systemID, stati
 	}
 
 	return systemName, stationName
+}
+
+// getSystemSecurityStatus retrieves the security status of a solar system from SDE
+func (rc *RouteCalculator) getSystemSecurityStatus(ctx context.Context, systemID int64) float64 {
+	query := `SELECT securityStatus FROM mapSolarSystems WHERE _key = ?`
+	var secStatus float64
+	err := rc.sdeDB.QueryRowContext(ctx, query, systemID).Scan(&secStatus)
+	if err != nil {
+		log.Printf("Warning: failed to get security status for system %d: %v", systemID, err)
+		return 1.0 // Default to high-sec if lookup fails
+	}
+	return secStatus
 }

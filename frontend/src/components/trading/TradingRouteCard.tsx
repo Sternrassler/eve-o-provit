@@ -32,8 +32,26 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
     return "text-red-600 dark:text-red-400";
   };
 
+  // Determine card background based on security status
+  const getSecurityBackground = () => {
+    const buySecStatus = route.buy_security_status ?? 1.0;
+    const sellSecStatus = route.sell_security_status ?? 1.0;
+    const minSecStatus = Math.min(buySecStatus, sellSecStatus);
+
+    if (minSecStatus >= 0.5) {
+      // High sec: light green
+      return "bg-green-100/60 dark:bg-green-900/30";
+    } else if (minSecStatus > 0.0) {
+      // Low sec: light yellow
+      return "bg-yellow-100/60 dark:bg-yellow-900/30";
+    } else {
+      // Null sec: light red
+      return "bg-red-100/60 dark:bg-red-900/30";
+    }
+  };
+
   return (
-    <Card className="transition-all hover:shadow-lg hover:border-primary/50">
+    <Card className={cn("transition-all hover:shadow-lg hover:border-primary/50", getSecurityBackground())}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-base">
