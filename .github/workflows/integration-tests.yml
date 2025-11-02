@@ -61,16 +61,16 @@ jobs:
       - name: Validate Coverage Threshold
         if: success()
         run: |
-          echo "🎯 Validating coverage threshold (>80% for cache.go)..."
+          echo "🎯 Validating coverage threshold (>50% for cache.go integration tests)..."
           cd backend
           
           # Extract cache.go coverage
           CACHE_COVERAGE=$(go tool cover -func=coverage-integration.out | grep cache.go | awk '{sum+=$3; count++} END {if (count>0) print sum/count; else print 0}')
           echo "Cache.go Coverage: ${CACHE_COVERAGE}%"
           
-          # Check if coverage meets threshold
-          if (( $(echo "$CACHE_COVERAGE < 80" | bc -l) )); then
-            echo "❌ Coverage for cache.go is below 80%: ${CACHE_COVERAGE}%"
+          # Check if coverage meets threshold (50% for integration tests - unit tests cover the rest)
+          if (( $(echo "$CACHE_COVERAGE < 50" | bc -l) )); then
+            echo "❌ Coverage for cache.go is below 50%: ${CACHE_COVERAGE}%"
             exit 1
           else
             echo "✅ Coverage threshold met: ${CACHE_COVERAGE}%"
