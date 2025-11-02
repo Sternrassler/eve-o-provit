@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { RegionSelect } from "@/components/trading/RegionSelect";
 import { ShipSelect } from "@/components/trading/ShipSelect";
 import { TradingRouteList } from "@/components/trading/TradingRouteList";
@@ -14,10 +15,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TradingFilters as TradingFiltersType } from "@/types/trading";
-import { mockTradingRoutes } from "@/lib/mock-data/trading-routes";
+import { fetchCharacterLocation, fetchCharacterShip } from "@/lib/api-client";
 import { Loader2 } from "lucide-react";
 
 const MAX_DISPLAYED_ROUTES = 50;
+const DEFAULT_REGION = "10000002"; // The Forge
 
 const defaultFilters: TradingFiltersType = {
   minSpread: 5,
@@ -26,7 +28,8 @@ const defaultFilters: TradingFiltersType = {
 };
 
 export default function IntraRegionPage() {
-  const [selectedRegion, setSelectedRegion] = useState<string>("10000002");
+  const { isAuthenticated, getAuthHeader } = useAuth();
+  const [selectedRegion, setSelectedRegion] = useState<string>(DEFAULT_REGION);
   const [selectedShip, setSelectedShip] = useState<string>("648");
   const [filters, setFilters] = useState<TradingFiltersType>(defaultFilters);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -37,6 +40,40 @@ export default function IntraRegionPage() {
   >("isk_per_hour");
   const [apiRoutes, setApiRoutes] = useState<any[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [characterDataLoading, setCharacterDataLoading] = useState(false);
+
+  // Load character data when authenticated
+  useEffect(() => {
+    const loadCharacterData = async () => {
+      if (!isAuthenticated) return;
+
+      const authHeader = getAuthHeader();
+      if (!authHeader) return;
+
+      setCharacterDataLoading(true);
+      
+      try {
+        // Fetch character location to get region
+        const location = await fetchCharacterLocation(authHeader);
+        if (location.region_id) {
+          setSelectedRegion(location.region_id.toString());
+        }
+
+        // Fetch current ship
+        const ship = await fetchCharacterShip(authHeader);
+        if (ship.ship_type_id) {
+          setSelectedShip(ship.ship_type_id.toString());
+        }
+      } catch (error) {
+        console.error("Failed to load character data:", error);
+        // Keep default values on error
+      } finally {
+        setCharacterDataLoading(false);
+      }
+    };
+
+    loadCharacterData();
+  }, [isAuthenticated, getAuthHeader]);
 
   const handleCalculate = async () => {
     setIsCalculating(true);
@@ -109,7 +146,7 @@ export default function IntraRegionPage() {
     setDisplayedRoutes((prev) => Math.min(prev + 10, MAX_DISPLAYED_ROUTES));
   };
 
-  const isCalculateDisabled = !selectedRegion || !selectedShip || isCalculating;
+  const isCalculateDisabled = !selectedRegion || !selectedShip || isCalculating || characterDataLoading;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -130,21 +167,22 @@ export default function IntraRegionPage() {
             <RegionSelect
               value={selectedRegion}
               onChange={setSelectedRegion}
-              disabled={isCalculating}
+              disabled={isCalculating || characterDataLoading}
             />
             <ShipSelect
               value={selectedShip}
               onChange={setSelectedShip}
-              disabled={isCalculating}
-              authenticated={false}
+              disabled={isCalculating || characterDataLoading}
+              authenticated={isAuthenticated}
+              authHeader={getAuthHeader()}
             />
             <Button
               className="w-full"
               onClick={handleCalculate}
               disabled={isCalculateDisabled}
             >
-              {isCalculating && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {isCalculating ? "Berechne..." : "Berechnen"}
+              {(isCalculating || characterDataLoading) && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {characterDataLoading ? "Lade Character-Daten..." : isCalculating ? "Berechne..." : "Berechnen"}
             </Button>
           </div>
 
