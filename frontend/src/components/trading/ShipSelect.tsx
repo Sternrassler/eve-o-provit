@@ -65,11 +65,18 @@ export function ShipSelect({
           <SelectValue placeholder={loading ? "Lade Schiffe..." : "Schiff wählen..."} />
         </SelectTrigger>
         <SelectContent>
-          {ships.map((ship) => (
-            <SelectItem key={ship.type_id} value={ship.type_id.toString()}>
-              {ship.name} ({(ship.cargo_capacity / 1000).toFixed(0)}k m³)
-            </SelectItem>
-          ))}
+          {ships.map((ship) => {
+            // Format cargo capacity: show in m³ if < 1000, otherwise in k m³
+            const cargoDisplay = ship.cargo_capacity >= 1000 
+              ? `${(ship.cargo_capacity / 1000).toFixed(1)}k m³`
+              : `${Math.round(ship.cargo_capacity)} m³`;
+            
+            return (
+              <SelectItem key={ship.type_id} value={ship.type_id.toString()}>
+                {ship.name} ({cargoDisplay})
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
     </div>

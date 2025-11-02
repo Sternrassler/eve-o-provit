@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
@@ -358,38 +359,89 @@ type systemInfo struct {
 
 func (h *TradingHandler) getSystemInfo(ctx context.Context, systemID int64) (*systemInfo, error) {
 	query := `
-		SELECT s.solarSystemName, s.regionID, r.regionName
+		SELECT s.name, s.regionID, r.name
 		FROM mapSolarSystems s
-		JOIN mapRegions r ON s.regionID = r.regionID
-		WHERE s.solarSystemID = ?
+		JOIN mapRegions r ON s.regionID = r._key
+		WHERE s._key = ?
 	`
 
 	var info systemInfo
+	var systemNameJSON, regionNameJSON string
 	err := h.handler.db.SDE.QueryRowContext(ctx, query, systemID).Scan(
-		&info.SystemName,
+		&systemNameJSON,
 		&info.RegionID,
-		&info.RegionName,
+		&regionNameJSON,
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	// Parse JSON names and extract English version
+	var systemNames map[string]string
+	if err := json.Unmarshal([]byte(systemNameJSON), &systemNames); err == nil {
+		if enName, ok := systemNames["en"]; ok {
+			info.SystemName = enName
+		}
+	}
+
+	var regionNames map[string]string
+	if err := json.Unmarshal([]byte(regionNameJSON), &regionNames); err == nil {
+		if enName, ok := regionNames["en"]; ok {
+			info.RegionName = enName
+		}
 	}
 
 	return &info, nil
 }
 
 func (h *TradingHandler) getStationName(ctx context.Context, stationID int64) (string, error) {
+	// Try staStations first (old SDE format)
 	query := `SELECT stationName FROM staStations WHERE stationID = ?`
 
 	var name string
 	err := h.handler.db.SDE.QueryRowContext(ctx, query, stationID).Scan(&name)
+	if err == nil {
+		return name, nil
+	}
+
+	// Try mapDenormalize as fallback
+	query = `SELECT itemName FROM mapDenormalize WHERE itemID = ?`
+	err = h.handler.db.SDE.QueryRowContext(ctx, query, stationID).Scan(&name)
+	if err == nil {
+		return name, nil
+	}
+
+	// For NPC stations, fetch name from ESI Universe Names API
+	type esiNameResponse struct {
+		ID       int64  `json:"id"`
+		Name     string `json:"name"`
+		Category string `json:"category"`
+	}
+
+	url := "https://esi.evetech.net/latest/universe/names/"
+	payload := fmt.Sprintf("[%d]", stationID)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url, strings.NewReader(payload))
 	if err != nil {
-		// Try denormalize table as fallback
-		query = `SELECT itemName FROM mapDenormalize WHERE itemID = ?`
-		err = h.handler.db.SDE.QueryRowContext(ctx, query, stationID).Scan(&name)
-		if err != nil {
-			return strconv.FormatInt(stationID, 10), nil
+		return strconv.FormatInt(stationID, 10), nil
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return strconv.FormatInt(stationID, 10), nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 200 {
+		var esiNames []esiNameResponse
+		if err := json.NewDecoder(resp.Body).Decode(&esiNames); err == nil && len(esiNames) > 0 {
+			return esiNames[0].Name, nil
 		}
 	}
 
-	return name, nil
+	// Final fallback: just return ID as string
+	return strconv.FormatInt(stationID, 10), nil
 }

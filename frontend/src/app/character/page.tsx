@@ -186,6 +186,11 @@ export default function CharacterPage() {
                   ) : location ? (
                     <p className="font-medium">
                       {location.station_name || "Unbekannte Station"} ({location.solar_system_name})
+                      {location.region_name && (
+                        <span className="text-sm text-muted-foreground ml-2">
+                          [{location.region_name}]
+                        </span>
+                      )}
                     </p>
                   ) : (
                     <Skeleton className="h-5 w-48" />

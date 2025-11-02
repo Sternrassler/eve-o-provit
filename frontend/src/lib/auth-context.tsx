@@ -35,6 +35,7 @@ const EVE_SCOPES: string[] = [
   "esi-location.read_location.v1",
   "esi-location.read_ship_type.v1",
   "esi-clones.read_clones.v1",
+  "esi-assets.read_assets.v1",
 ];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

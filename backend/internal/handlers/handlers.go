@@ -2,6 +2,8 @@
 package handlers
 
 import (
+	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
@@ -126,15 +128,17 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 // GetRegions handles SDE regions list requests
 func (h *Handler) GetRegions(c *fiber.Ctx) error {
 	query := `
-		SELECT regionID, regionName
+		SELECT _key, name
 		FROM mapRegions
-		ORDER BY regionName ASC
+		ORDER BY name ASC
 	`
 
 	rows, err := h.db.SDE.QueryContext(c.Context(), query)
 	if err != nil {
+		fmt.Printf("ERROR: Failed to query SDE regions: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to fetch regions",
+			"error":   "Failed to fetch regions",
+			"details": err.Error(),
 		})
 	}
 	defer rows.Close()
@@ -142,17 +146,36 @@ func (h *Handler) GetRegions(c *fiber.Ctx) error {
 	var regions []models.Region
 	for rows.Next() {
 		var r models.Region
-		if err := rows.Scan(&r.ID, &r.Name); err != nil {
+		var nameJSON string
+		if err := rows.Scan(&r.ID, &nameJSON); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Failed to parse region data",
+				"error":   "Failed to parse region data",
+				"details": err.Error(),
 			})
 		}
+
+		// Parse JSON name and extract English version
+		var names map[string]string
+		if err := json.Unmarshal([]byte(nameJSON), &names); err != nil {
+			// Fallback: use raw string if JSON parsing fails
+			r.Name = nameJSON
+		} else if enName, ok := names["en"]; ok {
+			r.Name = enName
+		} else {
+			// Fallback: use first available name
+			for _, name := range names {
+				r.Name = name
+				break
+			}
+		}
+
 		regions = append(regions, r)
 	}
 
 	if err := rows.Err(); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Error reading regions",
+			"error":   "Error reading regions",
+			"details": err.Error(),
 		})
 	}
 
