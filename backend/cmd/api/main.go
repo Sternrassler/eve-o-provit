@@ -100,6 +100,7 @@ func main() {
 
 	// Public SDE endpoints
 	api.Get("/types/:id", h.GetType)
+	api.Get("/sde/regions", h.GetRegions)
 
 	// Public market endpoints
 	api.Get("/market/:region/:type", h.GetMarketOrders)

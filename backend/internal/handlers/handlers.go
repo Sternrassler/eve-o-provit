@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/gofiber/fiber/v2"
 )
@@ -119,5 +120,44 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 		"type_id":   typeID,
 		"orders":    orders,
 		"count":     len(orders),
+	})
+}
+
+// GetRegions handles SDE regions list requests
+func (h *Handler) GetRegions(c *fiber.Ctx) error {
+	query := `
+		SELECT regionID, regionName
+		FROM mapRegions
+		ORDER BY regionName ASC
+	`
+
+	rows, err := h.db.SDE.QueryContext(c.Context(), query)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch regions",
+		})
+	}
+	defer rows.Close()
+
+	var regions []models.Region
+	for rows.Next() {
+		var r models.Region
+		if err := rows.Scan(&r.ID, &r.Name); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to parse region data",
+			})
+		}
+		regions = append(regions, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Error reading regions",
+		})
+	}
+
+	return c.JSON(models.RegionsResponse{
+		Regions: regions,
+		Count:   len(regions),
 	})
 }

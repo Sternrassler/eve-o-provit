@@ -104,3 +104,15 @@ type CachedData struct {
 	Data      interface{}
 	ExpiresAt time.Time
 }
+
+// Region represents an EVE Online region
+type Region struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
+// RegionsResponse represents the response for regions list
+type RegionsResponse struct {
+	Regions []Region `json:"regions"`
+	Count   int      `json:"count"`
+}
