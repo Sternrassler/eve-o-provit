@@ -338,20 +338,20 @@ func (rc *RouteCalculator) calculateRoute(ctx context.Context, item models.ItemP
 	// Calculate number of tours based on available volume
 	var numberOfTours int
 	var totalQuantity int
-	
+
 	if item.AvailableQuantity > 0 && item.AvailableVolumeM3 > 0 {
 		// Calculate max tours based on available volume
 		maxToursFromVolume := int((item.AvailableVolumeM3 / cargoCapacity) + 0.5) // Round up
 		if maxToursFromVolume < 1 {
 			maxToursFromVolume = 1
 		}
-		
+
 		// Limit to max 10 tours (practical limit)
 		numberOfTours = maxToursFromVolume
 		if numberOfTours > 10 {
 			numberOfTours = 10
 		}
-		
+
 		// Calculate total quantity across all tours
 		totalQuantity = item.AvailableQuantity
 		if totalQuantity > quantityPerTour*numberOfTours {

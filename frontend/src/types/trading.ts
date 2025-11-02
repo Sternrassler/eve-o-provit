@@ -33,6 +33,10 @@ export interface TradingRoute {
   jumps?: number; // API field
   item_volume?: number; // API field
   profit_per_unit?: number; // API field
+  // Multi-tour fields
+  number_of_tours?: number;
+  profit_per_tour?: number;
+  total_time_minutes?: number;
 }
 
 export interface Region {
