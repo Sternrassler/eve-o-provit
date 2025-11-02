@@ -86,7 +86,7 @@ func TestMultiTourCalculation(t *testing.T) {
 			availableVolumeM3: 100000.0,
 			profitPerUnit:     500.0,
 			oneWaySeconds:     900.0, // 15 minutes
-			wantTours:         4,     // ceil(100000 / 24000) = 5, but rounds to 4
+			wantTours:         4,     // int((100000 / 24000) + 0.5) = 4
 			wantTotalQuantity: 96000, // 24000 * 4
 			wantProfitPerTour: 12000000.0,
 			wantTotalProfit:   48000000.0, // 500 * 96000
@@ -103,9 +103,9 @@ func TestMultiTourCalculation(t *testing.T) {
 			oneWaySeconds:     600.0, // 10 minutes
 			wantTours:         1,
 			wantTotalQuantity: 30000,
-			wantProfitPerTour: 5000000.0,
-			wantTotalProfit:   3000000.0,
-			wantTotalTimeMin:  20.0, // 1 roundtrip
+			wantProfitPerTour: 5000000.0, // Based on cargo capacity: 50000 * 100
+			wantTotalProfit:   3000000.0, // Based on actual quantity: 30000 * 100
+			wantTotalTimeMin:  20.0,      // 1 roundtrip
 			wantISKPerHour:    9000000.0,
 		},
 		{

@@ -92,7 +92,7 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
         {/* Quantity */}
         <div className="text-sm text-muted-foreground">
           Menge: {route.quantity.toLocaleString("de-DE")}
-          {isMultiTour && ` (${Math.floor(route.quantity / (route.number_of_tours || 1)).toLocaleString("de-DE")} pro Tour)`}
+          {isMultiTour && route.number_of_tours && ` (≈${Math.ceil(route.quantity / route.number_of_tours).toLocaleString("de-DE")} pro Tour)`}
         </div>
 
         {/* Prices */}
