@@ -14,12 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TradingFilters as TradingFiltersType } from "@/types/trading";
+import { TradingFilters as TradingFiltersType, TradingRoute } from "@/types/trading";
 import { fetchCharacterLocation, fetchCharacterShip } from "@/lib/api-client";
 import { Loader2 } from "lucide-react";
 
 const MAX_DISPLAYED_ROUTES = 50;
 const DEFAULT_REGION = "10000002"; // The Forge
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 
 const defaultFilters: TradingFiltersType = {
   minSpread: 5,
@@ -38,7 +39,7 @@ export default function IntraRegionPage() {
   const [sortBy, setSortBy] = useState<
     "isk_per_hour" | "profit" | "spread_percent" | "travel_time_seconds"
   >("isk_per_hour");
-  const [apiRoutes, setApiRoutes] = useState<any[]>([]);
+  const [apiRoutes, setApiRoutes] = useState<TradingRoute[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
   const [characterDataLoading, setCharacterDataLoading] = useState(false);
 
@@ -81,7 +82,7 @@ export default function IntraRegionPage() {
     setApiError(null);
 
     try {
-      const response = await fetch("http://localhost:9001/api/v1/trading/routes/calculate", {
+      const response = await fetch(`${API_BASE_URL}/api/v1/trading/routes/calculate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -114,9 +115,10 @@ export default function IntraRegionPage() {
 
     const routes = apiRoutes.filter((route) => {
       const travelTimeMinutes = route.travel_time_seconds / 60;
+      const totalProfit = route.total_profit ?? route.profit ?? 0;
       return (
         route.spread_percent >= filters.minSpread &&
-        route.total_profit >= filters.minProfit &&
+        totalProfit >= filters.minProfit &&
         travelTimeMinutes <= filters.maxTravelTime
       );
     });
@@ -126,7 +128,9 @@ export default function IntraRegionPage() {
         case "isk_per_hour":
           return b.isk_per_hour - a.isk_per_hour;
         case "profit":
-          return b.total_profit - a.total_profit;
+          const profitA = a.total_profit ?? a.profit ?? 0;
+          const profitB = b.total_profit ?? b.profit ?? 0;
+          return profitB - profitA;
         case "spread_percent":
           return b.spread_percent - a.spread_percent;
         case "travel_time_seconds":

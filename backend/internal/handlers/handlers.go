@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/gofiber/fiber/v2"
 )
@@ -138,14 +139,9 @@ func (h *Handler) GetRegions(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 
-	type Region struct {
-		ID   int64  `json:"id"`
-		Name string `json:"name"`
-	}
-
-	var regions []Region
+	var regions []models.Region
 	for rows.Next() {
-		var r Region
+		var r models.Region
 		if err := rows.Scan(&r.ID, &r.Name); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": "Failed to parse region data",
@@ -160,8 +156,8 @@ func (h *Handler) GetRegions(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"regions": regions,
-		"count":   len(regions),
+	return c.JSON(models.RegionsResponse{
+		Regions: regions,
+		Count:   len(regions),
 	})
 }
