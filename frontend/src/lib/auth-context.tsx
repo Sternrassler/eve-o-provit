@@ -31,7 +31,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const EVE_CLIENT_ID = process.env.NEXT_PUBLIC_EVE_CLIENT_ID || "0828b4bcd20242aeb9b8be10f5451094";
 const EVE_CALLBACK_URL = process.env.NEXT_PUBLIC_EVE_CALLBACK_URL || "http://localhost:9000/callback";
-const EVE_SCOPES: string[] = []; // Add required scopes here if needed
+const EVE_SCOPES: string[] = [
+  "esi-location.read_location.v1",
+  "esi-location.read_ship_type.v1",
+  "esi-clones.read_clones.v1",
+];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
