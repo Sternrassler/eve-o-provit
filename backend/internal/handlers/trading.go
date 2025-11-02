@@ -74,15 +74,7 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 // GetCharacterLocation handles GET /api/v1/character/location
 func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
 	characterID := c.Locals("character_id").(int)
-
-	// Get access token from locals (set by middleware)
-	authHeader := c.Get("Authorization")
-	if len(authHeader) < 7 || !strings.HasPrefix(authHeader, "Bearer ") {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid Authorization header",
-		})
-	}
-	accessToken := authHeader[7:] // Remove "Bearer " prefix
+	accessToken := c.Locals("access_token").(string)
 
 	// Call ESI
 	location, err := h.fetchESICharacterLocation(c.Context(), characterID, accessToken)
@@ -104,15 +96,7 @@ func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
 // GetCharacterShip handles GET /api/v1/character/ship
 func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
 	characterID := c.Locals("character_id").(int)
-
-	// Get access token
-	authHeader := c.Get("Authorization")
-	if len(authHeader) < 7 || !strings.HasPrefix(authHeader, "Bearer ") {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid Authorization header",
-		})
-	}
-	accessToken := authHeader[7:]
+	accessToken := c.Locals("access_token").(string)
 
 	// Call ESI
 	ship, err := h.fetchESICharacterShip(c.Context(), characterID, accessToken)
@@ -134,15 +118,7 @@ func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
 // GetCharacterShips handles GET /api/v1/character/ships
 func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
 	characterID := c.Locals("character_id").(int)
-
-	// Get access token
-	authHeader := c.Get("Authorization")
-	if len(authHeader) < 7 || !strings.HasPrefix(authHeader, "Bearer ") {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Invalid Authorization header",
-		})
-	}
-	accessToken := authHeader[7:]
+	accessToken := c.Locals("access_token").(string)
 
 	// Call ESI
 	ships, err := h.fetchESICharacterShips(c.Context(), characterID, accessToken)

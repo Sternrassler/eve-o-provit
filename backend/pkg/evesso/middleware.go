@@ -34,11 +34,12 @@ func AuthMiddleware(c *fiber.Ctx) error {
 		})
 	}
 
-	// Store character info in locals for use in handlers
+	// Store character info and access token in locals for use in handlers
 	c.Locals("character_id", charInfo.CharacterID)
 	c.Locals("character_name", charInfo.CharacterName)
 	c.Locals("scopes", charInfo.Scopes)
 	c.Locals("owner_hash", charInfo.CharacterOwnerHash)
+	c.Locals("access_token", accessToken)
 
 	return c.Next()
 }
