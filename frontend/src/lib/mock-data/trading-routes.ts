@@ -19,6 +19,10 @@ export const mockTradingRoutes: TradingRoute[] = [
     travel_time_seconds: 0,
     round_trip_seconds: 0,
     isk_per_hour: 5250000,
+    // Multi-tour example: 3 tours needed
+    number_of_tours: 3,
+    profit_per_tour: 117500,
+    total_time_minutes: 45,
   },
   {
     rank: 2,
@@ -38,6 +42,10 @@ export const mockTradingRoutes: TradingRoute[] = [
     travel_time_seconds: 120,
     round_trip_seconds: 240,
     isk_per_hour: 5200000,
+    // Multi-tour example: 5 tours
+    number_of_tours: 5,
+    profit_per_tour: 69350,
+    total_time_minutes: 82,
   },
   {
     rank: 3,
