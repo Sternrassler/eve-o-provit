@@ -154,3 +154,50 @@ func (r *SDERepository) GetSystemIDForLocation(ctx context.Context, locationID i
 
 	return 0, fmt.Errorf("failed to query system ID for location %d: %w", locationID, err)
 }
+
+// GetSystemName retrieves the solar system name by ID
+func (r *SDERepository) GetSystemName(ctx context.Context, systemID int64) (string, error) {
+	query := `
+		SELECT COALESCE(
+			json_extract(name, '$.en'),
+			json_extract(name, '$.de'),
+			'Unknown'
+		)
+		FROM mapSolarSystems
+		WHERE _key = ?
+	`
+	var name string
+	err := r.db.QueryRowContext(ctx, query, systemID).Scan(&name)
+	if err == sql.ErrNoRows {
+		return fmt.Sprintf("System-%d", systemID), nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to query system name: %w", err)
+	}
+	return name, nil
+}
+
+// GetStationName retrieves the station name by ID
+func (r *SDERepository) GetStationName(ctx context.Context, stationID int64) (string, error) {
+	// NPC stations store their name in the types table via typeID
+	query := `
+		SELECT COALESCE(
+			json_extract(t.name, '$.en'),
+			json_extract(t.name, '$.de'),
+			'Unknown'
+		)
+		FROM npcStations s
+		JOIN types t ON s.typeID = t._key
+		WHERE s._key = ?
+	`
+	var name string
+	err := r.db.QueryRowContext(ctx, query, stationID).Scan(&name)
+	if err == sql.ErrNoRows {
+		// Station not found - could be a structure/citadel
+		return fmt.Sprintf("Station-%d", stationID), nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to query station name: %w", err)
+	}
+	return name, nil
+}

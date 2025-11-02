@@ -417,10 +417,19 @@ func (rc *RouteCalculator) getSystemIDFromLocation(ctx context.Context, location
 }
 
 func (rc *RouteCalculator) getLocationNames(ctx context.Context, systemID, stationID int64) (string, string) {
-	// TODO(Phase 2): Implement actual SDE lookups for system/station names
-	// Current: Returns placeholder IDs until SDE queries are added
-	// Impact: Frontend displays "System-30000142" instead of "Jita"
-	systemName := fmt.Sprintf("System-%d", systemID)
-	stationName := fmt.Sprintf("Station-%d", stationID)
+	// Get system name from SDE
+	systemName, err := rc.sdeRepo.GetSystemName(ctx, systemID)
+	if err != nil {
+		log.Printf("Warning: failed to get system name for %d: %v", systemID, err)
+		systemName = fmt.Sprintf("System-%d", systemID)
+	}
+
+	// Get station name from SDE
+	stationName, err := rc.sdeRepo.GetStationName(ctx, stationID)
+	if err != nil {
+		log.Printf("Warning: failed to get station name for %d: %v", stationID, err)
+		stationName = fmt.Sprintf("Station-%d", stationID)
+	}
+
 	return systemName, stationName
 }
