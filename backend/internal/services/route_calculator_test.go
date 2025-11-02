@@ -79,7 +79,7 @@ func TestMultiTourCalculation(t *testing.T) {
 		wantISKPerHour    float64
 	}{
 		{
-			name:              "Tayra example - 5 tours",
+			name:              "Tayra example - 4 tours",
 			cargoCapacity:     24000.0,
 			itemVolume:        1.0,
 			availableQuantity: 100000,
