@@ -126,9 +126,10 @@ export default function IntraRegionPage() {
       if (travelTimeMinutes > filters.maxTravelTime) return false;
 
       // Check security zone filters
-      const buySecStatus = route.buy_security_status ?? 1.0;
-      const sellSecStatus = route.sell_security_status ?? 1.0;
-      const minSecStatus = Math.min(buySecStatus, sellSecStatus);
+      // Use min_route_security_status if available (considers entire route)
+      // Otherwise fall back to min of buy/sell (backward compatibility)
+      const minSecStatus = route.min_route_security_status ?? 
+                           Math.min(route.buy_security_status ?? 1.0, route.sell_security_status ?? 1.0);
 
       const isHighSec = minSecStatus >= 0.5;
       const isLowSec = minSecStatus > 0.0 && minSecStatus < 0.5;

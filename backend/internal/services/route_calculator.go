@@ -298,8 +298,17 @@ func (rc *RouteCalculator) findProfitableItems(ctx context.Context, orders []dat
 			continue
 		}
 
-		// Calculate available volume from sell orders at the lowest price
-		availableQuantity := lowestSell.VolumeRemain
+		// Calculate available volume - limited by BOTH buy and sell side
+		// We can only trade the minimum of what we can buy AND what we can sell
+		buyAvailable := lowestSell.VolumeRemain  // How much we can buy
+		sellAvailable := highestBuy.VolumeRemain // How much we can sell (demand)
+		
+		// Take the minimum - we're bottlenecked by the smaller side
+		availableQuantity := buyAvailable
+		if sellAvailable < buyAvailable {
+			availableQuantity = sellAvailable
+		}
+		
 		availableVolumeM3 := float64(availableQuantity) * itemVol.Volume
 
 		profitableItems = append(profitableItems, models.ItemPair{
@@ -402,30 +411,34 @@ func (rc *RouteCalculator) calculateRoute(ctx context.Context, item models.ItemP
 	buySecurityStatus := rc.getSystemSecurityStatus(ctx, item.BuySystemID)
 	sellSecurityStatus := rc.getSystemSecurityStatus(ctx, item.SellSystemID)
 
+	// Calculate minimum security status across entire route
+	minRouteSecurity := rc.getMinRouteSecurityStatus(ctx, travelResult.Route)
+
 	route = models.TradingRoute{
-		ItemTypeID:         item.TypeID,
-		ItemName:           item.ItemName,
-		BuySystemID:        item.BuySystemID,
-		BuySystemName:      buySystemName,
-		BuyStationID:       item.BuyStationID,
-		BuyStationName:     buyStationName,
-		BuyPrice:           item.BuyPrice,
-		SellSystemID:       item.SellSystemID,
-		SellSystemName:     sellSystemName,
-		SellStationID:      item.SellStationID,
-		SellStationName:    sellStationName,
-		SellPrice:          item.SellPrice,
-		BuySecurityStatus:  buySecurityStatus,
-		SellSecurityStatus: sellSecurityStatus,
-		Quantity:           totalQuantity,
-		ProfitPerUnit:      profitPerUnit,
-		TotalProfit:        totalProfit,
-		SpreadPercent:      item.SpreadPercent,
-		TravelTimeSeconds:  oneWaySeconds,
-		RoundTripSeconds:   roundTripSeconds,
-		ISKPerHour:         iskPerHour,
-		Jumps:              travelResult.Jumps,
-		ItemVolume:         item.ItemVolume,
+		ItemTypeID:             item.TypeID,
+		ItemName:               item.ItemName,
+		BuySystemID:            item.BuySystemID,
+		BuySystemName:          buySystemName,
+		BuyStationID:           item.BuyStationID,
+		BuyStationName:         buyStationName,
+		BuyPrice:               item.BuyPrice,
+		SellSystemID:           item.SellSystemID,
+		SellSystemName:         sellSystemName,
+		SellStationID:          item.SellStationID,
+		SellStationName:        sellStationName,
+		SellPrice:              item.SellPrice,
+		BuySecurityStatus:      buySecurityStatus,
+		SellSecurityStatus:     sellSecurityStatus,
+		MinRouteSecurityStatus: minRouteSecurity,
+		Quantity:               totalQuantity,
+		ProfitPerUnit:          profitPerUnit,
+		TotalProfit:            totalProfit,
+		SpreadPercent:          item.SpreadPercent,
+		TravelTimeSeconds:      oneWaySeconds,
+		RoundTripSeconds:       roundTripSeconds,
+		ISKPerHour:             iskPerHour,
+		Jumps:                  travelResult.Jumps,
+		ItemVolume:             item.ItemVolume,
 		// Multi-tour fields
 		NumberOfTours:    numberOfTours,
 		ProfitPerTour:    profitPerTour,
@@ -500,4 +513,21 @@ func (rc *RouteCalculator) getSystemSecurityStatus(ctx context.Context, systemID
 		return 1.0 // Default to high-sec if lookup fails
 	}
 	return secStatus
+}
+
+// getMinRouteSecurityStatus finds the minimum security status across all systems in a route
+func (rc *RouteCalculator) getMinRouteSecurityStatus(ctx context.Context, route []int64) float64 {
+	if len(route) == 0 {
+		return 1.0 // Default to high-sec if no route
+	}
+
+	minSecurity := 1.0
+	for _, systemID := range route {
+		security := rc.getSystemSecurityStatus(ctx, systemID)
+		if security < minSecurity {
+			minSecurity = security
+		}
+	}
+
+	return minSecurity
 }

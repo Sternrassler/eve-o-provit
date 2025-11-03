@@ -119,6 +119,10 @@ func main() {
 	protected.Get("/character/ship", tradingHandler.GetCharacterShip)
 	protected.Get("/character/ships", tradingHandler.GetCharacterShips)
 
+	// ESI UI endpoints (require esi-ui.write_waypoint.v1 scope)
+	esiUI := protected.Group("/esi/ui")
+	esiUI.Post("/autopilot/waypoint", tradingHandler.SetAutopilotWaypoint)
+
 	// Trading endpoints
 	trading := protected.Group("/trading")
 	trading.Get("/profit-margins", handleProfitMargins)

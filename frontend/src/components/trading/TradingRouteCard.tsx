@@ -2,14 +2,22 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TradingRoute } from "@/types/trading";
-import { ArrowRight, TrendingUp, Repeat } from "lucide-react";
+import { ArrowRight, TrendingUp, Repeat, Navigation, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/lib/auth-context";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface TradingRouteCardProps {
   route: TradingRoute;
 }
 
 export function TradingRouteCard({ route }: TradingRouteCardProps) {
+  const { getAuthHeader, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [isSettingRoute, setIsSettingRoute] = useState(false);
+
   const formatISK = (value: number) => {
     if (value >= 1000000) {
       return `${(value / 1000000).toFixed(2)}M ISK`;
@@ -34,9 +42,10 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
 
   // Determine card background based on security status
   const getSecurityBackground = () => {
-    const buySecStatus = route.buy_security_status ?? 1.0;
-    const sellSecStatus = route.sell_security_status ?? 1.0;
-    const minSecStatus = Math.min(buySecStatus, sellSecStatus);
+    // Use minimum route security if available (considers all systems on route)
+    // Otherwise fall back to min of start/destination (backward compatibility)
+    const minSecStatus = route.min_route_security_status ?? 
+                         Math.min(route.buy_security_status ?? 1.0, route.sell_security_status ?? 1.0);
 
     if (minSecStatus >= 0.5) {
       // High sec: light green
@@ -51,6 +60,129 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
   };
 
   const isMultiTour = route.number_of_tours && route.number_of_tours > 1;
+
+  // Copy EVE Chat Link to clipboard
+  const handleCopyLink = async () => {
+    if (!route.buy_station_id || !route.sell_station_id) {
+      toast({
+        title: "Keine Stationen",
+        description: "Route hat keine Station-IDs",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const buyLink = `<url=showinfo:${route.buy_station_id}>${route.buy_station_name || route.buy_station_id}</url>`;
+    const sellLink = `<url=showinfo:${route.sell_station_id}>${route.sell_station_name || route.sell_station_id}</url>`;
+    const routeLink = `${buyLink} → ${sellLink}`;
+
+    try {
+      await navigator.clipboard.writeText(routeLink);
+      toast({
+        title: "Link kopiert",
+        description: "EVE Chat Link in Zwischenablage kopiert",
+      });
+    } catch (err) {
+      console.error("Failed to copy:", err);
+      toast({
+        title: "Fehler",
+        description: "Kopieren fehlgeschlagen",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Set route waypoints in EVE client via ESI
+  const handleSetRoute = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Nicht eingeloggt",
+        description: "EVE SSO Login erforderlich",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!route.buy_station_id || !route.sell_station_id) {
+      toast({
+        title: "Keine Stationen",
+        description: "Route hat keine Station-IDs",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSettingRoute(true);
+
+    try {
+      const authHeader = getAuthHeader();
+      if (!authHeader) {
+        throw new Error("No auth token");
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
+
+      // Set buy station waypoint (clear existing, add to beginning)
+      const buyResponse = await fetch(`${apiUrl}/api/v1/esi/ui/autopilot/waypoint`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+        body: JSON.stringify({
+          destination_id: route.buy_station_id,
+          clear_other_waypoints: true,
+          add_to_beginning: false,
+        }),
+      });
+
+      if (!buyResponse.ok) {
+        if (buyResponse.status === 401 || buyResponse.status === 403) {
+          throw new Error("Missing scope esi-ui.write_waypoint.v1");
+        }
+        if (buyResponse.status === 404) {
+          throw new Error("EVE client not running");
+        }
+        throw new Error(`Failed to set buy waypoint: ${buyResponse.statusText}`);
+      }
+
+      // Set sell station waypoint (append)
+      const sellResponse = await fetch(`${apiUrl}/api/v1/esi/ui/autopilot/waypoint`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+        body: JSON.stringify({
+          destination_id: route.sell_station_id,
+          clear_other_waypoints: false,
+          add_to_beginning: false,
+        }),
+      });
+
+      if (!sellResponse.ok) {
+        if (sellResponse.status === 404) {
+          throw new Error("EVE client not running");
+        }
+        throw new Error(`Failed to set sell waypoint: ${sellResponse.statusText}`);
+      }
+
+      toast({
+        title: "Route gesetzt",
+        description: `Waypoints in EVE gesetzt: ${route.buy_station_name} → ${route.sell_station_name}`,
+      });
+    } catch (err) {
+      console.error("Failed to set route:", err);
+      const message = err instanceof Error ? err.message : "Unbekannter Fehler";
+      toast({
+        title: "Fehler",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettingRoute(false);
+    }
+  };
 
   return (
     <Card className={cn("transition-all hover:shadow-lg hover:border-primary/50", getSecurityBackground())}>
@@ -85,6 +217,46 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
               <span className="truncate">{route.buy_station_name}</span>
               <ArrowRight className="size-3.5" />
               <span className="truncate">{route.sell_station_name}</span>
+              
+              {/* Route Action Buttons */}
+              {route.buy_station_id && route.sell_station_id && (
+                <TooltipProvider>
+                  <div className="flex items-center gap-1 ml-auto">
+                    {/* Copy Link Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={handleCopyLink}
+                          className="p-1 rounded hover:bg-muted transition-colors"
+                          aria-label="EVE Chat Link kopieren"
+                        >
+                          <Copy className="size-3.5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>EVE Chat Link kopieren</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Set Route Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={handleSetRoute}
+                          disabled={!isAuthenticated || isSettingRoute}
+                          className="p-1 rounded hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label="Route in EVE setzen"
+                        >
+                          <Navigation className={cn("size-3.5", isSettingRoute && "animate-pulse")} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{isAuthenticated ? "Route in EVE setzen" : "EVE Login erforderlich"}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
+              )}
             </div>
           )}
         </div>

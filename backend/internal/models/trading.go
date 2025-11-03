@@ -5,29 +5,30 @@ import "time"
 
 // TradingRoute represents a profitable trading route
 type TradingRoute struct {
-	ItemTypeID         int     `json:"item_type_id"`
-	ItemName           string  `json:"item_name"`
-	BuySystemID        int64   `json:"buy_system_id"`
-	BuySystemName      string  `json:"buy_system_name"`
-	BuyStationID       int64   `json:"buy_station_id"`
-	BuyStationName     string  `json:"buy_station_name"`
-	BuyPrice           float64 `json:"buy_price"`
-	SellSystemID       int64   `json:"sell_system_id"`
-	SellSystemName     string  `json:"sell_system_name"`
-	SellStationID      int64   `json:"sell_station_id"`
-	SellStationName    string  `json:"sell_station_name"`
-	SellPrice          float64 `json:"sell_price"`
-	BuySecurityStatus  float64 `json:"buy_security_status"`
-	SellSecurityStatus float64 `json:"sell_security_status"`
-	Quantity           int     `json:"quantity"`
-	ProfitPerUnit      float64 `json:"profit_per_unit"`
-	TotalProfit        float64 `json:"total_profit"`
-	SpreadPercent      float64 `json:"spread_percent"`
-	TravelTimeSeconds  float64 `json:"travel_time_seconds"`
-	RoundTripSeconds   float64 `json:"round_trip_seconds"`
-	ISKPerHour         float64 `json:"isk_per_hour"`
-	Jumps              int     `json:"jumps"`
-	ItemVolume         float64 `json:"item_volume"`
+	ItemTypeID             int     `json:"item_type_id"`
+	ItemName               string  `json:"item_name"`
+	BuySystemID            int64   `json:"buy_system_id"`
+	BuySystemName          string  `json:"buy_system_name"`
+	BuyStationID           int64   `json:"buy_station_id"`
+	BuyStationName         string  `json:"buy_station_name"`
+	BuyPrice               float64 `json:"buy_price"`
+	SellSystemID           int64   `json:"sell_system_id"`
+	SellSystemName         string  `json:"sell_system_name"`
+	SellStationID          int64   `json:"sell_station_id"`
+	SellStationName        string  `json:"sell_station_name"`
+	SellPrice              float64 `json:"sell_price"`
+	BuySecurityStatus      float64 `json:"buy_security_status"`
+	SellSecurityStatus     float64 `json:"sell_security_status"`
+	MinRouteSecurityStatus float64 `json:"min_route_security_status"` // Minimum security of all systems on route
+	Quantity               int     `json:"quantity"`
+	ProfitPerUnit          float64 `json:"profit_per_unit"`
+	TotalProfit            float64 `json:"total_profit"`
+	SpreadPercent          float64 `json:"spread_percent"`
+	TravelTimeSeconds      float64 `json:"travel_time_seconds"`
+	RoundTripSeconds       float64 `json:"round_trip_seconds"`
+	ISKPerHour             float64 `json:"isk_per_hour"`
+	Jumps                  int     `json:"jumps"`
+	ItemVolume             float64 `json:"item_volume"`
 	// Multi-tour fields
 	NumberOfTours    int     `json:"number_of_tours"`
 	ProfitPerTour    float64 `json:"profit_per_tour"`

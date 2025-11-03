@@ -137,6 +137,56 @@ func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
 	return c.JSON(ships)
 }
 
+// SetAutopilotWaypoint handles POST /api/v1/esi/ui/autopilot/waypoint
+// Sets a waypoint in the EVE client's autopilot via ESI UI API
+func (h *TradingHandler) SetAutopilotWaypoint(c *fiber.Ctx) error {
+	// Extract auth context
+	accessToken := c.Locals("access_token").(string)
+
+	// Parse request body
+	var req struct {
+		DestinationID  int64 `json:"destination_id"`
+		ClearOther     bool  `json:"clear_other_waypoints"`
+		AddToBeginning bool  `json:"add_to_beginning"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Validate destination_id
+	if req.DestinationID <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid destination_id",
+		})
+	}
+
+	// Call ESI UI Autopilot Waypoint endpoint
+	err := h.setESIAutopilotWaypoint(c.Context(), accessToken, req.DestinationID, req.ClearOther, req.AddToBeginning)
+	if err != nil {
+		switch err.Error() {
+		case "unauthorized":
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Not authenticated or missing scope esi-ui.write_waypoint.v1",
+			})
+		case "not_found":
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "EVE client not running or destination not found",
+			})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "Failed to set waypoint",
+				"details": err.Error(),
+			})
+		}
+	}
+
+	// Success (ESI returns 204 No Content)
+	return c.Status(fiber.StatusNoContent).Send(nil)
+}
+
 // ESI helper functions
 
 type esiLocationResponse struct {
@@ -444,4 +494,48 @@ func (h *TradingHandler) getStationName(ctx context.Context, stationID int64) (s
 
 	// Final fallback: just return ID as string
 	return strconv.FormatInt(stationID, 10), nil
+}
+
+// setESIAutopilotWaypoint sets a waypoint in the EVE client via ESI UI API
+func (h *TradingHandler) setESIAutopilotWaypoint(ctx context.Context, accessToken string, destinationID int64, clearOther, addToBeginning bool) error {
+	url := "https://esi.evetech.net/latest/ui/autopilot/waypoint/"
+
+	// Build query parameters
+	params := fmt.Sprintf("?destination_id=%d&clear_other_waypoints=%t&add_to_beginning=%t",
+		destinationID, clearOther, addToBeginning)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", url+params, nil)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// ESI returns 204 No Content on success
+	if resp.StatusCode == 204 {
+		return nil
+	}
+
+	// 403: Missing scope esi-ui.write_waypoint.v1
+	if resp.StatusCode == 403 || resp.StatusCode == 401 {
+		return fmt.Errorf("unauthorized")
+	}
+
+	// 404: EVE client not running or destination not found
+	if resp.StatusCode == 404 {
+		return fmt.Errorf("not_found")
+	}
+
+	// Other errors
+	body, _ := io.ReadAll(resp.Body)
+	return fmt.Errorf("ESI returned status %d: %s", resp.StatusCode, string(body))
 }

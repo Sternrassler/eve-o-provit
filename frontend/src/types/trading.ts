@@ -14,6 +14,7 @@ export interface TradingRoute {
   sell_station_name?: string;
   buy_security_status?: number; // Security status of buy system (0.0 - 1.0)
   sell_security_status?: number; // Security status of sell system (0.0 - 1.0)
+  min_route_security_status?: number; // Minimum security of all systems on route
   // Mock data fields (for backward compatibility)
   origin_system_id?: number;
   origin_system_name?: string;
