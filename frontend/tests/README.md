@@ -5,14 +5,16 @@ End-to-End Tests für EVE-O-Provit Frontend mit echtem EVE SSO OAuth Flow.
 ## Voraussetzungen
 
 1. **Docker Services laufen:**
+
    ```bash
    cd /home/ix/vscode/eve-o-provit
    make docker-rebuild
    ```
 
 2. **EVE Test Account Credentials:**
-   
+
    Erstelle `/home/ix/vscode/eve-o-provit/.env` (neben docker-compose.yml):
+
    ```bash
    # EVE Online Test Account
    EVE_TEST_CHARACTER=YourCharacterName
@@ -21,6 +23,7 @@ End-to-End Tests für EVE-O-Provit Frontend mit echtem EVE SSO OAuth Flow.
    ```
 
 3. **Playwright installiert:**
+
    ```bash
    cd frontend
    npm install
@@ -30,29 +33,33 @@ End-to-End Tests für EVE-O-Provit Frontend mit echtem EVE SSO OAuth Flow.
 ## Tests ausführen
 
 ### Headless (CI-Mode)
+
 ```bash
 cd frontend
 npm run test:e2e
 ```
 
 ### Headed (Browser sichtbar)
+
 ```bash
 npm run test:e2e:headed
 ```
 
 ### Debug Mode (mit Playwright Inspector)
+
 ```bash
 npm run test:e2e:debug
 ```
 
 ### UI Mode (interaktive Test-UI)
+
 ```bash
 npm run test:e2e:ui
 ```
 
 ## Test-Struktur
 
-```
+```txt
 tests/
 ├── e2e/
 │   ├── auth.spec.ts          # EVE SSO Login Flow
@@ -83,6 +90,7 @@ npm run test:e2e:debug
 ```
 
 Dann im Test `page.pause()` nutzen - Playwright Inspector öffnet sich und zeigt:
+
 - DOM-Struktur
 - Verfügbare Selektoren
 - Interaction Recording
@@ -90,22 +98,26 @@ Dann im Test `page.pause()` nutzen - Playwright Inspector öffnet sich und zeigt
 ## Troubleshooting
 
 ### Services laufen nicht
+
 ```bash
 make docker-ps  # Status prüfen
 make docker-logs  # Logs anzeigen
 ```
 
 ### Screenshots fehlen
+
 ```bash
 mkdir -p tests/screenshots
 ```
 
 ### Browser findet Element nicht
+
 - Timeout erhöhen: `{ timeout: 15000 }`
 - Screenshot machen: `await page.screenshot({ path: 'debug.png' })`
 - Playwright Inspector nutzen: `npm run test:e2e:debug`
 
 ### EVE SSO ändert Struktur
+
 Screenshots in `tests/screenshots/` prüfen und Selektoren anpassen.
 
 ## CI Integration (TODO)

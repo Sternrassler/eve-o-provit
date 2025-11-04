@@ -1,0 +1,16 @@
+# Markdownlint ignore patterns
+
+## Exclude temporary files and build artifacts
+
+## Temporary files directory
+
+tmp/
+
+## Node modules
+
+node_modules/
+
+## Build outputs
+
+dist/
+build/

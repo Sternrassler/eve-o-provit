@@ -361,7 +361,7 @@ SELECT * FROM schema_migrations;
 
 **Workflow:**
 
-```
+```text
 Code Change → make docker-rebuild → make test-be → make docker-logs
 ```
 
@@ -371,7 +371,7 @@ Code Change → make docker-rebuild → make test-be → make docker-logs
 
 **Workflow:**
 
-```
+```text
 Create Migration → make migrate-create NAME=xxx → Edit SQL → make migrate-up → Verify
 ```
 
@@ -381,7 +381,7 @@ Create Migration → make migrate-create NAME=xxx → Edit SQL → make migrate-
 
 **Workflow:**
 
-```
+```text
 Code Change → make docker-rebuild → Access http://localhost:9000 → Check browser console
 ```
 
@@ -391,7 +391,7 @@ Code Change → make docker-rebuild → Access http://localhost:9000 → Check b
 
 **Workflow:**
 
-```
+```text
 make docker-up → make test-be-int → make docker-logs
 ```
 

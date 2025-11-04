@@ -68,7 +68,7 @@ npx playwright test -g "Home page loads"
 
 ## Test-Dateien
 
-```
+```txt
 tests/e2e/
 ├── home.spec.ts        # ✅ Implementiert (9 tests)
 ├── auth.spec.ts        # 🚧 Teilweise (needs credentials)

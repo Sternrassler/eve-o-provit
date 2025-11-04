@@ -26,6 +26,7 @@ Die E2E Test Suite testet alle wichtigen Frontend-Features und Backend-Integrati
 ### Test-Kategorien
 
 **Funktionale Tests:**
+
 - ✅ Navigation zwischen Seiten
 - ✅ Formulare (System-Suche, Ship-Auswahl, Item-Suche)
 - ✅ Berechnungen (Route, Cargo Fit, Profit Margins)
@@ -33,24 +34,27 @@ Die E2E Test Suite testet alle wichtigen Frontend-Features und Backend-Integrati
 - ✅ Error Handling (Invalid Input, 404)
 
 **UI/UX Tests:**
+
 - ✅ Responsive Design (Mobile Viewports)
 - ✅ Loading States
 - ✅ Error Messages
 - ✅ Button States (Disabled, Loading)
 
 **Integration Tests:**
+
 - ✅ Backend API Endpoints
 - ✅ Database Connections (Health Check)
 - ✅ CORS Headers
 - ✅ Content-Type Validation
 
 **Performance Tests:**
+
 - ✅ Response Time Checks (< 1s)
 - ✅ Concurrent Requests
 
 ## Datei-Struktur
 
-```
+```txt
 frontend/tests/
 ├── e2e/
 │   ├── home.spec.ts          # 9 tests  - Landing Page Tests
@@ -69,6 +73,7 @@ frontend/tests/
 ## Verwendete Test-IDs (data-testid)
 
 ### Navigation
+
 - `route-result` - Route calculation result
 - `jump-count` - Number of jumps
 - `system-security` - System security values
@@ -76,6 +81,7 @@ frontend/tests/
 - `autocomplete-list` - System autocomplete dropdown
 
 ### Cargo
+
 - `cargo-capacity` - Ship cargo capacity
 - `item-volume` - Item volume display
 - `cargo-result` - Cargo calculation result
@@ -84,6 +90,7 @@ frontend/tests/
 - `value-density` - ISK/m³ indicator
 
 ### Market
+
 - `market-orders-table` - Market orders table
 - `order-type-buy` / `order-type-sell` - Order type indicators
 - `profit-margin` - Profit margin display
@@ -93,6 +100,7 @@ frontend/tests/
 - `price-history-chart` - Price history chart
 
 ### Character
+
 - `character-portrait` - Character portrait image
 - `character-name` - Character name
 - `character-id` - Character ID
@@ -107,6 +115,7 @@ frontend/tests/
 - `character-alliance` - Alliance name
 
 ### General
+
 - `error-message` - Error messages
 
 ## Playwright Konfiguration
@@ -131,24 +140,28 @@ frontend/tests/
 ## Test-Execution Modes
 
 ### 1. Headless (CI Mode)
+
 ```bash
 make test-e2e
 cd frontend && npm run test:e2e
 ```
 
 ### 2. Headed (Browser Visible)
+
 ```bash
 make fe-test-e2e-headed
 cd frontend && npm run test:e2e:headed
 ```
 
 ### 3. UI Mode (Interactive)
+
 ```bash
 make fe-test-e2e-ui
 cd frontend && npm run test:e2e:ui
 ```
 
 ### 4. Debug Mode (Inspector)
+
 ```bash
 make fe-test-e2e-debug
 cd frontend && npm run test:e2e:debug
@@ -159,12 +172,14 @@ cd frontend && npm run test:e2e:debug
 ### 🚧 Teilweise implementierte Tests
 
 **Auth Tests (auth.spec.ts):**
+
 - ⚠️ Benötigen gültige EVE SSO Credentials
 - ⚠️ EVE SSO UI kann sich ändern
 - ⚠️ Aktuell mit `test.skip()` deaktiviert
 - ✅ Helper Functions implementiert
 
 **Character Tests (character.spec.ts):**
+
 - ⚠️ Benötigen authentifizierten Zustand
 - ⚠️ ESI API Scopes erforderlich
 - ⚠️ Aktuell mit `test.skip()` deaktiviert
@@ -212,16 +227,19 @@ jobs:
 ## Nächste Schritte
 
 ### Kurzfristig (v0.2.0)
+
 - [ ] Frontend UI Features implementieren
 - [ ] Auth Tests aktivieren (nach UI Implementation)
 - [ ] Screenshot Baseline erstellen
 
 ### Mittelfristig (v0.3.0)
+
 - [ ] CI/CD Pipeline integrieren
 - [ ] Visual Regression Tests (Playwright Screenshot Comparison)
 - [ ] Performance Tests (Lighthouse CI)
 
 ### Langfristig (v0.4.0)
+
 - [ ] Accessibility Tests (axe-core Integration)
 - [ ] Mobile Browser Tests (Safari, Firefox)
 - [ ] Load Testing (K6 / Artillery)
@@ -229,14 +247,17 @@ jobs:
 ## Metriken
 
 **Code Coverage:**
+
 - Frontend Components: 0% (keine Tests implementiert)
 - E2E Test Coverage: ~80% (kritische User Flows)
 
 **Test Execution:**
+
 - Durchschnittliche Laufzeit: ~3-5 Minuten (headless)
 - Parallele Ausführung: Nein (shared state)
 
 **Wartbarkeit:**
+
 - Test-IDs: Konsistent (`data-testid`)
 - Selektoren: Semantic (Role, Label, Text)
 - Helper Functions: Wiederverwendbar
@@ -251,6 +272,7 @@ jobs:
 ## Changelog
 
 **2025-10-31:**
+
 - ✅ Initial E2E Test Suite implementiert (54 Tests)
 - ✅ Helper Functions für Auth Flow
 - ✅ Makefile Targets erstellt

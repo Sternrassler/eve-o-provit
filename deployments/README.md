@@ -77,7 +77,7 @@ make docker-up
 
 **Output**:
 
-```
+```txt
 Services verfügbar unter:
   - Backend API:  http://localhost:9001
   - Frontend UI:  http://localhost:9000

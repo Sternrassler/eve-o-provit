@@ -11,14 +11,14 @@ import (
 func TestNewRouteCalculator_Initialization(t *testing.T) {
 	t.Run("with nil dependencies", func(t *testing.T) {
 		calc := NewRouteCalculator(nil, nil, nil, nil, nil)
-		
+
 		assert.NotNil(t, calc, "Calculator should be initialized even with nil dependencies")
 	})
 
 	t.Run("with Redis client", func(t *testing.T) {
 		// Can't test Redis without actual connection, but verify it doesn't panic
 		calc := NewRouteCalculator(nil, nil, nil, nil, nil)
-		
+
 		assert.NotNil(t, calc)
 	})
 }
@@ -206,13 +206,13 @@ func TestMultiTourQuantityCalculation(t *testing.T) {
 // TestProfitableItemFiltering tests item filtering logic
 func TestProfitableItemFiltering(t *testing.T) {
 	tests := []struct {
-		name           string
-		buyPrice       float64
-		sellPrice      float64
-		volume         int
-		spreadPercent  float64
-		isProfitable   bool
-		reason         string
+		name          string
+		buyPrice      float64
+		sellPrice     float64
+		volume        int
+		spreadPercent float64
+		isProfitable  bool
+		reason        string
 	}{
 		{
 			name:          "profitable item",

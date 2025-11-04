@@ -74,7 +74,6 @@ func (c *MarketOrderCache) Set(ctx context.Context, regionID int, orders []datab
 // TODO: Re-implement using pagination.BatchFetcher
 func (c *MarketOrderCache) RefreshBackground(regionID int) {
 	// Disabled until refactoring complete
-	return
 }
 
 // compress compresses market orders using gzip

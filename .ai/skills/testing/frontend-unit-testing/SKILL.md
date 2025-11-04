@@ -122,7 +122,7 @@ fireEvent.click(button)
 
 ### 3. Async Testing
 
-**Wait for elements, don't use arbitrary timeouts**
+#### Wait for elements, don't use arbitrary timeouts
 
 ```typescript
 // GOOD: Wait for specific condition
@@ -134,7 +134,7 @@ await waitFor(() => {}, { timeout: 3000 })
 
 ### 4. Mock External Dependencies
 
-**Mock API calls, not React components**
+#### Mock API calls, not React components
 
 ```typescript
 // Setup MSW (Mock Service Worker)
@@ -151,7 +151,7 @@ afterAll(() => server.close())
 
 ### 5. Component Isolation
 
-**Provide necessary context/providers**
+#### Provide necessary context/providers
 
 ```typescript
 function renderWithProviders(ui: ReactElement) {

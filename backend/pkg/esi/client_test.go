@@ -166,8 +166,9 @@ func TestClient_ESIResponseConversion(t *testing.T) {
 		IsBuyOrder:   false,
 		Duration:     90,
 		Issued:       time.Now(),
-		Range:        "region",
+		Range:        "region", // ESI API field, not stored in database
 	}
+	_ = esiOrder.Range // Explicitly mark as unused in this test
 
 	// Convert to database model
 	var minVolume *int
@@ -206,6 +207,9 @@ func TestClient_ESIResponseConversion(t *testing.T) {
 	if minVolume == nil || *minVolume != esiOrder.MinVolume {
 		t.Error("MinVolume conversion failed")
 	}
+
+	// Full struct created for completeness
+	_ = dbOrder
 }
 
 func TestClient_MockESIServer(t *testing.T) {

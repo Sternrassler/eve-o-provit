@@ -129,7 +129,7 @@ func BenchmarkMarketOrderQuery(b *testing.B) {
 
 ### 1. Benchmark Setup Isolation
 
-**Exclude setup from measurements**
+#### Exclude setup from measurements
 
 ```go
 func BenchmarkCacheOperation(b *testing.B) {
@@ -153,7 +153,7 @@ func BenchmarkCacheOperation(b *testing.B) {
 
 ### 2. Realistic Load Patterns
 
-**Model actual user behavior**
+#### Model actual user behavior
 
 ```javascript
 // k6: Realistic user flow
@@ -189,7 +189,7 @@ export default function () {
 
 ### 3. Performance Baselines
 
-**Establish and track baselines**
+#### Establish and track baselines
 
 ```go
 // Store baseline results
@@ -220,7 +220,7 @@ func BenchmarkWithBaseline(b *testing.B) {
 
 ### 4. Memory Profiling
 
-**Track allocations and memory usage**
+#### Track allocations and memory usage
 
 ```go
 func BenchmarkWithMemory(b *testing.B) {
@@ -237,7 +237,7 @@ func BenchmarkWithMemory(b *testing.B) {
 
 ### 5. Stress Testing Boundaries
 
-**Find breaking points safely**
+#### Find breaking points safely
 
 ```javascript
 // k6: Stress test with gradual ramp-up
@@ -257,7 +257,7 @@ export const options = {
 
 ### 6. Continuous Performance Monitoring
 
-**Integrate into CI/CD**
+#### Integrate into CI/CD
 
 ```yaml
 # GitHub Actions: Benchmark comparison
@@ -388,22 +388,31 @@ func BenchmarkConnectionPool(b *testing.B) {
 ## Anti-Patterns
 
 ### 1. Benchmarking with Side Effects
+
 ❌ **Avoid:** Benchmarks that modify global state
+
 ✅ **Do:** Isolate benchmarks, use local state
 
 ### 2. Ignoring Warmup
+
 ❌ **Avoid:** Measuring cold start performance
+
 ✅ **Do:** Run warmup iterations before measurement
 
 ### 3. Non-Representative Load
+
 ❌ **Avoid:** Uniform traffic patterns
+
 ✅ **Do:** Model realistic user behavior, think times
 
 ### 4. No Performance Budgets
+
 ❌ **Avoid:** Benchmarking without thresholds
+
 ✅ **Do:** Set and enforce performance budgets
 
 ### 5. Testing in Development Environment
+
 ❌ **Avoid:** Load testing on local machine
 ✅ **Do:** Use production-like environment
 
@@ -535,19 +544,25 @@ k6 cloud script.js
 ## Performance Considerations
 
 ### 1. Benchmark Accuracy
+
 - Run multiple iterations (default: automatic)
+
 - Isolate CPU cores (`GOMAXPROCS=1`)
 - Disable frequency scaling
 - Close background applications
 
 ### 2. Load Test Infrastructure
+
 - Dedicated load generator machines
+
 - Network latency consideration
 - Database in production-like state
 - Monitoring overhead
 
 ### 3. Results Interpretation
+
 - Look for patterns, not single values
+
 - Compare distributions (p50, p95, p99)
 - Watch for outliers
 - Track trends over time

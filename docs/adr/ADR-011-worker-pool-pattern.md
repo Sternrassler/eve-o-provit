@@ -5,13 +5,12 @@ Superseded by: eve-esi-client BatchFetcher (external: ADR-011-equivalent in eve-
 Datum: 2025-11-01
 Superseded: 2025-11-04
 Ersetzt durch: eve-esi-client/pkg/pagination/batch_fetcher.go
-Repository: https://github.com/Sternrassler/eve-esi-client
+Repository: <https://github.com/Sternrassler/eve-esi-client>
 Autoren: GitHub Copilot (Performance Optimization Phase 3)
 
 > **Hinweis:** Dieses ADR beschreibt die ursprüngliche Implementierung eines MarketOrderFetchers in eve-o-provit.
 > Die Funktionalität wurde in eve-esi-client v0.3.0 als generisches BatchFetcher-Pattern zentralisiert.
-> Siehe: https://github.com/Sternrassler/eve-esi-client/pkg/pagination
-
+> Siehe: <https://github.com/Sternrassler/eve-esi-client/pkg/pagination>
 > Ablageort: ADR-Dateien werden im Verzeichnis `docs/adr/` gepflegt.
 
 ## Kontext
@@ -36,44 +35,44 @@ Die sequenzielle Berechnung von Trading Routes aus Issue #16b ist für große Re
 
 ### Option 1: Sequential Processing (Baseline)
 
-- **Vorteile:** 
+- **Vorteile:**
   - Einfach zu implementieren und debuggen
   - Keine Concurrency-Probleme
   - Bereits vorhanden
-- **Nachteile:** 
+- **Nachteile:**
   - Zu langsam (~120s für The Forge)
   - Schlechte Ressourcennutzung (CPU idle während I/O)
   - Skaliert nicht mit größeren Datenmengen
-- **Risiken:** 
+- **Risiken:**
   - Erfüllt Performance-Anforderungen nicht
 
 ### Option 2: Goroutines ohne Worker Pool (Unbounded Concurrency)
 
-- **Vorteile:** 
+- **Vorteile:**
   - Maximale Parallelität
   - Einfache Implementierung mit `go func()`
-- **Nachteile:** 
+- **Nachteile:**
   - ESI Rate Limit Violations (429 Errors)
   - Ressourcen-Exhaustion bei vielen Items
   - Schwer kontrollierbar
   - Keine Backpressure
-- **Risiken:** 
+- **Risiken:**
   - ESI API Ban möglich
   - Memory Exhaustion
 
 ### Option 3: Worker Pool Pattern (Bounded Concurrency)
 
-- **Vorteile:** 
+- **Vorteile:**
   - Kontrollierte Parallelität
   - ESI Rate Limit safe
   - Backpressure durch buffered channels
   - Graceful Degradation bei Timeouts
   - Etabliertes Go Pattern
-- **Nachteile:** 
+- **Nachteile:**
   - Komplexere Implementierung
   - Channel Overhead
   - Tuning erforderlich (Worker Count)
-- **Risiken:** 
+- **Risiken:**
   - Deadlocks bei falscher Channel-Nutzung
   - Starve bei zu wenigen Workers
 
@@ -169,11 +168,13 @@ func (p *RouteWorkerPool) ProcessItems(ctx context.Context, items []models.ItemP
 **Aufwand:** 8 PT (Implementation + Tests + Tuning)
 
 **Abhängigkeiten:**
+
 - ADR-009: Shared Redis Infrastructure (für Caching)
 - ADR-012: Redis Caching Strategy (parallel ADR)
 - ESI Client muss thread-safe sein
 
 **Validierung:**
+
 - Benchmark: The Forge < 30s
 - Load Test: 10 concurrent requests ohne 429 Errors
 - Metrics: `worker_pool_queue_size` < Capacity
@@ -182,15 +183,15 @@ func (p *RouteWorkerPool) ProcessItems(ctx context.Context, items []models.ItemP
 
 - **Issues:** #16 (Parent), #16b (Backend API), #16c (Phase 3)
 - **ADRs:** ADR-009 (Redis), ADR-012 (Caching), ADR-013 (Timeout Handling)
-- **Externe Docs:** 
-  - Go Worker Pools: https://gobyexample.com/worker-pools
-  - ESI Rate Limits: https://docs.esi.evetech.net/docs/esi_introduction.html#limits
+- **Externe Docs:**
+  - Go Worker Pools: <https://gobyexample.com/worker-pools>
+  - ESI Rate Limits: <https://docs.esi.evetech.net/docs/esi_introduction.html#limits>
 
 ## Notizen
 
 **Worker Count Rationale:**
 
-- **Market Orders (10 Workers):** 
+- **Market Orders (10 Workers):**
   - ESI Rate Limit: 300 req/min = 5 req/s
   - Mit 10 Workers: Max 10 * 5 = 50 req/s (safe)
   - Actual: ~30 req/s (mit Latency)

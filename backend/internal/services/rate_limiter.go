@@ -92,7 +92,7 @@ func RetryWithBackoff(ctx context.Context, cfg RetryConfig, fn func() error) err
 }
 
 // is429Error checks if error is a 429 rate limit error
-func is429Error(err error) bool {
+func is429Error(_ error) bool {
 	// Simplified check - in production, this would check error type/status code
 	// This is a placeholder for proper error type checking
 	return false

@@ -1,6 +1,6 @@
-tech stack festlegen# EVE Online Profit Calculator
+# EVE Online Profit Calculator
 
-**Web-App für Trading & Manufacturing Optimierung in EVE Online**
+## Web-App für Trading & Manufacturing Optimierung in EVE Online
 
 ## Vision
 

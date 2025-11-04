@@ -332,7 +332,7 @@ func TestSetAutopilotWaypoint_Validation(t *testing.T) {
 			name:           "Valid destination with boolean flags",
 			requestBody:    `{"destination_id": 30000142, "clear_other_waypoints": true, "add_to_beginning": false}`,
 			expectedStatus: fiber.StatusUnauthorized, // Will fail auth since no middleware
-			expectedError:  "", // Skip error check for this one
+			expectedError:  "",                       // Skip error check for this one
 		},
 	}
 
@@ -379,50 +379,50 @@ func TestSetAutopilotWaypoint_Validation(t *testing.T) {
 // Note: In production, middleware ensures locals are always set. This tests defensive programming.
 func TestCharacterEndpoints_MissingLocals(t *testing.T) {
 	t.Skip("Endpoints panic on missing locals - this is expected behavior with middleware requirement")
-	
+
 	// The actual test below is commented out because it causes panics
 	// In production, the auth middleware MUST set these locals before calling handlers
 	/*
-	tests := []struct {
-		name     string
-		endpoint string
-		handler  func(h *TradingHandler) fiber.Handler
-	}{
-		{
-			name:     "GetCharacterLocation",
-			endpoint: "/location",
-			handler:  func(h *TradingHandler) fiber.Handler { return h.GetCharacterLocation },
-		},
-		{
-			name:     "GetCharacterShip",
-			endpoint: "/ship",
-			handler:  func(h *TradingHandler) fiber.Handler { return h.GetCharacterShip },
-		},
-		{
-			name:     "GetCharacterShips",
-			endpoint: "/ships",
-			handler:  func(h *TradingHandler) fiber.Handler { return h.GetCharacterShips },
-		},
-	}
+		tests := []struct {
+			name     string
+			endpoint string
+			handler  func(h *TradingHandler) fiber.Handler
+		}{
+			{
+				name:     "GetCharacterLocation",
+				endpoint: "/location",
+				handler:  func(h *TradingHandler) fiber.Handler { return h.GetCharacterLocation },
+			},
+			{
+				name:     "GetCharacterShip",
+				endpoint: "/ship",
+				handler:  func(h *TradingHandler) fiber.Handler { return h.GetCharacterShip },
+			},
+			{
+				name:     "GetCharacterShips",
+				endpoint: "/ships",
+				handler:  func(h *TradingHandler) fiber.Handler { return h.GetCharacterShips },
+			},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			app := fiber.New()
-			handler := &TradingHandler{}
-			app.Get(tt.endpoint, tt.handler(handler))
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				app := fiber.New()
+				handler := &TradingHandler{}
+				app.Get(tt.endpoint, tt.handler(handler))
 
-			req := httptest.NewRequest("GET", tt.endpoint, nil)
+				req := httptest.NewRequest("GET", tt.endpoint, nil)
 
-			// Should panic due to missing locals - catch it
-			defer func() {
-				if r := recover(); r == nil {
-					t.Errorf("Expected panic due to missing locals, but got none")
-				}
-			}()
+				// Should panic due to missing locals - catch it
+				defer func() {
+					if r := recover(); r == nil {
+						t.Errorf("Expected panic due to missing locals, but got none")
+					}
+				}()
 
-			app.Test(req)
-		})
-	}
+				app.Test(req)
+			})
+		}
 	*/
 }
 

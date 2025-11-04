@@ -103,7 +103,7 @@ EVE-O-Provit ist eine Full-Stack Web-Anwendung für Trading- und Manufacturing-O
 
 **Package-Struktur:**
 
-```
+```txt
 backend/
 ├── cmd/api/                    # Entrypoint
 ├── internal/

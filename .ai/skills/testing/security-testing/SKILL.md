@@ -252,7 +252,7 @@ func TestEVESSOSecurity(t *testing.T) {
 
 ### 1. Secure Token Storage
 
-**Never store tokens in localStorage**
+#### Never store tokens in localStorage
 
 ```typescript
 // BAD: Vulnerable to XSS
@@ -492,22 +492,27 @@ func TestSessionFixation(t *testing.T) {
 ## Anti-Patterns
 
 ### 1. Storing Secrets in Code
+
 ❌ **Avoid:** Hardcoded credentials, API keys
 ✅ **Do:** Use environment variables, secret managers
 
 ### 2. Weak Password Validation
+
 ❌ **Avoid:** Only checking length
 ✅ **Do:** Enforce complexity, check against common passwords
 
 ### 3. Information Leakage
+
 ❌ **Avoid:** Detailed error messages ("User not found" vs "Password incorrect")
 ✅ **Do:** Generic messages ("Invalid credentials")
 
 ### 4. Insecure Token Storage
+
 ❌ **Avoid:** localStorage, sessionStorage
 ✅ **Do:** httpOnly cookies
 
 ### 5. Missing HTTPS
+
 ❌ **Avoid:** Allowing HTTP for auth endpoints
 ✅ **Do:** Enforce HTTPS, use HSTS headers
 

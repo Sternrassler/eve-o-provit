@@ -66,7 +66,7 @@ NEXT_PUBLIC_EVE_CALLBACK_URL=http://localhost:9001/api/v1/auth/callback
 
 ## Project Structure
 
-```
+```txt
 frontend/
 ├── src/
 │   ├── app/                      # Next.js App Router

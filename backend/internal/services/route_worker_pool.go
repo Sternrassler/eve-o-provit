@@ -76,7 +76,7 @@ func (p *RouteWorkerPool) ProcessItems(ctx context.Context, items []models.ItemP
 }
 
 // worker processes items from the queue
-func (p *RouteWorkerPool) worker(ctx context.Context, itemQueue <-chan models.ItemPair, results chan<- models.TradingRoute, errors chan<- error, cargoCapacity float64) {
+func (p *RouteWorkerPool) worker(ctx context.Context, itemQueue <-chan models.ItemPair, results chan<- models.TradingRoute, _ chan<- error, cargoCapacity float64) {
 	for item := range itemQueue {
 		// Check for context cancellation
 		select {

@@ -197,7 +197,7 @@ func TestBackwardCompatibility(t *testing.T) {
 
 ### 1. Contract First Development
 
-**Define contracts before implementation**
+#### Define contracts before implementation
 
 ```yaml
 # openapi.yaml
@@ -249,7 +249,7 @@ components:
 
 ### 2. Version Your Contracts
 
-**Use semantic versioning for contract changes**
+#### Use semantic versioning for contract changes
 
 - **MAJOR**: Breaking changes (remove field, change type)
 - **MINOR**: Backward-compatible additions (new optional field)
@@ -257,7 +257,7 @@ components:
 
 ### 3. Test All Response Codes
 
-**Don't just test happy path**
+#### Don't just test happy path
 
 ```go
 func TestAPIErrorContracts(t *testing.T) {
@@ -301,7 +301,7 @@ func TestAPIErrorContracts(t *testing.T) {
 
 ### 4. Validate Request Contracts
 
-**Test that API rejects invalid requests**
+#### Test that API rejects invalid requests
 
 ```go
 func TestRequestValidation(t *testing.T) {
@@ -345,7 +345,7 @@ func TestRequestValidation(t *testing.T) {
 
 ### 5. Document Breaking Changes
 
-**Maintain changelog for contract changes**
+#### Maintain changelog for contract changes
 
 ```markdown
 # API Contract Changelog
@@ -371,7 +371,7 @@ func TestRequestValidation(t *testing.T) {
 
 ### 6. Cross-Service Contract Testing
 
-**Test integration between services**
+#### Test integration between services
 
 ```go
 func TestESIClientContract(t *testing.T) {
@@ -551,22 +551,27 @@ func TestAPIResponseSnapshot(t *testing.T) {
 ## Anti-Patterns
 
 ### 1. Testing Implementation, Not Contract
+
 ❌ **Avoid:** Testing internal logic instead of API surface
 ✅ **Do:** Test only public API contract
 
 ### 2. Brittle Contract Tests
+
 ❌ **Avoid:** Asserting exact response values
 ✅ **Do:** Validate structure, types, required fields
 
 ### 3. No Versioning Strategy
+
 ❌ **Avoid:** Breaking changes without version bump
 ✅ **Do:** Use semantic versioning, deprecation warnings
 
 ### 4. Missing Error Contract Tests
+
 ❌ **Avoid:** Only testing 200 OK responses
 ✅ **Do:** Test all error codes (400, 404, 500, etc.)
 
 ### 5. Ignoring Consumer Needs
+
 ❌ **Avoid:** Provider-only contract definition
 ✅ **Do:** Consumer-driven contracts where applicable
 

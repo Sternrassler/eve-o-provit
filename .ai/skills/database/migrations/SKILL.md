@@ -503,7 +503,7 @@ gh pr create --title "feat(db): add sessions table" --body "..."
 
 **Workflow:**
 
-```
+```text
 make docker-up → make migrate-up → make docker-rebuild → make test-be
 ```
 
@@ -513,7 +513,7 @@ make docker-up → make migrate-up → make docker-rebuild → make test-be
 
 **Workflow:**
 
-```
+```text
 Create Migration → Apply Migration → Update Models/Queries → make docker-rebuild → Test
 ```
 
@@ -523,7 +523,7 @@ Create Migration → Apply Migration → Update Models/Queries → make docker-r
 
 **Workflow:**
 
-```
+```text
 make test-migrations → Verify schema → make test-be-int → Full integration
 ```
 

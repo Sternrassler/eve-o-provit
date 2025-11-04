@@ -49,6 +49,7 @@ func BenchmarkWorkerPoolProcessing(b *testing.B) {
 				}
 				routes = append(routes, route)
 			}
+			_ = routes
 		}
 	})
 
@@ -92,6 +93,7 @@ func BenchmarkWorkerPoolProcessing(b *testing.B) {
 			for route := range results {
 				routes = append(routes, route)
 			}
+			_ = routes
 		}
 	})
 
@@ -135,6 +137,7 @@ func BenchmarkWorkerPoolProcessing(b *testing.B) {
 			for route := range results {
 				routes = append(routes, route)
 			}
+			_ = routes
 		}
 	})
 }

@@ -245,7 +245,7 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 
 **Verification Chain:**
 
-```
+```text
 1. Chrome DevTools → Submit form via browser
 2. Backend → Verify database record created
 3. Chrome DevTools → Verify success message displayed

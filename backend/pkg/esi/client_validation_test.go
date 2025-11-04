@@ -340,15 +340,15 @@ func TestPaginationHeaders(t *testing.T) {
 			pages := 1
 			var err error
 
-			if tt.xPagesHeader != "" {
-				// In real code: strconv.Atoi(xPagesHeader)
-				if tt.xPagesHeader == "invalid" {
-					err = assert.AnError
-				} else if tt.xPagesHeader == "1" {
-					pages = 1
-				} else if tt.xPagesHeader == "5" {
-					pages = 5
-				}
+			switch tt.xPagesHeader {
+			case "invalid":
+				err = assert.AnError
+			case "1":
+				pages = 1
+			case "5":
+				pages = 5
+			case "":
+				// Keep default pages = 1
 			}
 
 			assert.Equal(t, tt.expectedPages, pages)
@@ -424,6 +424,16 @@ func TestESIMarketOrder_RangeValidation(t *testing.T) {
 				Issued:       time.Now(),
 				Range:        validRange,
 			}
+			// Unused fields in this test (testing Range only)
+			_ = order.OrderID
+			_ = order.TypeID
+			_ = order.LocationID
+			_ = order.Price
+			_ = order.VolumeRemain
+			_ = order.VolumeTotal
+			_ = order.IsBuyOrder
+			_ = order.Duration
+			_ = order.Issued
 
 			// Range field should accept documented ESI values
 			assert.NotEmpty(t, order.Range)
@@ -464,6 +474,10 @@ func TestESIMarketOrder_MinVolumeZeroValue(t *testing.T) {
 				MinVolume:    tt.minVolume,
 				VolumeRemain: 100,
 			}
+			// Unused fields in this test (testing MinVolume only)
+			_ = order.OrderID
+			_ = order.TypeID
+			_ = order.VolumeRemain
 
 			// MinVolume 0 means field was omitted in ESI response
 			// (not a validation error, just informational)

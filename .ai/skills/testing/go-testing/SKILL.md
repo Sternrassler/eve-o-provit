@@ -400,7 +400,7 @@ func BenchmarkShortestPath(b *testing.B) {
 
 **Workflow:**
 
-```
+```text
 make docker-up → make test-be-int → Testcontainers start fresh instances → Tests run → Cleanup
 ```
 
@@ -410,7 +410,7 @@ make docker-up → make test-be-int → Testcontainers start fresh instances →
 
 **Workflow:**
 
-```
+```text
 Write Test (Red) → Implement (Green) → make docker-rebuild → make test-be → Refactor
 ```
 
@@ -420,7 +420,7 @@ Write Test (Red) → Implement (Green) → make docker-rebuild → make test-be 
 
 **Workflow:**
 
-```
+```text
 make test-be → go tool cover -func=coverage.out → Identify gaps → Write tests for 0% modules
 ```
 
@@ -430,7 +430,7 @@ make test-be → go tool cover -func=coverage.out → Identify gaps → Write te
 
 **Workflow:**
 
-```
+```text
 make pr-check → Runs: lint + test-be + scan → All green → Merge allowed
 ```
 

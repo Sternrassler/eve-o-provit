@@ -22,7 +22,7 @@
 
 ### Decision Tree
 
-```
+```text
 Need to verify calls? 
   ├─ Yes → Mock or Spy
   │   └─ Need real implementation? 
@@ -133,7 +133,7 @@ test('component calls API with correct params', async () => {
 
 ### 1. Minimal Mocking
 
-**Mock only external boundaries, not internal logic**
+#### Mock only external boundaries, not internal logic
 
 ```go
 // GOOD: Mock external API
@@ -149,7 +149,7 @@ mockCalculator := &MockProfitCalculator{} // Should be real!
 
 ### 2. Behavior Verification vs. State Verification
 
-**Prefer state verification over behavior verification**
+#### Prefer state verification over behavior verification
 
 ```typescript
 // GOOD: Verify state change
@@ -172,7 +172,7 @@ test('calls internal method', () => {
 
 ### 3. Mock Lifecycle
 
-**Setup in beforeEach, cleanup in afterEach**
+#### Setup in beforeEach, cleanup in afterEach
 
 ```typescript
 describe('UserService', () => {
@@ -197,7 +197,7 @@ describe('UserService', () => {
 
 ### 4. Realistic Test Data
 
-**Use builders or fixtures for consistent test data**
+#### Use builders or fixtures for consistent test data
 
 ```go
 // Test data builder
@@ -224,7 +224,7 @@ func TestUserService(t *testing.T) {
 
 ### 5. Avoid Over-Specification
 
-**Don't verify every interaction**
+#### Don't verify every interaction
 
 ```typescript
 // GOOD: Verify critical behavior
@@ -242,7 +242,7 @@ expect(mockLogger.debug).toHaveBeenNthCalledWith(2, 'Processing')
 
 ### 6. Test Double Naming
 
-**Clear naming conventions**
+#### Clear naming conventions
 
 ```go
 // Prefix clearly indicates type

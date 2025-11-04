@@ -9,11 +9,13 @@
 ## Architecture Patterns
 
 ### Read-Only Mode
+
 - **Immutable Access:** Database opened with `mode=ro&immutable=1` flags
 - **Static Reference Data:** EVE SDE (items, regions, systems, stations)
 - **No Writes:** Application never modifies SDE database
 
 ### Dual-Database Architecture
+
 - **SQLite:** Static EVE game data (SDE)
 - **PostgreSQL:** Dynamic market data, user preferences
 - **Separation of Concerns:** Static vs. dynamic data in separate databases
@@ -116,11 +118,13 @@ func (r *SDERepository) SearchItems(ctx context.Context, query string, limit int
 ## Integration with Backend
 
 ### Dual-Database Manager
+
 - **DB Struct:** Holds both `*pgxpool.Pool` (PostgreSQL) and `*sql.DB` (SQLite)
 - **Repository Injection:** SDERepository receives SQLite connection, MarketRepository receives PostgreSQL pool
 - **Service Coordination:** Services can query both databases (SDE for names, PostgreSQL for prices)
 
 ### Typical Flow
+
 1. User requests market data for "Tritanium" (item name)
 2. Service queries SDE for `type_id` by name
 3. Service queries PostgreSQL for market orders by `type_id`
@@ -148,6 +152,7 @@ func (r *SDERepository) SearchItems(ctx context.Context, query string, limit int
 ## Quick Reference
 
 | Task | Pattern |
+
 |------|---------|
 | Open read-only | `sql.Open("sqlite3", "file:path?mode=ro&immutable=1")` |
 | Single row | `db.QueryRowContext(ctx, "SELECT ...", args).Scan(&var)` |
