@@ -49,6 +49,12 @@ func NewClient(redisClient *redis.Client, cfg Config, repo *database.MarketRepos
 	}, nil
 }
 
+// GetRawClient returns the underlying ESI client for direct access
+// Used by pagination.BatchFetcher to implement PageFetcher interface
+func (c *Client) GetRawClient() *esiclient.Client {
+	return c.esi
+}
+
 // Close closes the ESI client
 func (c *Client) Close() error {
 	return c.esi.Close()
@@ -69,78 +75,99 @@ type ESIMarketOrder struct {
 	Range        string    `json:"range"`
 }
 
-// FetchMarketOrders fetches all market order pages for a region and stores them in the database
-// This is a high-level wrapper that uses MarketOrderFetcher for parallel pagination
+// FetchMarketOrders fetches ALL market order pages for a region and stores them in the database
+// This implementation ensures complete data by fetching all pages sequentially
+// Future enhancement: Use MarketOrderFetcher for parallel pagination with worker pools
 func (c *Client) FetchMarketOrders(ctx context.Context, regionID int) error {
-	// Use MarketOrderFetcher for parallel pagination (see internal/services/market_fetcher.go)
-	// Note: This method is kept for backward compatibility, but the real work is done by
-	// the MarketOrderFetcher worker pool (10 workers, 15s timeout)
-
-	// For now, delegate to the single-page method for backward compatibility
-	// The parallel fetcher is used directly by route_calculator.go and cache.go
-	endpoint := fmt.Sprintf("/v1/markets/%d/orders/?page=1", regionID)
-
-	resp, err := c.esi.Get(ctx, endpoint)
-	if err != nil {
-		return fmt.Errorf("ESI request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == 304 {
-		// Not Modified - Cache is still valid
-		return nil
-	}
-
-	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("unexpected ESI status %d: %s", resp.StatusCode, string(body))
-	}
-
-	// Parse response
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	var esiOrders []ESIMarketOrder
-	if err := json.Unmarshal(body, &esiOrders); err != nil {
-		return fmt.Errorf("failed to parse ESI response: %w", err)
-	}
-
-	// Convert to database models
 	fetchedAt := time.Now()
-	dbOrders := make([]database.MarketOrder, 0, len(esiOrders))
-	for _, esiOrder := range esiOrders {
-		var minVolume *int
-		if esiOrder.MinVolume > 0 {
-			minVolume = &esiOrder.MinVolume
+	allDBOrders := make([]database.MarketOrder, 0, 10000) // Pre-allocate for ~10k orders
+
+	// Fetch pages sequentially until X-Pages header indicates we've reached the end
+	page := 1
+	for {
+		endpoint := fmt.Sprintf("/v1/markets/%d/orders/?page=%d", regionID, page)
+
+		resp, err := c.esi.Get(ctx, endpoint)
+		if err != nil {
+			return fmt.Errorf("ESI request failed for page %d: %w", page, err)
 		}
 
-		dbOrders = append(dbOrders, database.MarketOrder{
-			OrderID:      esiOrder.OrderID,
-			TypeID:       esiOrder.TypeID,
-			RegionID:     regionID,
-			LocationID:   esiOrder.LocationID,
-			IsBuyOrder:   esiOrder.IsBuyOrder,
-			Price:        esiOrder.Price,
-			VolumeTotal:  esiOrder.VolumeTotal,
-			VolumeRemain: esiOrder.VolumeRemain,
-			MinVolume:    minVolume,
-			Issued:       esiOrder.Issued,
-			Duration:     esiOrder.Duration,
-			FetchedAt:    fetchedAt,
-		})
+		// Handle Not Modified (cache hit) - treat as end of pagination
+		if resp.StatusCode == 304 {
+			resp.Body.Close()
+			break
+		}
+
+		// Check for errors
+		if resp.StatusCode != 200 {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			return fmt.Errorf("unexpected ESI status %d for page %d: %s", resp.StatusCode, page, string(body))
+		}
+
+		// Parse X-Pages header to determine total pages
+		totalPages := 1
+		if xPages := resp.Header.Get("X-Pages"); xPages != "" {
+			if _, err := fmt.Sscanf(xPages, "%d", &totalPages); err != nil {
+				resp.Body.Close()
+				return fmt.Errorf("invalid X-Pages header '%s': %w", xPages, err)
+			}
+		}
+
+		// Parse response body
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return fmt.Errorf("failed to read response body for page %d: %w", page, err)
+		}
+
+		var esiOrders []ESIMarketOrder
+		if err := json.Unmarshal(body, &esiOrders); err != nil {
+			return fmt.Errorf("failed to parse ESI response for page %d: %w", page, err)
+		}
+
+		// Convert ESI orders to database models
+		for _, esiOrder := range esiOrders {
+			var minVolume *int
+			if esiOrder.MinVolume > 0 {
+				minVolume = &esiOrder.MinVolume
+			}
+
+			allDBOrders = append(allDBOrders, database.MarketOrder{
+				OrderID:      esiOrder.OrderID,
+				TypeID:       esiOrder.TypeID,
+				RegionID:     regionID,
+				LocationID:   esiOrder.LocationID,
+				IsBuyOrder:   esiOrder.IsBuyOrder,
+				Price:        esiOrder.Price,
+				VolumeTotal:  esiOrder.VolumeTotal,
+				VolumeRemain: esiOrder.VolumeRemain,
+				MinVolume:    minVolume,
+				Issued:       esiOrder.Issued,
+				Duration:     esiOrder.Duration,
+				FetchedAt:    fetchedAt,
+			})
+		}
+
+		// Check if we've fetched all pages
+		if page >= totalPages {
+			break
+		}
+
+		page++
 	}
 
-	// Store in database
-	if err := c.repo.UpsertMarketOrders(ctx, dbOrders); err != nil {
-		return fmt.Errorf("failed to store market orders: %w", err)
+	// Store all orders in database (single batch operation)
+	if err := c.repo.UpsertMarketOrders(ctx, allDBOrders); err != nil {
+		return fmt.Errorf("failed to store %d market orders: %w", len(allDBOrders), err)
 	}
 
 	return nil
 }
 
 // FetchMarketOrdersPage fetches a single page of market orders from ESI
+// This is an INTERNAL method used by MarketOrderFetcher for parallel pagination
+// DO NOT call this directly - use FetchMarketOrders or MarketOrderFetcher.FetchAllPages instead
 // Returns the orders, total page count (from X-Pages header), and any error
 func (c *Client) FetchMarketOrdersPage(ctx context.Context, regionID, page int) ([]ESIMarketOrder, int, error) {
 	endpoint := fmt.Sprintf("/v1/markets/%d/orders/?page=%d", regionID, page)

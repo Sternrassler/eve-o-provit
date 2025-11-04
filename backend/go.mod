@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.7
 
 require (
-	github.com/Sternrassler/eve-esi-client v0.2.0
+	github.com/Sternrassler/eve-esi-client v0.2.1-0.20251104015143-df66ffe69393
 	github.com/gofiber/fiber/v2 v2.52.9
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/mattn/go-sqlite3 v1.14.32

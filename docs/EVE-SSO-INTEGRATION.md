@@ -4,26 +4,24 @@ This guide explains how to set up and use the EVE Online SSO authentication in t
 
 ## Overview
 
-The application implements a complete OAuth2 authentication flow using EVE Online's Single Sign-On (SSO) system. This allows users to log in with their EVE characters and grants the application access to ESI (EVE Swagger Interface) endpoints.
+The application implements a **Frontend-only OAuth2 flow with PKCE** (ADR-004) using EVE Online's Single Sign-On (SSO) system. This allows users to log in with their EVE characters and grants the application access to ESI (EVE Swagger Interface) endpoints.
+
+**Security Model:** Authorization Code Flow with PKCE (Proof Key for Code Exchange) - no Client Secret needed, tokens stored in browser.
 
 ## Architecture
 
-### Backend (Go)
+### Frontend (Next.js) - PKCE Flow
 
-- **Package**: `backend/pkg/evesso/`
-- **Framework**: Fiber v2
-- **Authentication**: OAuth2 Authorization Code Flow
-- **Session Management**: JWT tokens stored in HttpOnly cookies
-- **Token Duration**: 24 hours (configurable)
-
-### Frontend (Next.js)
-
-- **Framework**: Next.js 16 (App Router)
-- **State Management**: React Context API
+- **Framework**: Next.js 14 (App Router)
+- **Authentication**: OAuth2 Authorization Code Flow with PKCE (ADR-004)
+- **State Management**: React Context API (`auth-context.tsx`)
+- **Token Storage**: Browser localStorage (encrypted with PKCE)
+- **Session Duration**: Based on ESI token expiry (~20 minutes)
 - **Components**:
+  - `AuthProvider` - Manages authentication state
   - `EveLoginButton` - Initiates login flow
   - `CharacterInfo` - Displays logged-in character
-  - `AuthProvider` - Manages authentication state
+  - `/callback` page - Handles OAuth callback
 
 ## Setup Instructions
 
@@ -35,7 +33,8 @@ The application implements a complete OAuth2 authentication flow using EVE Onlin
 2. Create a new application or use existing:
    - **Name**: EVE Profit Maximizer
    - **Client ID**: `0828b4bcd20242aeb9b8be10f5451094` (from issue requirements)
-   - **Callback URL**: `http://localhost:8082/api/v1/auth/callback`
+   - **Callback URL**: `http://localhost:9000/callback` ⚠️ **Frontend Port!**
+   - **Connection Type**: Authentication & API Access
    - **Scopes**: Enable the following:
      - `publicData`
      - `esi-location.read_location.v1`
@@ -46,52 +45,39 @@ The application implements a complete OAuth2 authentication flow using EVE Onlin
      - `esi-assets.read_assets.v1`
      - `esi-fittings.read_fittings.v1`
      - `esi-characters.read_standings.v1`
-3. Copy your **Client Secret** (keep it secure!)
+     - `esi-ui.write_waypoint.v1` (for autopilot route setting)
+     - `esi-markets.read_character_orders.v1` (for character market orders)
+3. **No Client Secret needed** - PKCE flow uses code_verifier instead!
 
-### 2. Backend Configuration
-
-Create `backend/.env` file:
-
-```env
-# EVE SSO Configuration
-EVE_CLIENT_ID=0828b4bcd20242aeb9b8be10f5451094
-EVE_CLIENT_SECRET=your-secret-from-eve-developer-portal
-EVE_CALLBACK_URL=http://localhost:8082/api/v1/auth/callback
-EVE_SCOPES=publicData esi-location.read_location.v1 esi-location.read_ship_type.v1 esi-skills.read_skills.v1 esi-wallet.read_character_wallet.v1 esi-universe.read_structures.v1 esi-assets.read_assets.v1 esi-fittings.read_fittings.v1 esi-characters.read_standings.v1
-
-# JWT Configuration
-JWT_SECRET=REPLACE_THIS_WITH_OUTPUT_FROM_openssl_rand_base64_32
-SESSION_DURATION=24h
-
-# Server Configuration
-PORT=8082
-CORS_ORIGINS=http://localhost:3000
-```
-
-**Generate a secure JWT secret:**
-```bash
-openssl rand -base64 32
-```
-
-### 3. Frontend Configuration
+### 2. Frontend Configuration
 
 Create `frontend/.env.local` file:
 
 ```env
+# EVE SSO (Public - used in browser)
 NEXT_PUBLIC_EVE_CLIENT_ID=0828b4bcd20242aeb9b8be10f5451094
-NEXT_PUBLIC_EVE_CALLBACK_URL=http://localhost:8082/api/v1/auth/callback
-NEXT_PUBLIC_API_URL=http://localhost:8082
+NEXT_PUBLIC_EVE_CALLBACK_URL=http://localhost:9000/callback
+
+# Backend API URL
+NEXT_PUBLIC_API_URL=http://localhost:9001
+
+# Optional: Override scopes (defaults in auth-context.tsx)
+NEXT_PUBLIC_EVE_SCOPES=esi-location.read_location.v1,esi-location.read_ship_type.v1,esi-clones.read_clones.v1,esi-assets.read_assets.v1,esi-ui.write_waypoint.v1
 ```
 
-### 4. Start the Application
+**Note:** No secrets needed! PKCE flow uses dynamically generated code_verifier.
 
-**Backend:**
+### 3. Start the Application
+
+**Backend (for Market Data API):**
+
 ```bash
 cd backend
 go run ./cmd/api/main.go
 ```
 
-**Frontend:**
+**Frontend (handles OAuth):**
+
 ```bash
 cd frontend
 npm run dev
@@ -116,6 +102,7 @@ npm run dev
 ## API Endpoints
 
 ### `GET /api/v1/auth/login`
+
 Initiates OAuth2 flow by redirecting to EVE SSO.
 
 **Response:** HTTP 307 Redirect to EVE SSO
@@ -123,9 +110,11 @@ Initiates OAuth2 flow by redirecting to EVE SSO.
 ---
 
 ### `GET /api/v1/auth/callback`
+
 Handles OAuth2 callback from EVE SSO.
 
 **Query Parameters:**
+
 - `code` - Authorization code
 - `state` - CSRF protection token
 
@@ -134,9 +123,11 @@ Handles OAuth2 callback from EVE SSO.
 ---
 
 ### `POST /api/v1/auth/logout`
+
 Invalidates the current session.
 
 **Response:**
+
 ```json
 {
   "message": "Logged out successfully"
@@ -146,9 +137,11 @@ Invalidates the current session.
 ---
 
 ### `GET /api/v1/auth/verify`
+
 Verifies the current session and returns session information.
 
 **Response:**
+
 ```json
 {
   "authenticated": true,
@@ -162,9 +155,11 @@ Verifies the current session and returns session information.
 ---
 
 ### `POST /api/v1/auth/refresh`
+
 Refreshes the session token with a new expiration time.
 
 **Response:**
+
 ```json
 {
   "message": "Session refreshed successfully"
@@ -174,9 +169,11 @@ Refreshes the session token with a new expiration time.
 ---
 
 ### `GET /api/v1/auth/character`
+
 Returns detailed character information.
 
 **Response:**
+
 ```json
 {
   "character_id": 123456789,
@@ -242,10 +239,14 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 ### Development vs Production
 
 **Development (HTTP):**
+
 - Cookies use `Secure: false` to work with HTTP
-- Callback URL: `http://localhost:8082/api/v1/auth/callback`
+- Callback URL: `http://localhost:9001/api/v1/auth/callback`
+- Frontend: `http://localhost:9000`
+- Backend: `http://localhost:9001`
 
 **Production (HTTPS):**
+
 - Cookies must use `Secure: true`
 - Callback URL: `https://your-domain.com/api/v1/auth/callback`
 - Update EVE application callback URL in developer portal
@@ -260,6 +261,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 ### State Parameter
 
 The state parameter is a random 32-byte value that:
+
 - Prevents CSRF attacks
 - Is stored in a short-lived cookie (5 minutes)
 - Must match between the initial request and callback

@@ -7,18 +7,51 @@ eve-o-provit/
 │   │   └── api/               # API Server Entrypoint
 │   │       └── main.go
 │   ├── internal/              # Private Application Code
-│   │   ├── database/         # PostgreSQL Migrations & Queries
+│   │   ├── database/         # PostgreSQL Repository Layer
 │   │   ├── handlers/         # HTTP Request Handlers
-│   │   ├── services/         # Business Logic Layer
-│   │   └── esi/              # ESI API Client
+│   │   ├── models/           # Domain Models
+│   │   └── services/         # Business Logic Layer
+│   │       ├── route_calculator.go  # Trading Route Calculator
+│   │       └── cache.go            # Market Data Cache (TODO: refactor)
 │   ├── pkg/
-│   │   └── evedb/            # SQLite SDE Access (aus eve-sde migriert)
+│   │   ├── evedb/            # SQLite SDE Access Library
+│   │   │   ├── cargo/        # Cargo/Hauling Calculations
+│   │   │   └── navigation/   # Pathfinding & Travel Time
+│   │   ├── esi/              # ESI Client Wrapper
+│   │   └── evesso/           # EVE SSO OAuth2
+│   ├── examples/             # CLI Examples
+│   │   ├── cargo/            # Cargo Calculator Demo
+│   │   └── navigation/       # Route Planning Demo
+│   ├── migrations/           # Database Schema Migrations
+│   ├── sql/views/            # PostgreSQL View Definitions
 │   ├── go.mod
 │   ├── go.sum
 │   └── Dockerfile
 │
-├── frontend/                   # Next.js 14 Frontend (TODO: scaffold)
-│   └── .gitkeep
+├── frontend/                   # Next.js 14 Frontend
+│   ├── src/
+│   │   ├── app/              # App Router Pages
+│   │   │   ├── intra-region/         # Intra-Region Trading
+│   │   │   ├── inventory-sell/       # Inventory Sell Optimizer
+│   │   │   ├── character/            # Character Management
+│   │   │   └── callback/             # OAuth Callback Handler
+│   │   ├── components/
+│   │   │   ├── ui/                   # shadcn/ui Components
+│   │   │   ├── trading/              # Trading-Specific Components
+│   │   │   │   ├── RegionSelect.tsx
+│   │   │   │   ├── RegionRefreshButton.tsx
+│   │   │   │   ├── RegionStalenessIndicator.tsx
+│   │   │   │   ├── TradingRouteList.tsx
+│   │   │   │   └── TradingFilters.tsx
+│   │   │   └── item-autocomplete.tsx
+│   │   ├── lib/
+│   │   │   ├── api-client.ts         # Backend API Client
+│   │   │   └── auth-context.tsx      # Auth State Management
+│   │   └── types/
+│   │       └── trading.ts            # TypeScript Type Definitions
+│   ├── tests/                # Playwright E2E Tests
+│   ├── package.json
+│   └── Dockerfile
 │
 ├── data/
 │   └── sde/                   # SQLite SDE Database (Read-Only Mount)
@@ -54,24 +87,45 @@ eve-o-provit/
 ## Komponenten
 
 ### Backend (`/backend`)
-- **Go 1.21+** mit Fiber Framework
-- **SQLite SDE Access** via `pkg/evedb` (aus eve-sde migriert)
-- **PostgreSQL** für Market/User Data
-- **Redis** für Caching
-- **ESI Client** für Live Market Data
+
+- **Go 1.24+** mit Fiber Framework
+- **SQLite SDE Access** via `pkg/evedb` (migriert von eve-sde)
+- **PostgreSQL** für Market/User Data (pgx/v5)
+- **Redis** für ESI Response Caching
+- **eve-esi-client v0.3.0** für Live Market Data (BatchFetcher Pattern)
+- **EVE SSO** OAuth2 Authentication (pkg/evesso)
+
+**Key Features:**
+
+- Parallel Market Data Fetching (10 workers, ~8.7s für 387 Seiten)
+- Intra-Region Trading Route Calculator
+- Inventory Sell Optimizer
+- Market Data Staleness Tracking
+- Character Location & Ship Integration
 
 ### Frontend (`/frontend`)
+
 - **Next.js 14** (App Router, Server Components)
-- **TypeScript** + **shadcn/ui**
-- **TanStack Table** für Data Tables
-- **Recharts** für Charts
+- **TypeScript** + **shadcn/ui** (Radix UI + Tailwind)
+- **Auth:** EVE SSO Integration (OAuth2, JWT Sessions)
+- **State:** React Context API
+- **Components:**
+  - Region Selection mit Refresh & Staleness Indicator
+  - Trading Route Visualization
+  - Item Autocomplete Search
+  - Inventory Sell Calculator
+  - Character Integration
 
 ### Data (`/data`)
+
 - **SDE SQLite DB** (Read-Only, aus eve-sde Projekt)
+- Enthält: Types, Regions, Systems, Stargates, Ships, Blueprints
 
 ### Deployments (`/deployments`)
+
 - **Docker Compose** für lokale Entwicklung
-- PostgreSQL + Redis + API (+ Frontend später)
+- Services: PostgreSQL + Redis + API + Frontend
+- Ports: 5432, 6379, 9001, 9000
 
 ## Setup
 

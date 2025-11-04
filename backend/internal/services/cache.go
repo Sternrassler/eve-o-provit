@@ -15,22 +15,25 @@ import (
 )
 
 // MarketOrderCache provides Redis caching for market orders
+// TODO: Refactor to use pagination.BatchFetcher instead of removed MarketOrderFetcher
 type MarketOrderCache struct {
-	redis   *redis.Client
-	ttl     time.Duration
-	fetcher *MarketOrderFetcher
+	redis *redis.Client
+	ttl   time.Duration
+	// fetcher *MarketOrderFetcher // Removed - needs refactoring
 }
 
 // NewMarketOrderCache creates a new market order cache
-func NewMarketOrderCache(redisClient *redis.Client, fetcher *MarketOrderFetcher) *MarketOrderCache {
+// TODO: Add BatchFetcher parameter after refactoring
+func NewMarketOrderCache(redisClient *redis.Client) *MarketOrderCache {
 	return &MarketOrderCache{
-		redis:   redisClient,
-		ttl:     5 * time.Minute,
-		fetcher: fetcher,
+		redis: redisClient,
+		ttl:   5 * time.Minute,
+		// fetcher: fetcher, // Removed - needs refactoring
 	}
 }
 
 // Get retrieves market orders from cache or fetches if not present
+// TODO: Re-implement using pagination.BatchFetcher
 func (c *MarketOrderCache) Get(ctx context.Context, regionID int) ([]database.MarketOrder, error) {
 	cacheKey := fmt.Sprintf("market_orders:%d", regionID)
 
@@ -45,20 +48,8 @@ func (c *MarketOrderCache) Get(ctx context.Context, regionID int) ([]database.Ma
 		// If decompression fails, fall through to fetch
 	}
 
-	// Cache miss - fetch from ESI
-	orders, err := c.fetcher.FetchAllPages(ctx, regionID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch orders: %w", err)
-	}
-
-	// Store in cache (async, don't block on cache write)
-	go func() {
-		cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = c.Set(cacheCtx, regionID, orders)
-	}()
-
-	return orders, nil
+	// Cache miss - TODO: implement fetching via BatchFetcher
+	return nil, fmt.Errorf("cache miss and fetcher not implemented yet")
 }
 
 // Set stores market orders in cache with compression
@@ -80,19 +71,10 @@ func (c *MarketOrderCache) Set(ctx context.Context, regionID int, orders []datab
 }
 
 // RefreshBackground refreshes cache in background
+// TODO: Re-implement using pagination.BatchFetcher
 func (c *MarketOrderCache) RefreshBackground(regionID int) {
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		orders, err := c.fetcher.FetchAllPages(ctx, regionID)
-		if err != nil {
-			// Log error but don't fail
-			return
-		}
-
-		_ = c.Set(ctx, regionID, orders)
-	}()
+	// Disabled until refactoring complete
+	return
 }
 
 // compress compresses market orders using gzip

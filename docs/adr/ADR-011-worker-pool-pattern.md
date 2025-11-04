@@ -1,8 +1,16 @@
 # ADR-011: Worker Pool Pattern für Trading Route Berechnung
 
-Status: Accepted
+Status: Superseded
+Superseded by: eve-esi-client BatchFetcher (external: ADR-011-equivalent in eve-esi-client repository)
 Datum: 2025-11-01
+Superseded: 2025-11-04
+Ersetzt durch: eve-esi-client/pkg/pagination/batch_fetcher.go
+Repository: https://github.com/Sternrassler/eve-esi-client
 Autoren: GitHub Copilot (Performance Optimization Phase 3)
+
+> **Hinweis:** Dieses ADR beschreibt die ursprüngliche Implementierung eines MarketOrderFetchers in eve-o-provit.
+> Die Funktionalität wurde in eve-esi-client v0.3.0 als generisches BatchFetcher-Pattern zentralisiert.
+> Siehe: https://github.com/Sternrassler/eve-esi-client/pkg/pagination
 
 > Ablageort: ADR-Dateien werden im Verzeichnis `docs/adr/` gepflegt.
 

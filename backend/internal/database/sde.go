@@ -201,3 +201,76 @@ func (r *SDERepository) GetStationName(ctx context.Context, stationID int64) (st
 	}
 	return name, nil
 }
+
+// GetRegionIDForSystem retrieves the region ID for a given solar system ID
+func (r *SDERepository) GetRegionIDForSystem(ctx context.Context, systemID int64) (int, error) {
+	query := `
+		SELECT c.regionID
+		FROM mapSolarSystems s
+		JOIN mapConstellations c ON s.constellationID = c._key
+		WHERE s._key = ?
+	`
+	var regionID int
+	err := r.db.QueryRowContext(ctx, query, systemID).Scan(&regionID)
+	if err == sql.ErrNoRows {
+		return 0, fmt.Errorf("system %d not found in SDE", systemID)
+	}
+	if err != nil {
+		return 0, fmt.Errorf("failed to query region ID for system %d: %w", systemID, err)
+	}
+	return regionID, nil
+}
+
+// SearchItems searches for published items by name with group information
+func (r *SDERepository) SearchItems(ctx context.Context, searchTerm string, limit int) ([]struct {
+	TypeID    int
+	Name      string
+	GroupName string
+}, error) {
+	query := `
+		SELECT 
+			t._key as type_id,
+			COALESCE(json_extract(t.name, '$.en'), json_extract(t.name, '$.de'), 'Unknown') as name,
+			COALESCE(json_extract(g.name, '$.en'), json_extract(g.name, '$.de'), 'Unknown') as group_name
+		FROM types t
+		JOIN groups g ON t.groupID = g._key
+		WHERE t.published = 1
+		AND (
+			json_extract(t.name, '$.en') LIKE '%' || ? || '%'
+			OR json_extract(t.name, '$.de') LIKE '%' || ? || '%'
+		)
+		ORDER BY json_extract(t.name, '$.en') ASC
+		LIMIT ?
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, searchTerm, searchTerm, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search items: %w", err)
+	}
+	defer rows.Close()
+
+	var results []struct {
+		TypeID    int
+		Name      string
+		GroupName string
+	}
+
+	for rows.Next() {
+		var item struct {
+			TypeID    int
+			Name      string
+			GroupName string
+		}
+		err := rows.Scan(&item.TypeID, &item.Name, &item.GroupName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan item: %w", err)
+		}
+		results = append(results, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return results, nil
+}

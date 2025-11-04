@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"time"
 
+	"github.com/Sternrassler/eve-esi-client/pkg/pagination"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
@@ -100,10 +102,50 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 	// Check if we should fetch fresh data
 	refresh := c.QueryBool("refresh", false)
 	if refresh {
-		// Fetch fresh data from ESI
-		if err := h.esiClient.FetchMarketOrders(c.Context(), regionID); err != nil {
+		// Use esi-client BatchFetcher for parallel pagination (10 workers)
+		config := pagination.DefaultConfig()
+		fetcher := pagination.NewBatchFetcher(h.esiClient.GetRawClient(), config)
+		endpoint := fmt.Sprintf("/v1/markets/%d/orders/", regionID)
+
+		// Fetch all pages in parallel
+		results, err := fetcher.FetchAllPages(c.Context(), endpoint)
+		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   "failed to fetch market data",
+				"details": err.Error(),
+			})
+		}
+
+		// Convert paginated results to MarketOrder structs
+		allOrders := make([]database.MarketOrder, 0)
+		for pageNum := 1; pageNum <= len(results); pageNum++ {
+			pageData, ok := results[pageNum]
+			if !ok {
+				continue
+			}
+
+			// ESI response structure (matches database.MarketOrder fields)
+			var orders []database.MarketOrder
+			if err := json.Unmarshal(pageData, &orders); err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+					"error":   "failed to parse market data",
+					"details": err.Error(),
+				})
+			}
+
+			// Add region ID and timestamp
+			for i := range orders {
+				orders[i].RegionID = regionID
+				orders[i].FetchedAt = time.Now()
+			}
+
+			allOrders = append(allOrders, orders...)
+		}
+
+		// Store in database
+		if err := h.marketRepo.UpsertMarketOrders(c.Context(), allOrders); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error":   "failed to store market data",
 				"details": err.Error(),
 			})
 		}
@@ -122,6 +164,51 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 		"type_id":   typeID,
 		"orders":    orders,
 		"count":     len(orders),
+	})
+}
+
+// GetMarketDataStaleness returns age of market data for a region
+func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
+	regionIDStr := c.Params("region")
+	if regionIDStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "missing region ID",
+		})
+	}
+
+	regionID, err := strconv.Atoi(regionIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "invalid region ID",
+			"details": err.Error(),
+		})
+	}
+
+	query := `
+		SELECT 
+			COUNT(*) as total_orders,
+			MAX(fetched_at) as latest_fetch,
+			EXTRACT(EPOCH FROM (NOW() - MAX(fetched_at)))/60 as age_minutes
+		FROM market_orders
+		WHERE region_id = $1
+	`
+
+	var totalOrders int
+	var latestFetch time.Time
+	var ageMinutes float64
+
+	err = h.db.Postgres.QueryRow(c.Context(), query, regionID).Scan(&totalOrders, &latestFetch, &ageMinutes)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to query market data age",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"region_id":    regionID,
+		"total_orders": totalOrders,
+		"latest_fetch": latestFetch.Format(time.RFC3339),
+		"age_minutes":  ageMinutes,
 	})
 }
 

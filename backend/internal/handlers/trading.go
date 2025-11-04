@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -14,20 +16,23 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
 	"github.com/gofiber/fiber/v2"
 )
 
 // TradingHandler handles trading-related HTTP requests
 type TradingHandler struct {
-	calculator *services.RouteCalculator
-	handler    *Handler
+	calculator      *services.RouteCalculator
+	handler         *Handler
+	characterHelper *services.CharacterHelper
 }
 
 // NewTradingHandler creates a new trading handler instance
-func NewTradingHandler(calculator *services.RouteCalculator, baseHandler *Handler) *TradingHandler {
+func NewTradingHandler(calculator *services.RouteCalculator, baseHandler *Handler, charHelper *services.CharacterHelper) *TradingHandler {
 	return &TradingHandler{
-		calculator: calculator,
-		handler:    baseHandler,
+		calculator:      calculator,
+		handler:         baseHandler,
+		characterHelper: charHelper,
 	}
 }
 
@@ -538,4 +543,267 @@ func (h *TradingHandler) setESIAutopilotWaypoint(ctx context.Context, accessToke
 	// Other errors
 	body, _ := io.ReadAll(resp.Body)
 	return fmt.Errorf("ESI returned status %d: %s", resp.StatusCode, string(body))
+}
+
+// SearchItems handles GET /api/v1/items/search
+func (h *TradingHandler) SearchItems(c *fiber.Ctx) error {
+	query := c.Query("q")
+	if len(query) < 3 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "query parameter 'q' must be at least 3 characters",
+		})
+	}
+
+	// Parse limit (default 20, max 100)
+	limit := 20
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil {
+			if parsedLimit > 0 && parsedLimit <= 100 {
+				limit = parsedLimit
+			}
+		}
+	}
+
+	// Search items via SDE repository
+	items, err := h.handler.sdeRepo.SearchItems(c.Context(), query, limit)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "failed to search items",
+			"details": err.Error(),
+		})
+	}
+
+	// Convert to response model
+	var results []models.ItemSearchResult
+	for _, item := range items {
+		results = append(results, models.ItemSearchResult{
+			TypeID:    item.TypeID,
+			Name:      item.Name,
+			GroupName: item.GroupName,
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"items": results,
+		"count": len(results),
+	})
+}
+
+// CalculateInventorySellRoutes handles POST /api/v1/trading/inventory-sell
+func (h *TradingHandler) CalculateInventorySellRoutes(c *fiber.Ctx) error {
+	characterID := c.Locals("character_id").(int)
+	accessToken := c.Locals("access_token").(string)
+
+	var req models.InventorySellRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Validate request
+	if req.TypeID <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid type_id",
+		})
+	}
+	if req.Quantity <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid quantity",
+		})
+	}
+	if req.BuyPricePerUnit <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid buy_price_per_unit",
+		})
+	}
+	if req.RegionID <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid region_id",
+		})
+	}
+
+	// Get character location (current station)
+	location, err := h.characterHelper.GetCharacterLocation(c.Context(), characterID, accessToken)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Failed to fetch character location",
+			"details": err.Error(),
+		})
+	}
+
+	// Determine starting station (fallback to system if in space)
+	var startStationID int64
+	if location.StationID != nil {
+		startStationID = *location.StationID
+	} else {
+		// Character in space - must be docked
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Character must be docked at a station to calculate sell routes",
+		})
+	}
+
+	// Get start system ID
+	startSystemID, err := h.handler.sdeRepo.GetSystemIDForLocation(c.Context(), startStationID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Failed to determine starting system",
+			"details": err.Error(),
+		})
+	}
+
+	// Calculate tax rate based on character skills
+	taxRate, err := h.characterHelper.CalculateTaxRate(c.Context(), characterID, accessToken)
+	if err != nil {
+		// Use fallback tax rate
+		taxRate = 0.055
+	}
+
+	// Fetch all buy orders for the item in the region
+	orders, err := h.handler.esiClient.GetMarketOrders(c.Context(), req.RegionID, req.TypeID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Failed to fetch market orders",
+			"details": err.Error(),
+		})
+	}
+
+	log.Printf("[DEBUG] Raw ESI orders count: %d for type_id=%d region_id=%d", len(orders), req.TypeID, req.RegionID)
+	if len(orders) > 0 {
+		log.Printf("[DEBUG] First order sample: Price=%.2f, IsBuy=%v, Volume=%d", orders[0].Price, orders[0].IsBuyOrder, orders[0].VolumeRemain)
+	}
+
+	// Filter for buy orders only
+	var buyOrders []struct {
+		Price        float64
+		VolumeRemain int
+		LocationID   int64
+	}
+	for _, order := range orders {
+		if order.IsBuyOrder {
+			buyOrders = append(buyOrders, struct {
+				Price        float64
+				VolumeRemain int
+				LocationID   int64
+			}{
+				Price:        order.Price,
+				VolumeRemain: order.VolumeRemain,
+				LocationID:   order.LocationID,
+			})
+		}
+	}
+
+	log.Printf("[DEBUG] InventorySell: Found %d buy orders for type_id=%d in region_id=%d", len(buyOrders), req.TypeID, req.RegionID)
+
+	// Calculate routes for each buy order
+	var routes []models.InventorySellRoute
+	skipped := map[string]int{}
+	for _, order := range buyOrders {
+		// Calculate net price after tax
+		netPrice := order.Price * (1 - taxRate)
+		profitPerUnit := netPrice - req.BuyPricePerUnit
+
+		log.Printf("[DEBUG] Order: price=%.2f ISK, taxRate=%.4f, netPrice=%.2f ISK, buyPrice=%.2f ISK, profit=%.2f ISK, minProfit=%.2f ISK",
+			order.Price, taxRate, netPrice, req.BuyPricePerUnit, profitPerUnit, req.MinProfitPerUnit)
+
+		// Filter by minimum profit
+		if profitPerUnit < req.MinProfitPerUnit {
+			skipped["profit_too_low"]++
+			log.Printf("[DEBUG] Skipped: profit %.2f < min %.2f", profitPerUnit, req.MinProfitPerUnit)
+			continue
+		}
+
+		// Calculate available quantity
+		availableQuantity := req.Quantity
+		if order.VolumeRemain < availableQuantity {
+			availableQuantity = order.VolumeRemain
+		}
+
+		// Get station/system information
+		systemID, err := h.handler.sdeRepo.GetSystemIDForLocation(c.Context(), order.LocationID)
+		if err != nil {
+			skipped["invalid_location"]++
+			continue // Skip invalid locations
+		}
+
+		// Calculate route navigation
+		travelResult, err := navigation.ShortestPath(h.handler.db.SDE, startSystemID, systemID, false)
+		if err != nil {
+			skipped["navigation_failed"]++
+			continue // Skip if route calculation fails
+		}
+
+		// Get min security status of route
+		minRouteSecurity := h.getMinRouteSecurityStatus(c.Context(), travelResult.Route)
+
+		// Apply security filter
+		if req.SecurityFilter == "highsec" && minRouteSecurity < 0.5 {
+			skipped["security_highsec"]++
+			continue
+		}
+		if req.SecurityFilter == "highlow" && minRouteSecurity <= 0.0 {
+			skipped["security_highlow"]++
+			continue
+		}
+
+		systemName, _ := h.handler.sdeRepo.GetSystemName(c.Context(), systemID)
+		stationName, _ := h.handler.sdeRepo.GetStationName(c.Context(), order.LocationID)
+
+		route := models.InventorySellRoute{
+			SellStationID:          order.LocationID,
+			SellStationName:        stationName,
+			SellSystemID:           systemID,
+			SellSystemName:         systemName,
+			SellSecurityStatus:     h.getSystemSecurityStatus(c.Context(), systemID),
+			BuyOrderPrice:          order.Price,
+			TaxRate:                taxRate,
+			NetPricePerUnit:        netPrice,
+			ProfitPerUnit:          profitPerUnit,
+			AvailableQuantity:      availableQuantity,
+			TotalProfit:            profitPerUnit * float64(availableQuantity),
+			RouteJumps:             len(travelResult.Route) - 1,
+			RouteSystemIDs:         travelResult.Route,
+			MinRouteSecurityStatus: minRouteSecurity,
+		}
+
+		routes = append(routes, route)
+	}
+
+	// Sort by profit per unit (descending)
+	sort.Slice(routes, func(i, j int) bool {
+		return routes[i].ProfitPerUnit > routes[j].ProfitPerUnit
+	})
+
+	log.Printf("[DEBUG] InventorySell: Generated %d routes. Skipped: %+v", len(routes), skipped)
+
+	return c.JSON(fiber.Map{
+		"routes": routes,
+		"count":  len(routes),
+	})
+}
+
+// getMinRouteSecurityStatus finds the minimum security status across all systems in a route
+func (h *TradingHandler) getMinRouteSecurityStatus(ctx context.Context, route []int64) float64 {
+	if len(route) == 0 {
+		return 1.0
+	}
+
+	minSec := 1.0
+	for _, systemID := range route {
+		sec := h.getSystemSecurityStatus(ctx, systemID)
+		if sec < minSec {
+			minSec = sec
+		}
+	}
+	return minSec
+}
+
+// getSystemSecurityStatus retrieves security status for a system
+func (h *TradingHandler) getSystemSecurityStatus(ctx context.Context, systemID int64) float64 {
+	query := `SELECT security FROM mapSolarSystems WHERE _key = ?`
+	var security float64
+	if err := h.handler.db.SDE.QueryRowContext(ctx, query, systemID).Scan(&security); err != nil {
+		return 1.0 // Default to high-sec on error
+	}
+	return security
 }

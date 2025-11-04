@@ -59,3 +59,35 @@ export interface TradingFilters {
   allowLowSec: boolean;
   allowNullSec: boolean;
 }
+
+export interface ItemSearchResult {
+  type_id: number;
+  name: string;
+  group_name: string;
+}
+
+export interface InventorySellRequest {
+  type_id: number;
+  quantity: number;
+  buy_price_per_unit: number;
+  region_id: number;
+  min_profit_per_unit: number;
+  security_filter: string; // "all", "highsec", "highlow"
+}
+
+export interface InventorySellRoute {
+  sell_station_id: number;
+  sell_station_name: string;
+  sell_system_id: number;
+  sell_system_name: string;
+  sell_security_status: number;
+  buy_order_price: number;
+  tax_rate: number;
+  net_price_per_unit: number;
+  profit_per_unit: number;
+  available_quantity: number;
+  total_profit: number;
+  route_jumps: number;
+  route_system_ids: number[];
+  min_route_security_status: number;
+}

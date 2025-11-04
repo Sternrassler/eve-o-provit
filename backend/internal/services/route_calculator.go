@@ -63,8 +63,8 @@ func NewRouteCalculator(esiClient *esi.Client, sdeDB *sql.DB, sdeRepo *database.
 
 	// Initialize caches if Redis is available
 	if redisClient != nil {
-		fetcher := NewMarketOrderFetcher(esiClient)
-		rc.marketCache = NewMarketOrderCache(redisClient, fetcher)
+		// TODO: Refactor cache to use pagination.BatchFetcher
+		// rc.marketCache = NewMarketOrderCache(redisClient, fetcher)
 		rc.navCache = NewNavigationCache(redisClient)
 	}
 
@@ -302,13 +302,13 @@ func (rc *RouteCalculator) findProfitableItems(ctx context.Context, orders []dat
 		// We can only trade the minimum of what we can buy AND what we can sell
 		buyAvailable := lowestSell.VolumeRemain  // How much we can buy
 		sellAvailable := highestBuy.VolumeRemain // How much we can sell (demand)
-		
+
 		// Take the minimum - we're bottlenecked by the smaller side
 		availableQuantity := buyAvailable
 		if sellAvailable < buyAvailable {
 			availableQuantity = sellAvailable
 		}
-		
+
 		availableVolumeM3 := float64(availableQuantity) * itemVol.Volume
 
 		profitableItems = append(profitableItems, models.ItemPair{

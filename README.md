@@ -12,6 +12,7 @@ tech stack festlegen# EVE Online Profit Calculator
 ## Kernfunktionen
 
 ### Trading Module
+
 - **Profit-Margin Analyse** - Echtzeit-Berechnung von Buy/Sell-Order Spreads
 - **Market Hub Vergleiche** - Jita, Amarr, Dodixie, Rens Preisvergleich
 - **Trade Route Finder** - Optimale Inter-Hub Arbitrage-Routes
@@ -19,6 +20,7 @@ tech stack festlegen# EVE Online Profit Calculator
 - **Live Market Data** - Integration mit EVE ESI API
 
 ### Manufacturing Module
+
 - **Blueprint Efficiency Calculator** - Material-/Zeit-/Kosten-Optimierung
 - **Profit Calculator** - Material Cost vs. Market Price Analyse
 - **T2/T3 Manufacturing Chains** - Komplette Produktionsketten-Planung
@@ -28,6 +30,7 @@ tech stack festlegen# EVE Online Profit Calculator
 ## Tech Stack
 
 ### Frontend
+
 - **Framework:** Next.js 14+ (App Router, Server Components)
 - **Language:** TypeScript
 - **UI Library:** shadcn/ui (Radix UI + Tailwind CSS)
@@ -36,29 +39,33 @@ tech stack festlegen# EVE Online Profit Calculator
 - **Tables:** TanStack Table
 
 ### Backend
+
 - **Language:** Go 1.24+
 - **Framework:** Fiber (Fast HTTP Router)
-- **Database:** 
+- **Database:**
   - PostgreSQL 16+ (Dynamic Market Data)
   - SQLite (Read-Only SDE from eve-sde)
 - **ORM/Query:** pgx/v5, database/sql
 - **API:** REST (tRPC/OpenAPI geplant)
 - **Caching:** Redis (ESI Cache & Rate Limiting)
-- **ESI Client:** [eve-esi-client](https://github.com/Sternrassler/eve-esi-client) v0.2.0
+- **ESI Client:** [eve-esi-client](https://github.com/Sternrassler/eve-esi-client) v0.3.0 (BatchFetcher Pattern)
 - **Migrations:** golang-migrate
 - **Auth:** JWT (EVE SSO Integration)
 
 ### Datenbank
+
 - **Dynamic Data:** PostgreSQL 16+ (Market Orders, Price History, User Data)
 - **Static Data:** SQLite (Read-Only SDE from [eve-sde](https://github.com/Sternrassler/eve-sde))
 - **Optional:** TimescaleDB Extension (Time-Series Market Data)
 
 ### Infrastructure
+
 - **Containerization:** Docker + Docker Compose
 - **Reverse Proxy:** Caddy (Auto-HTTPS) - geplant
 - **Monitoring:** Prometheus + Grafana - geplant
 
 ### Datenquellen
+
 - **EVE SDE:** SQLite DB (via [eve-sde](https://github.com/Sternrassler/eve-sde) Projekt, Read-Only)
 - **EVE ESI API:** Live Market Orders/History via [eve-esi-client](https://github.com/Sternrassler/eve-esi-client)
 - **Cache Layer:** Redis (ESI Response Cache + Rate Limit Tracking)
@@ -67,14 +74,19 @@ tech stack festlegen# EVE Online Profit Calculator
 
 ## Projekt-Status
 
-🚀 **Backend Foundation Complete** 
+🚀 **Production Ready - v0.1.0**
+
 - ✅ Dual-DB Architecture (PostgreSQL + SQLite SDE)
-- ✅ ESI Client Integration (eve-esi-client v0.2.0)
-- ✅ Basic API Endpoints (Health, Version, Types, Market)
+- ✅ ESI Client Integration (eve-esi-client v0.3.0 mit BatchFetcher)
+- ✅ Frontend (Next.js 14 mit Trading UI)
+- ✅ EVE SSO Authentication (OAuth2)
+- ✅ Intra-Region Trading Routes
+- ✅ Inventory Sell Optimization
+- ✅ Market Data Refresh (Parallel Fetching, 8.7s für ~1.2M Orders)
 - ✅ Docker Compose Setup
 - ✅ Database Migrations
-- 🚧 Frontend (Next.js) - In Planung
-- 🚧 Advanced Trading Features - In Planung
+- 🚧 Manufacturing Module - Geplant
+- 🚧 Multi-Region Trading - Geplant
 
 ## Verwandte Projekte
 
@@ -85,17 +97,47 @@ tech stack festlegen# EVE Online Profit Calculator
 
 ### Public Endpoints
 
-- `GET /health` - Health check (with database status)
+**Health & Info:**
+
+- `GET /health` - Health check (database status)
 - `GET /version` - API version information
+
+**SDE Data:**
+
 - `GET /api/v1/types/:id` - SDE type lookup (Items, Ships, etc.)
+- `GET /api/v1/sde/regions` - List all regions
+
+**Market Data:**
+
 - `GET /api/v1/market/:region/:type` - Market orders for region and type
-  - Query param: `?refresh=true` to fetch fresh data from ESI
+  - Query param: `?refresh=true` - Fetch fresh data from ESI (parallel, ~8.7s für The Forge)
+- `GET /api/v1/market/staleness/:region` - Market data age/staleness indicator
+
+**Trading Routes:**
+
+- `POST /api/v1/trading/routes/calculate` - Calculate intra-region trading routes
+- `GET /api/v1/items/search` - Search items by name (autocomplete)
 
 ### Protected Endpoints (EVE SSO required)
 
+**Authentication:**
+
+- `GET /api/v1/auth/login` - Initiate EVE SSO login
+- `GET /api/v1/auth/callback` - OAuth callback handler
+- `GET /api/v1/auth/verify` - Verify current session
+- `POST /api/v1/auth/logout` - Logout
+
+**Character:**
+
 - `GET /api/v1/character` - Character information
-- `GET /api/v1/trading/profit-margins` - Profit margin calculations (TODO)
-- `GET /api/v1/manufacturing/blueprints` - Blueprint data (TODO)
+- `GET /api/v1/character/location` - Current character location
+- `GET /api/v1/character/ship` - Current ship
+- `GET /api/v1/character/ships` - Available ships
+
+**Trading:**
+
+- `POST /api/v1/trading/inventory-sell` - Calculate best sell locations for inventory
+- `POST /api/v1/esi/ui/autopilot/waypoint` - Set autopilot waypoint
 
 Weitere Details zur API-Nutzung und Authentifizierung siehe [docs/EVE-SSO-INTEGRATION.md](docs/EVE-SSO-INTEGRATION.md)
 
@@ -110,6 +152,7 @@ Weitere Details zur API-Nutzung und Authentifizierung siehe [docs/EVE-SSO-INTEGR
 - **eve-sde** SQLite Database (optional für lokale Entwicklung)
 
 **golang-migrate Installation:**
+
 ```bash
 # macOS (Homebrew)
 brew install golang-migrate
@@ -128,17 +171,20 @@ go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@lat
 ### Quick Start
 
 1. **Repository clonen**
+
    ```bash
    git clone https://github.com/Sternrassler/eve-o-provit.git
    cd eve-o-provit
    ```
 
 2. **Git Hooks aktivieren**
+
    ```bash
    git config core.hooksPath .githooks
    ```
 
 3. **Environment-Datei erstellen**
+
    ```bash
    cd backend
    cp .env.example .env
@@ -146,29 +192,33 @@ go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@lat
    ```
 
 4. **Docker Services starten**
+
    ```bash
    # Von Repository-Root
    make docker-up
    ```
-   
+
    Dies startet:
-   - PostgreSQL (Port 5432)
-   - Redis (Port 6379)
-   - Backend API (Port 9001)
-   - Frontend (Port 9000)
+   - PostgreSQL (Port 5432) - Persistent market data
+   - Redis (Port 6379) - ESI caching
+   - Backend API (Port 9001) - Go/Fiber REST API
+   - Frontend (Port 9000) - Next.js 14 Web UI
 
 5. **Datenbank Migrations ausführen**
+
    ```bash
    make migrate
    ```
 
 6. **SDE Database verlinken (optional für lokale Entwicklung)**
+
    ```bash
    # Falls du das Backend lokal (ohne Docker) entwickeln möchtest
    ln -s /path/to/eve-sde/data/sqlite/sde.sqlite backend/data/sde/sde.sqlite
    ```
 
 7. **API testen**
+
    ```bash
    # Health Check
    curl http://localhost:9001/health
@@ -179,13 +229,31 @@ go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@lat
    # SDE Type Lookup (Tritanium = 34)
    curl http://localhost:9001/api/v1/types/34
    
-   # Market Orders (Jita = 10000002, Tritanium = 34)
+   # Market Orders (The Forge = 10000002, Tritanium = 34)
+   # Normal query (from cache/DB)
+   curl http://localhost:9001/api/v1/market/10000002/34
+   
+   # Refresh all market data for region (parallel fetch, ~45s)
    curl "http://localhost:9001/api/v1/market/10000002/34?refresh=true"
+   
+   # Check market data age
+   curl http://localhost:9001/api/v1/market/staleness/10000002
+   ```
+
+8. **Frontend öffnen**
+
+   ```bash
+   # Intra-Region Trading
+   http://localhost:9000/intra-region
+   
+   # Inventory Sell Optimization
+   http://localhost:9000/inventory-sell
    ```
 
 ### Development
 
 **Backend lokal entwickeln (ohne Docker):**
+
 ```bash
 cd backend
 
@@ -203,6 +271,7 @@ go run ./cmd/api
 ```
 
 **Tests ausführen:**
+
 ```bash
 # Alle Tests
 make test
@@ -220,6 +289,7 @@ make lint
 > **Migration Testing:** Siehe [docs/testing/migrations.md](docs/testing/migrations.md) für ausführliche Dokumentation zu Migration Tests mit Testcontainers.
 
 **Docker Commands:**
+
 ```bash
 # Alle Services starten
 make docker-up
@@ -237,6 +307,7 @@ make docker-shell-redis  # Redis CLI
 ```
 
 **Datenbank Migrations:**
+
 ```bash
 # Migrations ausführen
 make migrate
@@ -249,6 +320,7 @@ make migrate-down
 ```
 
 **Frontend entwickeln (TODO):**
+
 ```bash
 cd frontend
 npm run dev

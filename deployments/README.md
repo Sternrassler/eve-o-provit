@@ -35,23 +35,29 @@ Lokales Entwicklungs-Setup mit PostgreSQL, Redis und Backend API.
 
 ### Backend API (Go + Fiber)
 
-- **Port**: 8080
-- **Health Check**: `http://localhost:8080/health`
+- **Port**: 9001
+- **Health Check**: `http://localhost:9001/health`
 - **Dependencies**:
   - PostgreSQL (market/user data)
   - Redis (caching)
   - SDE SQLite (static game data via symlink)
+  - eve-esi-client (v0.3.0 für BatchFetcher)
 
 **Environment Variables**:
 
 ```bash
-PORT=8080
+PORT=9001
 DATABASE_URL=postgres://eveprovit:devpassword@postgres:5432/eveprovit?sslmode=disable
 REDIS_URL=redis://redis:6379/0
 SDE_PATH=/data/sde/eve-sde.db
-CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+CORS_ORIGINS=http://localhost:9000,http://localhost:5173
 LOG_LEVEL=debug
 ENV=development
+
+# EVE SSO (optional, falls EVE-SSO-INTEGRATION.md befolgt)
+EVE_CLIENT_ID=<from_developer_portal>
+EVE_CLIENT_SECRET=<from_developer_portal>
+EVE_CALLBACK_URL=http://localhost:9001/auth/callback
 ```
 
 **SDE Database Mount** (siehe ADR-010):
@@ -73,7 +79,8 @@ make docker-up
 
 ```
 Services verfügbar unter:
-  - Backend API:  http://localhost:8080
+  - Backend API:  http://localhost:9001
+  - Frontend UI:  http://localhost:9000
   - PostgreSQL:   localhost:5432 (User: eveprovit, DB: eveprovit)
   - Redis:        localhost:6379
 ```
@@ -100,7 +107,7 @@ make docker-logs SERVICE=postgres
 ### 4. Teste Backend Health
 
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:9001/health
 ```
 
 **Expected Response**:
@@ -186,7 +193,8 @@ make docker-clean
 
 ```bash
 # Prüfe welche Ports belegt sind
-lsof -i :8080  # Backend
+lsof -i :9001  # Backend
+lsof -i :9000  # Frontend
 lsof -i :5432  # PostgreSQL
 lsof -i :6379  # Redis
 ```
@@ -243,7 +251,7 @@ Alle Services laufen im gleichen Docker Network `eve-network`:
 
 - Interne DNS-Resolution funktioniert (z.B. `postgres:5432`)
 - Services können sich gegenseitig erreichen
-- Frontend (wenn aktiviert) kann Backend über `api:8080` erreichen
+- Frontend (aktiviert) erreicht Backend über `api:9001`
 
 ## Production Differences
 
@@ -283,8 +291,10 @@ Alle Services laufen im gleichen Docker Network `eve-network`:
 
 1. ✅ PostgreSQL Schema initialisiert
 2. ✅ Redis Cache Layer bereit
-3. ✅ Backend API startet
-4. 🔲 API Endpoints für Cargo/Navigation implementieren
-5. 🔲 Frontend Container hinzufügen
-6. 🔲 ESI Market Data Import Cron
+3. ✅ Backend API startet (v0.1.0)
+4. ✅ API Endpoints implementiert (Cargo, Navigation, Market, Auth)
+5. ✅ Frontend Container aktiv (Next.js auf Port 9000)
+6. ✅ ESI Market Data mit BatchFetcher (eve-esi-client v0.3.0)
 7. 🔲 Production docker-compose.yml
+8. 🔲 Monitoring & Alerting (Prometheus/Grafana)
+9. 🔲 Automated Backups (PostgreSQL + Redis)

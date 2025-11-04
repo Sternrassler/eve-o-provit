@@ -73,10 +73,11 @@ func main() {
 
 	// Initialize services
 	routeCalculator := services.NewRouteCalculator(esiClient, db.SDE, sdeRepo, marketRepo, redisClient)
+	characterHelper := services.NewCharacterHelper(redisClient)
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
-	tradingHandler := handlers.NewTradingHandler(routeCalculator, h)
+	tradingHandler := handlers.NewTradingHandler(routeCalculator, h, characterHelper)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -103,10 +104,14 @@ func main() {
 	api.Get("/sde/regions", h.GetRegions)
 
 	// Public market endpoints
+	api.Get("/market/staleness/:region", h.GetMarketDataStaleness)
 	api.Get("/market/:region/:type", h.GetMarketOrders)
 
 	// Public trading routes (unauthenticated)
 	api.Post("/trading/routes/calculate", tradingHandler.CalculateRoutes)
+
+	// Item search endpoint (public)
+	api.Get("/items/search", tradingHandler.SearchItems)
 
 	// Protected routes (require Bearer token)
 	protected := api.Group("", evesso.AuthMiddleware)
@@ -126,6 +131,7 @@ func main() {
 	// Trading endpoints
 	trading := protected.Group("/trading")
 	trading.Get("/profit-margins", handleProfitMargins)
+	trading.Post("/inventory-sell", tradingHandler.CalculateInventorySellRoutes)
 
 	// Manufacturing endpoints
 	manufacturing := protected.Group("/manufacturing")
