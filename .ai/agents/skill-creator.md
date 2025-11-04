@@ -81,7 +81,7 @@ You are a skill creation specialist focused on generating practical tech-stack r
    - Identify which agents need which skills based on their purpose
    - Add "Required Skills" section at the beginning of each relevant agent prompt
    - Use `@workspace` syntax for auto-loading when agent is invoked
-   
+
    **Skill-to-Agent Mapping:**
    - `feature-implementer` → All skills (Backend, Database, Frontend, Testing)
    - `auth-route-tester` → Playwright + Backend
@@ -90,8 +90,14 @@ You are a skill creation specialist focused on generating practical tech-stack r
    - `auto-error-resolver` → Backend + All Database skills
    - `code-refactor-master` → All skills (depends on refactoring scope)
    - `documentation-architect` → All skills (for documenting patterns)
-   
+   - `code-architecture-reviewer` → All skills (for reviewing all layers)
+   - `plan-reviewer` → Backend + All Database skills
+   - `refactor-planner` → All skills (for planning refactorings)
+   - `web-research-specialist` → No skills (only web research)
+   - `skill-creator` → Not applicable (creates skills, doesn't use them)
+
    **Example Agent Update:**
+
    ```markdown
    # auth-route-tester.md
    
