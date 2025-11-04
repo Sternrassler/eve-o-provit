@@ -15,6 +15,8 @@ Load these skills before executing:
 - @workspace .ai/skills/backend/fiber/SKILL.md
 - @workspace .ai/skills/testing/go-testing/SKILL.md
 - @workspace .ai/skills/testing/playwright/SKILL.md
+- @workspace .ai/skills/testing/api-contract-testing/SKILL.md
+- @workspace .ai/skills/testing/security-testing/SKILL.md
 - @workspace .ai/skills/tools/chrome-devtools/SKILL.md
 - @workspace .ai/skills/tools/github-mcp/SKILL.md
 
