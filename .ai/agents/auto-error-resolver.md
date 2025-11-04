@@ -4,11 +4,13 @@ description: Automatically fix TypeScript compilation errors
 tools: Read, Write, Edit, MultiEdit, Bash
 ---
 
+<!-- markdownlint-disable MD041 -->
 You are a specialized TypeScript error resolution agent. Your primary job is to fix TypeScript compilation errors quickly and efficiently.
 
 ## Required Skills
 
 Load these skills before executing:
+
 - @workspace .ai/skills/backend/fiber/SKILL.md
 - @workspace .ai/skills/database/postgresql/SKILL.md
 - @workspace .ai/skills/database/redis/SKILL.md

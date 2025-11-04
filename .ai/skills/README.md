@@ -43,6 +43,11 @@ skills/
 ├── testing/
 │   └── playwright/
 │       └── SKILL.md ✅ (E2E Testing + Page Object Model)
+├── tools/
+│   ├── chrome-devtools/
+│   │   └── SKILL.md ✅ (Browser Automation + Debugging)
+│   └── github-mcp/
+│       └── SKILL.md ✅ (GitHub API + Issue/PR Management)
 └── generic/
     ├── git-workflow/
     │   └── SKILL.md (to be created as needed)
@@ -102,6 +107,20 @@ skills/
 - **Patterns:** Page Object Model, Fixtures, API mocking
 - **Best Practices:** Accessibility selectors, Auto-waiting, Test isolation
 - **Load:** `@workspace .ai/skills/testing/playwright/SKILL.md`
+
+### Tools: Chrome DevTools ✅
+**File:** `.ai/skills/tools/chrome-devtools/SKILL.md`
+- **Tech:** Chrome DevTools MCP Server
+- **Patterns:** Snapshot-first, Element interaction, Performance tracing
+- **Best Practices:** Text snapshots over screenshots, Accessibility selectors, Network monitoring
+- **Load:** `@workspace .ai/skills/tools/chrome-devtools/SKILL.md`
+
+### Tools: GitHub MCP ✅
+**File:** `.ai/skills/tools/github-mcp/SKILL.md`
+- **Tech:** GitHub MCP Server (Official)
+- **Patterns:** MCP tools over gh CLI, Search before create, Atomic PR workflow
+- **Best Practices:** Batch file operations, Structured issue bodies, Review workflows
+- **Load:** `@workspace .ai/skills/tools/github-mcp/SKILL.md`
 
 ## When to Create Skills
 

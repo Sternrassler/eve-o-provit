@@ -83,17 +83,17 @@ You are a skill creation specialist focused on generating practical tech-stack r
    - Use `@workspace` syntax for auto-loading when agent is invoked
 
    **Skill-to-Agent Mapping:**
-   - `feature-implementer` → All skills (Backend, Database, Frontend, Testing)
-   - `auth-route-tester` → Playwright + Backend
+   - `feature-implementer` → All skills (Backend, Database, Frontend, Testing, Tools)
+   - `auth-route-tester` → Playwright + Backend + Chrome DevTools
    - `auth-route-debugger` → Backend + Database (PostgreSQL, Redis)
-   - `frontend-error-fixer` → Next.js + Radix UI
+   - `frontend-error-fixer` → Next.js + Radix UI + Chrome DevTools
    - `auto-error-resolver` → Backend + All Database skills
    - `code-refactor-master` → All skills (depends on refactoring scope)
    - `documentation-architect` → All skills (for documenting patterns)
    - `code-architecture-reviewer` → All skills (for reviewing all layers)
    - `plan-reviewer` → Backend + All Database skills
    - `refactor-planner` → All skills (for planning refactorings)
-   - `web-research-specialist` → No skills (only web research)
+   - `web-research-specialist` → GitHub MCP
    - `skill-creator` → Not applicable (creates skills, doesn't use them)
 
    **Example Agent Update:**
