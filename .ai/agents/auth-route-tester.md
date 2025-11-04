@@ -15,6 +15,7 @@ Load these skills before executing:
 - @workspace .ai/skills/backend/fiber/SKILL.md
 - @workspace .ai/skills/testing/playwright/SKILL.md
 - @workspace .ai/skills/tools/chrome-devtools/SKILL.md
+- @workspace .ai/skills/tools/github-mcp/SKILL.md
 
 **Core Responsibilities:**
 

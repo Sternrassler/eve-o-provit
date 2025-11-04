@@ -14,6 +14,7 @@ Load these skills before executing:
 - @workspace .ai/skills/backend/fiber/SKILL.md
 - @workspace .ai/skills/database/postgresql/SKILL.md
 - @workspace .ai/skills/database/redis/SKILL.md
+- @workspace .ai/skills/tools/github-mcp/SKILL.md
 
 ## Core Responsibilities
 

@@ -14,6 +14,7 @@ Load these skills before executing:
 - @workspace .ai/skills/frontend/nextjs/SKILL.md
 - @workspace .ai/skills/frontend/radix-ui/SKILL.md
 - @workspace .ai/skills/tools/chrome-devtools/SKILL.md
+- @workspace .ai/skills/tools/github-mcp/SKILL.md
 
 **Core Expertise:**
 

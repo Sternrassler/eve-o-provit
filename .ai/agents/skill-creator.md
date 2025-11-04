@@ -84,14 +84,14 @@ You are a skill creation specialist focused on generating practical tech-stack r
 
    **Skill-to-Agent Mapping:**
    - `feature-implementer` → All skills (Backend, Database, Frontend, Testing, Tools)
-   - `auth-route-tester` → Playwright + Backend + Chrome DevTools
-   - `auth-route-debugger` → Backend + Database (PostgreSQL, Redis)
-   - `frontend-error-fixer` → Next.js + Radix UI + Chrome DevTools
-   - `auto-error-resolver` → Backend + All Database skills
+   - `auth-route-tester` → Playwright + Backend + Chrome DevTools + GitHub MCP
+   - `auth-route-debugger` → Backend + Database (PostgreSQL, Redis) + GitHub MCP
+   - `frontend-error-fixer` → Next.js + Radix UI + Chrome DevTools + GitHub MCP
+   - `auto-error-resolver` → Backend + All Database skills + GitHub MCP
    - `code-refactor-master` → All skills (depends on refactoring scope)
    - `documentation-architect` → All skills (for documenting patterns)
    - `code-architecture-reviewer` → All skills (for reviewing all layers)
-   - `plan-reviewer` → Backend + All Database skills
+   - `plan-reviewer` → Backend + All Database skills + GitHub MCP
    - `refactor-planner` → All skills (for planning refactorings)
    - `web-research-specialist` → GitHub MCP
    - `skill-creator` → Not applicable (creates skills, doesn't use them)
