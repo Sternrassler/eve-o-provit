@@ -1,517 +1,330 @@
-# Copilot Instruction – Generische Engineering Richtlinien
+# Project Development Guidelines
 
-Diese Regeldatei gilt für technische Entwicklungs- und Automatisierungsprojekte (z. B. Anwendungs-/Service-Entwicklung, Plattform-/Konfigurationsautomation, Build- und Bereitstellungsprozesse). Sie beschreibt gewünschte Verhaltensweisen, Qualitätsprinzipien, Kollaborations- und Governance-Aspekte für Copilot-Vorschläge – unabhängig von konkreten Technologien oder einzelnen Tools. Konkrete produkt-/domänenspezifische Vorgaben oder Tool-Policies können ergänzend in separaten Dokumenten (z. B. ADRs, SECURITY, Betriebs-Runbooks) definiert werden.
-
-> Normative Schlüsselwörter (MUST / MUST NOT / SHOULD / SHOULD NOT / MAY) lehnen sich an RFC 2119 an.
-
-## AI Execution Contract (Zusatz für KI-gestützte Assistenz)
-
-MUST: 
-- Niemals Code vorschlagen, der ein neues Feature ohne zugehöriges Issue + Test einführt.
-- Patch-Ausgaben minimal halten (nur betroffene Zeilen / Dateien, keine kosmetische Reformatierung).
-- Vor Änderungen an Architektur-/Sicherheits-relevanten Dateien prüfen, ob eine passende ADR existiert und referenziert werden muss.
-- Sicherheits- und Geheimnis-Policy beachten: Keine Secrets, Tokens, personenbezogenen Daten generieren, spiegeln oder im Klartext einfügen.
-- Bei Unklarheit (fehlender Pfad, widersprüchliche Anforderungen) Rückfrage einleiten statt zu raten.
-
-SHOULD:
-- Tests zuerst ergänzen/ändern (Red) bevor Implementierung (Green) erfolgt.
-- Jede Empfehlung mit kurzer Begründung (Warum / Effekt / Risiko) versehen.
-- Fehlerausgaben interpretieren und konkrete Fix-Vorschläge liefern.
-
-MAY:
-- Kleinere, klar vorteilhafte Refactorings (Duplicate Removal, offensichtliche Naming-Verbesserungen) – sofern kein Scope Creep.
-
-MUST NOT:
-- Globale Formatierung (mass Reflow) ohne ausdrückliche Anweisung durchführen.
-- Sicherheitsprüfungen „stumm“ entschärfen (z. B. `|| true` entfernen/ersetzen ohne Hinweis) oder bewusst umgehen.
-
-Escalation / Rückfrage Kriterien (Rückfrage statt Änderung):
-- Fehlende ADR bei architekturrelevantem Eingriff.
-- Ungelöster Merge-Konflikt.
-- Nicht reproduzierbarer Testfehler (unklarer deterministischer Zustand).
-
-Validierungs-Erwartung:
-- Nach bedeutender Änderung: Lint / Tests (mind. relevante Teil-Suite) gedanklich oder real ausführen und Status melden.
-- Klare Kennzeichnung normativer Stufen in Befehlssequenzen (MUST / SHOULD / MAY).
-
-Output Format Empfehlung (Antwortstruktur):
-1. Kontext / Ziel (max 2 Sätze)
-2. Delta-Plan (Stichpunkte)
-3. Patch / Snippet
-4. Validierung / Hinweise
-5. Optionale Next Steps
+**Agent-Primary Model:** Agents execute ALL tasks. Skills provide tech-stack reference that agents use.
 
 ---
 
-## 1. Prinzipien & Grundlagen
+## CRITICAL: Agent Orchestration - Wann welchen Agent verwenden
 
-1.1 **Zweck & Geltungsbereich**  
-Diese Richtlinien definieren universelle Prinzipien für nachhaltige, sichere, nachvollziehbare Software- und Automatisierungs-Entwicklung. Sie adressieren Produkt-Features, Plattform-/Konfigurationsänderungen und operative Anpassungen gleichermaßen.
+**RULE: Für JEDE Aufgabe gibt es einen passenden Agent oder Agent-Chain!**
 
-1.2 **Kernprinzipien**
-- Transparenter, nachvollziehbarer Änderungsfluss (Issue → Branch → Review → Merge → Release → Betrieb → Feedback)
-- Test- & Qualitätsorientierung (Fehlerprävention vor Nachbesserung)
-- Least Privilege & Minimierung von Angriffs-/Fehleroberflächen
-- Reproduzierbarkeit & Determinismus
-- Evolvierbare Architektur (ADR-gesteuert statt implizit)
-- Dokumentation fokussiert auf Entscheidungen & Betriebsrelevanz
+### Single Agent Tasks
 
-1.3 **Engineering-Lifecycle (abstrakt)**
-1. Planung  
-2. Test First / TDD  
-3. Implementierung (kleine, fokussierte Schritte)  
-4. Review / Self-Audit  
-5. Automatisiertes Testen (alle Ebenen)  
-6. Sicherheits- & Qualitäts-Checks  
-7. Build & Bereitstellung (pipeline-gesteuert)  
-8. Betriebsbeobachtung & Drift-Erkennung  
-9. Kontinuierliche Verbesserung / Lessons Learned  
+| User Request | Agent | Beispiel |
+|--------------|-------|----------|
+| **Feature Implementation** | `feature-implementer` | "Implement user registration with email verification" |
+| **Code Refactoring** | `code-refactor-master` | "Reorganize the components folder structure" |
+| **Architecture Review** | `code-architecture-reviewer` | "Review the authentication module architecture" |
+| **Documentation** | `documentation-architect` | "Create API documentation for user endpoints" |
+| **Auth Debugging** | `auth-route-debugger` | "Getting 401 error on /api/users" |
+| **Frontend Debugging** | `frontend-error-fixer` | "React component not rendering correctly" |
+| **TypeScript Errors** | `auto-error-resolver` | "Fix all TypeScript compilation errors" |
+| **Auth Testing** | `auth-route-tester` | "Test the authenticated endpoints" |
+| **Research** | `web-research-specialist` | "Find best practices for handling file uploads" |
+| **Skill Creation** | `skill-creator` | "Create skills for React and Express" / "Need skill reference for MUI v7" |
 
-1.4 **Sprache**  
-Alle Kommentare, Commits, Issues, PR-Bodies und Richtlinien in Deutsch (Ausnahme: externe API-/Lib-Namen, Standardbegriffe). 
+### Agent Chains (Multi-Step Tasks)
 
-1.5 **Modularität & Struktur**
-- Schichten / Domänen klar getrennt (kein „God“-Modul)
-- Öffentliche Schnittstellen minimal & eindeutig dokumentiert
-- Keine impliziten globalen Zustände; explizite Abhängigkeits-Injektion bevorzugt
+**Complex Implementation Chain:**
 
-1.6 **Versionierung & Nachverfolgung**
-- `VERSION` als Single Source of Truth (SemVer) (MUST)
-- `CHANGELOG.md` nach Keep a Changelog (MUST)
-- Release-Prozess: Unreleased → Freeze → Bump → Tag → Veröffentlichung (MUST)
+```txt
+User: "Implement complete user registration system"
 
-1.7 **Konfiguration & Laufzeit**
-- Keine Hardcodierung sensibler / variabler Parameter (MUST)
-- Health/Readiness Indikatoren für zentrale Funktionen (SHOULD)
-- Isolierung interner Komponenten von externen Schnittstellen (SHOULD)
-- Nur notwendige Exposition (Least Exposure) (MUST)
-- Persistente vs. flüchtige Daten klar getrennt; Minimalzugriff (SHOULD)
+Step 1: web-research-specialist
+→ Research best practices for registration flows
+→ Find security considerations
+→ Identify proven patterns
 
-1.8 **Dokumentation**
-- Fokus auf Warum + Konsequenzen, nicht redundante Code-Nacherzählung (SHOULD)
-- ADRs für jede signifikante Architektur-/Governance-Entscheidung (MUST)
-- Runbooks für wiederkehrende Betriebsaufgaben (SHOULD)
+Step 2: plan-reviewer  
+→ Review the implementation plan
+→ Identify potential issues
+→ Validate architectural decisions
 
-## 2. Qualitäts- & Governance-Gates
-
-2.1 **Tests & Qualitätssäulen**
-- Unit → Integration → System / E2E: Pyramidenansatz
-- Policy-/Konfigurationsprüfungen als Code (z. B. Validierungsregeln, statische Analysen)
-- Keine neuen Features bei roten Tests
-
-2.2 **Testanforderungen**
-- Aussagekräftige, deterministische Tests (kein Sleep-basiertes Timing)
-- Fehlerfälle & Edge Cases werden explizit adressiert
-- Testcode gleichwertig gepflegt (Lesbarkeit, Refactor bei Geruch)
-
-2.3 **Security & Geheimnisse**
-- Keine Klartext-Secrets im Repo / Commit-Historie
-- Geheimnisse nur über kontrollierte Kanäle (Secret Manager, verschlüsselte Konfiguration, o. ä.)
-- Prinzip Geringster Rechte (Daten, Rollen, Services, Pipelines)
-- Minimierung der Angriffsoberfläche (kein unnötiger Code / Endpunkt / Port)
-- Härtung sensibler Pfade (AuthN, AuthZ, Rate Limits, Logging, Header/Policy Hardening)
-- Supply Chain Schutz (Abhängigkeits-Scans, Signaturen, SBOM wo möglich)
-
-2.4 **Automatisierte Qualitätsschranken**
-Verbindliche Checks vor Merge / Deployment:
-- Formatierung & Linting (MUST)
-- Statische / Semantische Analyse (MUST)
-- Dependency / Vulnerability Scan (keine offenen kritischen ohne Ausnahme) (MUST)
-- Test-Suites grün (Unit + definierte höhere Ebenen) (MUST)
-- (MAY) Dry-Run / Konfig-Validierung bei deklarativen Artefakten
-
-2.5 **Architektur & ADR Disziplin**
-- Jede Änderung prüft bestehende ADRs (kein stilles Override)
-- Supersession über neue ADR mit Referenz, niemals Direktedit akzeptierter Historie
-- Temporäre Abweichungen: Issue + Risiko + Ablaufdatum + Dokumentation im ADR Abschnitt "Known Deviations"
-
-2.6 **Beobachtbarkeit & Betrieb**
-- Metriken: Latenz, Durchsatz, Fehlerrate, Ressourcenverbrauch
-- Strukturiertes Logging mit Korrelation / Trace IDs (keine sensiblen Inhalte)
-- Drift-Erkennung (Soll vs. Ist) – Abweichung erzeugt Issue
-- Definierte Wiederherstellungsziele & dokumentierte Backup-/Restore-Pfade
-
-2.7 **Sicherer Änderungsfluss**
-- Kein Direkt-Push auf `main` (MUST)
-- Branch Protection + Status Checks obligatorisch (MUST)
-- Commit Hygiene: kleine, thematisch fokussierte Schritte (SHOULD)
-
-2.8 **Rollback & Reproduzierbarkeit**
-- Jede Release-Version rekonstruierbar (Tag + Artefakt + Konfigurationsstand) (MUST)
-- Keine „floating“ Produktionsabhängigkeiten ohne Versionsbindung (MUST)
-
-2.9 **Qualitätsmetriken & Kontinuierliche Verbesserung**
-- Regelmäßige Auswertung von Fehlerraten, MTTR, Teststabilität, Sicherheitsfunden
-- Erkenntnisse → neue Issues / ADR Anpassungen
-
-## 3. Operativer Workflow (konkret)
-
-### 3.0 GitHub Integration (MCP Tools)
-
-**Primäre Methode:** GitHub MCP Tools (direkte API-Integration, seit 2025-09-30)  
-**Fallback:** `gh` CLI (nur wenn MCP Tools nicht verfügbar)
-
-**Verfügbare GitHub MCP Tools:**
-- `mcp_github_github_create_gist` / `mcp_github_github_update_gist` / `mcp_github_github_list_gists` - Gist Management
-- `mcp_github_github_assign_copilot_to_issue` - Copilot Coding Agent Issue Assignment
-- `mcp_github_github_create_pull_request_with_copilot` - Copilot PR Delegation
-- `mcp_github_github_request_copilot_review` - Copilot Code Review Request
-- `mcp_github_github_get_me` - Authentifizierter User Info
-- `mcp_github_github_get_team_members` / `mcp_github_github_get_teams` - Team Management
-- `mcp_github_github_list_starred_repositories` - Repository Discovery
-- `mcp_github_github_get_discussion` / `mcp_github_github_list_discussions` - Discussion APIs
-- `mcp_github_github_get_project` / `mcp_github_github_list_projects` - Project Management
-
-**Zusätzliche Tool-Kategorien (via activate_* functions):**
-- `activate_github_issue_management` - Issue CRUD, Comments, Sub-Issues
-- `activate_github_pull_request_management` - PR CRUD, Reviews, Merge, Diffs
-- `activate_github_repository_management` - Repo Creation, Files, Branches, Tags
-- `activate_github_workflow_management` - GitHub Actions Workflows
-- `activate_github_notification_management` - Notifications & Subscriptions
-- `activate_github_search_tools` - Code/Issue/PR/Repo/User Search
-- `activate_github_security_management` - Security Alerts & Advisories
-
-**AI Execution Guidance:**
-- PREFER: GitHub MCP Tools für Issue/PR/Gist Operations (direkter, typsicher)
-- FALLBACK: `gh` CLI nur wenn MCP Tool fehlt oder Fehler auftritt
-- VALIDATE: Nach MCP Tool-Call immer Ergebnis prüfen (Success/Error Handling)
-- DOCUMENT: Bei neuem MCP Tool-Einsatz kurz im Commit erwähnen
-
-**Beispiel (Issue Erstellung):**
-```text
-# PREFER (MCP Tools)
-activate_github_issue_management → create_issue(title, body, labels)
-
-# FALLBACK (gh CLI)
-gh issue create --title "<Titel>" --body-file tmp/issue-body.md --label "feat"
+Step 3: feature-implementer
+→ Implement database schema
+→ Create backend services
+→ Build frontend components
+→ Integrate all layers
 ```
 
-### Quick Start (normativer Kurzablauf)
-1. (MUST) Issue anlegen (Ziel + Akzeptanzkriterien + ADR Referenzen) → **MCP Tools bevorzugt**
-2. (MUST) Branch vom aktuellen `main` erstellen (konformes Naming) → `git` CLI
-3. (MUST) Failing Test hinzufügen (Red) – kein Produktionscode davor
-4. (MUST) Minimalen Code schreiben bis Tests grün (Green) – kein Scope Creep
-5. (SHOULD) Lint / Security lokal prüfen; (MAY) zusätzliche Scans
-6. (MUST) PR erstellen mit Issue-Referenz + ADR IDs (falls relevant) → **MCP Tools bevorzugt**
-7. (MUST) Alle Gates grün (Tests, Lint, Security) → Merge via PR → **MCP Tools bevorzugt**
-8. (MUST) Versionierung / Follow-ups / Drift prüfen & Issues nachziehen
-9. (MUST) Vor Issue-Abschluss Pläne, `CHANGELOG.md` und betroffene Dokumentation aktualisieren
+**Refactoring Chain:**
 
-Hinweis (ADR Referenz Enforcement): Bei Änderungen an Governance-/Architektur-relevanten Pfaden (`docs/adr/`, `scripts/`, `.github/`, `Makefile`, allgemeine `docs/`) MUSS der PR Body eine ADR Referenz (`ADR-XYZ`) enthalten oder explizit den Skip Marker `ADR-NOT-REQ` mit kurzer Begründung. Fehlt beides, schlägt das ADR Reference Gate fehl. Skip Marker führt nur zu einer Warnung (nicht-blockierend).
+```txt
+User: "Refactor the authentication module"
 
-3.1 **Einordnung & Mapping**  
-Der folgende Ablauf operationalisiert die Lifecycle-Schritte aus Abschnitt 1.3.
+Step 1: refactor-planner
+→ Analyze current structure
+→ Identify problems
+→ Create refactoring strategy
 
-Implementierte Make Targets (seit v0.1.0, vollständig verfügbar):
-- `make test` (führt Unit/Integration Tests aus)
-- `make lint` (statische Analysen / Format / Stil)
-- `make scan` (Security & Dependency Checks)
-- `make pr-check` (bündelt: lint + test + scan für lokale PR-Vorbereitung)
-- `make release VERSION=X.Y.Z` (Version bump + Changelog Transformation + Tag-Vorbereitung)
-- `make ci-local` (Simulation definierter CI-Gates lokal)
-
-Details / Vollständige Spezifikation: siehe `docs/make-targets-plan.md`.
-
-Diese Targets können ab sofort anstelle der expliziten Befehlsblöcke in 3.2–3.9 verwendet werden (bevorzugte Methode).
-
-**CI-Pipeline Integration:** 
-- `make pr-check` eignet sich zur Verwendung in GitHub Actions Workflows
-- `make ci-local` kann als lokaler CI-Simulator eingesetzt werden  
-- Empfohlene Pipeline-Nutzung: `make ci-local` in CI-Environment für vollständige Gate-Simulation
-
-| Lifecycle (1.3) | Operative Umsetzung (Abschnitt 3.x / Querverweis) |
-|-----------------|---------------------------------------------------|
-| 1 Planung | Issue-Erstellung (3.2) |
-| 2 Test First / TDD | Erster Commit mit rotem Test vor Implementierung (3.3) |
-| 3 Implementierung | Iterative Branch-Commits (3.3) |
-| 4 Review / Audit | PR Body (3.4), PR Review & Workflow (3.5) |
-| 5 Automatisiertes Testen | CI-Ausführung der Suites (3.6) |
-| 6 Sicherheits-/Qualitäts-Checks | CI Gates / Scans (3.6 / Abschnitt 2.4) |
-| 7 Build & Bereitstellung | Release / Tagging (3.7) |
-| 8 Betriebsbeobachtung & Drift | Monitoring & Drift Tickets (2.6) |
-| 9 Verbesserung | Lessons Learned → Issues / ADRs (2.9) |
-
-3.2 **Issue → Branch**
-- Jede Änderung startet mit einem Issue (Ziel + Akzeptanzkriterien + Referenzen zu ADRs)
-- Branch-Naming: `feat/<kurz>`, `fix/<kurz>`, `chore/<kurz>`, `refactor/<kurz>` oder Issue-ID basiert
-- Keine parallele Vermischung mehrerer unzusammenhängender Ziele
- - Nutzung der bereitgestellten Issue Templates (Feature / Bug) wird erwartet (GitHub UI Auswahl). Blank Issues sind deaktiviert.
- - Issue-Bodies MÜSSEN gültiges Markdown sein (Headings für Kontext / Akzeptanzkriterien, ungefüllte Sektionen als Platzhalter klar markiert). Reiner Fließtext ohne Struktur gilt als unvollständig.
- - Sicherheits-Hinweis: In `tmp/` abgelegte Issue-/PR-Bodies dürfen keine sensitiven Inhalte (Secrets, personenbezogene Daten, Zugangstokens) enthalten. Dateien gelten als temporär und können rotierend gelöscht werden.
- - Befehle (Erstellung & Vorbereitung) (MUST):
-	 ```bash
-	 # Issue erstellen (interaktiv)
-	 gh issue create --title "<Titel>" --body-file tmp/issue-<nr>-body.md --label feat
-
-	 # Alle offenen Issues anzeigen
-	 gh issue list --limit 30
-
-	 # Branch aus Issue heraus anlegen (gh extension workflow, falls vorhanden) – sonst manuell:
-	 # (Falls 'gh issue develop' nicht verfügbar: Branch manuell erstellen)
-	 git fetch origin
-	 git checkout -b feat/<slug> origin/main
-
-	 # Issue im Browser öffnen (MAY)
-	 gh issue view <ISSUE_NR> --web
-	 ```
-
-3.3 **Implementierung & Tests**
-- Erster Commit setzt (mind.) einen fehlenden Test (rot) für neues Verhalten
-- Kleinste sinnvolle Schritte; früh grüner Zustand wiederherstellen
-- Kein Scope Creep: Zusätzliche Ideen → neue Issues
- - Befehle (Beispielablauf): Tests (MUST) / Lint (MAY):
-	 ```bash
-	 # Status prüfen
-	 git status
-
-	 # Neuen (roten) Test hinzufügen
-	 git add tests/unit/<neuer_test>.go
-	 git commit -m "test: spezifiziert neues Verhalten <kurz>"  # failing expected
-
-	 # Implementierung anpassen
-	 git add internal/<pfad>/logic.go
-	 git commit -m "feat: implementiert Basislogik für <kurz>" 
-
-	 # Lokale Tests ausführen (Beispiel Make Target)
-	 make test
-
-	 # Lint (MAY)
-	 make lint || true
-
-	 # Änderungen pushen
-	 git push -u origin feat/<slug>
-	 ```
-
-3.4 **Pull Request Body (Copilot Workspace)**
-
-**Closing-Keywords (MUST):**
-- Immer das Schlüsselwort **Closes Issue <NR>** verwenden (konsistente Formulierung bevorzugt)
-- Position: **Erste Zeile** des PR Body (vor `## Overview` oder anderen Headings)
-- Syntax: **Closes Issue 123** (ohne Repository-Prefix bei gleichem Repo) oder **Closes <owner>/<repository> Issue 123** (mit Prefix)
-- GitHub Action `.github/workflows/pr-closing-keyword-fix.yml` korrigiert automatisch falsche Platzierungen
-- Auch **Fixes Issue <NR>** oder **Resolves Issue <NR>** werden erkannt und zu Closes normalisiert
-
-**Beispiel (korrekte Struktur):**
-```markdown
-Closes Issue 123
-
-## Overview
-Implements feature XYZ...
-
-## Changes
-- Added new functionality
-- Updated tests
+Step 2: code-refactor-master
+→ Execute the refactoring plan
+→ Move files systematically
+→ Update all imports
+→ Verify nothing breaks
 ```
 
-**Begründung:** 
-- Zuverlässigste Auto-Close Methode für Issues
-- Keine Template-Abhängigkeit (Copilot-kompatibel)
-- Automatische Korrektur durch GitHub Action verhindert fehlerhafte Platzierung
-- Konsistenz über alle PRs (manuell + Copilot-generiert)
+**Research → Implementation Chain:**
 
-**Vermeidung:**
-- ❌ Keyword nach `</details>` oder HTML-Tags
-- ❌ Keyword in Code-Blöcken (````markdown ... ```)
-- ❌ Keyword nach Zeile 200 (zu weit unten)
-- ❌ Eingerücktes Keyword (Listen, Quotes)
+```txt
+User: "Add real-time notifications (not sure how)"
 
-3.5 **Pull Request Review & Workflow**
-- PR referenziert Issue & relevante ADR IDs
-- PR Body: Was / Warum / Risiken / Testnachweis (kurz) – per Datei (`--body-file`)
-- Alle Diskussionen geklärt vor Merge
- - Befehle: PR Erstellung (MUST) / Labels & Diff Web (MAY):
-	 ```bash
-	 # Preview Diff
-	 gh pr diff --web || true   # Falls bereits ein PR existiert
+Step 1: web-research-specialist
+→ Research WebSocket vs SSE vs Polling
+→ Find implementation examples
+→ Compare trade-offs
 
-	 # PR erstellen (automatische Befüllung: Titel aus erstem Commit, Body interaktiv)
-	 gh pr create --base main --head feat/<slug> --title "feat: <kurztitel>" \
-		 --body-file tmp/pr-<slug>-body.md
+Step 2: plan-reviewer
+→ Review chosen approach
+→ Validate architecture fit
 
-	 # PR anzeigen
-	 gh pr view --web
+Step 3: feature-implementer
+→ Implement chosen solution
+```
 
-	 # Labels setzen (falls nötig)
-	 gh pr edit <PR_NR> --add-label "feature"
+### Decision Tree
 
-	 # ADR Referenzen im Body validieren (manuell / MAY: zusätzlicher Check-Script)
-	 ```
+```
+User Request
+    │
+    ├─ New Feature? 
+    │   ├─ Simple/Clear → feature-implementer
+    │   └─ Complex/Unclear → web-research → plan-reviewer → feature-implementer
+    │
+    ├─ Refactoring?
+    │   ├─ Clear scope → code-refactor-master
+    │   └─ Needs planning → refactor-planner → code-refactor-master
+    │
+    ├─ Debugging?
+    │   ├─ Auth issue → auth-route-debugger
+    │   ├─ Frontend issue → frontend-error-fixer
+    │   └─ TypeScript errors → auto-error-resolver
+    │
+    ├─ Review/Documentation?
+    │   ├─ Architecture → code-architecture-reviewer
+    │   ├─ Plan review → plan-reviewer
+    │   └─ Documentation → documentation-architect
+    │
+    └─ Research needed?
+        └─ web-research-specialist → (plan-reviewer) → appropriate agent
+```
 
-3.6 **Pipeline & Gates**
-- Vollständige Ausführung definierter Checks (Tests, Lint, Scans, Validierungen)
-- Hard Fail bei kritischen Sicherheitsfunden ohne Ausnahme-Issue
-- Keine manuelle Umgehung gesperrter Gates
-- **Auto-Approve für Bots:** Copilot/Dependabot PRs benötigen keine manuelle Workflow-Approval (siehe `docs/ci-cd/bot-workflow-approval.md`)
- - Befehle / Checks (Beispiele): Tests, Lint, Security (MUST) / Format separat, zusätzliche Scans (MAY):
-	 ```bash
-	 # Tests
-	 make test
+### Wann welche Chain?
 
-	 # Lint (Beispiel)
-	 make lint-ci
+**Einfach → Single Agent:**
 
-	 # Security Scan (z. B. mit Trivy oder vergleichbaren Tools)
-	 make scan
+- Klare Anforderungen
+- Bekannter Scope
+- Standard-Patterns
+- Beispiel: "Add validation to login form"
 
-	 # Format (optional)
-	 make lint
+**Komplex → Chain:**
 
-	 # PR Checks ansehen
-	 gh pr checks <PR_NR>
-	 ```
+- Unklare Anforderungen
+- Neue Technologie
+- Große Scope
+- Beispiel: "Implement real-time collaboration"
 
-3.7 **Versionierung & Release**
-- Unreleased Abschnitt bereinigen → neue Version vergeben → `VERSION` aktualisieren
-- Commit Message: `chore: Version auf X.Y.Z erhöht`
-- Tag erstellen & pushen (`vX.Y.Z`)
- - Befehle: Version + Tag (MUST):
-	 ```bash
-	 # Version setzen (Beispiel)
-	 echo "X.Y.Z" > VERSION
-	 sed -i "s/^## \[Unreleased\]/## [Unreleased]\n\n## [X.Y.Z] - $(date +%Y-%m-%d)/" CHANGELOG.md
+**Skills' Role:**
+Agents verwenden Skills als **Referenz-Material**:
 
-	 git add VERSION CHANGELOG.md
-	 git commit -m "chore: Version auf X.Y.Z erhöht"
-	 git push origin feat/<slug>
-
-	 # (Nach Merge auf main) Tag erstellen
-	 git fetch origin
-	 git checkout main
-	 git pull --ff-only
-	 git tag -a vX.Y.Z -m "Version X.Y.Z"
-	 git push origin vX.Y.Z
-	 ```
-
-3.8 **Merge & Clean-up**
-- Merge nur via PR (kein Rebase-Rewrite der Historie)
-- Branch löschen nach erfolgreichem Merge
-- Keine nachträglichen Commits auf gemergte Feature Branches
-- Merge-Vorgang nach Freigabe ausschließlich mit `git` CLI durchführen (kein Merge-Button, kein `gh pr merge`)
- - Befehle: Merge (MUST) / Manuelle Prüfung entfernte Branches (MAY):
-	 ```bash
-	 # Merge-Ablauf (nach Approval)
-	 git checkout main
-	 git pull --ff-only
-	 git merge --ff-only origin/<branch>
-	 git push origin main
-
-	 # Remote-Branch entfernen
-	 git push origin --delete <branch>
-	 git fetch --prune
-	 git branch -a | grep <slug> || echo "Branch entfernt"
-	 ```
-
-Hinweis: Der finale Push auf `main` im Zuge des Merge-Vorgangs gilt als einzige Ausnahme zur "kein Direkt-Push"-Regel und setzt eine freigegebene PR voraus.
-
-3.9 **Post-Merge & Betrieb**
-- Monitoring prüfen (Anomalien?)
-- Offene Folgeaufgaben als Issues erfassen (keine stillen TODOs)
-- ADR Supersessions bei Architekturfolgen zeitnah anstoßen
-- Dokumentationsartefakte (Pläne, `CHANGELOG.md`, Nutzer-/Ops-Doku) auf aktuellen Stand bringen
- - Befehle / Nachbereitung: TODO Scan & Folge-Issue (MUST) / ADR Draft sofort (MAY):
-	 ```bash
-	 # Letzten Merge-Commit anzeigen
-	 git log -1 --oneline
-
-	 # Offene TODO Marker scannen (Beispiel)
-	 grep -R "TODO(" -n . || true
-
-	 # Neues Folge-Issue (Beispiel)
-	 gh issue create --title "Follow-up: <konkret>" --body-file tmp/issue-followup-<slug>.md --label chore
-
-	 # ADR Vorschlag Template kopieren (falls neue Entscheidung nötig)
-	 cp docs/adr/000-template.md docs/adr/ADR-<nr>-<slug>.md
-	 git add docs/adr/ADR-<nr>-<slug>.md
-	 git commit -m "docs(adr): propose <slug>"
-	 git push origin <branch>  # falls noch nicht merged oder neuer Branch
-	 ```
-
-3.10 **Kontinuierliche Verbesserung**
-- Retro / Lessons Learned bündeln → Prozess-/Test-/Policy-Anpassungen
-- Metriken und Vorfälle fließen in priorisierte Verbesserungs-Issues
- - Hilfsbefehle (MAY) (Metriken / Übersicht):
-	 ```bash
-	 # Offene Issues nach Label sortieren
-	 gh issue list --label improvement --limit 50
-
-	 # Statistische einfache Übersicht (Commits letzte 7 Tage)
-	 git log --since="7 days ago" --oneline | wc -l
-
-	 # PRs der letzten Woche
-	 gh pr list --state merged --limit 30 --search "merged:>=$(date -I -d '7 days ago')"
-	 ```
-
-## 4. Hinweise
-
-- Änderungen an diesen Richtlinien folgen selbst dem definierten Workflow.
-- Tool-/Technologie-spezifische Leitlinien werden ausgelagert (z. B. separate Infrastruktur-, API- oder UI-Guides).
-- Erweiterbare Referenzen: Security-Guides, Architekturübersichten, Betriebs-Runbooks, Qualitäts- & Metrik-Standards, Lieferketten-/Supply-Chain-Richtlinien.
-- Konsistenzprüfung der Norm-Labels lokal: `scripts/common/check-normative.sh` ausführen (CI-Integration empfohlen).
- - Pre-Commit Aktivierung (lokal): `git config core.hooksPath .githooks` (führt u. a. normative Check vor jedem Commit aus).
- - Issue Templates: Siehe `.github/ISSUE_TEMPLATE/` – Issues sollten strukturiert mit Markdown-Headings erstellt werden.
- - PR Body Guidelines: Siehe Abschnitt 3.4 – Closing-Keywords werden automatisch via GitHub Action korrigiert (`.github/workflows/pr-closing-keyword-fix.yml`).
- - ADR Erstellung & Prüfung: Neue ADR via `make adr-new SLUG=<slug>` (Template: `docs/adr/000-template.md`), Validierung mit `scripts/common/check-adr.sh` (läuft auch im CI Workflow `quality-gates`).
- - Issue Body Qualität: CI / zukünftige Hooks KÖNNEN fehlende Pflichtsektionen (Kontext, Ziel, Akzeptanzkriterien) beanstanden.
-
-## 5. Glossar (Platzhalter / Konventionen)
-### Normative Legende
-| Begriff | RFC Ebene |
-|---------|-----------|
-| MUST | Verbindlich, keine Abweichung ohne dokumentierte Ausnahme |
-| SHOULD | Starke Empfehlung – Abweichung nur mit Begründung |
-| MAY | Situativ, kein Gate |
-| MUST NOT | Verbot – nicht implementieren |
-| SHOULD NOT | Vermeiden – nur in begründeten Ausnahmefällen |
-
-
-### ADR Kurzreferenz (Zusammenfassung)
-
-| Status | Bedeutung | Aktion bei Änderung |
-|--------|-----------|---------------------|
-| Proposed | In Diskussion | Review, ggf. Anpassungen einpflegen |
-| Accepted | Verbindlich | Bei Widerspruch neue ADR (Supersede) |
-| Superseded | Historisch, ersetzt | Nicht mehr anwenden, nur Referenz |
-| Deprecated | Nutzung auslaufend | Migration planen / Issue anlegen |
-| Rejected | Abgelehnt | Nicht implementieren |
-
-Hinweis: Architekturänderungen ohne passende Accepted ADR sind zu vermeiden (MUST). Supersessions immer bidirektional referenzieren (MUST).
-
-| Platzhalter | Bedeutung | Hinweis |
-|-------------|-----------|---------|
-| `<slug>` | Kurzlesbarer Bezeichner (kebab-case) für Branch/Feature | Keine Leer- oder Sonderzeichen, eindeutig im Kontext |
-| `<nr>` | Laufende Nummer / Issue-ID | Entspricht exakter Plattform-ID (z. B. GitHub Issue Nummer) |
-| `<ISSUE_NR>` | Explizite Referenz auf eine Issue-ID | Großschreibung zur Hervorhebung im Befehlsbeispiel |
-| `<PR_NR>` | PR Nummer | Wird nach PR-Erstellung sichtbar (gh pr view) |
-| `<branch>` | Aktueller Arbeits- oder Ziel-Branch | Vermeide direkte Arbeit auf `main` |
-| `<kurz>` | Kurzbeschreibung eines Features / Tests / Logikbestandteils | Max. ~3 Worte, semantisch aussagekräftig |
-| `X.Y.Z` | SemVer Version | MAJOR.MINOR.PATCH |
-| `<pfad>` | Relativer Pfad zu Quellcode / Modul | Projektkonventionen beachten |
-| `<konkret>` | Frei ausformulierter spezifischer Folgeschritt | Sollte test-/issue-fähig sein |
-| `<Titel>` | Volltext-Titel eines Issues / PR | Prägnant, Ergebnis-orientiert |
-| `<kurztitel>` | Kompakte PR Titel-Variante | Für Übersicht / Listenansichten |
-
-Konventionen:
-- Platzhalter nicht wörtlich übernehmen – immer konkret ersetzen.
-- Neue Platzhalter erst nach Dokumentation im Glossar verwenden.
-- Sensible Inhalte niemals in Platzhalter-Beispielen zeigen.
- - Für implementierte Automatisierungs-Targets siehe `docs/make-targets-plan.md` (Vollständige Spezifikation).
+- Express-Patterns → Wie schreibe ich Express-Code?
+- React-Patterns → Welche React-Patterns nutzen?
+- Git-Workflow → Wie formatiere ich Commits?
 
 ---
 
-### Maschinenlesbarer Norm-Export (JSON)
-Dieser Block KANN von Automatisierung / Policies geparst werden (Single Source: dieses Dokument).
+## Available Agents (Load from .ai/agents/)
 
-```json
-{
-	"normative": {
-		"no_direct_push_main": "MUST",
-		"tests_green_before_merge": "MUST",
-		"security_scans_blockers": "MUST",
-		"version_single_source": "MUST",
-		"adr_reference_on_arch_changes": "MUST",
-		"lint_before_pr": "SHOULD",
-		"format_consistency": "SHOULD",
-		"metrics_review": "MAY"
-	}
-}
-```
+**Implementation:**
+
+- feature-implementer → Implement new features across all layers (database → backend → frontend)
+
+**Debugging:**
+
+- auth-route-debugger → Auth errors, 401/403, JWT issues
+- frontend-error-fixer → React errors, UI bugs
+- auto-error-resolver → TypeScript compilation errors
+
+**Refactoring:**
+
+- refactor-planner → Plan refactoring strategy
+- code-refactor-master → Execute refactorings
+
+**Review:**
+
+- code-architecture-reviewer → Architecture reviews
+- plan-reviewer → Review implementation plans
+
+**Documentation:**
+
+- documentation-architect → Create comprehensive docs
+
+**Testing:**
+
+- auth-route-tester → Test authenticated endpoints
+
+**Research:**
+
+- web-research-specialist → Research solutions
+
+**Setup & Skills:**
+
+- skill-creator → Create tech-stack skills (Express, React, MUI, etc.)
+
+**Load agents with:** `@workspace load .ai/agents/[agent-name].md`
+
+---
+
+## Available Skills (Reference Material for Agents)
+
+**Backend Skills (Tech-Stack Reference):**
+
+- express-prisma-patterns → Express syntax, Prisma queries, middleware patterns
+
+**Frontend Skills (Tech-Stack Reference):**
+
+- react-typescript-mui-patterns → React hooks, MUI components, TypeScript patterns
+
+**Generic Skills (Methodology Reference):**
+
+- git-workflow → Git Flow, GitHub Flow specifications
+- documentation-standards → JSDoc, API docs formats
+
+**Skills provide syntax and patterns that agents reference during execution.**
+
+---
+
+## PLACEHOLDER: Agent Orchestration
+
+**Skill Location:** `.ai/skills/generic/agent-orchestration/SKILL.md`
+
+This skill defines the agent selection and chaining logic. Created automatically by skill-creator.
+
+**To load:** `@workspace .ai/skills/generic/agent-orchestration/SKILL.md`
+
+---
+
+## PLACEHOLDER: Git Workflow
+
+**Skill Location:** `.ai/skills/generic/git-workflow/SKILL.md`
+
+Git conventions, commit message formats, branch naming, PR workflow.
+
+**To create:** Ask "Create Git workflow skill"  
+**To load:** `@workspace .ai/skills/generic/git-workflow/SKILL.md`
+
+---
+
+## PLACEHOLDER: Documentation Standards
+
+**Skill Location:** `.ai/skills/generic/documentation-standards/SKILL.md`
+
+JSDoc, TSDoc, API documentation formats, README structures.
+
+**To create:** Ask "Create documentation standards skill"  
+**To load:** `@workspace .ai/skills/generic/documentation-standards/SKILL.md`
+
+---
+
+## Backend Development
+
+**Skill Location:** `.ai/skills/backend/fiber/SKILL.md`
+
+**Architecture:** Layered (Handler → Service → Repository → Database)
+
+**Key Patterns:**
+- Dependency injection (constructor-based)
+- Context propagation with timeouts
+- Structured error handling
+- Repository pattern for data access
+
+**To load:** `@workspace .ai/skills/backend/fiber/SKILL.md`---
+
+## Frontend Development
+
+**Next.js:** `.ai/skills/frontend/nextjs/SKILL.md`
+**Radix UI:** `.ai/skills/frontend/radix-ui/SKILL.md`
+
+**Architecture:** App Router (Server + Client Components), React Context
+
+**Key Patterns:**
+- Server Components by default
+- Client Components for interactivity (`"use client"`)
+- React Context for auth state
+- Controlled components (Radix UI)
+- API integration with fetch
+
+**To load:** `@workspace .ai/skills/frontend/*/SKILL.md`---
+
+## Database & ORM
+
+**PostgreSQL:** `.ai/skills/database/postgresql/SKILL.md`
+**Redis:** `.ai/skills/database/redis/SKILL.md`
+**SQLite:** `.ai/skills/database/sqlite/SKILL.md`
+
+**Architecture:** Dual-database (PostgreSQL for dynamic data, SQLite for static SDE)
+
+**Key Patterns:**
+- Connection pooling (pgxpool)
+- Repository pattern (pgx/v5)
+- Batch operations for performance
+- Cache-aside pattern (Redis)
+- Read-only mode (SQLite SDE)
+
+**To load:** `@workspace .ai/skills/database/*/SKILL.md`
+
+---
+
+## Testing
+
+**Skill Location:** `.ai/skills/testing/playwright/SKILL.md`
+
+**Architecture:** E2E testing with Page Object Model
+
+**Key Patterns:**
+- Accessibility-based selectors (`getByRole`, `getByLabel`)
+- Auto-waiting (no manual waits)
+- Page Object Model for reusability
+- API mocking for deterministic tests
+- Parallel execution with isolation
+
+**To load:** `@workspace .ai/skills/testing/playwright/SKILL.md`
+
+---
+
+## PLACEHOLDER: Error Tracking
+
+**Skill Location:** `.ai/skills/monitoring/error-tracking/SKILL.md`
+
+The skill-creator agent will create error tracking skills based on your tools (Sentry, LogRocket, etc.).
+
+**Expected Content:**
+- Integration setup
+- Error context and metadata
+- Custom error boundaries
+- Performance monitoring
+- Alert configuration
+
+**To create:** Ask "Create error tracking skills for [your tool]"
+**To load:** `@workspace .ai/skills/monitoring/error-tracking/SKILL.md`
+
+---
+
+## PLACEHOLDER: Additional Skills
+
+**Skill Locations:** `.ai/skills/[category]/[tool]/SKILL.md`
+
+The skill-creator agent can create additional skills for:
+- CI/CD pipelines (GitHub Actions, GitLab CI)
+- Containerization (Docker, Kubernetes)
+- API documentation (OpenAPI, GraphQL)
+- Authentication (OAuth, JWT, Passport)
+- Deployment (Vercel, Railway, AWS)
+
+**To create:** Ask "Create skill for [specific tool/framework]"
+**To load:** `@workspace .ai/skills/[category]/[tool]/SKILL.md`
+
+---
+
+*This file is part of the AI Project Template. Skills are created on-demand by the skill-creator agent as separate files in `.ai/skills/`. Placeholders above contain **references** to skill files, not the full content. Load skills with `@workspace .ai/skills/[path]/SKILL.md` when needed.*
