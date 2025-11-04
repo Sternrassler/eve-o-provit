@@ -17,6 +17,7 @@
 - **Performance Analysis:** Trace recordings, Core Web Vitals, LCP/FCP metrics
 
 **When to Use:**
+
 - E2E testing of authenticated routes
 - Visual regression testing
 - Debugging frontend issues (screenshots + console logs)
@@ -31,13 +32,14 @@
 
 **Pattern:** Always take a text snapshot before screenshots to minimize token usage.
 
-```
+```txt
 1. Take text snapshot (a11y tree) → Identify elements by UID
 2. Interact with elements using UIDs
 3. Take screenshot only when visual confirmation needed
 ```
 
 **Benefits:**
+
 - Lower token consumption (text < images)
 - Faster interaction (no image processing)
 - Accessibility-first mindset
@@ -46,15 +48,16 @@
 
 **Pattern:** Explicit page creation → navigation → interaction → cleanup.
 
-```
+```txt
 Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 ```
 
-**Anti-Pattern:** ❌ Reusing pages without cleanup (stale state, memory leaks)
+**Anti-Pattern:** Reusing pages without cleanup (stale state, memory leaks)
 
 ### 3. Element Selection Strategy
 
 **Priority Order:**
+
 1. Accessibility selectors (role, label) → Best for stability
 2. UID from snapshot → Precise targeting
 3. CSS selectors → Last resort (brittle)
@@ -117,6 +120,7 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 ```
 
 **Key Points:**
+
 - Cookies persist across navigation within same page
 - Use `wait_for` to confirm successful authentication
 - Check network tab for auth token in requests
@@ -135,6 +139,7 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 ```
 
 **Key Points:**
+
 - Use `fill_form` for multiple fields simultaneously
 - Monitor network requests for API response
 - Combine with backend verification (database query)
@@ -151,6 +156,7 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 ```
 
 **Key Points:**
+
 - Use `fullPage: true` for complete screenshots
 - Store baseline images in version control
 - Automate comparison in CI/CD pipeline
@@ -169,6 +175,7 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 ```
 
 **Key Points:**
+
 - Console errors often reveal JavaScript issues
 - Network tab shows API failures (500, 404)
 - Screenshot confirms visual state vs expected
@@ -187,6 +194,7 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 ```
 
 **Key Points:**
+
 - LCP < 2.5s (good), > 4s (poor)
 - FCP < 1.8s (good), > 3s (poor)
 - Use insights to identify bottlenecks
@@ -196,22 +204,27 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 ## Anti-Patterns
 
 ### ❌ Taking Screenshots for Everything
+
 **Why:** High token cost, slow, unnecessary for most interactions.  
 **Instead:** Use text snapshots for element identification, screenshots only for visual validation.
 
 ### ❌ Using Arbitrary `sleep()` Delays
+
 **Why:** Flaky tests, slower execution, doesn't handle variable load times.  
 **Instead:** Use `wait_for` with expected text/elements or network idle.
 
 ### ❌ Hardcoded CSS Selectors
+
 **Why:** Brittle, breaks with UI changes, not accessibility-friendly.  
 **Instead:** Use accessibility selectors (role, label) or UIDs from snapshots.
 
 ### ❌ Ignoring Console Errors
+
 **Why:** Silent failures, JavaScript errors cause broken functionality.  
 **Instead:** Always check console after critical actions (page load, form submit).
 
 ### ❌ Reusing Pages Across Tests
+
 **Why:** Stale state, cookies, memory leaks, test interdependence.  
 **Instead:** Create fresh page for each test, close after completion.
 
@@ -220,14 +233,18 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 ## Integration with Testing Workflow
 
 ### With Playwright Skill
+
 **Complementary, not overlapping:**
+
 - **Playwright Skill:** Test structure, assertions, page object models
 - **Chrome DevTools Skill:** Browser automation mechanics, debugging tools
 
 **Example:** Use Playwright patterns for test organization, Chrome DevTools MCP for actual browser interactions.
 
 ### With Backend Testing
+
 **Verification Chain:**
+
 ```
 1. Chrome DevTools → Submit form via browser
 2. Backend → Verify database record created
@@ -295,21 +312,27 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 ## Common Debugging Scenarios
 
 ### Scenario: 401 Error on Authenticated Route
+
 **Steps:**
+
 1. Take snapshot → Check if user is logged in (auth indicators)
 2. Check console → Look for auth token errors
 3. Check network → Verify `Authorization` header in request
 4. Check cookies → Confirm auth cookie exists
 
 ### Scenario: Form Not Submitting
+
 **Steps:**
+
 1. Take snapshot → Verify form fields are filled
 2. Check console → Look for JavaScript errors
 3. Check network → See if submit request was sent
 4. Take screenshot → Confirm visual state
 
 ### Scenario: Page Load Timeout
+
 **Steps:**
+
 1. Start performance trace
 2. Navigate to page
 3. Analyze performance insights → Identify slow resources

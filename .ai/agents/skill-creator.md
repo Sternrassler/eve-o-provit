@@ -83,15 +83,15 @@ You are a skill creation specialist focused on generating practical tech-stack r
    - Use `@workspace` syntax for auto-loading when agent is invoked
 
    **Skill-to-Agent Mapping:**
-   - `feature-implementer` → All skills (Backend, Database, Frontend, Testing, Tools)
+   - `feature-implementer` → All skills (Backend, Database, Migrations, Frontend, Testing, Docker, Tools)
    - `auth-route-tester` → Playwright + Backend + Chrome DevTools + GitHub MCP
    - `auth-route-debugger` → Backend + Database (PostgreSQL, Redis) + GitHub MCP
    - `frontend-error-fixer` → Next.js + Radix UI + Chrome DevTools + GitHub MCP
-   - `auto-error-resolver` → Backend + All Database skills + GitHub MCP
+   - `auto-error-resolver` → Backend + All Database skills + Migrations + Docker + GitHub MCP
    - `code-refactor-master` → All skills (depends on refactoring scope)
    - `documentation-architect` → All skills (for documenting patterns)
    - `code-architecture-reviewer` → All skills (for reviewing all layers)
-   - `plan-reviewer` → Backend + All Database skills + GitHub MCP
+   - `plan-reviewer` → Backend + All Database skills + Migrations + Docker + GitHub MCP
    - `refactor-planner` → All skills (for planning refactorings)
    - `web-research-specialist` → GitHub MCP
    - `skill-creator` → Not applicable (creates skills, doesn't use them)
@@ -164,16 +164,16 @@ When complete, summarize:
 - **Usage:** How developers can load and use the new skills
 - **Gaps:** Any additional skills that could be helpful (optional)
 
-**Quality Checklist (Before Reporting Complete):**
+## Quality Checklist (Before Completion)
 
-- ✅ Each database technology has separate skill file
-- ✅ Skills are 200-400 lines max (concise, not code-heavy)
-- ✅ 3-5 code examples max per skill (10-15 lines each)
-- ✅ Best practices section is substantial (not just code)
-- ✅ Anti-patterns section describes what to avoid (no code)
-- ✅ **Agent prompts updated with "Required Skills" sections**
-- ✅ **Agents auto-load their relevant skills when invoked**
-- ✅ **copilot-instructions.md has NO placeholders** (all replaced with actual references)
-- ✅ skills/README.md documents all created skills
+- Each database technology has separate skill file
+- Skills are 200-400 lines max (concise, not code-heavy)
+- 3-5 code examples max per skill (10-15 lines each)
+- Best practices section is substantial (not just code)
+- Anti-patterns section describes what to avoid (no code)
+- **Agent prompts updated with "Required Skills" sections**
+- **Agents auto-load their relevant skills when invoked**
+- **copilot-instructions.md has NO placeholders** (all replaced with actual references)
+- skills/README.md documents all created skills
 
 Remember: Skills are **architecture and best practice reference material**, not code snippet libraries. They help developers understand **patterns and principles**, not memorize syntax. Agents **automatically load** their required skills and use them to structure solutions correctly.

@@ -17,6 +17,7 @@
 - **Team Collaboration:** Manage teams, request reviews, comment on PRs
 
 **When to Use:**
+
 - Automating issue creation from errors/bugs
 - Creating PRs programmatically
 - Searching for solutions in GitHub issues/discussions
@@ -32,12 +33,14 @@
 **Pattern:** Use GitHub MCP tools as primary method, fall back to `gh` CLI only if MCP tool unavailable.
 
 **Rationale:**
+
 - Direct API integration (type-safe, no shell parsing)
 - Better error handling (structured responses)
 - Faster execution (no subprocess overhead)
 
 **Example Decision:**
-```
+
+```txt
 Need to create issue?
   ├─ MCP Tool available? → Use mcp_github_issue_write
   └─ MCP Tool missing? → Fall back to gh issue create
@@ -47,7 +50,7 @@ Need to create issue?
 
 **Pattern:** Always search existing issues/PRs before creating new ones.
 
-```
+```txt
 1. Search issues with relevant keywords
 2. Check if issue already exists
 3. If exists → Comment on existing issue
@@ -55,6 +58,7 @@ Need to create issue?
 ```
 
 **Benefits:**
+
 - Avoid duplicates
 - Discover existing solutions
 - Better issue organization
@@ -63,7 +67,7 @@ Need to create issue?
 
 **Pattern:** One logical change per PR, proper metadata from creation.
 
-```
+```txt
 1. Create branch
 2. Make changes (push_files for multiple files)
 3. Create PR with: title, body, labels, reviewers
@@ -71,7 +75,7 @@ Need to create issue?
 5. Merge after approval
 ```
 
-**Anti-Pattern:** ❌ Creating PR first, adding metadata later (incomplete context).
+**Anti-Pattern:** Creating PR first, adding metadata later (incomplete context).
 
 ---
 
@@ -133,6 +137,7 @@ Need to create issue?
 ```
 
 **Key Points:**
+
 - Avoid duplicate issues (search first)
 - Include reproduction steps
 - Add relevant labels for triage
@@ -153,6 +158,7 @@ Need to create issue?
 ```
 
 **Key Points:**
+
 - Use `push_files` for atomic multi-file commits
 - Include complete PR metadata at creation
 - Reference related issues with "Closes #123"
@@ -172,6 +178,7 @@ Need to create issue?
 ```
 
 **Key Points:**
+
 - Search across all repositories (not just one repo)
 - Prioritize issues with high reactions/comments
 - Check closed issues (likely have solutions)
@@ -190,6 +197,7 @@ Need to create issue?
 ```
 
 **Key Points:**
+
 - Use Copilot review for quick automated feedback
 - Update branch before merge (avoid conflicts)
 - Use squash merge for clean history
@@ -209,6 +217,7 @@ Need to create issue?
 ```
 
 **Key Points:**
+
 - Use labels for categorization
 - Assign issues for accountability
 - Close or archive stale issues
@@ -218,22 +227,27 @@ Need to create issue?
 ## Anti-Patterns
 
 ### ❌ Using gh CLI When MCP Tool Exists
+
 **Why:** Slower, no type safety, harder error handling.  
 **Instead:** Check MCP tools first, use `mcp_github_*` functions.
 
 ### ❌ Creating PRs Without Metadata
+
 **Why:** Incomplete context, requires follow-up edits.  
 **Instead:** Include title, body, labels, reviewers at creation time.
 
 ### ❌ Skipping Search Before Creating Issues
+
 **Why:** Duplicate issues, fragmented discussions.  
 **Instead:** Always search with `search_issues` before creating.
 
 ### ❌ Multiple Single-File Commits
+
 **Why:** Cluttered history, hard to review, inefficient.  
 **Instead:** Use `push_files` with array of file changes for atomic commits.
 
 ### ❌ Ignoring Rate Limits
+
 **Why:** API failures, blocked operations.  
 **Instead:** Batch operations, check rate limit status, handle 429 errors.
 
@@ -242,23 +256,29 @@ Need to create issue?
 ## Integration with Development Workflow
 
 ### With Issue Management
+
 **Workflow:**
-```
+
+```txt
 Error Detected → Search Issues → Create/Comment → Fix → Close Issue
 ```
 
 **Tools:**
+
 - `search_issues` → Find existing reports
 - `issue_write` → Create new issue
 - `add_issue_comment` → Update existing issue
 
 ### With PR Workflow
+
 **Workflow:**
-```
+
+```txt
 Feature → Branch → Changes → PR → Review → Merge → Cleanup
 ```
 
 **Tools:**
+
 - `create_branch` → Start work
 - `push_files` → Commit changes
 - `create_pull_request` → Open PR
@@ -266,12 +286,15 @@ Feature → Branch → Changes → PR → Review → Merge → Cleanup
 - `merge_pull_request` → Complete PR
 
 ### With Code Search
+
 **Workflow:**
-```
+
+```txt
 Problem → Search Code/Issues → Find Solution → Apply → Document
 ```
 
 **Tools:**
+
 - `search_code` → Find implementation examples
 - `search_issues` → Find discussions/solutions
 - `search_repositories` → Discover relevant projects
@@ -354,21 +377,27 @@ Some GitHub MCP tools require activation via `activate_*` functions:
 ## Common Debugging Scenarios
 
 ### Scenario: Issue Creation Fails
+
 **Steps:**
+
 1. Check error message from MCP tool response
 2. Validate required fields (owner, repo, title, body)
 3. Verify repository access permissions
 4. Check rate limit status
 
 ### Scenario: PR Merge Blocked
+
 **Steps:**
+
 1. Check PR status: `mcp_github_pull_request_read` (method: get_status)
 2. Verify required checks passed
 3. Ensure no merge conflicts
 4. Update branch if needed: `update_pull_request_branch`
 
 ### Scenario: Search Returns No Results
+
 **Steps:**
+
 1. Verify search query syntax
 2. Check repository/organization filters
 3. Try broader search terms
