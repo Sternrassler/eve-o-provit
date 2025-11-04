@@ -9,11 +9,13 @@
 ## Architecture Patterns
 
 ### Unstyled Primitives
+
 - **Radix UI:** Provides accessibility, behavior, and keyboard navigation
 - **shadcn/ui:** Pre-styled Radix components with Tailwind CSS
 - **Customization:** Modify `components/ui/` files to match design
 
 ### Controlled Components
+
 - **State Management:** Parent component manages state
 - **Event Handlers:** `onValueChange`, `onCheckedChange`, etc.
 - **Type Safety:** TypeScript interfaces for all props
@@ -118,6 +120,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 ## Integration with Tailwind CSS
 
 ### Utility Classes
+
 ```tsx
 <Button className="hover:bg-primary/90 transition-colors">
   Hover Effect
@@ -125,6 +128,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 ```
 
 ### Conditional Styling
+
 ```tsx
 import { cn } from "@/lib/utils"; // tailwind-merge + clsx
 
@@ -139,6 +143,7 @@ import { cn } from "@/lib/utils"; // tailwind-merge + clsx
 ## Component Variants
 
 ### Using `class-variance-authority`
+
 ```tsx
 import { cva } from "class-variance-authority";
 

@@ -195,17 +195,7 @@ Agents verwenden Skills als **Referenz-Material**:
 
 ---
 
-## PLACEHOLDER: Agent Orchestration
-
-**Skill Location:** `.ai/skills/generic/agent-orchestration/SKILL.md`
-
-This skill defines the agent selection and chaining logic. Created automatically by skill-creator.
-
-**To load:** `@workspace .ai/skills/generic/agent-orchestration/SKILL.md`
-
----
-
-## PLACEHOLDER: Git Workflow
+## Backend Development
 
 **Skill Location:** `.ai/skills/generic/git-workflow/SKILL.md`
 
@@ -239,7 +229,9 @@ JSDoc, TSDoc, API documentation formats, README structures.
 - Structured error handling
 - Repository pattern for data access
 
-**To load:** `@workspace .ai/skills/backend/fiber/SKILL.md`---
+**To load:** `@workspace .ai/skills/backend/fiber/SKILL.md`
+
+---
 
 ## Frontend Development
 
@@ -290,41 +282,3 @@ JSDoc, TSDoc, API documentation formats, README structures.
 - Parallel execution with isolation
 
 **To load:** `@workspace .ai/skills/testing/playwright/SKILL.md`
-
----
-
-## PLACEHOLDER: Error Tracking
-
-**Skill Location:** `.ai/skills/monitoring/error-tracking/SKILL.md`
-
-The skill-creator agent will create error tracking skills based on your tools (Sentry, LogRocket, etc.).
-
-**Expected Content:**
-- Integration setup
-- Error context and metadata
-- Custom error boundaries
-- Performance monitoring
-- Alert configuration
-
-**To create:** Ask "Create error tracking skills for [your tool]"
-**To load:** `@workspace .ai/skills/monitoring/error-tracking/SKILL.md`
-
----
-
-## PLACEHOLDER: Additional Skills
-
-**Skill Locations:** `.ai/skills/[category]/[tool]/SKILL.md`
-
-The skill-creator agent can create additional skills for:
-- CI/CD pipelines (GitHub Actions, GitLab CI)
-- Containerization (Docker, Kubernetes)
-- API documentation (OpenAPI, GraphQL)
-- Authentication (OAuth, JWT, Passport)
-- Deployment (Vercel, Railway, AWS)
-
-**To create:** Ask "Create skill for [specific tool/framework]"
-**To load:** `@workspace .ai/skills/[category]/[tool]/SKILL.md`
-
----
-
-*This file is part of the AI Project Template. Skills are created on-demand by the skill-creator agent as separate files in `.ai/skills/`. Placeholders above contain **references** to skill files, not the full content. Load skills with `@workspace .ai/skills/[path]/SKILL.md` when needed.*

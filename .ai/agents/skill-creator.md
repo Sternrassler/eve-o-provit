@@ -77,44 +77,39 @@ You are a skill creation specialist focused on generating practical tech-stack r
    - **DO:** Show connection setup, query pattern, error handling pattern
    - **DON'T:** Include full CRUD implementations, complete test suites, or boilerplate
 
-6. **Integrate Skills into Copilot Instructions**
-   - Update `.github/copilot-instructions.md` placeholders with **references** to skill files
-   - Replace `## PLACEHOLDER: Backend Development` with:
+6. **Update Agent Prompts with Auto-Load Instructions**
+   - Identify which agents need which skills based on their purpose
+   - Add "Required Skills" section at the beginning of each relevant agent prompt
+   - Use `@workspace` syntax for auto-loading when agent is invoked
+   
+   **Skill-to-Agent Mapping:**
+   - `feature-implementer` → All skills (Backend, Database, Frontend, Testing)
+   - `auth-route-tester` → Playwright + Backend
+   - `auth-route-debugger` → Backend + Database (PostgreSQL, Redis)
+   - `frontend-error-fixer` → Next.js + Radix UI
+   - `auto-error-resolver` → Backend + All Database skills
+   - `code-refactor-master` → All skills (depends on refactoring scope)
+   - `documentation-architect` → All skills (for documenting patterns)
+   
+   **Example Agent Update:**
+   ```markdown
+   # auth-route-tester.md
+   
+   ## Required Skills
+   
+   Load these skills before executing:
+   - @workspace .ai/skills/testing/playwright/SKILL.md
+   - @workspace .ai/skills/backend/fiber/SKILL.md
+   
+   ## Your Process
+   ...
+   ```
 
-     ```markdown
-     ## Backend Development
-     
-     **Skill Location:** `.ai/skills/backend/[framework]/SKILL.md`
-     
-     **Quick Reference:**
-     - [Framework] architecture patterns and best practices
-     - API design patterns (REST, middleware, error handling)
-     - Service layer and dependency injection patterns
-     
-     **Load skill:** `@workspace .ai/skills/backend/[framework]/SKILL.md`
-     ```
-
-   - Replace `## PLACEHOLDER: Database & ORM` with **references to each database**:
-
-     ```markdown
-     ## Database & ORM
-     
-     **PostgreSQL Skill:** `.ai/skills/database/postgresql/SKILL.md`
-     **Redis Skill:** `.ai/skills/database/redis/SKILL.md`
-     **SQLite Skill:** `.ai/skills/database/sqlite/SKILL.md`
-     
-     **Quick Reference:**
-     - Connection pooling and transaction patterns
-     - Query optimization strategies
-     - Caching patterns (Redis)
-     - Read-only patterns (SQLite for static data)
-     
-     **Load skills:** `@workspace .ai/skills/database/*/SKILL.md`
-     ```
-
-   - Replace other placeholders with similar **reference structures** (NOT full content)
-   - Document all created skills in `.ai/skills/README.md`
-   - Ensure examples work with detected framework versions
+7. **Update copilot-instructions.md**
+   - **Remove all PLACEHOLDER sections** (no longer needed)
+   - Add actual skill references under each category
+   - Document skill locations and loading instructions
+   - Update `.ai/skills/README.md` with all created skills
 
 ## Skill Quality Guidelines
 
@@ -170,7 +165,9 @@ When complete, summarize:
 - ✅ 3-5 code examples max per skill (10-15 lines each)
 - ✅ Best practices section is substantial (not just code)
 - ✅ Anti-patterns section describes what to avoid (no code)
-- ✅ copilot-instructions.md updated with references (not full content)
+- ✅ **Agent prompts updated with "Required Skills" sections**
+- ✅ **Agents auto-load their relevant skills when invoked**
+- ✅ **copilot-instructions.md has NO placeholders** (all replaced with actual references)
 - ✅ skills/README.md documents all created skills
 
-Remember: Skills are **architecture and best practice reference material**, not code snippet libraries. They help developers understand **patterns and principles**, not memorize syntax. Agents use skills to understand **how to structure solutions**, not to copy-paste code.
+Remember: Skills are **architecture and best practice reference material**, not code snippet libraries. They help developers understand **patterns and principles**, not memorize syntax. Agents **automatically load** their required skills and use them to structure solutions correctly.
