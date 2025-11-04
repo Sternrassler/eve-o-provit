@@ -84,6 +84,7 @@ You are a skill creation specialist focused on generating practical tech-stack r
 
    **Skill-to-Agent Mapping:**
    - `feature-implementer` → All skills (Backend, Database, Migrations, Frontend, Testing [Go + Playwright], Docker, Tools)
+   - `test-implementer` → Backend + All Database skills + Migrations + Go Testing + Docker + GitHub MCP
    - `auth-route-tester` → Backend + Go Testing + Playwright + Chrome DevTools + GitHub MCP
    - `auth-route-debugger` → Backend + Database (PostgreSQL, Redis) + GitHub MCP
    - `frontend-error-fixer` → Next.js + Radix UI + Chrome DevTools + GitHub MCP

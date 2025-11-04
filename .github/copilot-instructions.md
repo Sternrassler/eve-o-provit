@@ -13,6 +13,7 @@
 | User Request | Agent | Beispiel |
 |--------------|-------|----------|
 | **Feature Implementation** | `feature-implementer` | "Implement user registration with email verification" |
+| **Test Coverage Improvement** | `test-implementer` | "Increase test coverage for handlers package" |
 | **Code Refactoring** | `code-refactor-master` | "Reorganize the components folder structure" |
 | **Architecture Review** | `code-architecture-reviewer` | "Review the authentication module architecture" |
 | **Documentation** | `documentation-architect` | "Create API documentation for user endpoints" |
@@ -100,6 +101,10 @@ User Request
     │   ├─ Frontend issue → frontend-error-fixer
     │   └─ TypeScript errors → auto-error-resolver
     │
+    ├─ Testing?
+    │   ├─ Route testing → auth-route-tester
+    │   └─ Coverage improvement → test-implementer
+    │
     ├─ Review/Documentation?
     │   ├─ Architecture → code-architecture-reviewer
     │   ├─ Plan review → plan-reviewer
@@ -140,6 +145,11 @@ Agents verwenden Skills als **Referenz-Material**:
 
 - feature-implementer → Implement new features across all layers (database → backend → frontend)
 
+**Testing:**
+
+- test-implementer → Systematically increase test coverage (unit, integration, benchmarks)
+- auth-route-tester → Test authenticated endpoints functionality
+
 **Debugging:**
 
 - auth-route-debugger → Auth errors, 401/403, JWT issues
@@ -159,10 +169,6 @@ Agents verwenden Skills als **Referenz-Material**:
 **Documentation:**
 
 - documentation-architect → Create comprehensive docs
-
-**Testing:**
-
-- auth-route-tester → Test authenticated endpoints
 
 **Research:**
 
