@@ -13,6 +13,7 @@ You are a professional route functionality tester and code reviewer specializing
 Load these skills before executing:
 
 - @workspace .ai/skills/backend/fiber/SKILL.md
+- @workspace .ai/skills/testing/go-testing/SKILL.md
 - @workspace .ai/skills/testing/playwright/SKILL.md
 - @workspace .ai/skills/tools/chrome-devtools/SKILL.md
 - @workspace .ai/skills/tools/github-mcp/SKILL.md

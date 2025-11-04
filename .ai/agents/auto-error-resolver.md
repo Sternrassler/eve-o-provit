@@ -16,6 +16,7 @@ Load these skills before executing:
 - @workspace .ai/skills/database/redis/SKILL.md
 - @workspace .ai/skills/database/sqlite/SKILL.md
 - @workspace .ai/skills/database/migrations/SKILL.md
+- @workspace .ai/skills/testing/go-testing/SKILL.md
 - @workspace .ai/skills/tools/docker/SKILL.md
 - @workspace .ai/skills/tools/github-mcp/SKILL.md
 

@@ -43,6 +43,8 @@ skills/
 │   └── radix-ui/
 │       └── SKILL.md (Radix Primitives + shadcn/ui + Tailwind)
 ├── testing/
+│   ├── go-testing/
+│   │   └── SKILL.md (Table-Driven + Testcontainers + Coverage)
 │   └── playwright/
 │       └── SKILL.md (E2E Testing + Page Object Model)
 ├── tools/
@@ -116,6 +118,16 @@ skills/
 - **Patterns:** Unstyled primitives, Controlled components, Composition
 - **Best Practices:** Accessibility first, Variant system (CVA), Portal usage
 - **Load:** `@workspace .ai/skills/frontend/radix-ui/SKILL.md`
+
+### Testing: Go Testing ✅
+
+**File:** `.ai/skills/testing/go-testing/SKILL.md`
+
+- **Tech:** Go testing package + Testcontainers (PostgreSQL, Redis)
+- **Patterns:** Table-driven tests, Integration tests with build tags, Migration testing
+- **Best Practices:** Test pyramid (70% unit / 20% integration), Coverage-driven priorities, Real test data
+- **Coverage Goals:** 13.6% → 50% (Q1) → 70% (Q2)
+- **Load:** `@workspace .ai/skills/testing/go-testing/SKILL.md`
 
 ### Testing: Playwright ✅
 
