@@ -34,6 +34,19 @@ type MarketQuerier interface {
 	CleanOldMarketOrders(ctx context.Context, olderThan time.Duration) (int64, error)
 }
 
+// PostgresQuerier defines the interface for raw Postgres queries
+// Used for operations that haven't been migrated to repository pattern yet
+type PostgresQuerier interface {
+	// QueryRow executes a query that returns at most one row
+	QueryRow(ctx context.Context, query string, args ...interface{}) Row
+}
+
+// Row defines the interface for scanning query results
+type Row interface {
+	// Scan copies the columns from the matched row into the values pointed at by dest
+	Scan(dest ...interface{}) error
+}
+
 // Compile-time interface compliance checks
 var (
 	_ HealthChecker = (*DB)(nil)

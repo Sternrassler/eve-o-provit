@@ -23,13 +23,14 @@ type MarketServicer interface {
 
 // Handler holds dependencies for HTTP handlers
 type Handler struct {
-	healthChecker database.HealthChecker
-	sdeQuerier    database.SDEQuerier
-	marketQuerier database.MarketQuerier
-	esiClient     *esi.Client
-	marketService MarketServicer // Interface for testability
+	healthChecker  database.HealthChecker
+	sdeQuerier     database.SDEQuerier
+	marketQuerier  database.MarketQuerier
+	postgresQuery  database.PostgresQuerier // Interface for raw Postgres queries
+	esiClient      *esi.Client
+	marketService  MarketServicer // Interface for testability
 	// TODO(Phase 2): Remove raw DB access, use services instead
-	db *database.DB // Temporary: for GetMarketDataStaleness and GetRegions
+	db *database.DB // Temporary: for GetRegions (SDE access)
 }
 
 // New creates a new handler instance with interfaces
@@ -37,8 +38,10 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 	// For Phase 1: Accept both interfaces and concrete DB
 	// Type assert to get raw DB access (temporary)
 	var rawDB *database.DB
+	var postgresQuery database.PostgresQuerier
 	if concreteDB, ok := healthChecker.(*database.DB); ok {
 		rawDB = concreteDB
+		postgresQuery = concreteDB // DB implements PostgresQuerier
 	}
 
 	// Create MarketService
@@ -48,6 +51,7 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 		healthChecker: healthChecker,
 		sdeQuerier:    sdeQuerier,
 		marketQuerier: marketQuerier,
+		postgresQuery: postgresQuery,
 		esiClient:     esiClient,
 		marketService: marketService,
 		db:            rawDB, // Temporary for Phase 1
@@ -63,6 +67,7 @@ func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRep
 		healthChecker: db,
 		sdeQuerier:    sdeRepo,
 		marketQuerier: marketRepo,
+		postgresQuery: db, // DB implements PostgresQuerier
 		esiClient:     esiClient,
 		marketService: marketService,
 		db:            db,
@@ -189,12 +194,11 @@ func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 		FROM market_orders
 		WHERE region_id = $1
 	`
-
 	var totalOrders int
 	var latestFetch time.Time
 	var ageMinutes float64
 
-	err = h.db.Postgres.QueryRow(c.Context(), query, regionID).Scan(&totalOrders, &latestFetch, &ageMinutes)
+	err = h.postgresQuery.QueryRow(c.Context(), query, regionID).Scan(&totalOrders, &latestFetch, &ageMinutes)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "failed to query market data age",

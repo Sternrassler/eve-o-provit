@@ -19,7 +19,7 @@ import (
 
 // TradingHandler handles trading-related HTTP requests
 type TradingHandler struct {
-	calculator                *services.RouteCalculator
+	calculator                services.RouteCalculatorServicer // Interface for testability
 	handler                   *Handler
 	characterHelper           *services.CharacterHelper
 	tradingService            *services.TradingService

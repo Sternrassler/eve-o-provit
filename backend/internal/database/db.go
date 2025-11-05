@@ -107,3 +107,8 @@ func (db *DB) AcquirePostgres(ctx context.Context) (*pgxpool.Conn, error) {
 func (db *DB) BeginTx(ctx context.Context) (pgx.Tx, error) {
 	return db.Postgres.Begin(ctx)
 }
+
+// QueryRow implements PostgresQuerier interface
+func (db *DB) QueryRow(ctx context.Context, query string, args ...interface{}) Row {
+	return db.Postgres.QueryRow(ctx, query, args...)
+}

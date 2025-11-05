@@ -52,3 +52,9 @@ type InventorySellOrchestrator interface {
 		accessToken string,
 	) ([]models.InventorySellRoute, error)
 }
+
+// RouteCalculatorServicer defines the interface for route calculation
+type RouteCalculatorServicer interface {
+	// Calculate computes profitable trading routes for a region
+	Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error)
+}

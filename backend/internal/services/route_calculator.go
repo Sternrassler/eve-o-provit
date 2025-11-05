@@ -74,6 +74,9 @@ func NewRouteCalculator(esiClient *esi.Client, sdeDB *sql.DB, sdeRepo *database.
 	return rc
 }
 
+// Compile-time interface compliance check
+var _ RouteCalculatorServicer = (*RouteCalculator)(nil)
+
 // Calculate computes profitable trading routes for a region with timeout support
 func (rc *RouteCalculator) Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
 	startTime := time.Now()
