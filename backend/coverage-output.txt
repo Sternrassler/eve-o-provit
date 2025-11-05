@@ -1,0 +1,760 @@
+=== RUN   TestVersion
+--- PASS: TestVersion (0.00s)
+=== RUN   TestSearchItems_QueryTooShort
+=== RUN   TestSearchItems_QueryTooShort/Empty_query
+=== RUN   TestSearchItems_QueryTooShort/1_character
+=== RUN   TestSearchItems_QueryTooShort/2_characters
+--- PASS: TestSearchItems_QueryTooShort (0.00s)
+    --- PASS: TestSearchItems_QueryTooShort/Empty_query (0.00s)
+    --- PASS: TestSearchItems_QueryTooShort/1_character (0.00s)
+    --- PASS: TestSearchItems_QueryTooShort/2_characters (0.00s)
+=== RUN   TestSetAutopilotWaypoint_InvalidRequest
+=== RUN   TestSetAutopilotWaypoint_InvalidRequest/Invalid_JSON
+=== RUN   TestSetAutopilotWaypoint_InvalidRequest/Missing_destination_id
+=== RUN   TestSetAutopilotWaypoint_InvalidRequest/Zero_destination_id
+=== RUN   TestSetAutopilotWaypoint_InvalidRequest/Negative_destination_id
+--- PASS: TestSetAutopilotWaypoint_InvalidRequest (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_InvalidRequest/Invalid_JSON (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_InvalidRequest/Missing_destination_id (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_InvalidRequest/Zero_destination_id (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_InvalidRequest/Negative_destination_id (0.00s)
+=== RUN   TestGetMarketOrders_Integration
+2025/11/05 07:31:33 github.com/testcontainers/testcontainers-go - Connected to docker: 
+  Server Version: 28.5.1
+  API Version: 1.51
+  Operating System: Linux Mint 22.2
+  Total Memory: 32010 MB
+  Testcontainers for Go Version: v0.39.0
+  Resolved Docker Host: unix:///var/run/docker.sock
+  Resolved Docker Socket Path: /var/run/docker.sock
+  Test SessionID: 800ee03fd7ab79b663bd1f5aaa25c37d288c4f9e944672e09529a4e637312124
+  Test ProcessID: 27e111b9-d9ba-4b4f-bf16-b17a7ed48e75
+2025/11/05 07:31:33 🐳 Creating container for image postgres:16-alpine
+2025/11/05 07:31:33 🐳 Creating container for image testcontainers/ryuk:0.13.0
+2025/11/05 07:31:33 ✅ Container created: 0133a7236650
+2025/11/05 07:31:33 🐳 Starting container: 0133a7236650
+2025/11/05 07:31:33 ✅ Container started: 0133a7236650
+2025/11/05 07:31:33 ⏳ Waiting for container id 0133a7236650 image: testcontainers/ryuk:0.13.0. Waiting for: &{Port:8080/tcp timeout:<nil> PollInterval:100ms skipInternalCheck:false skipExternalCheck:false}
+2025/11/05 07:31:33 Shell not found in container
+2025/11/05 07:31:33 🔔 Container is ready: 0133a7236650
+2025/11/05 07:31:33 ✅ Container created: 8a44faf640c3
+2025/11/05 07:31:33 🐳 Starting container: 8a44faf640c3
+2025/11/05 07:31:34 ✅ Container started: 8a44faf640c3
+2025/11/05 07:31:34 ⏳ Waiting for container id 8a44faf640c3 image: postgres:16-alpine. Waiting for: &{timeout:<nil> deadline:0xc000616608 Strategies:[0xc0006269c0]}
+2025/11/05 07:31:35 🔔 Container is ready: 8a44faf640c3
+    handlers_integration_test.go:69: Test schema created successfully
+    handlers_integration_test.go:70: Test data seeded successfully
+2025/11/05 07:31:36 🐳 Creating container for image redis:7-alpine
+2025/11/05 07:31:36 ✅ Container created: 7950d0c62045
+2025/11/05 07:31:36 🐳 Starting container: 7950d0c62045
+2025/11/05 07:31:36 ✅ Container started: 7950d0c62045
+2025/11/05 07:31:36 ⏳ Waiting for container id 7950d0c62045 image: redis:7-alpine. Waiting for: &{timeout:<nil> Log:Ready to accept connections IsRegexp:false Occurrence:1 PollInterval:100ms check:<nil> submatchCallback:<nil> re:<nil> log:[]}
+2025/11/05 07:31:36 🔔 Container is ready: 7950d0c62045
+redis: 2025/11/05 07:31:36 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'maint_notifications'. Try CLIENT HELP.
+2025/11/05 07:31:36 🐳 Stopping container: 7950d0c62045
+2025/11/05 07:31:36 ✅ Container stopped: 7950d0c62045
+2025/11/05 07:31:36 🐳 Terminating container: 7950d0c62045
+2025/11/05 07:31:36 🚫 Container terminated: 7950d0c62045
+2025/11/05 07:31:36 🐳 Stopping container: 8a44faf640c3
+2025/11/05 07:31:36 ✅ Container stopped: 8a44faf640c3
+2025/11/05 07:31:36 🐳 Terminating container: 8a44faf640c3
+2025/11/05 07:31:36 🚫 Container terminated: 8a44faf640c3
+--- PASS: TestGetMarketOrders_Integration (3.18s)
+=== RUN   TestGetMarketOrders_Integration_InvalidParams
+2025/11/05 07:31:36 🐳 Creating container for image postgres:16-alpine
+2025/11/05 07:31:36 ✅ Container created: 51927fedbfc3
+2025/11/05 07:31:36 🐳 Starting container: 51927fedbfc3
+2025/11/05 07:31:36 ✅ Container started: 51927fedbfc3
+2025/11/05 07:31:36 ⏳ Waiting for container id 51927fedbfc3 image: postgres:16-alpine. Waiting for: &{timeout:<nil> deadline:0xc000616d68 Strategies:[0xc000410c60]}
+2025/11/05 07:31:38 🔔 Container is ready: 51927fedbfc3
+    handlers_integration_test.go:134: Test schema created successfully
+2025/11/05 07:31:38 🐳 Creating container for image redis:7-alpine
+2025/11/05 07:31:38 ✅ Container created: 58a5fe2ffd5e
+2025/11/05 07:31:38 🐳 Starting container: 58a5fe2ffd5e
+2025/11/05 07:31:39 ✅ Container started: 58a5fe2ffd5e
+2025/11/05 07:31:39 ⏳ Waiting for container id 58a5fe2ffd5e image: redis:7-alpine. Waiting for: &{timeout:<nil> Log:Ready to accept connections IsRegexp:false Occurrence:1 PollInterval:100ms check:<nil> submatchCallback:<nil> re:<nil> log:[]}
+2025/11/05 07:31:39 🔔 Container is ready: 58a5fe2ffd5e
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'maint_notifications'. Try CLIENT HELP.
+=== RUN   TestGetMarketOrders_Integration_InvalidParams/invalid_region_ID
+=== RUN   TestGetMarketOrders_Integration_InvalidParams/invalid_type_ID
+=== RUN   TestGetMarketOrders_Integration_InvalidParams/negative_region_ID
+    handlers_integration_test.go:182: 
+        	Error Trace:	/home/ix/vscode/eve-o-provit/backend/internal/handlers/handlers_integration_test.go:182
+        	Error:      	Not equal: 
+        	            	expected: 400
+        	            	actual  : 200
+        	Test:       	TestGetMarketOrders_Integration_InvalidParams/negative_region_ID
+2025/11/05 07:31:39 🐳 Stopping container: 58a5fe2ffd5e
+2025/11/05 07:31:39 ✅ Container stopped: 58a5fe2ffd5e
+2025/11/05 07:31:39 🐳 Terminating container: 58a5fe2ffd5e
+2025/11/05 07:31:39 🚫 Container terminated: 58a5fe2ffd5e
+2025/11/05 07:31:39 🐳 Stopping container: 51927fedbfc3
+2025/11/05 07:31:39 ✅ Container stopped: 51927fedbfc3
+2025/11/05 07:31:39 🐳 Terminating container: 51927fedbfc3
+2025/11/05 07:31:39 🚫 Container terminated: 51927fedbfc3
+--- FAIL: TestGetMarketOrders_Integration_InvalidParams (2.81s)
+    --- PASS: TestGetMarketOrders_Integration_InvalidParams/invalid_region_ID (0.00s)
+    --- PASS: TestGetMarketOrders_Integration_InvalidParams/invalid_type_ID (0.00s)
+    --- FAIL: TestGetMarketOrders_Integration_InvalidParams/negative_region_ID (0.00s)
+=== RUN   TestGetMarketOrders_Integration_EmptyResult
+2025/11/05 07:31:39 🐳 Creating container for image postgres:16-alpine
+2025/11/05 07:31:39 ✅ Container created: d696733b5f20
+2025/11/05 07:31:39 🐳 Starting container: d696733b5f20
+2025/11/05 07:31:39 ✅ Container started: d696733b5f20
+2025/11/05 07:31:39 ⏳ Waiting for container id d696733b5f20 image: postgres:16-alpine. Waiting for: &{timeout:<nil> deadline:0xc0005120f0 Strategies:[0xc0004d0540]}
+2025/11/05 07:31:41 🔔 Container is ready: d696733b5f20
+    handlers_integration_test.go:194: Test schema created successfully
+2025/11/05 07:31:41 🐳 Creating container for image redis:7-alpine
+2025/11/05 07:31:41 ✅ Container created: 5c2b1080c1a4
+2025/11/05 07:31:41 🐳 Starting container: 5c2b1080c1a4
+2025/11/05 07:31:41 ✅ Container started: 5c2b1080c1a4
+2025/11/05 07:31:41 ⏳ Waiting for container id 5c2b1080c1a4 image: redis:7-alpine. Waiting for: &{timeout:<nil> Log:Ready to accept connections IsRegexp:false Occurrence:1 PollInterval:100ms check:<nil> submatchCallback:<nil> re:<nil> log:[]}
+2025/11/05 07:31:41 🔔 Container is ready: 5c2b1080c1a4
+redis: 2025/11/05 07:31:41 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'maint_notifications'. Try CLIENT HELP.
+2025/11/05 07:31:41 🐳 Stopping container: 5c2b1080c1a4
+2025/11/05 07:31:42 ✅ Container stopped: 5c2b1080c1a4
+2025/11/05 07:31:42 🐳 Terminating container: 5c2b1080c1a4
+2025/11/05 07:31:42 🚫 Container terminated: 5c2b1080c1a4
+2025/11/05 07:31:42 🐳 Stopping container: d696733b5f20
+2025/11/05 07:31:42 ✅ Container stopped: d696733b5f20
+2025/11/05 07:31:42 🐳 Terminating container: d696733b5f20
+2025/11/05 07:31:42 🚫 Container terminated: d696733b5f20
+--- PASS: TestGetMarketOrders_Integration_EmptyResult (2.84s)
+=== RUN   TestHealth_Integration
+    handlers_integration_test.go:240: Health endpoint requires full database.DB setup with SDE - use E2E tests instead
+--- SKIP: TestHealth_Integration (0.00s)
+=== RUN   TestVersion_Integration
+--- PASS: TestVersion_Integration (0.00s)
+=== RUN   TestGetMarketDataStaleness_Integration
+2025/11/05 07:31:42 🐳 Creating container for image postgres:16-alpine
+2025/11/05 07:31:42 ✅ Container created: 63465ce2dd63
+2025/11/05 07:31:42 🐳 Starting container: 63465ce2dd63
+2025/11/05 07:31:42 ✅ Container started: 63465ce2dd63
+2025/11/05 07:31:42 ⏳ Waiting for container id 63465ce2dd63 image: postgres:16-alpine. Waiting for: &{timeout:<nil> deadline:0xc000383500 Strategies:[0xc0006aa9c0]}
+2025/11/05 07:31:44 🔔 Container is ready: 63465ce2dd63
+    handlers_integration_test.go:281: Test schema created successfully
+    handlers_integration_test.go:282: Test data seeded successfully
+    handlers_integration_test.go:296: 
+        	Error Trace:	/home/ix/vscode/eve-o-provit/backend/internal/handlers/handlers_integration_test.go:296
+        	Error:      	Not equal: 
+        	            	expected: 200
+        	            	actual  : 400
+        	Test:       	TestGetMarketDataStaleness_Integration
+    handlers_integration_test.go:302: 
+        	Error Trace:	/home/ix/vscode/eve-o-provit/backend/internal/handlers/handlers_integration_test.go:302
+        	Error:      	Expected value not to be nil.
+        	Test:       	TestGetMarketDataStaleness_Integration
+    handlers_integration_test.go:303: 
+        	Error Trace:	/home/ix/vscode/eve-o-provit/backend/internal/handlers/handlers_integration_test.go:303
+        	Error:      	Expected value not to be nil.
+        	Test:       	TestGetMarketDataStaleness_Integration
+    handlers_integration_test.go:304: 
+        	Error Trace:	/home/ix/vscode/eve-o-provit/backend/internal/handlers/handlers_integration_test.go:304
+        	Error:      	Expected value not to be nil.
+        	Test:       	TestGetMarketDataStaleness_Integration
+2025/11/05 07:31:44 🐳 Stopping container: 63465ce2dd63
+2025/11/05 07:31:44 ✅ Container stopped: 63465ce2dd63
+2025/11/05 07:31:44 🐳 Terminating container: 63465ce2dd63
+2025/11/05 07:31:44 🚫 Container terminated: 63465ce2dd63
+--- FAIL: TestGetMarketDataStaleness_Integration (2.25s)
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestGetMarketDataStaleness
+=== RUN   TestGetMarketDataStaleness/missing_region_parameter
+=== RUN   TestGetMarketDataStaleness/invalid_region_ID
+--- PASS: TestGetMarketDataStaleness (0.00s)
+    --- PASS: TestGetMarketDataStaleness/missing_region_parameter (0.00s)
+    --- PASS: TestGetMarketDataStaleness/invalid_region_ID (0.00s)
+=== RUN   TestSearchItems_QueryValidation
+=== RUN   TestSearchItems_QueryValidation/Empty_query
+=== RUN   TestSearchItems_QueryValidation/One_character
+=== RUN   TestSearchItems_QueryValidation/Two_characters
+=== RUN   TestSearchItems_QueryValidation/Three_characters_(minimum_valid)
+=== RUN   TestSearchItems_QueryValidation/Valid_query
+--- PASS: TestSearchItems_QueryValidation (0.00s)
+    --- PASS: TestSearchItems_QueryValidation/Empty_query (0.00s)
+    --- PASS: TestSearchItems_QueryValidation/One_character (0.00s)
+    --- PASS: TestSearchItems_QueryValidation/Two_characters (0.00s)
+    --- PASS: TestSearchItems_QueryValidation/Three_characters_(minimum_valid) (0.00s)
+    --- PASS: TestSearchItems_QueryValidation/Valid_query (0.00s)
+=== RUN   TestVersion_Success
+--- PASS: TestVersion_Success (0.00s)
+=== RUN   TestGetType_InvalidID
+=== RUN   TestGetType_InvalidID/non-numeric_ID
+=== RUN   TestGetType_InvalidID/empty_ID
+=== RUN   TestGetType_InvalidID/special_characters
+--- PASS: TestGetType_InvalidID (0.00s)
+    --- PASS: TestGetType_InvalidID/non-numeric_ID (0.00s)
+    --- PASS: TestGetType_InvalidID/empty_ID (0.00s)
+    --- PASS: TestGetType_InvalidID/special_characters (0.00s)
+=== RUN   TestGetMarketOrders_InvalidRegionID
+=== RUN   TestGetMarketOrders_InvalidRegionID/invalid_region_ID
+=== RUN   TestGetMarketOrders_InvalidRegionID/invalid_type_ID
+=== RUN   TestGetMarketOrders_InvalidRegionID/both_invalid
+--- PASS: TestGetMarketOrders_InvalidRegionID (0.00s)
+    --- PASS: TestGetMarketOrders_InvalidRegionID/invalid_region_ID (0.00s)
+    --- PASS: TestGetMarketOrders_InvalidRegionID/invalid_type_ID (0.00s)
+    --- PASS: TestGetMarketOrders_InvalidRegionID/both_invalid (0.00s)
+=== RUN   TestGetMarketDataStaleness_InvalidInput
+=== RUN   TestGetMarketDataStaleness_InvalidInput/invalid_region_ID
+=== RUN   TestGetMarketDataStaleness_InvalidInput/empty_region_ID
+--- PASS: TestGetMarketDataStaleness_InvalidInput (0.00s)
+    --- PASS: TestGetMarketDataStaleness_InvalidInput/invalid_region_ID (0.00s)
+    --- PASS: TestGetMarketDataStaleness_InvalidInput/empty_region_ID (0.00s)
+=== RUN   TestCalculateInventorySellRoutes_InvalidTypeID
+=== RUN   TestCalculateInventorySellRoutes_InvalidTypeID/Zero_type_id
+=== RUN   TestCalculateInventorySellRoutes_InvalidTypeID/Negative_type_id
+--- PASS: TestCalculateInventorySellRoutes_InvalidTypeID (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_InvalidTypeID/Zero_type_id (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_InvalidTypeID/Negative_type_id (0.00s)
+=== RUN   TestCalculateInventorySellRoutes_InvalidQuantity
+=== RUN   TestCalculateInventorySellRoutes_InvalidQuantity/Zero_quantity
+=== RUN   TestCalculateInventorySellRoutes_InvalidQuantity/Negative_quantity
+--- PASS: TestCalculateInventorySellRoutes_InvalidQuantity (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_InvalidQuantity/Zero_quantity (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_InvalidQuantity/Negative_quantity (0.00s)
+=== RUN   TestCalculateInventorySellRoutes_InvalidBuyPrice
+=== RUN   TestCalculateInventorySellRoutes_InvalidBuyPrice/Zero_buy_price
+=== RUN   TestCalculateInventorySellRoutes_InvalidBuyPrice/Negative_buy_price
+--- PASS: TestCalculateInventorySellRoutes_InvalidBuyPrice (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_InvalidBuyPrice/Zero_buy_price (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_InvalidBuyPrice/Negative_buy_price (0.00s)
+=== RUN   TestCalculateInventorySellRoutes_InvalidRegionID
+=== RUN   TestCalculateInventorySellRoutes_InvalidRegionID/Zero_region_id
+=== RUN   TestCalculateInventorySellRoutes_InvalidRegionID/Negative_region_id
+--- PASS: TestCalculateInventorySellRoutes_InvalidRegionID (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_InvalidRegionID/Zero_region_id (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_InvalidRegionID/Negative_region_id (0.00s)
+=== RUN   TestCalculateInventorySellRoutes_InvalidJSON
+--- PASS: TestCalculateInventorySellRoutes_InvalidJSON (0.00s)
+=== RUN   TestCalculateInventorySellRoutes_SecurityFilter
+=== RUN   TestCalculateInventorySellRoutes_SecurityFilter/Empty_filter_(default:_all)
+=== RUN   TestCalculateInventorySellRoutes_SecurityFilter/Valid:_all
+=== RUN   TestCalculateInventorySellRoutes_SecurityFilter/Valid:_highsec
+=== RUN   TestCalculateInventorySellRoutes_SecurityFilter/Valid:_highlow
+=== RUN   TestCalculateInventorySellRoutes_SecurityFilter/Invalid:_lowsec
+--- PASS: TestCalculateInventorySellRoutes_SecurityFilter (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_SecurityFilter/Empty_filter_(default:_all) (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_SecurityFilter/Valid:_all (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_SecurityFilter/Valid:_highsec (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_SecurityFilter/Valid:_highlow (0.00s)
+    --- PASS: TestCalculateInventorySellRoutes_SecurityFilter/Invalid:_lowsec (0.00s)
+=== RUN   TestCalculateRoutes_ValidationErrors
+=== RUN   TestCalculateRoutes_ValidationErrors/Invalid_JSON
+=== RUN   TestCalculateRoutes_ValidationErrors/Missing_region_id
+=== RUN   TestCalculateRoutes_ValidationErrors/Invalid_region_id
+=== RUN   TestCalculateRoutes_ValidationErrors/Missing_ship_type_id
+=== RUN   TestCalculateRoutes_ValidationErrors/Invalid_ship_type_id
+--- PASS: TestCalculateRoutes_ValidationErrors (0.00s)
+    --- PASS: TestCalculateRoutes_ValidationErrors/Invalid_JSON (0.00s)
+    --- PASS: TestCalculateRoutes_ValidationErrors/Missing_region_id (0.00s)
+    --- PASS: TestCalculateRoutes_ValidationErrors/Invalid_region_id (0.00s)
+    --- PASS: TestCalculateRoutes_ValidationErrors/Missing_ship_type_id (0.00s)
+    --- PASS: TestCalculateRoutes_ValidationErrors/Invalid_ship_type_id (0.00s)
+=== RUN   TestCalculateRoutes_ValidRequest
+--- PASS: TestCalculateRoutes_ValidRequest (0.00s)
+=== RUN   TestCalculateRoutes_OptionalCargoCapacity
+--- PASS: TestCalculateRoutes_OptionalCargoCapacity (0.00s)
+=== RUN   TestCalculateRoutes_NegativeValues
+=== RUN   TestCalculateRoutes_NegativeValues/Negative_region_id
+=== RUN   TestCalculateRoutes_NegativeValues/Negative_ship_type_id
+--- PASS: TestCalculateRoutes_NegativeValues (0.00s)
+    --- PASS: TestCalculateRoutes_NegativeValues/Negative_region_id (0.00s)
+    --- PASS: TestCalculateRoutes_NegativeValues/Negative_ship_type_id (0.00s)
+=== RUN   TestCalculateRoutes_LargeValues
+--- PASS: TestCalculateRoutes_LargeValues (0.00s)
+=== RUN   TestCalculateRoutes_EmptyBody
+--- PASS: TestCalculateRoutes_EmptyBody (0.00s)
+=== RUN   TestCalculateRoutes_WrongContentType
+--- PASS: TestCalculateRoutes_WrongContentType (0.00s)
+=== RUN   TestSetAutopilotWaypoint_Validation
+=== RUN   TestSetAutopilotWaypoint_Validation/Invalid_JSON
+=== RUN   TestSetAutopilotWaypoint_Validation/Missing_destination_id
+=== RUN   TestSetAutopilotWaypoint_Validation/Zero_destination_id
+=== RUN   TestSetAutopilotWaypoint_Validation/Negative_destination_id
+=== RUN   TestSetAutopilotWaypoint_Validation/Valid_destination_with_boolean_flags
+--- PASS: TestSetAutopilotWaypoint_Validation (0.14s)
+    --- PASS: TestSetAutopilotWaypoint_Validation/Invalid_JSON (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_Validation/Missing_destination_id (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_Validation/Zero_destination_id (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_Validation/Negative_destination_id (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_Validation/Valid_destination_with_boolean_flags (0.14s)
+=== RUN   TestCharacterEndpoints_MissingLocals
+    trading_test.go:381: Endpoints panic on missing locals - this is expected behavior with middleware requirement
+--- SKIP: TestCharacterEndpoints_MissingLocals (0.00s)
+=== RUN   TestCharacterEndpoints_Authentication
+    trading_test.go:433: Authentication tests require integration test setup with middleware
+--- SKIP: TestCharacterEndpoints_Authentication (0.00s)
+=== RUN   TestResponseStructures
+=== RUN   TestResponseStructures/RouteCalculationResponse
+--- PASS: TestResponseStructures (0.00s)
+    --- PASS: TestResponseStructures/RouteCalculationResponse (0.00s)
+=== RUN   TestSearchItems_CaseSensitivity
+=== RUN   TestSearchItems_CaseSensitivity/Lowercase_query
+=== RUN   TestSearchItems_CaseSensitivity/Uppercase_query
+=== RUN   TestSearchItems_CaseSensitivity/Mixed_case_query
+--- PASS: TestSearchItems_CaseSensitivity (0.00s)
+    --- PASS: TestSearchItems_CaseSensitivity/Lowercase_query (0.00s)
+    --- PASS: TestSearchItems_CaseSensitivity/Uppercase_query (0.00s)
+    --- PASS: TestSearchItems_CaseSensitivity/Mixed_case_query (0.00s)
+=== RUN   TestSetAutopilotWaypoint_BooleanFlags
+=== RUN   TestSetAutopilotWaypoint_BooleanFlags/Clear_waypoints_and_add_to_beginning
+=== RUN   TestSetAutopilotWaypoint_BooleanFlags/Keep_waypoints_and_add_to_end
+=== RUN   TestSetAutopilotWaypoint_BooleanFlags/Clear_waypoints_but_add_to_end
+--- PASS: TestSetAutopilotWaypoint_BooleanFlags (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_BooleanFlags/Clear_waypoints_and_add_to_beginning (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_BooleanFlags/Keep_waypoints_and_add_to_end (0.00s)
+    --- PASS: TestSetAutopilotWaypoint_BooleanFlags/Clear_waypoints_but_add_to_end (0.00s)
+=== RUN   TestHealth_Success
+--- PASS: TestHealth_Success (0.00s)
+=== RUN   TestHealth_DatabaseUnhealthy
+--- PASS: TestHealth_DatabaseUnhealthy (0.00s)
+=== RUN   TestVersion_Success
+--- PASS: TestVersion_Success (0.00s)
+=== RUN   TestGetType_Success
+--- PASS: TestGetType_Success (0.00s)
+=== RUN   TestGetType_InvalidID
+--- PASS: TestGetType_InvalidID (0.00s)
+=== RUN   TestGetType_NotFound
+--- PASS: TestGetType_NotFound (0.00s)
+FAIL
+coverage: 25.5% of statements
+FAIL	github.com/Sternrassler/eve-o-provit/backend/internal/handlers	11.281s
+=== RUN   TestMarketOrderCache_compress_Success
+--- PASS: TestMarketOrderCache_compress_Success (0.00s)
+=== RUN   TestMarketOrderCache_compress_EmptySlice
+--- PASS: TestMarketOrderCache_compress_EmptySlice (0.00s)
+=== RUN   TestMarketOrderCache_decompress_InvalidGzip
+--- PASS: TestMarketOrderCache_decompress_InvalidGzip (0.00s)
+=== RUN   TestMarketOrderCache_decompress_InvalidJSON
+--- PASS: TestMarketOrderCache_decompress_InvalidJSON (0.00s)
+=== RUN   TestMarketOrderCache_Set_Success
+redis: 2025/11/05 07:31:33 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_Set_Success (0.00s)
+=== RUN   TestMarketOrderCache_Set_RedisError
+redis: 2025/11/05 07:31:34 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:41593: connect: connection refused
+redis: 2025/11/05 07:31:34 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:41593: connect: connection refused
+redis: 2025/11/05 07:31:35 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:41593: connect: connection refused
+redis: 2025/11/05 07:31:35 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:41593: connect: connection refused
+--- PASS: TestMarketOrderCache_Set_RedisError (2.08s)
+=== RUN   TestMarketOrderCache_Get_CacheMiss
+redis: 2025/11/05 07:31:35 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_Get_CacheMiss (0.00s)
+=== RUN   TestMarketOrderCache_Get_Success
+redis: 2025/11/05 07:31:35 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_Get_Success (0.00s)
+=== RUN   TestMarketOrderCache_Get_DecompressError
+redis: 2025/11/05 07:31:35 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_Get_DecompressError (0.00s)
+=== RUN   TestNavigationCache_Get_Success
+redis: 2025/11/05 07:31:35 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_Get_Success (0.00s)
+=== RUN   TestNavigationCache_Set_Success
+redis: 2025/11/05 07:31:35 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_Set_Success (0.00s)
+=== RUN   TestNavigationCache_Set_RedisError
+redis: 2025/11/05 07:31:36 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:44353: connect: connection refused
+redis: 2025/11/05 07:31:36 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:44353: connect: connection refused
+redis: 2025/11/05 07:31:37 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:44353: connect: connection refused
+redis: 2025/11/05 07:31:37 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:44353: connect: connection refused
+--- PASS: TestNavigationCache_Set_RedisError (2.08s)
+=== RUN   TestNavigationCache_Get_RedisError
+redis: 2025/11/05 07:31:38 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:34439: connect: connection refused
+redis: 2025/11/05 07:31:38 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:34439: connect: connection refused
+redis: 2025/11/05 07:31:39 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:34439: connect: connection refused
+redis: 2025/11/05 07:31:39 pool.go:376: redis: connection pool: failed to dial after 5 attempts: dial tcp 127.0.0.1:34439: connect: connection refused
+--- PASS: TestNavigationCache_Get_RedisError (2.12s)
+=== RUN   TestNavigationCache_Get_CorruptJSON
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_Get_CorruptJSON (0.00s)
+=== RUN   TestMarketOrderCache_RefreshBackground
+--- PASS: TestMarketOrderCache_RefreshBackground (0.00s)
+=== RUN   TestNewMarketOrderCache
+--- PASS: TestNewMarketOrderCache (0.00s)
+=== RUN   TestMarketOrderCache_SetAndGet
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_SetAndGet (0.00s)
+=== RUN   TestMarketOrderCache_GetMiss
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_GetMiss (0.00s)
+=== RUN   TestMarketOrderCache_Expiration
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_Expiration (0.00s)
+=== RUN   TestMarketOrderCache_EmptyOrders
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_EmptyOrders (0.00s)
+=== RUN   TestMarketOrderCache_LargeDataset
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_LargeDataset (0.00s)
+=== RUN   TestNewNavigationCache
+--- PASS: TestNewNavigationCache (0.00s)
+=== RUN   TestNavigationCache_SetAndGet
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_SetAndGet (0.00s)
+=== RUN   TestNavigationCache_GetMiss
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_GetMiss (0.00s)
+=== RUN   TestNavigationCache_Expiration
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_Expiration (0.00s)
+=== RUN   TestNavigationCache_ZeroJumps
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_ZeroJumps (0.00s)
+=== RUN   TestCacheKeyFormat
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestCacheKeyFormat (0.00s)
+=== RUN   TestNavigationCacheKeyFormat
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCacheKeyFormat (0.00s)
+=== RUN   TestMarketOrderCache_MultipleRegions
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_MultipleRegions (0.00s)
+=== RUN   TestNavigationCache_BidirectionalRoutes
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_BidirectionalRoutes (0.00s)
+=== RUN   TestMarketOrderCache_CompressDecompress
+--- PASS: TestMarketOrderCache_CompressDecompress (0.00s)
+=== RUN   TestMarketOrderCache_DecompressInvalidData
+=== RUN   TestMarketOrderCache_DecompressInvalidData/invalid_gzip_data
+=== RUN   TestMarketOrderCache_DecompressInvalidData/empty_data
+=== RUN   TestMarketOrderCache_DecompressInvalidData/truncated_gzip
+--- PASS: TestMarketOrderCache_DecompressInvalidData (0.00s)
+    --- PASS: TestMarketOrderCache_DecompressInvalidData/invalid_gzip_data (0.00s)
+    --- PASS: TestMarketOrderCache_DecompressInvalidData/empty_data (0.00s)
+    --- PASS: TestMarketOrderCache_DecompressInvalidData/truncated_gzip (0.00s)
+=== RUN   TestNavigationCache_GetMissing
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_GetMissing (0.00s)
+=== RUN   TestMarketOrderCache_SetEmpty
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_SetEmpty (0.00s)
+=== RUN   TestNavigationCache_SetGet
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_SetGet (0.00s)
+=== RUN   TestNavigationCache_GetCorruptData
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestNavigationCache_GetCorruptData (0.00s)
+=== RUN   TestMarketOrderCache_GetCorruptCompression
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestMarketOrderCache_GetCorruptCompression (0.00s)
+=== RUN   TestNewCharacterHelper
+--- PASS: TestNewCharacterHelper (0.00s)
+=== RUN   TestCalculateTaxRate_NoSkills
+redis: 2025/11/05 07:31:39 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestCalculateTaxRate_NoSkills (0.21s)
+=== RUN   TestCalculateTaxRate_MaxSkills
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestCalculateTaxRate_MaxSkills (0.00s)
+=== RUN   TestCalculateTaxRate_PartialSkills
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestCalculateTaxRate_PartialSkills (0.00s)
+=== RUN   TestCalculateTaxRate_AccountingOnly
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestCalculateTaxRate_AccountingOnly (0.00s)
+=== RUN   TestCalculateTaxRate_BrokerRelationsOnly
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestCalculateTaxRate_BrokerRelationsOnly (0.00s)
+=== RUN   TestGetCharacterSkills_CacheHit
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestGetCharacterSkills_CacheHit (0.00s)
+=== RUN   TestGetCharacterLocation_CacheHit
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestGetCharacterLocation_CacheHit (0.00s)
+=== RUN   TestGetCharacterLocation_InSpace
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestGetCharacterLocation_InSpace (0.00s)
+=== RUN   TestCharacterSkill_Marshaling
+--- PASS: TestCharacterSkill_Marshaling (0.00s)
+=== RUN   TestCharacterLocation_Marshaling
+--- PASS: TestCharacterLocation_Marshaling (0.00s)
+=== RUN   TestCalculateTaxRate_SkillFormulas
+=== RUN   TestCalculateTaxRate_SkillFormulas/Level_0_(untrained)
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+=== RUN   TestCalculateTaxRate_SkillFormulas/Level_1
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+=== RUN   TestCalculateTaxRate_SkillFormulas/Level_2
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+=== RUN   TestCalculateTaxRate_SkillFormulas/Level_4
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestCalculateTaxRate_SkillFormulas (0.00s)
+    --- PASS: TestCalculateTaxRate_SkillFormulas/Level_0_(untrained) (0.00s)
+    --- PASS: TestCalculateTaxRate_SkillFormulas/Level_1 (0.00s)
+    --- PASS: TestCalculateTaxRate_SkillFormulas/Level_2 (0.00s)
+    --- PASS: TestCalculateTaxRate_SkillFormulas/Level_4 (0.00s)
+=== RUN   TestGetCharacterSkills_EmptyCache
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestGetCharacterSkills_EmptyCache (0.04s)
+=== RUN   TestGetCharacterLocation_EmptyCache
+redis: 2025/11/05 07:31:40 redis.go:478: auto mode fallback: maintnotifications disabled due to handshake error: ERR unknown subcommand 'MAINT_NOTIFICATIONS'. Try CLIENT HELP.
+--- PASS: TestGetCharacterLocation_EmptyCache (0.04s)
+=== RUN   TestMarketService_NewMarketService
+--- PASS: TestMarketService_NewMarketService (0.00s)
+=== RUN   TestMarketService_FetchAndStoreMarketOrders_IntegrationRequired
+    market_service_test.go:36: Requires working ESI client and BatchFetcher - tested in integration tests
+--- SKIP: TestMarketService_FetchAndStoreMarketOrders_IntegrationRequired (0.00s)
+=== RUN   TestMarketService_GetMarketOrders_NotImplemented
+--- PASS: TestMarketService_GetMarketOrders_NotImplemented (0.00s)
+=== RUN   TestMarketService_UpsertMarketOrders_Success
+--- PASS: TestMarketService_UpsertMarketOrders_Success (0.00s)
+=== RUN   TestMarketService_UpsertMarketOrders_DatabaseError
+--- PASS: TestMarketService_UpsertMarketOrders_DatabaseError (0.00s)
+=== RUN   TestNewESIRateLimiter
+--- PASS: TestNewESIRateLimiter (0.00s)
+=== RUN   TestRateLimiterWait
+--- PASS: TestRateLimiterWait (0.00s)
+=== RUN   TestRateLimiterAllow
+--- PASS: TestRateLimiterAllow (0.00s)
+=== RUN   TestRateLimiterBurst
+--- PASS: TestRateLimiterBurst (0.00s)
+=== RUN   TestDefaultRetryConfig
+--- PASS: TestDefaultRetryConfig (0.00s)
+=== RUN   TestRetryWithBackoff_Success
+--- PASS: TestRetryWithBackoff_Success (0.00s)
+=== RUN   TestRetryWithBackoff_EventualSuccess
+--- PASS: TestRetryWithBackoff_EventualSuccess (0.00s)
+=== RUN   TestRetryWithBackoff_MaxRetriesExceeded
+--- PASS: TestRetryWithBackoff_MaxRetriesExceeded (0.00s)
+=== RUN   TestRetryWithBackoff_ContextCanceled
+--- PASS: TestRetryWithBackoff_ContextCanceled (0.03s)
+=== RUN   TestRetryWithBackoff_BackoffProgression
+--- PASS: TestRetryWithBackoff_BackoffProgression (0.00s)
+=== RUN   TestIs429Error
+=== RUN   TestIs429Error/HTTP_429_error
+=== RUN   TestIs429Error/HTTP_500_error
+=== RUN   TestIs429Error/Nil_error
+=== RUN   TestIs429Error/Generic_error
+--- PASS: TestIs429Error (0.00s)
+    --- PASS: TestIs429Error/HTTP_429_error (0.00s)
+    --- PASS: TestIs429Error/HTTP_500_error (0.00s)
+    --- PASS: TestIs429Error/Nil_error (0.00s)
+    --- PASS: TestIs429Error/Generic_error (0.00s)
+=== RUN   TestRetryConfig_CustomValues
+--- PASS: TestRetryConfig_CustomValues (0.00s)
+=== RUN   TestRetryWithBackoff_ZeroMaxRetries
+--- PASS: TestRetryWithBackoff_ZeroMaxRetries (0.00s)
+=== RUN   TestRateLimiter_ConcurrentAccess
+--- PASS: TestRateLimiter_ConcurrentAccess (0.00s)
+=== RUN   TestRetryWithBackoff_BackoffCapping
+--- PASS: TestRetryWithBackoff_BackoffCapping (0.00s)
+=== RUN   TestGetRegionName
+    route_calculator_helpers_test.go:14: Requires SDE database - implement with test fixtures
+--- SKIP: TestGetRegionName (0.00s)
+=== RUN   TestGetSystemIDFromLocation
+    route_calculator_helpers_test.go:21: Requires SDE repository - implement with test fixtures
+--- SKIP: TestGetSystemIDFromLocation (0.00s)
+=== RUN   TestGetMinRouteSecurityStatus
+    route_calculator_helpers_test.go:28: Requires navigation service - implement with mocks
+--- SKIP: TestGetMinRouteSecurityStatus (0.00s)
+=== RUN   TestNewRouteCalculator
+=== RUN   TestNewRouteCalculator/with_Redis_cache
+=== RUN   TestNewRouteCalculator/without_Redis_cache_(nil)
+--- PASS: TestNewRouteCalculator (0.00s)
+    --- PASS: TestNewRouteCalculator/with_Redis_cache (0.00s)
+    --- PASS: TestNewRouteCalculator/without_Redis_cache_(nil) (0.00s)
+=== RUN   TestRouteCalculatorConcurrency
+    route_calculator_helpers_test.go:73: Requires full integration test setup with worker pool
+--- SKIP: TestRouteCalculatorConcurrency (0.00s)
+=== RUN   TestISKPerHourCalculation
+=== RUN   TestISKPerHourCalculation/Basic_calculation
+=== RUN   TestISKPerHourCalculation/One_hour_round_trip
+=== RUN   TestISKPerHourCalculation/30_second_round_trip
+=== RUN   TestISKPerHourCalculation/Zero_round_trip_time
+--- PASS: TestISKPerHourCalculation (0.00s)
+    --- PASS: TestISKPerHourCalculation/Basic_calculation (0.00s)
+    --- PASS: TestISKPerHourCalculation/One_hour_round_trip (0.00s)
+    --- PASS: TestISKPerHourCalculation/30_second_round_trip (0.00s)
+    --- PASS: TestISKPerHourCalculation/Zero_round_trip_time (0.00s)
+=== RUN   TestMultiTourCalculation
+=== RUN   TestMultiTourCalculation/Tayra_example_-_4_tours
+=== RUN   TestMultiTourCalculation/Single_tour_-_sufficient_cargo
+=== RUN   TestMultiTourCalculation/Max_10_tours_limit
+=== RUN   TestMultiTourCalculation/Partial_cargo_fill_-_2_tours
+--- PASS: TestMultiTourCalculation (0.00s)
+    --- PASS: TestMultiTourCalculation/Tayra_example_-_4_tours (0.00s)
+    --- PASS: TestMultiTourCalculation/Single_tour_-_sufficient_cargo (0.00s)
+    --- PASS: TestMultiTourCalculation/Max_10_tours_limit (0.00s)
+    --- PASS: TestMultiTourCalculation/Partial_cargo_fill_-_2_tours (0.00s)
+=== RUN   TestSpreadCalculation
+=== RUN   TestSpreadCalculation/10%_spread
+=== RUN   TestSpreadCalculation/5%_spread_(minimum)
+=== RUN   TestSpreadCalculation/50%_spread
+=== RUN   TestSpreadCalculation/Negative_spread_(not_profitable)
+=== RUN   TestSpreadCalculation/Zero_spread
+--- PASS: TestSpreadCalculation (0.00s)
+    --- PASS: TestSpreadCalculation/10%_spread (0.00s)
+    --- PASS: TestSpreadCalculation/5%_spread_(minimum) (0.00s)
+    --- PASS: TestSpreadCalculation/50%_spread (0.00s)
+    --- PASS: TestSpreadCalculation/Negative_spread_(not_profitable) (0.00s)
+    --- PASS: TestSpreadCalculation/Zero_spread (0.00s)
+=== RUN   TestQuantityCalculation
+=== RUN   TestQuantityCalculation/Exact_fit
+=== RUN   TestQuantityCalculation/Partial_fit_(rounds_down)
+=== RUN   TestQuantityCalculation/Large_item
+=== RUN   TestQuantityCalculation/Small_cargo
+--- PASS: TestQuantityCalculation (0.00s)
+    --- PASS: TestQuantityCalculation/Exact_fit (0.00s)
+    --- PASS: TestQuantityCalculation/Partial_fit_(rounds_down) (0.00s)
+    --- PASS: TestQuantityCalculation/Large_item (0.00s)
+    --- PASS: TestQuantityCalculation/Small_cargo (0.00s)
+=== RUN   TestItemPairFiltering
+--- PASS: TestItemPairFiltering (0.00s)
+=== RUN   TestRoutesSorting
+--- PASS: TestRoutesSorting (0.00s)
+=== RUN   TestMaxRoutesLimit
+--- PASS: TestMaxRoutesLimit (0.00s)
+=== RUN   TestNewRouteCalculator_Initialization
+=== RUN   TestNewRouteCalculator_Initialization/with_nil_dependencies
+=== RUN   TestNewRouteCalculator_Initialization/with_Redis_client
+--- PASS: TestNewRouteCalculator_Initialization (0.00s)
+    --- PASS: TestNewRouteCalculator_Initialization/with_nil_dependencies (0.00s)
+    --- PASS: TestNewRouteCalculator_Initialization/with_Redis_client (0.00s)
+=== RUN   TestCalculate_ContextTimeout
+    route_calculator_validation_test.go:28: Requires mock dependencies - covered by integration tests
+--- SKIP: TestCalculate_ContextTimeout (0.00s)
+=== RUN   TestCalculate_InvalidInputs
+    route_calculator_validation_test.go:35: Requires mock dependencies - covered by handler tests
+--- SKIP: TestCalculate_InvalidInputs (0.00s)
+=== RUN   TestGetMinRouteSecurityStatus_EdgeCases
+=== RUN   TestGetMinRouteSecurityStatus_EdgeCases/both_high-sec
+=== RUN   TestGetMinRouteSecurityStatus_EdgeCases/both_low-sec
+=== RUN   TestGetMinRouteSecurityStatus_EdgeCases/both_null-sec
+=== RUN   TestGetMinRouteSecurityStatus_EdgeCases/high_to_low_transition
+=== RUN   TestGetMinRouteSecurityStatus_EdgeCases/low_to_null_transition
+=== RUN   TestGetMinRouteSecurityStatus_EdgeCases/exactly_0.5_boundary
+=== RUN   TestGetMinRouteSecurityStatus_EdgeCases/exactly_0.0_boundary
+--- PASS: TestGetMinRouteSecurityStatus_EdgeCases (0.00s)
+    --- PASS: TestGetMinRouteSecurityStatus_EdgeCases/both_high-sec (0.00s)
+    --- PASS: TestGetMinRouteSecurityStatus_EdgeCases/both_low-sec (0.00s)
+    --- PASS: TestGetMinRouteSecurityStatus_EdgeCases/both_null-sec (0.00s)
+    --- PASS: TestGetMinRouteSecurityStatus_EdgeCases/high_to_low_transition (0.00s)
+    --- PASS: TestGetMinRouteSecurityStatus_EdgeCases/low_to_null_transition (0.00s)
+    --- PASS: TestGetMinRouteSecurityStatus_EdgeCases/exactly_0.5_boundary (0.00s)
+    --- PASS: TestGetMinRouteSecurityStatus_EdgeCases/exactly_0.0_boundary (0.00s)
+=== RUN   TestCacheExpiration_InMemory
+=== RUN   TestCacheExpiration_InMemory/expired_entry_should_be_removed
+=== RUN   TestCacheExpiration_InMemory/valid_entry_should_not_be_removed
+--- PASS: TestCacheExpiration_InMemory (0.00s)
+    --- PASS: TestCacheExpiration_InMemory/expired_entry_should_be_removed (0.00s)
+    --- PASS: TestCacheExpiration_InMemory/valid_entry_should_not_be_removed (0.00s)
+=== RUN   TestMultiTourQuantityCalculation
+=== RUN   TestMultiTourQuantityCalculation/exact_single_tour
+=== RUN   TestMultiTourQuantityCalculation/two_tours_needed
+=== RUN   TestMultiTourQuantityCalculation/large_item_volume
+=== RUN   TestMultiTourQuantityCalculation/item_too_large_for_cargo
+--- PASS: TestMultiTourQuantityCalculation (0.00s)
+    --- PASS: TestMultiTourQuantityCalculation/exact_single_tour (0.00s)
+    --- PASS: TestMultiTourQuantityCalculation/two_tours_needed (0.00s)
+    --- PASS: TestMultiTourQuantityCalculation/large_item_volume (0.00s)
+    --- PASS: TestMultiTourQuantityCalculation/item_too_large_for_cargo (0.00s)
+=== RUN   TestProfitableItemFiltering
+=== RUN   TestProfitableItemFiltering/profitable_item
+=== RUN   TestProfitableItemFiltering/zero_spread
+=== RUN   TestProfitableItemFiltering/negative_spread
+=== RUN   TestProfitableItemFiltering/low_spread_below_threshold
+=== RUN   TestProfitableItemFiltering/zero_volume
+--- PASS: TestProfitableItemFiltering (0.00s)
+    --- PASS: TestProfitableItemFiltering/profitable_item (0.00s)
+    --- PASS: TestProfitableItemFiltering/zero_spread (0.00s)
+    --- PASS: TestProfitableItemFiltering/negative_spread (0.00s)
+    --- PASS: TestProfitableItemFiltering/low_spread_below_threshold (0.00s)
+    --- PASS: TestProfitableItemFiltering/zero_volume (0.00s)
+=== RUN   TestRouteCalculation_EdgeCases
+=== RUN   TestRouteCalculation_EdgeCases/zero_volume_item
+=== RUN   TestRouteCalculation_EdgeCases/negative_price
+=== RUN   TestRouteCalculation_EdgeCases/extremely_large_quantity
+--- PASS: TestRouteCalculation_EdgeCases (0.00s)
+    --- PASS: TestRouteCalculation_EdgeCases/zero_volume_item (0.00s)
+    --- PASS: TestRouteCalculation_EdgeCases/negative_price (0.00s)
+    --- PASS: TestRouteCalculation_EdgeCases/extremely_large_quantity (0.00s)
+=== RUN   TestTradingService_NewTradingService
+--- PASS: TestTradingService_NewTradingService (0.00s)
+=== RUN   TestTradingService_CalculateInventorySellRoutes_IntegrationRequired
+    trading_service_test.go:43: Requires working SDE database for navigation.ShortestPath - tested in integration tests
+--- SKIP: TestTradingService_CalculateInventorySellRoutes_IntegrationRequired (0.00s)
+=== RUN   TestTradingService_CalculateInventorySellRoutes_NoOrders
+2025/11/05 07:31:40 [DEBUG] Raw ESI orders count: 0 for type_id=34 region_id=10000002
+2025/11/05 07:31:40 [DEBUG] InventorySell: Found 0 buy orders for type_id=34 in region_id=10000002
+2025/11/05 07:31:40 [DEBUG] InventorySell: Generated 0 routes. Skipped: map[]
+--- PASS: TestTradingService_CalculateInventorySellRoutes_NoOrders (0.00s)
+=== RUN   TestTradingService_GetSystemSecurityStatus_HighSec
+    trading_service_test.go:80: Requires working SDE database - tested in integration tests
+--- SKIP: TestTradingService_GetSystemSecurityStatus_HighSec (0.00s)
+=== RUN   TestTradingService_GetMinRouteSecurityStatus_EmptyRoute
+--- PASS: TestTradingService_GetMinRouteSecurityStatus_EmptyRoute (0.00s)
+=== RUN   TestTradingService_GetMinRouteSecurityStatus_SingleSystem
+    trading_service_test.go:97: Requires working SDE database - tested in integration tests
+--- SKIP: TestTradingService_GetMinRouteSecurityStatus_SingleSystem (0.00s)
+=== RUN   TestMarketFetcher_FetchMarketOrders_Success
+--- PASS: TestMarketFetcher_FetchMarketOrders_Success (0.00s)
+=== RUN   TestMarketFetcher_FetchMarketOrders_EmptyResult
+--- PASS: TestMarketFetcher_FetchMarketOrders_EmptyResult (0.00s)
+=== RUN   TestMarketFetcher_FetchMarketOrders_DatabaseError
+--- PASS: TestMarketFetcher_FetchMarketOrders_DatabaseError (0.00s)
+=== RUN   TestMarketFetcher_NewMarketFetcher_WithRedis
+--- PASS: TestMarketFetcher_NewMarketFetcher_WithRedis (0.00s)
+=== RUN   TestProfitAnalyzer_CalculateProfitPerTour
+=== RUN   TestProfitAnalyzer_CalculateProfitPerTour/Simple_profit
+=== RUN   TestProfitAnalyzer_CalculateProfitPerTour/Zero_profit
+=== RUN   TestProfitAnalyzer_CalculateProfitPerTour/Loss
+=== RUN   TestProfitAnalyzer_CalculateProfitPerTour/Large_quantity
+--- PASS: TestProfitAnalyzer_CalculateProfitPerTour (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateProfitPerTour/Simple_profit (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateProfitPerTour/Zero_profit (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateProfitPerTour/Loss (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateProfitPerTour/Large_quantity (0.00s)
+=== RUN   TestProfitAnalyzer_CalculateQuantityPerTour
+=== RUN   TestProfitAnalyzer_CalculateQuantityPerTour/Simple_fit
+=== RUN   TestProfitAnalyzer_CalculateQuantityPerTour/Exact_fit
+=== RUN   TestProfitAnalyzer_CalculateQuantityPerTour/Doesn't_fit
+=== RUN   TestProfitAnalyzer_CalculateQuantityPerTour/Zero_volume
+=== RUN   TestProfitAnalyzer_CalculateQuantityPerTour/Negative_volume
+=== RUN   TestProfitAnalyzer_CalculateQuantityPerTour/Fractional
+--- PASS: TestProfitAnalyzer_CalculateQuantityPerTour (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateQuantityPerTour/Simple_fit (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateQuantityPerTour/Exact_fit (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateQuantityPerTour/Doesn't_fit (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateQuantityPerTour/Zero_volume (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateQuantityPerTour/Negative_volume (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateQuantityPerTour/Fractional (0.00s)
+=== RUN   TestProfitAnalyzer_CalculateNumberOfTours
+=== RUN   TestProfitAnalyzer_CalculateNumberOfTours/Single_tour
+=== RUN   TestProfitAnalyzer_CalculateNumberOfTours/Multiple_tours
+=== RUN   TestProfitAnalyzer_CalculateNumberOfTours/Exactly_10_tours
+=== RUN   TestProfitAnalyzer_CalculateNumberOfTours/Capped_at_10
+=== RUN   TestProfitAnalyzer_CalculateNumberOfTours/Zero_quantity_per_tour
+--- PASS: TestProfitAnalyzer_CalculateNumberOfTours (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateNumberOfTours/Single_tour (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateNumberOfTours/Multiple_tours (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateNumberOfTours/Exactly_10_tours (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateNumberOfTours/Capped_at_10 (0.00s)
+    --- PASS: TestProfitAnalyzer_CalculateNumberOfTours/Zero_quantity_per_tour (0.00s)
+=== RUN   TestProfitAnalyzer_FindProfitableItems_WithMocks
+    profit_analyzer_test.go:97: Requires working SDE database - tested in integration tests
+--- SKIP: TestProfitAnalyzer_FindProfitableItems_WithMocks (0.00s)
+=== RUN   TestProfitAnalyzer_FindProfitableItems_NoSpread
+--- PASS: TestProfitAnalyzer_FindProfitableItems_NoSpread (0.00s)
+=== RUN   TestProfitAnalyzer_FindProfitableItems_MissingBuyOrders
+--- PASS: TestProfitAnalyzer_FindProfitableItems_MissingBuyOrders (0.00s)
+=== RUN   TestRoutePlanner_GetSystemIDFromLocation
+--- PASS: TestRoutePlanner_GetSystemIDFromLocation (0.00s)
+=== RUN   TestRoutePlanner_GetSystemIDFromLocation_AlreadySystemID
+--- PASS: TestRoutePlanner_GetSystemIDFromLocation_AlreadySystemID (0.00s)
+=== RUN   TestRoutePlanner_CalculateTravelTime
+=== RUN   TestRoutePlanner_CalculateTravelTime/Single_tour,_5_jumps
+=== RUN   TestRoutePlanner_CalculateTravelTime/Multiple_tours,_10_jumps
+=== RUN   TestRoutePlanner_CalculateTravelTime/Zero_jumps
+--- PASS: TestRoutePlanner_CalculateTravelTime (0.00s)
+    --- PASS: TestRoutePlanner_CalculateTravelTime/Single_tour,_5_jumps (0.00s)
+    --- PASS: TestRoutePlanner_CalculateTravelTime/Multiple_tours,_10_jumps (0.00s)
+    --- PASS: TestRoutePlanner_CalculateTravelTime/Zero_jumps (0.00s)
+=== RUN   TestRoutePlanner_CalculateRoute_InvalidInput
+--- PASS: TestRoutePlanner_CalculateRoute_InvalidInput (0.00s)
+=== RUN   TestRoutePlanner_CalculateRoute_NavigationError
+    route_planner_test.go:113: Requires working SDE database - tested in integration tests
+--- SKIP: TestRoutePlanner_CalculateRoute_NavigationError (0.00s)
+=== RUN   TestRoutePlanner_NewRoutePlanner_WithRedis
+--- PASS: TestRoutePlanner_NewRoutePlanner_WithRedis (0.00s)
+PASS
+coverage: 32.0% of statements
+ok  	github.com/Sternrassler/eve-o-provit/backend/internal/services	6.693s	coverage: 32.0% of statements
+FAIL
