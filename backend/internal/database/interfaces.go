@@ -26,6 +26,17 @@ type SDEQuerier interface {
 	}, error)
 }
 
+// RegionQuerier defines the interface for region queries
+type RegionQuerier interface {
+	GetAllRegions(ctx context.Context) ([]RegionData, error)
+}
+
+// RegionData represents a region from SDE
+type RegionData struct {
+	ID   int64
+	Name string
+}
+
 // MarketQuerier defines the interface for market data queries
 type MarketQuerier interface {
 	UpsertMarketOrders(ctx context.Context, orders []MarketOrder) error

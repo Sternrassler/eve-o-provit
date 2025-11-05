@@ -85,7 +85,7 @@ func TestNew_WithInterfaces(t *testing.T) {
 	assert.NotNil(t, handler.marketQuerier)
 	assert.NotNil(t, handler.marketService)
 	assert.Nil(t, handler.postgresQuery) // Not a DB instance
-	assert.Nil(t, handler.db)             // Not a DB instance
+	assert.Nil(t, handler.db)            // Not a DB instance
 }
 
 // TestNew_WithConcreteDB tests handler creation when healthChecker is *database.DB
@@ -96,6 +96,6 @@ func TestNew_WithConcreteDB(t *testing.T) {
 
 	assert.NotNil(t, handler)
 	assert.Nil(t, handler.healthChecker) // nil passed
-	assert.Nil(t, handler.postgresQuery)  // Can't type-assert nil
-	assert.Nil(t, handler.db)             // Can't type-assert nil
+	assert.Nil(t, handler.postgresQuery) // Can't type-assert nil
+	assert.Nil(t, handler.db)            // Can't type-assert nil
 }

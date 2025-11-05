@@ -4,6 +4,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 )
 
@@ -23,6 +24,10 @@ type TypeInfo struct {
 type SDERepository struct {
 	db *sql.DB
 }
+
+// Compile-time interface compliance checks
+var _ SDEQuerier = (*SDERepository)(nil)
+var _ RegionQuerier = (*SDERepository)(nil)
 
 // NewSDERepository creates a new SDE repository
 func NewSDERepository(db *sql.DB) *SDERepository {
@@ -273,4 +278,51 @@ func (r *SDERepository) SearchItems(ctx context.Context, searchTerm string, limi
 	}
 
 	return results, nil
+}
+
+// GetAllRegions retrieves all regions from SDE
+func (r *SDERepository) GetAllRegions(ctx context.Context) ([]RegionData, error) {
+	query := `
+		SELECT _key, name
+		FROM mapRegions
+		ORDER BY name ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query regions: %w", err)
+	}
+	defer rows.Close()
+
+	var regions []RegionData
+	for rows.Next() {
+		var r RegionData
+		var nameJSON string
+		if err := rows.Scan(&r.ID, &nameJSON); err != nil {
+			return nil, fmt.Errorf("failed to scan region: %w", err)
+		}
+
+		// Parse JSON name and extract English version
+		var names map[string]string
+		if err := json.Unmarshal([]byte(nameJSON), &names); err != nil {
+			// Fallback: use raw string if JSON parsing fails
+			r.Name = nameJSON
+		} else if enName, ok := names["en"]; ok {
+			r.Name = enName
+		} else {
+			// Fallback: use first available name
+			for _, name := range names {
+				r.Name = name
+				break
+			}
+		}
+
+		regions = append(regions, r)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return regions, nil
 }

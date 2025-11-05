@@ -52,9 +52,9 @@ func TestGetMarketDataStaleness_Success_Unit(t *testing.T) {
 			return &MockRow{
 				ScanFunc: func(dest ...interface{}) error {
 					// Simulate query result: 1500 orders, fetched 5 minutes ago
-					*dest[0].(*int) = 1500                                    // total_orders
+					*dest[0].(*int) = 1500                                   // total_orders
 					*dest[1].(*time.Time) = time.Now().Add(-5 * time.Minute) // latest_fetch
-					*dest[2].(*float64) = 5.0                                 // age_minutes
+					*dest[2].(*float64) = 5.0                                // age_minutes
 					return nil
 				},
 			}

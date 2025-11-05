@@ -3,7 +3,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -27,10 +26,11 @@ type Handler struct {
 	sdeQuerier    database.SDEQuerier
 	marketQuerier database.MarketQuerier
 	postgresQuery database.PostgresQuerier // Interface for raw Postgres queries
+	regionQuerier database.RegionQuerier   // Interface for region data
 	esiClient     *esi.Client
 	marketService MarketServicer // Interface for testability
 	// TODO(Phase 2): Remove raw DB access, use services instead
-	db *database.DB // Temporary: for GetRegions (SDE access)
+	db *database.DB // Temporary: for direct DB access (being phased out)
 }
 
 // New creates a new handler instance with interfaces
@@ -39,9 +39,13 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 	// Type assert to get raw DB access (temporary)
 	var rawDB *database.DB
 	var postgresQuery database.PostgresQuerier
+	var regionQuerier database.RegionQuerier
 	if concreteDB, ok := healthChecker.(*database.DB); ok {
 		rawDB = concreteDB
 		postgresQuery = concreteDB // DB implements PostgresQuerier
+	}
+	if sdeRepo, ok := sdeQuerier.(*database.SDERepository); ok {
+		regionQuerier = sdeRepo // SDERepository implements RegionQuerier
 	}
 
 	// Create MarketService
@@ -52,6 +56,7 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 		sdeQuerier:    sdeQuerier,
 		marketQuerier: marketQuerier,
 		postgresQuery: postgresQuery,
+		regionQuerier: regionQuerier,
 		esiClient:     esiClient,
 		marketService: marketService,
 		db:            rawDB, // Temporary for Phase 1
@@ -67,7 +72,8 @@ func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRep
 		healthChecker: db,
 		sdeQuerier:    sdeRepo,
 		marketQuerier: marketRepo,
-		postgresQuery: db, // DB implements PostgresQuerier
+		postgresQuery: db,      // DB implements PostgresQuerier
+		regionQuerier: sdeRepo, // SDERepository implements RegionQuerier
 		esiClient:     esiClient,
 		marketService: marketService,
 		db:            db,
@@ -215,60 +221,32 @@ func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 
 // GetRegions handles SDE regions list requests
 func (h *Handler) GetRegions(c *fiber.Ctx) error {
-	query := `
-		SELECT _key, name
-		FROM mapRegions
-		ORDER BY name ASC
-	`
+	if h.regionQuerier == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Region querier not initialized",
+		})
+	}
 
-	rows, err := h.db.SDE.QueryContext(c.Context(), query)
+	regions, err := h.regionQuerier.GetAllRegions(c.Context())
 	if err != nil {
-		fmt.Printf("ERROR: Failed to query SDE regions: %v\n", err)
+		fmt.Printf("ERROR: Failed to fetch regions: %v\n", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to fetch regions",
 			"details": err.Error(),
 		})
 	}
-	defer rows.Close()
 
-	var regions []models.Region
-	for rows.Next() {
-		var r models.Region
-		var nameJSON string
-		if err := rows.Scan(&r.ID, &nameJSON); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   "Failed to parse region data",
-				"details": err.Error(),
-			})
+	// Convert RegionData to models.Region
+	result := make([]models.Region, len(regions))
+	for i, rd := range regions {
+		result[i] = models.Region{
+			ID:   rd.ID,
+			Name: rd.Name,
 		}
-
-		// Parse JSON name and extract English version
-		var names map[string]string
-		if err := json.Unmarshal([]byte(nameJSON), &names); err != nil {
-			// Fallback: use raw string if JSON parsing fails
-			r.Name = nameJSON
-		} else if enName, ok := names["en"]; ok {
-			r.Name = enName
-		} else {
-			// Fallback: use first available name
-			for _, name := range names {
-				r.Name = name
-				break
-			}
-		}
-
-		regions = append(regions, r)
-	}
-
-	if err := rows.Err(); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Error reading regions",
-			"details": err.Error(),
-		})
 	}
 
 	return c.JSON(models.RegionsResponse{
-		Regions: regions,
-		Count:   len(regions),
+		Regions: result,
+		Count:   len(result),
 	})
 }
