@@ -15,7 +15,6 @@
 | **Feature Implementation** | `feature-implementer` | "Implement user registration with email verification" |
 | **Test Coverage Improvement** | `test-implementer` | "Increase test coverage for handlers package" |
 | **Code Refactoring** | `code-refactor-master` | "Reorganize the components folder structure" |
-| **Handler Refactoring** | `orchestrator-pattern-refactorer` | "Handler has 4 service dependencies - apply orchestrator pattern" |
 | **Architecture Review** | `code-architecture-reviewer` | "Review the authentication module architecture" |
 | **Documentation** | `documentation-architect` | "Create API documentation for user endpoints" |
 | **Auth Debugging** | `auth-route-debugger` | "Getting 401 error on /api/users" |
@@ -66,23 +65,6 @@ Step 2: code-refactor-master
 → Verify nothing breaks
 ```
 
-**Handler Refactoring Chain:**
-
-```txt
-User: "Handler has too many dependencies and is hard to test"
-
-Step 1: code-architecture-reviewer
-→ Analyze handler complexity
-→ Identify Fat Handler anti-pattern
-→ Recommend Orchestrator Pattern
-
-Step 2: orchestrator-pattern-refactorer
-→ Extract service interfaces
-→ Create orchestrator service
-→ Simplify handler to HTTP-only
-→ Simplify tests (4 mocks → 1 mock)
-```
-
 **Research → Implementation Chain:**
 
 ```txt
@@ -112,7 +94,6 @@ User Request
     │
     ├─ Refactoring?
     │   ├─ Clear scope → code-refactor-master
-    │   ├─ Handler with 3+ services → orchestrator-pattern-refactorer
     │   └─ Needs planning → refactor-planner → code-refactor-master
     │
     ├─ Debugging?
@@ -179,7 +160,6 @@ Agents verwenden Skills als **Referenz-Material**:
 
 - refactor-planner → Plan refactoring strategy
 - code-refactor-master → Execute refactorings
-- orchestrator-pattern-refactorer → Extract business logic from fat handlers (3+ services, 50%+ business logic)
 
 **Review:**
 

@@ -86,4 +86,3 @@ func (s *MarketService) GetMarketOrders(ctx context.Context, regionID, typeID in
 	}
 	return orders, nil
 }
-

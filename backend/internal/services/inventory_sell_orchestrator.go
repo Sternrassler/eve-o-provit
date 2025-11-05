@@ -10,9 +10,9 @@ import (
 
 // InventorySellOrchestratorImpl implements the InventorySellOrchestrator interface
 type InventorySellOrchestratorImpl struct {
-	characterService CharacterServicer
+	characterService  CharacterServicer
 	navigationService NavigationServicer
-	tradingService   TradingServicer
+	tradingService    TradingServicer
 }
 
 // NewInventorySellOrchestrator creates a new orchestrator instance
