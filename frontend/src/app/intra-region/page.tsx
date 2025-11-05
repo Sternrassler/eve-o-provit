@@ -45,6 +45,7 @@ export default function IntraRegionPage() {
   const [apiRoutes, setApiRoutes] = useState<TradingRoute[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
   const [characterDataLoading, setCharacterDataLoading] = useState(false);
+  const [isRefreshingMarketData, setIsRefreshingMarketData] = useState(false);
 
   // Load character data when authenticated
   useEffect(() => {
@@ -169,7 +170,7 @@ export default function IntraRegionPage() {
     setDisplayedRoutes((prev) => Math.min(prev + 10, MAX_DISPLAYED_ROUTES));
   };
 
-  const isCalculateDisabled = !selectedRegion || !selectedShip || isCalculating || characterDataLoading;
+  const isCalculateDisabled = !selectedRegion || !selectedShip || isCalculating || characterDataLoading || isRefreshingMarketData;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -191,6 +192,7 @@ export default function IntraRegionPage() {
               value={selectedRegion}
               onChange={setSelectedRegion}
               disabled={isCalculating || characterDataLoading}
+              onRefreshStateChange={setIsRefreshingMarketData}
             />
             <ShipSelect
               value={selectedShip}

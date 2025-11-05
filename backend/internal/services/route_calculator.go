@@ -215,7 +215,7 @@ func (rc *RouteCalculator) fetchMarketOrders(ctx context.Context, regionID int) 
 	// Convert paginated results to MarketOrder structs
 	allOrders := make([]database.MarketOrder, 0)
 	fetchedAt := time.Now()
-	
+
 	for pageNum := 1; pageNum <= len(results); pageNum++ {
 		pageData, ok := results[pageNum]
 		if !ok {

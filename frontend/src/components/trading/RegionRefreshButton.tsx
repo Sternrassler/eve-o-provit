@@ -10,12 +10,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 interface RegionRefreshButtonProps {
   regionId: string;
   onRefreshComplete?: () => void;
+  onRefreshStateChange?: (isRefreshing: boolean) => void;
   disabled?: boolean;
 }
 
 export function RegionRefreshButton({
   regionId,
   onRefreshComplete,
+  onRefreshStateChange,
   disabled,
 }: RegionRefreshButtonProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -25,6 +27,7 @@ export function RegionRefreshButton({
     if (!regionId || isRefreshing) return;
 
     setIsRefreshing(true);
+    onRefreshStateChange?.(true);
     const startTime = Date.now();
 
     try {
@@ -63,6 +66,7 @@ export function RegionRefreshButton({
       });
     } finally {
       setIsRefreshing(false);
+      onRefreshStateChange?.(false);
     }
   };
 

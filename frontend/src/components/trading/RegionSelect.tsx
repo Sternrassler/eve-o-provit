@@ -21,6 +21,7 @@ interface RegionSelectProps {
   showStaleness?: boolean;
   showRefresh?: boolean;
   onRefreshComplete?: () => void;
+  onRefreshStateChange?: (isRefreshing: boolean) => void;
 }
 
 export function RegionSelect({ 
@@ -30,6 +31,7 @@ export function RegionSelect({
   showStaleness = true,
   showRefresh = true,
   onRefreshComplete,
+  onRefreshStateChange,
 }: RegionSelectProps) {
   const [regions, setRegions] = useState<Region[]>(fallbackRegions);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,7 @@ export function RegionSelect({
             regionId={value} 
             disabled={disabled || loading || !value}
             onRefreshComplete={handleRefreshComplete}
+            onRefreshStateChange={onRefreshStateChange}
           />
         )}
       </div>
