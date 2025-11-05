@@ -113,10 +113,42 @@ test-be-ex-nav: ## Führt Navigation-Example aus (Jita → Amarr)
 	@cd $(BACKEND_DIR)/examples/navigation && go run main.go -from 30000142 -to 30002187 -exact
 	@echo "[make test-be-ex-nav] ✅ Navigation-Example erfolgreich"
 
-test-fe: ## Führt Frontend-Tests aus (Platzhalter)
-	@echo "[make test-fe] Keine Frontend-Tests konfiguriert – Platzhalter für zukünftige Implementierung"
+test-fe: ## Führt alle Frontend-Tests aus (Vitest Unit + Playwright E2E)
+	@echo "[make test-fe] Führe Frontend Unit-Tests aus..."
+	@cd $(FRONTEND_DIR) && npm run test
+	@echo "[make test-fe] ✅ Frontend Tests erfolgreich"
 
-lint: lint-be ## Führt alle Linting-Checks aus (Backend + Frontend)
+test-fe-unit: ## Führt Frontend Unit-Tests aus (Vitest)
+	@echo "[make test-fe-unit] Führe Frontend Unit-Tests aus..."
+	@cd $(FRONTEND_DIR) && npm run test
+
+test-fe-unit-ui: ## Führt Frontend Unit-Tests mit UI aus (Vitest UI)
+	@echo "[make test-fe-unit-ui] Starte Vitest UI..."
+	@cd $(FRONTEND_DIR) && npm run test:ui
+
+test-fe-coverage: ## Führt Frontend-Tests mit Coverage aus
+	@echo "[make test-fe-coverage] Führe Frontend-Tests mit Coverage aus..."
+	@cd $(FRONTEND_DIR) && npm run test:coverage
+	@echo "[make test-fe-coverage] ✅ Coverage Report erstellt"
+
+test-fe-e2e: ## Führt Playwright E2E-Tests aus (headless)
+	@echo "[make test-fe-e2e] Führe Playwright E2E-Tests aus..."
+	@cd $(FRONTEND_DIR) && npm run test:e2e
+	@echo "[make test-fe-e2e] ✅ E2E-Tests erfolgreich"
+
+test-fe-e2e-headed: ## Führt Playwright E2E-Tests mit sichtbarem Browser aus
+	@echo "[make test-fe-e2e-headed] Führe Playwright E2E-Tests (headed) aus..."
+	@cd $(FRONTEND_DIR) && npm run test:e2e:headed
+
+test-fe-e2e-debug: ## Führt Playwright E2E-Tests im Debug-Modus aus
+	@echo "[make test-fe-e2e-debug] Führe Playwright E2E-Tests (debug) aus..."
+	@cd $(FRONTEND_DIR) && npm run test:e2e:debug
+
+test-fe-e2e-ui: ## Führt Playwright E2E-Tests mit UI aus
+	@echo "[make test-fe-e2e-ui] Starte Playwright UI..."
+	@cd $(FRONTEND_DIR) && npm run test:e2e:ui
+
+lint: lint-be lint-fe ## Führt alle Linting-Checks aus (Backend + Frontend)
 	@echo "[make lint] ✅ Alle Linting-Checks abgeschlossen"
 
 lint-be: ## Führt Backend Linting aus (gofmt, go vet)
@@ -125,10 +157,12 @@ lint-be: ## Führt Backend Linting aus (gofmt, go vet)
 	@cd $(BACKEND_DIR) && go vet ./...
 	@echo "[make lint-be] ✅ Backend Linting erfolgreich"
 
-lint-fe: ## Führt Frontend Linting aus (Platzhalter)
-	@echo "[make lint-fe] Kein Frontend Linting konfiguriert – Platzhalter für zukünftige Implementierung"
+lint-fe: ## Führt Frontend Linting aus (ESLint)
+	@echo "[make lint-fe] Prüfe Frontend Code-Stil..."
+	@cd $(FRONTEND_DIR) && npm run lint
+	@echo "[make lint-fe] ✅ Frontend Linting erfolgreich"
 
-lint-ci: lint-be ## Statische Analysen (CI-Modus)
+lint-ci: lint-be lint-fe ## Statische Analysen (CI-Modus)
 	@echo "[make lint-ci] ✅ CI Linting abgeschlossen"
 
 adr-ref: ## Erzwingt ADR-Referenzen für Governance-Änderungen (CI-kompatibel)
