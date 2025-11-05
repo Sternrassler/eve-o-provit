@@ -370,3 +370,111 @@ func TestNavigationCacheKeyFormat(t *testing.T) {
 	assert.NotEmpty(t, keys)
 	assert.Contains(t, keys[0], "nav:30000142:30002187", "Key should contain both system IDs")
 }
+
+// TestMarketOrderCache_MultipleRegions tests caching orders for different regions
+func TestMarketOrderCache_MultipleRegions(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	cache := NewMarketOrderCache(redisClient)
+	ctx := context.Background()
+
+	// Cache orders for different regions
+	regions := []struct {
+		regionID int
+		orders   []database.MarketOrder
+	}{
+		{
+			regionID: 10000002, // The Forge (Jita)
+			orders: []database.MarketOrder{
+				{OrderID: 1001, TypeID: 34, Price: 5.50},
+				{OrderID: 1002, TypeID: 34, Price: 5.25},
+			},
+		},
+		{
+			regionID: 10000043, // Domain (Amarr)
+			orders: []database.MarketOrder{
+				{OrderID: 2001, TypeID: 34, Price: 5.60},
+				{OrderID: 2002, TypeID: 34, Price: 5.30},
+			},
+		},
+		{
+			regionID: 10000032, // Sinq Laison (Dodixie)
+			orders: []database.MarketOrder{
+				{OrderID: 3001, TypeID: 34, Price: 5.55},
+			},
+		},
+	}
+
+	// Set all regions
+	for _, r := range regions {
+		err := cache.Set(ctx, r.regionID, r.orders)
+		require.NoError(t, err)
+	}
+
+	// Verify all regions independently
+	for _, r := range regions {
+		cachedOrders, err := cache.Get(ctx, r.regionID)
+		require.NoError(t, err)
+		assert.Len(t, cachedOrders, len(r.orders))
+		assert.Equal(t, r.orders[0].OrderID, cachedOrders[0].OrderID)
+		assert.Equal(t, r.orders[0].Price, cachedOrders[0].Price)
+	}
+
+	// Verify keys exist in Redis
+	keys := s.Keys()
+	assert.Len(t, keys, 3, "Should have 3 separate cache keys")
+}
+
+// TestNavigationCache_BidirectionalRoutes tests caching routes in both directions
+func TestNavigationCache_BidirectionalRoutes(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	cache := NewNavigationCache(redisClient)
+	ctx := context.Background()
+
+	jita := int64(30000142)
+	amarr := int64(30002187)
+
+	// Route from Jita to Amarr
+	jitaToAmarr := NavigationResult{
+		TravelTimeSeconds: 450.0,
+		Jumps:             10,
+	}
+	err := cache.Set(ctx, jita, amarr, jitaToAmarr)
+	require.NoError(t, err)
+
+	// Route from Amarr to Jita (different route characteristics)
+	amarrToJita := NavigationResult{
+		TravelTimeSeconds: 460.0, // Slightly different timing
+		Jumps:             10,
+	}
+	err = cache.Set(ctx, amarr, jita, amarrToJita)
+	require.NoError(t, err)
+
+	// Verify both directions independently
+	cachedJitaToAmarr, err := cache.Get(ctx, jita, amarr)
+	require.NoError(t, err)
+	assert.Equal(t, 10, cachedJitaToAmarr.Jumps)
+	assert.InDelta(t, 450.0, cachedJitaToAmarr.TravelTimeSeconds, 0.1)
+
+	cachedAmarrToJita, err := cache.Get(ctx, amarr, jita)
+	require.NoError(t, err)
+	assert.Equal(t, 10, cachedAmarrToJita.Jumps)
+	assert.InDelta(t, 460.0, cachedAmarrToJita.TravelTimeSeconds, 0.1)
+
+	// Verify separate keys
+	keys := s.Keys()
+	assert.Len(t, keys, 2, "Should have 2 separate cache keys for bidirectional routes")
+}

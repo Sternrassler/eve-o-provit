@@ -204,8 +204,6 @@ func TestESIMarketOrder_Marshaling(t *testing.T) {
 	assert.True(t, order.Issued.Equal(unmarshaled.Issued))
 }
 
-
-
 // TestConfig_DefaultValues tests config struct
 func TestConfig_DefaultValues(t *testing.T) {
 	cfg := Config{
@@ -385,4 +383,159 @@ func TestConfig_CustomValues(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 	defer client.Close()
+}
+
+// TestConfig_Validation tests configuration edge cases
+func TestConfig_Validation(t *testing.T) {
+	tests := []struct {
+		name   string
+		config Config
+		valid  bool
+	}{
+		{
+			name: "minimal valid config",
+			config: Config{
+				UserAgent: "test-agent",
+			},
+			valid: true,
+		},
+		{
+			name: "empty user agent",
+			config: Config{
+				UserAgent: "",
+			},
+			valid: true, // Empty user agent is allowed (will use default)
+		},
+		{
+			name: "very long user agent",
+			config: Config{
+				UserAgent: string(make([]byte, 500)),
+			},
+			valid: true,
+		},
+		{
+			name: "special characters in user agent",
+			config: Config{
+				UserAgent: "test/1.0 (contact@example.com)",
+			},
+			valid: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Config struct has no validation, just ensure it can be created
+			assert.NotNil(t, tt.config)
+			if tt.valid {
+				if tt.name != "empty user agent" {
+					assert.NotEmpty(t, tt.config.UserAgent)
+				}
+			}
+		})
+	}
+}
+
+// TestESIMarketOrder_BoundaryValues tests boundary value handling
+func TestESIMarketOrder_BoundaryValues(t *testing.T) {
+	tests := []struct {
+		name  string
+		order ESIMarketOrder
+		valid bool
+	}{
+		{
+			name: "minimum valid order",
+			order: ESIMarketOrder{
+				OrderID:      1,
+				TypeID:       1,
+				LocationID:   1,
+				VolumeTotal:  1,
+				VolumeRemain: 1,
+				MinVolume:    1,
+				Price:        0.01,
+				IsBuyOrder:   false,
+				Duration:     1,
+				Issued:       time.Now(),
+				Range:        "station",
+			},
+			valid: true,
+		},
+		{
+			name: "maximum realistic values",
+			order: ESIMarketOrder{
+				OrderID:      9223372036854775807, // Max int64
+				TypeID:       999999999,
+				LocationID:   999999999,
+				VolumeTotal:  2147483647, // Max int32
+				VolumeRemain: 2147483647,
+				MinVolume:    2147483647,
+				Price:        999999999999.99,
+				IsBuyOrder:   true,
+				Duration:     365,
+				Issued:       time.Now(),
+				Range:        "region",
+			},
+			valid: true,
+		},
+		{
+			name: "zero price (invalid in real ESI)",
+			order: ESIMarketOrder{
+				OrderID:      12345,
+				TypeID:       34,
+				LocationID:   60003760,
+				VolumeTotal:  1000,
+				VolumeRemain: 1000,
+				MinVolume:    1,
+				Price:        0.0, // Invalid
+				IsBuyOrder:   false,
+				Duration:     90,
+				Issued:       time.Now(),
+				Range:        "station",
+			},
+			valid: false,
+		},
+		{
+			name: "zero volume remaining (expired order)",
+			order: ESIMarketOrder{
+				OrderID:      12345,
+				TypeID:       34,
+				LocationID:   60003760,
+				VolumeTotal:  1000,
+				VolumeRemain: 0, // Expired
+				MinVolume:    1,
+				Price:        5.50,
+				IsBuyOrder:   false,
+				Duration:     90,
+				Issued:       time.Now(),
+				Range:        "station",
+			},
+			valid: true, // Valid state (order fulfilled)
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Marshal to JSON
+			jsonData, err := json.Marshal(tt.order)
+			require.NoError(t, err)
+
+			// Unmarshal back
+			var decoded ESIMarketOrder
+			err = json.Unmarshal(jsonData, &decoded)
+			require.NoError(t, err)
+
+			// Verify roundtrip
+			assert.Equal(t, tt.order.OrderID, decoded.OrderID)
+			assert.Equal(t, tt.order.TypeID, decoded.TypeID)
+			assert.Equal(t, tt.order.Price, decoded.Price)
+			assert.Equal(t, tt.order.VolumeRemain, decoded.VolumeRemain)
+
+			// Validation checks
+			if tt.valid {
+				assert.Greater(t, decoded.OrderID, int64(0))
+			} else {
+				// Invalid orders still decode, but logic should reject them
+				assert.LessOrEqual(t, decoded.Price, 0.0)
+			}
+		})
+	}
 }
