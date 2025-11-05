@@ -57,13 +57,23 @@
   - **Vorher:** 80 Zeilen mit ESI/DB-Logik
   - **Nachher:** 30 Zeilen thin controller
   - **Reduzierung:** 60+ Zeilen entfernt
-- [ ] `CalculateRoutes` Handler refactoren
-- [ ] `SetAutopilotWaypoint` Handler refactoren
+- [x] `CalculateInventorySellRoutes` Handler refactoren
+  - **Vorher:** 200+ Zeilen mit Business-Logik
+  - **Nachher:** 70 Zeilen thin controller
+  - **Reduzierung:** 150+ Zeilen entfernt
+- [x] `CalculateRoutes` Handler (kein Refactoring nötig)
+  - Bereits thin controller (nutzt RouteCalculator)
+- [ ] `SetAutopilotWaypoint` Handler (optional)
+  - Bereits minimal (direkter ESI Call)
 
 **Commits:**
 
 - `4ebb39c`: MarketService + TradingService + Tests
 - `2eba22c`: GetMarketOrders Refactoring
+- `a476472`: TODO Update - Phase 3 Progress
+- `e937700`: CalculateInventorySellRoutes Refactoring
+
+**Gesamt-Reduzierung:** 210+ Zeilen aus Handlers in Services extrahiert
 
 ### Task 3.2: Handler Unit Tests (8h)
 
