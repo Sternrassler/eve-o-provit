@@ -356,33 +356,33 @@ func TestCalculateTaxRate_SkillFormulas(t *testing.T) {
 			name:                 "Level 0 (untrained)",
 			accountingLevel:      0,
 			brokerRelationsLevel: 0,
-			expectedBrokerFee:    0.03,     // 3% * (1 - 0) = 3%
-			expectedSalesTax:     0.025,    // 2.5% * (1 - 0) = 2.5%
-			expectedTotal:        0.055,    // 5.5%
+			expectedBrokerFee:    0.03,  // 3% * (1 - 0) = 3%
+			expectedSalesTax:     0.025, // 2.5% * (1 - 0) = 2.5%
+			expectedTotal:        0.055, // 5.5%
 		},
 		{
 			name:                 "Level 1",
 			accountingLevel:      1,
 			brokerRelationsLevel: 1,
-			expectedBrokerFee:    0.0291,   // 3% * (1 - 0.03) = 2.91%
-			expectedSalesTax:     0.02225,  // 2.5% * (1 - 0.11) = 2.225%
-			expectedTotal:        0.05135,  // 5.135%
+			expectedBrokerFee:    0.0291,  // 3% * (1 - 0.03) = 2.91%
+			expectedSalesTax:     0.02225, // 2.5% * (1 - 0.11) = 2.225%
+			expectedTotal:        0.05135, // 5.135%
 		},
 		{
 			name:                 "Level 2",
 			accountingLevel:      2,
 			brokerRelationsLevel: 2,
-			expectedBrokerFee:    0.0282,   // 3% * (1 - 0.06) = 2.82%
-			expectedSalesTax:     0.0195,   // 2.5% * (1 - 0.22) = 1.95%
-			expectedTotal:        0.0477,   // 4.77%
+			expectedBrokerFee:    0.0282, // 3% * (1 - 0.06) = 2.82%
+			expectedSalesTax:     0.0195, // 2.5% * (1 - 0.22) = 1.95%
+			expectedTotal:        0.0477, // 4.77%
 		},
 		{
 			name:                 "Level 4",
 			accountingLevel:      4,
 			brokerRelationsLevel: 4,
-			expectedBrokerFee:    0.0264,   // 3% * (1 - 0.12) = 2.64%
-			expectedSalesTax:     0.014,    // 2.5% * (1 - 0.44) = 1.4%
-			expectedTotal:        0.0404,   // 4.04%
+			expectedBrokerFee:    0.0264, // 3% * (1 - 0.12) = 2.64%
+			expectedSalesTax:     0.014,  // 2.5% * (1 - 0.44) = 1.4%
+			expectedTotal:        0.0404, // 4.04%
 		},
 	}
 

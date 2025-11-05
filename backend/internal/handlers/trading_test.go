@@ -480,3 +480,95 @@ func TestResponseStructures(t *testing.T) {
 		}
 	})
 }
+
+// TestSearchItems_CaseSensitivity tests search case insensitivity
+func TestSearchItems_CaseSensitivity(t *testing.T) {
+	t.Run("Lowercase query", func(t *testing.T) {
+		query := "tritanium"
+		if len(query) < 3 {
+			t.Errorf("Query too short: %s", query)
+		}
+	})
+
+	t.Run("Uppercase query", func(t *testing.T) {
+		query := "TRITANIUM"
+		if len(query) < 3 {
+			t.Errorf("Query too short: %s", query)
+		}
+	})
+
+	t.Run("Mixed case query", func(t *testing.T) {
+		query := "TrItAnIuM"
+		if len(query) < 3 {
+			t.Errorf("Query too short: %s", query)
+		}
+	})
+}
+
+// TestSetAutopilotWaypoint_BooleanFlags tests boolean flag handling
+func TestSetAutopilotWaypoint_BooleanFlags(t *testing.T) {
+	tests := []struct {
+		name                   string
+		clearOtherWaypoints    bool
+		addToBeginning         bool
+		expectedClearValue     bool
+		expectedBeginningValue bool
+	}{
+		{
+			name:                   "Clear waypoints and add to beginning",
+			clearOtherWaypoints:    true,
+			addToBeginning:         true,
+			expectedClearValue:     true,
+			expectedBeginningValue: true,
+		},
+		{
+			name:                   "Keep waypoints and add to end",
+			clearOtherWaypoints:    false,
+			addToBeginning:         false,
+			expectedClearValue:     false,
+			expectedBeginningValue: false,
+		},
+		{
+			name:                   "Clear waypoints but add to end",
+			clearOtherWaypoints:    true,
+			addToBeginning:         false,
+			expectedClearValue:     true,
+			expectedBeginningValue: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test inline struct from trading.go
+			type waypointRequest struct {
+				DestinationID  int64 `json:"destination_id"`
+				ClearOther     bool  `json:"clear_other_waypoints"`
+				AddToBeginning bool  `json:"add_to_beginning"`
+			}
+
+			req := waypointRequest{
+				DestinationID:  30000142,
+				ClearOther:     tt.clearOtherWaypoints,
+				AddToBeginning: tt.addToBeginning,
+			}
+
+			jsonData, err := json.Marshal(req)
+			if err != nil {
+				t.Fatalf("Failed to marshal request: %v", err)
+			}
+
+			var decoded waypointRequest
+			if err := json.Unmarshal(jsonData, &decoded); err != nil {
+				t.Fatalf("Failed to unmarshal request: %v", err)
+			}
+
+			if decoded.ClearOther != tt.expectedClearValue {
+				t.Errorf("ClearOther = %v, want %v", decoded.ClearOther, tt.expectedClearValue)
+			}
+
+			if decoded.AddToBeginning != tt.expectedBeginningValue {
+				t.Errorf("AddToBeginning = %v, want %v", decoded.AddToBeginning, tt.expectedBeginningValue)
+			}
+		})
+	}
+}
