@@ -300,6 +300,7 @@ func TestGetMarketOrders_EmptyResult(t *testing.T) {
 
 // TestGetMarketOrders_MultipleOrders tests retrieval of multiple orders
 func TestGetMarketOrders_MultipleOrders(t *testing.T) {
+	//nolint:unusedwrite // Test fixtures with realistic market data
 	mockRepo := &mockMarketRepository{
 		getOrders: []database.MarketOrder{
 			{OrderID: 1, TypeID: 34, Price: 5.00, IsBuyOrder: false},
@@ -333,6 +334,7 @@ func TestGetMarketOrders_MultipleOrders(t *testing.T) {
 
 // TestESIMarketOrder_BuyOrderProperties tests buy order specific properties
 func TestESIMarketOrder_BuyOrderProperties(t *testing.T) {
+	//nolint:unusedwrite // Test fixture with complete realistic data
 	buyOrder := ESIMarketOrder{
 		OrderID:      123,
 		TypeID:       34,
@@ -362,9 +364,10 @@ func TestESIMarketOrder_BuyOrderProperties(t *testing.T) {
 
 // TestESIMarketOrder_SellOrderProperties tests sell order specific properties
 func TestESIMarketOrder_SellOrderProperties(t *testing.T) {
+	//nolint:unusedwrite // Test fixture with complete realistic data
 	sellOrder := ESIMarketOrder{
 		OrderID:      456,
-		TypeID:       35,
+		TypeID:       34,
 		LocationID:   60003760,
 		VolumeTotal:  2000,
 		VolumeRemain: 1500,
@@ -373,7 +376,7 @@ func TestESIMarketOrder_SellOrderProperties(t *testing.T) {
 		IsBuyOrder:   false,
 		Duration:     90,
 		Issued:       time.Now(),
-		Range:        "station", // Sell orders typically station-limited
+		Range:        "station", // Sell orders are station-only
 	}
 
 	if sellOrder.IsBuyOrder {

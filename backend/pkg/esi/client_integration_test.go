@@ -291,6 +291,7 @@ func TestESIMarketOrder_RangeValues(t *testing.T) {
 
 	for _, r := range ranges {
 		t.Run("Range_"+r, func(t *testing.T) {
+			//nolint:unusedwrite // Test fixture for range validation
 			order := ESIMarketOrder{
 				OrderID: 12345,
 				Range:   r,
