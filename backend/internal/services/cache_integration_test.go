@@ -56,8 +56,8 @@ func setupRedisContainer(t *testing.T) (*redis.Client, func()) {
 	return redisClient, cleanup
 }
 
-// TestMarketOrderCache_SetAndGet tests basic cache set and get
-func TestMarketOrderCache_SetAndGet(t *testing.T) {
+// TestMarketOrderCache_SetAndGet_Integration tests basic cache set and get with real Redis
+func TestMarketOrderCache_SetAndGet_Integration(t *testing.T) {
 	redisClient, cleanup := setupRedisContainer(t)
 	defer cleanup()
 
@@ -113,8 +113,8 @@ func TestMarketOrderCache_SetAndGet(t *testing.T) {
 	assert.Equal(t, orders[1].Price, cachedOrders[1].Price)
 }
 
-// TestMarketOrderCache_CacheMiss tests cache miss behavior
-func TestMarketOrderCache_CacheMiss(t *testing.T) {
+// TestMarketOrderCache_CacheMiss_Integration tests cache miss behavior with real Redis
+func TestMarketOrderCache_CacheMiss_Integration(t *testing.T) {
 	redisClient, cleanup := setupRedisContainer(t)
 	defer cleanup()
 
@@ -127,8 +127,8 @@ func TestMarketOrderCache_CacheMiss(t *testing.T) {
 	assert.Equal(t, redis.Nil, err)
 }
 
-// TestMarketOrderCache_TTLExpiration tests TTL expiration
-func TestMarketOrderCache_TTLExpiration(t *testing.T) {
+// TestMarketOrderCache_TTLExpiration_Integration tests TTL expiration with real Redis
+func TestMarketOrderCache_TTLExpiration_Integration(t *testing.T) {
 	redisClient, cleanup := setupRedisContainer(t)
 	defer cleanup()
 
@@ -161,8 +161,8 @@ func TestMarketOrderCache_TTLExpiration(t *testing.T) {
 	assert.Equal(t, redis.Nil, err)
 }
 
-// TestMarketOrderCache_GzipCompression tests gzip compression
-func TestMarketOrderCache_GzipCompression(t *testing.T) {
+// TestMarketOrderCache_GzipCompression_Integration tests gzip compression with real Redis
+func TestMarketOrderCache_GzipCompression_Integration(t *testing.T) {
 	redisClient, cleanup := setupRedisContainer(t)
 	defer cleanup()
 
@@ -207,8 +207,8 @@ func TestMarketOrderCache_GzipCompression(t *testing.T) {
 	assert.Less(t, len(compressed), 100000*150*20/100, "Compression should reduce size to <20%")
 }
 
-// TestMarketOrderCache_ConcurrentAccess tests concurrent cache access
-func TestMarketOrderCache_ConcurrentAccess(t *testing.T) {
+// TestMarketOrderCache_ConcurrentAccess_Integration tests concurrent cache access with real Redis
+func TestMarketOrderCache_ConcurrentAccess_Integration(t *testing.T) {
 	redisClient, cleanup := setupRedisContainer(t)
 	defer cleanup()
 
@@ -246,8 +246,8 @@ func TestMarketOrderCache_ConcurrentAccess(t *testing.T) {
 	assert.Equal(t, 1, len(cachedOrders), "Should have exactly 1 order (last write wins)")
 }
 
-// TestNavigationCache_SetAndGet tests navigation cache
-func TestNavigationCache_SetAndGet(t *testing.T) {
+// TestNavigationCache_SetAndGet_Integration tests navigation cache with real Redis
+func TestNavigationCache_SetAndGet_Integration(t *testing.T) {
 	redisClient, cleanup := setupRedisContainer(t)
 	defer cleanup()
 
@@ -272,8 +272,8 @@ func TestNavigationCache_SetAndGet(t *testing.T) {
 	assert.Equal(t, result.Jumps, cached.Jumps)
 }
 
-// TestNavigationCache_TTL tests navigation cache TTL
-func TestNavigationCache_TTL(t *testing.T) {
+// TestNavigationCache_TTL_Integration tests navigation cache TTL with real Redis
+func TestNavigationCache_TTL_Integration(t *testing.T) {
 	redisClient, cleanup := setupRedisContainer(t)
 	defer cleanup()
 
