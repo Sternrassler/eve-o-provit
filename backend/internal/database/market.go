@@ -67,13 +67,13 @@ func (r *MarketRepository) UpsertMarketOrders(ctx context.Context, orders []Mark
 	// This is significantly faster than individual Exec calls in a loop
 	// Especially critical for large datasets (e.g., 177k orders for Domain region)
 	const batchSize = 1000 // Process in chunks to avoid memory issues
-	
+
 	for i := 0; i < len(orders); i += batchSize {
 		end := i + batchSize
 		if end > len(orders) {
 			end = len(orders)
 		}
-		
+
 		batch := orders[i:end]
 		if err := r.upsertBatch(ctx, batch); err != nil {
 			return fmt.Errorf("failed to upsert batch %d-%d: %w", i, end, err)
@@ -123,7 +123,7 @@ func (r *MarketRepository) upsertBatch(ctx context.Context, orders []MarketOrder
 
 	// Send batch and close results immediately
 	results := tx.SendBatch(ctx, batch)
-	
+
 	// Check all results
 	for i := 0; i < batch.Len(); i++ {
 		if _, err := results.Exec(); err != nil {
@@ -131,7 +131,7 @@ func (r *MarketRepository) upsertBatch(ctx context.Context, orders []MarketOrder
 			return fmt.Errorf("batch exec failed at index %d: %w", i, err)
 		}
 	}
-	
+
 	// Close results before commit
 	if err := results.Close(); err != nil {
 		return fmt.Errorf("failed to close batch results: %w", err)

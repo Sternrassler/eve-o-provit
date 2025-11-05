@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Sternrassler/eve-esi-client/pkg/pagination"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/metrics"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
@@ -200,15 +201,45 @@ func (rc *RouteCalculator) fetchMarketOrders(ctx context.Context, regionID int) 
 
 	metrics.TradingCacheMissesTotal.Inc()
 
-	// Fetch fresh data from ESI (this stores in DB)
-	if err := rc.esiClient.FetchMarketOrders(ctx, regionID); err != nil {
-		return nil, err
+	// Fetch fresh data from ESI using BatchFetcher for parallel pagination (much faster)
+	config := pagination.DefaultConfig()
+	fetcher := pagination.NewBatchFetcher(rc.esiClient.GetRawClient(), config)
+	endpoint := fmt.Sprintf("/v1/markets/%d/orders/", regionID)
+
+	// Fetch all pages in parallel
+	results, err := fetcher.FetchAllPages(ctx, endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch market data from ESI: %w", err)
 	}
 
-	// Get all orders from database for this region
-	allOrders, err := rc.marketRepo.GetAllMarketOrdersForRegion(ctx, regionID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get orders from database: %w", err)
+	// Convert paginated results to MarketOrder structs
+	allOrders := make([]database.MarketOrder, 0)
+	fetchedAt := time.Now()
+	
+	for pageNum := 1; pageNum <= len(results); pageNum++ {
+		pageData, ok := results[pageNum]
+		if !ok {
+			continue
+		}
+
+		// Parse page data
+		var orders []database.MarketOrder
+		if err := json.Unmarshal(pageData, &orders); err != nil {
+			return nil, fmt.Errorf("failed to parse market data from page %d: %w", pageNum, err)
+		}
+
+		// Add region ID and timestamp
+		for i := range orders {
+			orders[i].RegionID = regionID
+			orders[i].FetchedAt = fetchedAt
+		}
+
+		allOrders = append(allOrders, orders...)
+	}
+
+	// Store in database using batch upsert
+	if err := rc.marketRepo.UpsertMarketOrders(ctx, allOrders); err != nil {
+		return nil, fmt.Errorf("failed to store market data: %w", err)
 	}
 
 	// Update in-memory cache
