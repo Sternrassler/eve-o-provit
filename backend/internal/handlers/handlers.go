@@ -23,12 +23,12 @@ type MarketServicer interface {
 
 // Handler holds dependencies for HTTP handlers
 type Handler struct {
-	healthChecker  database.HealthChecker
-	sdeQuerier     database.SDEQuerier
-	marketQuerier  database.MarketQuerier
-	postgresQuery  database.PostgresQuerier // Interface for raw Postgres queries
-	esiClient      *esi.Client
-	marketService  MarketServicer // Interface for testability
+	healthChecker database.HealthChecker
+	sdeQuerier    database.SDEQuerier
+	marketQuerier database.MarketQuerier
+	postgresQuery database.PostgresQuerier // Interface for raw Postgres queries
+	esiClient     *esi.Client
+	marketService MarketServicer // Interface for testability
 	// TODO(Phase 2): Remove raw DB access, use services instead
 	db *database.DB // Temporary: for GetRegions (SDE access)
 }
