@@ -23,15 +23,15 @@
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Server Components by Default:** Only use `"use client"` when needed (interactivity, hooks, browser APIs)
-2. **Minimize Client Bundles:** Keep server components for data fetching, static content
-3. **Environment Variables:** `NEXT_PUBLIC_*` for client-side, no prefix for server-side
-4. **Loading States:** Use `loading.tsx` for route-level loading UI
-5. **Error Boundaries:** Use `error.tsx` for error handling
-6. **Metadata API:** Define SEO metadata in `layout.tsx` or `page.tsx`
-7. **Route Organization:** Group related routes in folders with `layout.tsx`
+1. **Server Components by Default (SHOULD):** Only use `"use client"` when needed (interactivity, hooks, browser APIs)
+2. **Minimize Client Bundles (SHOULD):** Keep server components for data fetching, static content
+3. **Environment Variables (MUST):** `NEXT_PUBLIC_*` for client-side, no prefix for server-side
+4. **Loading States (SHOULD):** Use `loading.tsx` for route-level loading UI
+5. **Error Boundaries (SHOULD):** Use `error.tsx` for error handling
+6. **Metadata API (SHOULD):** Define SEO metadata in `layout.tsx` or `page.tsx`
+7. **Route Organization (SHOULD):** Group related routes in folders with `layout.tsx`
 
 ---
 

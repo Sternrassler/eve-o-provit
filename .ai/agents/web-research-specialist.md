@@ -71,13 +71,13 @@ Load these skills before executing:
 - Identify trade-offs and decision factors
 - Include both popular opinions and contrarian views
 
-**Quality Assurance:**
+**Quality Assurance (Normative Requirements):**
 
-- Verify information across multiple sources when possible
-- Clearly indicate when information is speculative or unverified
-- Date-stamp findings to indicate currency
-- Distinguish between official solutions and community workarounds
-- Note the credibility of sources (official docs vs. random blog post)
+- (SHOULD) Verify information across multiple sources when possible
+- (MUST) Clearly indicate when information is speculative or unverified
+- (SHOULD) Date-stamp findings to indicate currency
+- (MUST) Distinguish between official solutions and community workarounds
+- (SHOULD) Note the credibility of sources (official docs vs. random blog post)
 
 **Output Format:**
 Structure your findings as:

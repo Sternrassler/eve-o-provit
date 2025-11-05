@@ -92,16 +92,16 @@ Load these skills before executing:
    - Validate TypeScript types are correct
    - Test the complete feature end-to-end
 
-**Critical Rules:**
+**Critical Rules (Normative Requirements):**
 
-- ALWAYS plan file structure before creating files
-- ALWAYS follow existing project patterns and conventions
-- ALWAYS implement proper TypeScript types from the start
-- ALWAYS use approved loading components (LoadingOverlay, SuspenseLoader, PaperWrapper)
-- ALWAYS implement error handling at every layer
-- ALWAYS reuse existing utilities instead of duplicating code
-- NEVER create files longer than 300 lines (extract into smaller modules)
-- NEVER skip proper validation (frontend AND backend)
+- (MUST) Plan file structure before creating files
+- (MUST) Follow existing project patterns and conventions
+- (MUST) Implement proper TypeScript types from the start
+- (MUST) Use approved loading components (LoadingOverlay, SuspenseLoader, PaperWrapper)
+- (MUST) Implement error handling at every layer
+- (SHOULD) Reuse existing utilities instead of duplicating code
+- (MUST NOT) Create files longer than 300 lines (extract into smaller modules)
+- (MUST NOT) Skip proper validation (frontend AND backend)
 
 **Quality Metrics You Enforce:**
 

@@ -64,39 +64,39 @@ Create Page → Navigate to URL → Wait for Load → Interact → Close Page
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Snapshot Before Screenshot**
+1. **Snapshot Before Screenshot (MUST)**
    - Text snapshots are cheaper and faster
    - Use screenshots only for visual validation or debugging
    - Combine both: snapshot for interaction, screenshot for verification
 
-2. **Use Accessibility Selectors**
+2. **Use Accessibility Selectors (MUST)**
    - More stable than CSS selectors
    - Promotes accessible markup
    - Example: `role=button[name="Submit"]` vs `.btn-primary`
 
-3. **Wait for Network Idle**
+3. **Wait for Network Idle (MUST)**
    - Don't interact immediately after navigation
    - Use `wait_for` with expected text/elements
    - Monitor network requests to confirm API responses
 
-4. **Handle Dynamic Content**
+4. **Handle Dynamic Content (SHOULD)**
    - Poll for element visibility before interaction
    - Use `wait_for` instead of arbitrary delays
    - Check console for JavaScript errors
 
-5. **Isolate Tests**
+5. **Isolate Tests (MUST)**
    - Each test should create its own page
    - Clean up pages after test completion
    - Avoid shared state between tests
 
-6. **Monitor Console & Network**
+6. **Monitor Console & Network (SHOULD)**
    - Check console for errors after critical actions
    - Validate network requests for expected API calls
    - Use network inspection for debugging 401/403 errors
 
-7. **Performance Testing**
+7. **Performance Testing (MAY)**
    - Use performance traces for Core Web Vitals
    - Identify slow page loads (LCP, FCP)
    - Analyze performance insights for optimization

@@ -124,20 +124,20 @@ Load these skills before executing:
    - Document known gaps or testing limitations
    - Provide recommendations for next testing priorities
 
-**Critical Rules:**
+**Critical Rules (Normative Requirements):**
 
-- ALWAYS follow testing patterns and conventions from loaded testing skills
-- ALWAYS consult project build workflows before running integration tests (Docker skills)
-- ALWAYS separate fast unit tests from slower integration tests
-- ALWAYS implement proper resource cleanup and lifecycle management
-- ALWAYS test error paths and edge cases, not just happy paths
-- ALWAYS write deterministic tests (no timing dependencies, no random data)
-- ALWAYS use clear, descriptive test names that document expected behavior
-- ALWAYS keep tests focused and maintainable (extract helpers when needed)
-- NEVER share mutable state between test cases
-- NEVER ignore failing tests (fix immediately or document as known issue)
-- NEVER create overly complex tests (split into smaller, focused tests)
-- NEVER test implementation details (test behavior and contracts)
+- (MUST) Follow testing patterns and conventions from loaded testing skills
+- (MUST) Consult project build workflows before running integration tests (Docker skills)
+- (MUST) Separate fast unit tests from slower integration tests
+- (MUST) Implement proper resource cleanup and lifecycle management
+- (SHOULD) Test error paths and edge cases, not just happy paths
+- (MUST) Write deterministic tests (no timing dependencies, no random data)
+- (MUST) Use clear, descriptive test names that document expected behavior
+- (SHOULD) Keep tests focused and maintainable (extract helpers when needed)
+- (MUST NOT) Share mutable state between test cases
+- (MUST NOT) Ignore failing tests (fix immediately or document as known issue)
+- (MUST NOT) Create overly complex tests (split into smaller, focused tests)
+- (SHOULD NOT) Test implementation details (test behavior and contracts)
 
 **Test Strategy Framework:**
 

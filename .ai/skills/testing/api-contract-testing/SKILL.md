@@ -193,9 +193,9 @@ func TestBackwardCompatibility(t *testing.T) {
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-### 1. Contract First Development
+### 1. Contract First Development (MUST)
 
 #### Define contracts before implementation
 

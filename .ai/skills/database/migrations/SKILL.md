@@ -101,43 +101,43 @@ DROP TABLE IF EXISTS users;
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Never Modify Applied Migrations**
+1. **Never Modify Applied Migrations (MUST NOT)**
    - Once merged to main, migrations are immutable
    - Create new migration to fix issues
    - Reason: Other developers/environments already applied
 
-2. **One Logical Change Per Migration**
+2. **One Logical Change Per Migration (SHOULD)**
    - Single table creation
    - Single index addition
    - Single column modification
    - Easier to rollback granularly
 
-3. **Use Transactions Where Supported**
+3. **Use Transactions Where Supported (MUST)**
    - PostgreSQL supports DDL transactions
    - Wrap migration in `BEGIN; ... COMMIT;`
    - All-or-nothing application
 
-4. **Test Migrations Locally First**
+4. **Test Migrations Locally First (MUST)**
    - Run `make migrate-up` on local database
    - Verify schema changes
    - Test rollback: `make migrate-down`
    - Ensure no data loss
 
-5. **Data Migrations Require Extra Care**
+5. **Data Migrations Require Extra Care (MUST)**
    - Separate from schema migrations
    - Test with production-like data volumes
    - Consider backfilling in application code instead
    - Always have rollback plan for data
 
-6. **Use Testcontainers for Integration Tests**
+6. **Use Testcontainers for Integration Tests (SHOULD)**
    - Spin up temporary PostgreSQL instance
    - Apply migrations programmatically
    - Test against real database
    - Cleanup automatic after tests
 
-7. **Version Control Schema State**
+7. **Version Control Schema State (MUST)**
    - Commit migration files to git
    - One PR per migration (or related set)
    - Review migrations like code

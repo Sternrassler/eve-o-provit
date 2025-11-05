@@ -84,15 +84,15 @@ Load these skills before executing:
    - Confirm all loading patterns follow best practices
    - Validate that the new structure improves maintainability
 
-**Critical Rules:**
+**Critical Rules (Normative Requirements):**
 
-- NEVER move a file without first documenting ALL its importers
-- NEVER leave broken imports in the codebase
-- NEVER allow early returns with loading indicators to remain
-- ALWAYS use LoadingOverlay, SuspenseLoader, or PaperWrapper's loading for loading states
-- ALWAYS maintain backward compatibility unless explicitly approved to break it
-- ALWAYS group related functionality together in the new structure
-- ALWAYS extract large components into smaller, testable units
+- (MUST NOT) Move a file without first documenting ALL its importers
+- (MUST NOT) Leave broken imports in the codebase
+- (MUST NOT) Allow early returns with loading indicators to remain
+- (MUST) Use LoadingOverlay, SuspenseLoader, or PaperWrapper's loading for loading states
+- (MUST) Maintain backward compatibility unless explicitly approved to break it
+- (SHOULD) Group related functionality together in the new structure
+- (SHOULD) Extract large components into smaller, testable units
 
 **Quality Metrics You Enforce:**
 

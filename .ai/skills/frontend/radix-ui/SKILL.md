@@ -22,15 +22,15 @@
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Accessibility First:** Radix components are ARIA-compliant by default
-2. **Controlled Pattern:** Always provide `value` + `onValueChange` (not uncontrolled)
-3. **Composition:** Combine primitives to build complex components
-4. **Styling:** Use Tailwind utility classes, avoid inline styles
-5. **Variants:** Use `class-variance-authority` for component variants
-6. **Portal Usage:** Dialogs and Tooltips render in portal (avoid z-index issues)
-7. **Form Integration:** Radix components work with React Hook Form
+1. **Accessibility First (MUST):** Radix components are ARIA-compliant by default
+2. **Controlled Pattern (MUST):** Always provide `value` + `onValueChange` (not uncontrolled)
+3. **Composition (SHOULD):** Combine primitives to build complex components
+4. **Styling (SHOULD):** Use Tailwind utility classes, avoid inline styles
+5. **Variants (SHOULD):** Use `class-variance-authority` for component variants
+6. **Portal Usage (MUST):** Dialogs and Tooltips render in portal (avoid z-index issues)
+7. **Form Integration (MAY):** Radix components work with React Hook Form
 
 ---
 

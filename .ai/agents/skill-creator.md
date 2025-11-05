@@ -165,16 +165,16 @@ When complete, summarize:
 - **Usage:** How developers can load and use the new skills
 - **Gaps:** Any additional skills that could be helpful (optional)
 
-## Quality Checklist (Before Completion)
+## Quality Checklist (Before Completion - Normative Requirements)
 
-- Each database technology has separate skill file
-- Skills are 200-400 lines max (concise, not code-heavy)
-- 3-5 code examples max per skill (10-15 lines each)
-- Best practices section is substantial (not just code)
-- Anti-patterns section describes what to avoid (no code)
-- **Agent prompts updated with "Required Skills" sections**
-- **Agents auto-load their relevant skills when invoked**
-- **copilot-instructions.md has NO placeholders** (all replaced with actual references)
-- skills/README.md documents all created skills
+- (MUST) Each database technology has separate skill file
+- (MUST) Skills are 200-400 lines max (concise, not code-heavy)
+- (MUST) 3-5 code examples max per skill (10-15 lines each)
+- (MUST) Best practices section is substantial (not just code)
+- (MUST) Anti-patterns section describes what to avoid (no code)
+- (MUST) **Agent prompts updated with "Required Skills" sections**
+- (MUST) **Agents auto-load their relevant skills when invoked**
+- (MUST) **copilot-instructions.md has NO placeholders** (all replaced with actual references)
+- (MUST) skills/README.md documents all created skills
 
 Remember: Skills are **architecture and best practice reference material**, not code snippet libraries. They help developers understand **patterns and principles**, not memorize syntax. Agents **automatically load** their required skills and use them to structure solutions correctly.

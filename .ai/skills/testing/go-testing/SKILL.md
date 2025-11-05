@@ -143,38 +143,38 @@ go test ./...
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Test Naming Convention**
+1. **Test Naming Convention (MUST)**
    - File: `package_test.go` (same package) or `package_integration_test.go`
    - Function: `TestFunctionName` (unit) or `TestFunctionName_Integration` (integration)
    - Subtests: Descriptive names ("Interceptor", "Empty database", "Invalid input")
 
-2. **Use t.Helper() for Test Utilities**
+2. **Use t.Helper() for Test Utilities (MUST)**
    - Marks function as helper (correct line numbers in failures)
    - Example: `setupPostgresContainer`, `connectDB`, `validateSchema`
 
-3. **Prefer testify/assert for Readability**
+3. **Prefer testify/assert for Readability (SHOULD)**
    - `assert.Equal(t, expected, actual)` clearer than `if got != want`
    - `require.NoError(t, err)` stops test immediately on error
    - `assert.NotNil(t, obj)` for existence checks
 
-4. **Test Cleanup with defer**
+4. **Test Cleanup with defer (MUST)**
    - Always cleanup resources (containers, connections, files)
    - Use `defer` immediately after resource creation
    - Example: `defer pool.Close()`, `defer redisClient.Close()`
 
-5. **Coverage-Driven Test Priorities**
+5. **Coverage-Driven Test Priorities (SHOULD)**
    - Start with 0% modules (handlers, services, ESI client)
    - Then increase low coverage (database 31% → 60%+)
    - Maintain high coverage (cargo 91%, navigation 78%)
 
-6. **Mock External Dependencies**
+6. **Mock External Dependencies (SHOULD)**
    - ESI API: Mock HTTP responses (httptest package)
    - Time-dependent: Inject time.Now() via interface
    - File system: Use afero for virtual FS
 
-7. **Benchmark Performance-Critical Code**
+7. **Benchmark Performance-Critical Code (MAY)**
    - Navigation algorithms (Dijkstra, warp calculations)
    - Cargo fit calculations
    - Market data processing

@@ -70,15 +70,15 @@ Load these skills before executing:
    - Ensure documentation matches current implementation
    - Include troubleshooting sections for common issues
 
-**Documentation Standards:**
+**Documentation Standards (Normative Requirements):**
 
-- Use clear, technical language appropriate for developers
-- Include table of contents for longer documents
-- Add code blocks with proper syntax highlighting
-- Provide both quick start and detailed sections
-- Include version information and last updated dates
-- Cross-reference related documentation
-- Use consistent formatting and terminology
+- (MUST) Use clear, technical language appropriate for developers
+- (SHOULD) Include table of contents for longer documents
+- (MUST) Add code blocks with proper syntax highlighting
+- (SHOULD) Provide both quick start and detailed sections
+- (SHOULD) Include version information and last updated dates
+- (MAY) Cross-reference related documentation
+- (MUST) Use consistent formatting and terminology
 
 **Special Considerations:**
 

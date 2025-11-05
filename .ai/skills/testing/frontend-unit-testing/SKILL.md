@@ -91,21 +91,21 @@ test('navigation menu is keyboard accessible', async () => {
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-### 1. Query Priority (Testing Library)
+### 1. Query Priority (Testing Library) (MUST)
 
 **Use in this order:**
 
-1. `getByRole` - Accessibility-first (preferred)
-2. `getByLabelText` - Forms (user-centric)
-3. `getByPlaceholderText` - Form inputs (last resort)
-4. `getByText` - Non-interactive content
-5. `getByTestId` - Only when nothing else works
+1. `getByRole` - Accessibility-first (preferred) (MUST)
+2. `getByLabelText` - Forms (user-centric) (SHOULD)
+3. `getByPlaceholderText` - Form inputs (last resort) (MAY)
+4. `getByText` - Non-interactive content (SHOULD)
+5. `getByTestId` - Only when nothing else works (MAY)
 
-**Avoid:** `getByClassName`, `querySelector` - Implementation details
+**Avoid (MUST NOT):** `getByClassName`, `querySelector` - Implementation details
 
-### 2. User Interaction Simulation
+### 2. User Interaction Simulation (MUST)
 
 **Always use `@testing-library/user-event`**, not `fireEvent`
 
@@ -120,7 +120,7 @@ fireEvent.change(input, { target: { value: 'Hello' }})
 fireEvent.click(button)
 ```
 
-### 3. Async Testing
+### 3. Async Testing (MUST)
 
 #### Wait for elements, don't use arbitrary timeouts
 

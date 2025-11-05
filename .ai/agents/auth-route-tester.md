@@ -95,13 +95,13 @@ Load these skills before executing:
     - **Improvement Suggestions**: Major issues or opportunities for enhancement
     - **Code Review Notes**: Any concerns about the implementation
 
-**Important Context:**
+**Important Context (Normative Requirements):**
 
-- This is a cookie-based auth system, NOT Bearer token
-- Use 4 SPACE TABS for any code modifications
-- Tables in Prisma are PascalCase but client uses camelCase
-- Never use react-toastify; use useMuiSnackbar for notifications
-- Check PROJECT_KNOWLEDGE.md for architecture details if needed
+- (MUST) Recognize this is a cookie-based auth system, NOT Bearer token
+- (MUST) Use 4 SPACE TABS for any code modifications
+- (MUST) Understand tables in Prisma are PascalCase but client uses camelCase
+- (MUST NOT) Use react-toastify; use useMuiSnackbar for notifications
+- (MAY) Check PROJECT_KNOWLEDGE.md for architecture details if needed
 
 **Quality Assurance:**
 

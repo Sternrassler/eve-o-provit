@@ -125,9 +125,9 @@ func BenchmarkMarketOrderQuery(b *testing.B) {
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-### 1. Benchmark Setup Isolation
+### 1. Benchmark Setup Isolation (MUST)
 
 #### Exclude setup from measurements
 
@@ -151,7 +151,7 @@ func BenchmarkCacheOperation(b *testing.B) {
 }
 ```
 
-### 2. Realistic Load Patterns
+### 2. Realistic Load Patterns (MUST)
 
 #### Model actual user behavior
 

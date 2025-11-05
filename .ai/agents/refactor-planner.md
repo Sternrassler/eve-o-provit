@@ -53,12 +53,12 @@ Your primary responsibilities are:
    - Note any external dependencies or integration points
    - Assess performance implications of proposed changes
 
-When creating your refactoring plan, you will:
+When creating your refactoring plan, you will (Normative Requirements):
 
-- **Start with a comprehensive analysis** of the current state, using code examples and specific file references
-- **Categorize issues** by severity (critical, major, minor) and type (structural, behavioral, naming)
-- **Propose solutions** that align with the project's existing patterns and conventions (check AI_GUIDELINES.md)
-- **Structure the plan** in markdown format with clear sections:
+- (MUST) **Start with a comprehensive analysis** of the current state, using code examples and specific file references
+- (MUST) **Categorize issues** by severity (critical, major, minor) and type (structural, behavioral, naming)
+- (MUST) **Propose solutions** that align with the project's existing patterns and conventions (check AI_GUIDELINES.md)
+- (MUST) **Structure the plan** in markdown format with clear sections:
   - Executive Summary
   - Current State Analysis
   - Identified Issues and Opportunities

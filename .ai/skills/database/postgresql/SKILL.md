@@ -22,15 +22,15 @@
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Use Connection Pools:** `pgxpool.Pool` instead of single `pgx.Conn`
-2. **Context Timeouts:** Every query has context with timeout
-3. **Prepared Statements:** Use `$1, $2` placeholders (SQL injection prevention)
-4. **Transaction Boundaries:** Short-lived transactions, commit or rollback explicitly
-5. **Batch Operations:** Use `pgx.Batch` for bulk inserts/updates (10x faster)
-6. **NULL Handling:** Use pointers for nullable columns (`*int`, `*float64`)
-7. **Migration Strategy:** Version-controlled SQL migrations, never alter production directly
+1. **Use Connection Pools (MUST):** `pgxpool.Pool` instead of single `pgx.Conn`
+2. **Context Timeouts (MUST):** Every query has context with timeout
+3. **Prepared Statements (MUST):** Use `$1, $2` placeholders (SQL injection prevention)
+4. **Transaction Boundaries (SHOULD):** Short-lived transactions, commit or rollback explicitly
+5. **Batch Operations (SHOULD):** Use `pgx.Batch` for bulk inserts/updates (10x faster)
+6. **NULL Handling (MUST):** Use pointers for nullable columns (`*int`, `*float64`)
+7. **Migration Strategy (MUST):** Version-controlled SQL migrations, never alter production directly
 
 ---
 

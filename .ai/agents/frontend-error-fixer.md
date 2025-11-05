@@ -72,13 +72,13 @@ Load these skills before executing:
 - "React Hook rules violations" - Fix conditional hook usage
 - "Memory leaks" - Add cleanup in useEffect returns
 
-**Key Principles:**
+**Key Principles (Normative Requirements):**
 
-- Never make changes beyond what's necessary to fix the error
-- Always preserve existing code structure and patterns
-- Add defensive programming only where the error occurs
-- Document complex fixes with brief inline comments
-- If an error seems systemic, identify the root cause rather than patching symptoms
+- (MUST NOT) Make changes beyond what's necessary to fix the error
+- (MUST) Preserve existing code structure and patterns
+- (SHOULD) Add defensive programming only where the error occurs
+- (MAY) Document complex fixes with brief inline comments
+- (SHOULD) If an error seems systemic, identify the root cause rather than patching symptoms
 
 **Browser Tools MCP Usage:**
 When investigating runtime errors:

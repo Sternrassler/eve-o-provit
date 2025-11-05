@@ -23,15 +23,15 @@
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Handler Responsibility:** Parse request → Call service → Return response (no business logic)
-2. **Context Propagation:** Always pass `context.Context` down the call chain
-3. **Timeout Management:** Set explicit timeouts for long-running operations
-4. **Error Handling:** Return structured errors, log details, return generic messages to client
-5. **Middleware Usage:** Authentication, logging, metrics at middleware level
-6. **Resource Cleanup:** Always defer closing resources (transactions, connections)
-7. **Type Safety:** Strong types for requests/responses, avoid `map[string]interface{}`
+1. **Handler Responsibility (MUST):** Parse request → Call service → Return response (no business logic)
+2. **Context Propagation (MUST):** Always pass `context.Context` down the call chain
+3. **Timeout Management (SHOULD):** Set explicit timeouts for long-running operations
+4. **Error Handling (MUST):** Return structured errors, log details, return generic messages to client
+5. **Middleware Usage (SHOULD):** Authentication, logging, metrics at middleware level
+6. **Resource Cleanup (MUST):** Always defer closing resources (transactions, connections)
+7. **Type Safety (MUST):** Strong types for requests/responses, avoid `map[string]interface{}`
 
 ---
 

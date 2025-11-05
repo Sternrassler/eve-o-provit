@@ -22,15 +22,15 @@
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Read-Only URI:** Always use `file:path?mode=ro&immutable=1` for SDE access
-2. **Connection Per Application:** Single shared connection (not per request)
-3. **No Transactions:** Read-only mode doesn't need transactions
-4. **Fast Lookups:** Use `PRAGMA query_only = ON` for safety
-5. **Index Optimization:** Ensure SDE has indexes on frequently queried columns
-6. **Error Handling:** Handle "database is locked" gracefully (rare in read-only)
-7. **Version Control:** SDE database versioned, updated via download script
+1. **Read-Only URI (MUST):** Always use `file:path?mode=ro&immutable=1` for SDE access
+2. **Connection Per Application (MUST):** Single shared connection (not per request)
+3. **No Transactions (MUST NOT):** Read-only mode doesn't need transactions
+4. **Fast Lookups (SHOULD):** Use `PRAGMA query_only = ON` for safety
+5. **Index Optimization (SHOULD):** Ensure SDE has indexes on frequently queried columns
+6. **Error Handling (MUST):** Handle "database is locked" gracefully (rare in read-only)
+7. **Version Control (MUST):** SDE database versioned, updated via download script
 
 ---
 

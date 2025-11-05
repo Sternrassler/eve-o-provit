@@ -79,40 +79,40 @@ Need to create issue?
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Use MCP Tools First**
+1. **Use MCP Tools First (MUST)**
    - Check available MCP tools before using `gh` CLI
    - MCP tools are type-safe and provide better error messages
    - Fall back to CLI only if specific MCP tool doesn't exist
 
-2. **Search Effectively**
+2. **Search Effectively (SHOULD)**
    - Use specific search tools: `search_issues`, `search_code`, `search_pull_requests`
    - Combine filters: `label:bug state:open repo:owner/name`
    - Use pagination for large result sets
 
-3. **Structured Issue/PR Bodies**
+3. **Structured Issue/PR Bodies (MUST)**
    - Use markdown headings for sections
    - Include context, reproduction steps, expected behavior
    - Reference related issues/PRs with `#123` syntax
    - Add labels for categorization
 
-4. **Batch File Operations**
+4. **Batch File Operations (SHOULD)**
    - Use `push_files` for multiple file changes in single commit
    - Avoid multiple commits for related changes
    - Group logically related file operations
 
-5. **Proper Branch Management**
+5. **Proper Branch Management (MUST)**
    - Create branches from latest `main` before changes
    - Use descriptive branch names: `feat/user-auth`, `fix/login-error`
    - Clean up branches after PR merge
 
-6. **Review Workflow**
+6. **Review Workflow (SHOULD)**
    - Use `request_copilot_review` for automated feedback
    - Add human reviewers with `update_pull_request`
    - Address review comments before merge
 
-7. **Error Handling**
+7. **Error Handling (MUST)**
    - Check MCP tool responses for errors
    - Handle rate limits gracefully
    - Validate inputs before API calls

@@ -69,13 +69,13 @@ Load these skills before executing:
 - Verify object structure
 - Add missing properties to interfaces
 
-## Important Guidelines
+## Important Guidelines (Normative Requirements)
 
-- ALWAYS verify fixes by running the correct tsc command from tsc-commands.txt
-- Prefer fixing the root cause over adding @ts-ignore
-- If a type definition is missing, create it properly
-- Keep fixes minimal and focused on the errors
-- Don't refactor unrelated code
+- (MUST) Verify fixes by running the correct tsc command from tsc-commands.txt
+- (SHOULD) Prefer fixing the root cause over adding @ts-ignore
+- (MUST) If a type definition is missing, create it properly
+- (MUST) Keep fixes minimal and focused on the errors
+- (MUST NOT) Refactor unrelated code
 
 ## Example Workflow
 

@@ -129,9 +129,9 @@ test('component calls API with correct params', async () => {
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-### 1. Minimal Mocking
+### 1. Minimal Mocking (MUST)
 
 #### Mock only external boundaries, not internal logic
 
@@ -147,7 +147,7 @@ mockESI := &MockESIClient{
 mockCalculator := &MockProfitCalculator{} // Should be real!
 ```
 
-### 2. Behavior Verification vs. State Verification
+### 2. Behavior Verification vs. State Verification (SHOULD)
 
 #### Prefer state verification over behavior verification
 

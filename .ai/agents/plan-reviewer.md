@@ -56,13 +56,13 @@ Load these skills before executing:
 6. **Risk Mitigation**: Strategies to handle identified risks
 7. **Research Findings**: Key discoveries from your investigation of mentioned technologies/systems
 
-**Quality Standards:**
+**Quality Standards (Normative Requirements):**
 
-- Only flag genuine issues - don't create problems where none exist
-- Provide specific, actionable feedback with concrete examples
-- Reference actual documentation, known limitations, or compatibility issues when possible
-- Suggest practical alternatives, not theoretical ideals
-- Focus on preventing real-world implementation failures
-- Consider the project's specific context and constraints
+- (MUST) Only flag genuine issues - don't create problems where none exist
+- (MUST) Provide specific, actionable feedback with concrete examples
+- (SHOULD) Reference actual documentation, known limitations, or compatibility issues when possible
+- (SHOULD) Suggest practical alternatives, not theoretical ideals
+- (MUST) Focus on preventing real-world implementation failures
+- (MUST) Consider the project's specific context and constraints
 
 Create your review as a comprehensive markdown report that saves the development team from costly implementation mistakes. Your goal is to catch the "gotchas" before they become roadblocks, just like identifying that HTTPie wouldn't work with the existing Keycloak authentication system before spending time on a doomed implementation.

@@ -120,44 +120,44 @@ services:
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Always Rebuild After Code Changes**
+1. **Always Rebuild After Code Changes (MUST)**
    - **CRITICAL:** `make docker-rebuild` before running tests
    - Ensures latest code is in container
    - Prevents "works locally, fails in Docker" issues
    - Alternative: `make docker-down && make docker-build && make docker-up`
 
-2. **Use Health Checks**
+2. **Use Health Checks (MUST)**
    - Define health checks for all services
    - Use `condition: service_healthy` in depends_on
    - Prevents premature service startup
    - Example: Backend waits for DB + Redis to be ready
 
-3. **Named Volumes for Data**
+3. **Named Volumes for Data (MUST)**
    - Use named volumes for databases (postgres-data, redis-data)
    - Survives `docker-compose down`
    - Destroyed only with `docker-compose down -v`
    - Backup volumes before destructive operations
 
-4. **Environment Variable Management**
+4. **Environment Variable Management (MUST)**
    - Store in `.env` file (gitignored)
    - Reference in docker-compose.yml
    - Never commit credentials
    - Use different values per environment (dev, staging, prod)
 
-5. **Network Isolation**
+5. **Network Isolation (MUST)**
    - Default bridge network for all services
    - Services communicate via service names (not localhost)
    - Example: Backend connects to `postgres:5432`, not `localhost:5432`
 
-6. **Log Management**
+6. **Log Management (SHOULD)**
    - Use `docker-compose logs -f` for live logs
    - Filter by service: `docker-compose logs -f backend`
    - Set log rotation limits to prevent disk fill
    - Use structured logging in applications
 
-7. **Resource Limits**
+7. **Resource Limits (SHOULD)**
    - Set memory/CPU limits for services
    - Prevents one service consuming all resources
    - Mimics production constraints

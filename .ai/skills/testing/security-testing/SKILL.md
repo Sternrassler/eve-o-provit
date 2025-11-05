@@ -248,9 +248,9 @@ func TestEVESSOSecurity(t *testing.T) {
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-### 1. Secure Token Storage
+### 1. Secure Token Storage (MUST)
 
 #### Never store tokens in localStorage
 

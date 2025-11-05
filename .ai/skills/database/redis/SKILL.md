@@ -21,15 +21,15 @@
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Always Set TTL:** No cache entry without expiration (prevent memory bloat)
-2. **Key Naming Convention:** Use colons for hierarchy (`market:orders:10000002:34`)
-3. **Compression:** Use gzip for large values (>1KB) to save memory (~80% reduction)
-4. **Context Timeouts:** Redis operations should have timeouts (1-3 seconds)
-5. **Error Handling:** Cache failures should not break application (fail-open pattern)
-6. **Serialization:** Use JSON for structured data, not Protocol Buffers (debugging ease)
-7. **Monitoring:** Track hit/miss ratio, eviction rate, memory usage
+1. **Always Set TTL (MUST):** No cache entry without expiration (prevent memory bloat)
+2. **Key Naming Convention (MUST):** Use colons for hierarchy (`market:orders:10000002:34`)
+3. **Compression (SHOULD):** Use gzip for large values (>1KB) to save memory (~80% reduction)
+4. **Context Timeouts (MUST):** Redis operations should have timeouts (1-3 seconds)
+5. **Error Handling (MUST):** Cache failures should not break application (fail-open pattern)
+6. **Serialization (SHOULD):** Use JSON for structured data, not Protocol Buffers (debugging ease)
+7. **Monitoring (SHOULD):** Track hit/miss ratio, eviction rate, memory usage
 
 ---
 

@@ -22,15 +22,15 @@
 
 ---
 
-## Best Practices
+## Best Practices (Normative Requirements)
 
-1. **Accessibility Selectors:** Use `getByRole()`, `getByLabel()` (not CSS classes)
-2. **Auto-Waiting:** Playwright waits for elements automatically (no manual waits)
-3. **Test Isolation:** No shared state between tests
-4. **Descriptive Names:** Test names describe user behavior, not implementation
-5. **Error Debugging:** Take screenshots/videos on failure
-6. **API Mocking:** Mock external APIs for deterministic tests
-7. **Test Data:** Use fixtures for consistent test data
+1. **Accessibility Selectors (MUST):** Use `getByRole()`, `getByLabel()` (not CSS classes)
+2. **Auto-Waiting (MUST):** Playwright waits for elements automatically (no manual waits)
+3. **Test Isolation (MUST):** No shared state between tests
+4. **Descriptive Names (SHOULD):** Test names describe user behavior, not implementation
+5. **Error Debugging (SHOULD):** Take screenshots/videos on failure
+6. **API Mocking (SHOULD):** Mock external APIs for deterministic tests
+7. **Test Data (SHOULD):** Use fixtures for consistent test data
 
 ---
 

@@ -44,12 +44,12 @@ When services are running with PM2, check logs for authentication errors:
 4. **All services**: `pm2 logs --timestamp`
 5. **Check service status**: `pm2 list` to ensure services are running
 
-### Route Registration Checks
+### Route Registration Checks (Normative Requirements)
 
-1. **Always** verify the route is properly registered in app.ts
-2. Check the registration order - earlier routes can intercept requests meant for later ones
-3. Look for route naming conflicts (e.g., `/api/:id` before `/api/specific`)
-4. Verify middleware is applied correctly to the route
+1. (MUST) Verify the route is properly registered in app.ts
+2. (SHOULD) Check the registration order - earlier routes can intercept requests meant for later ones
+3. (SHOULD) Look for route naming conflicts (e.g., `/api/:id` before `/api/specific`)
+4. (MUST) Verify middleware is applied correctly to the route
 
 ### Authentication Testing
 
