@@ -388,13 +388,13 @@ func (rc *RouteCalculator) calculateRoute(ctx context.Context, item models.ItemP
 
 	// Calculate travel time in seconds (simplified)
 	oneWaySeconds := float64(travelResult.Jumps) * 30.0 // ~30 seconds per jump average
-	
+
 	// Station Trading: Use minimum time for order cycling (5 minutes base time)
 	// This prevents division by zero and provides realistic ISK/h for station trading
 	if item.BuySystemID == item.SellSystemID || travelResult.Jumps == 0 {
 		oneWaySeconds = 300.0 // 5 minutes for station trading order updates
 	}
-	
+
 	roundTripSeconds := oneWaySeconds * 2
 
 	// Multi-tour time calculation

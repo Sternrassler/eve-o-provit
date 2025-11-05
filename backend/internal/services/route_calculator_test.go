@@ -10,12 +10,12 @@ import (
 // TestStationTradingTimeCalculation tests that station trading uses minimum base time
 func TestStationTradingTimeCalculation(t *testing.T) {
 	tests := []struct {
-		name          string
-		jumps         int
-		buySystemID   int
-		sellSystemID  int
-		expectedTime  float64
-		description   string
+		name         string
+		jumps        int
+		buySystemID  int
+		sellSystemID int
+		expectedTime float64
+		description  string
 	}{
 		{
 			name:         "Station Trading - same system",
@@ -47,14 +47,14 @@ func TestStationTradingTimeCalculation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Calculate one-way time
 			oneWaySeconds := float64(tt.jumps) * 30.0
-			
+
 			// Station Trading fix
 			if tt.buySystemID == tt.sellSystemID || tt.jumps == 0 {
 				oneWaySeconds = 300.0 // 5 minutes base time
 			}
 
 			if oneWaySeconds != tt.expectedTime {
-				t.Errorf("%s: got %.0f seconds, want %.0f seconds", 
+				t.Errorf("%s: got %.0f seconds, want %.0f seconds",
 					tt.description, oneWaySeconds, tt.expectedTime)
 			}
 		})
@@ -95,8 +95,8 @@ func TestISKPerHourCalculation(t *testing.T) {
 			name:             "Station Trading - 5 minute base time",
 			profitPerUnit:    100000.0, // 100k ISK profit per unit
 			quantity:         737,
-			roundTripSeconds: 600.0,        // 5 min * 2 = 10 min round trip
-			wantISKPerHour:   442200000.0,  // (100k * 737 / 600) * 3600 = ~442.2M ISK/h
+			roundTripSeconds: 600.0,       // 5 min * 2 = 10 min round trip
+			wantISKPerHour:   442200000.0, // (100k * 737 / 600) * 3600 = ~442.2M ISK/h
 		},
 		{
 			name:             "Zero round trip time",

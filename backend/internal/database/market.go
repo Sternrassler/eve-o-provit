@@ -57,18 +57,42 @@ func NewMarketRepository(db DBPool) *MarketRepository {
 	return &MarketRepository{db: db}
 }
 
-// UpsertMarketOrders inserts or updates market orders
+// UpsertMarketOrders inserts or updates market orders using batch processing for performance
 func (r *MarketRepository) UpsertMarketOrders(ctx context.Context, orders []MarketOrder) error {
 	if len(orders) == 0 {
 		return nil
 	}
 
+	// Use pgx.Batch for high-performance batch inserts
+	// This is significantly faster than individual Exec calls in a loop
+	// Especially critical for large datasets (e.g., 177k orders for Domain region)
+	const batchSize = 1000 // Process in chunks to avoid memory issues
+	
+	for i := 0; i < len(orders); i += batchSize {
+		end := i + batchSize
+		if end > len(orders) {
+			end = len(orders)
+		}
+		
+		batch := orders[i:end]
+		if err := r.upsertBatch(ctx, batch); err != nil {
+			return fmt.Errorf("failed to upsert batch %d-%d: %w", i, end, err)
+		}
+	}
+
+	return nil
+}
+
+// upsertBatch performs a single batch upsert operation
+func (r *MarketRepository) upsertBatch(ctx context.Context, orders []MarketOrder) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
+	// Prepare batch
+	batch := &pgx.Batch{}
 	query := `
 		INSERT INTO market_orders (
 			order_id, type_id, region_id, location_id, is_buy_order,
@@ -81,7 +105,7 @@ func (r *MarketRepository) UpsertMarketOrders(ctx context.Context, orders []Mark
 	`
 
 	for _, order := range orders {
-		_, err := tx.Exec(ctx, query,
+		batch.Queue(query,
 			order.OrderID,
 			order.TypeID,
 			order.RegionID,
@@ -95,9 +119,22 @@ func (r *MarketRepository) UpsertMarketOrders(ctx context.Context, orders []Mark
 			order.Duration,
 			order.FetchedAt,
 		)
-		if err != nil {
-			return fmt.Errorf("failed to upsert order %d: %w", order.OrderID, err)
+	}
+
+	// Send batch and close results immediately
+	results := tx.SendBatch(ctx, batch)
+	
+	// Check all results
+	for i := 0; i < batch.Len(); i++ {
+		if _, err := results.Exec(); err != nil {
+			results.Close()
+			return fmt.Errorf("batch exec failed at index %d: %w", i, err)
 		}
+	}
+	
+	// Close results before commit
+	if err := results.Close(); err != nil {
+		return fmt.Errorf("failed to close batch results: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
