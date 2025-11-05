@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Sternrassler/eve-esi-client/pkg/client"
 	"github.com/Sternrassler/eve-esi-client/pkg/pagination"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 )
@@ -20,7 +21,7 @@ type MarketService struct {
 
 // ESIRawClient interface for raw ESI client access (for BatchFetcher)
 type ESIRawClient interface {
-	GetRawClient() interface{}
+	GetRawClient() *client.Client
 }
 
 // NewMarketService creates a new market service instance
@@ -36,12 +37,7 @@ func NewMarketService(marketQuerier database.MarketQuerier, esiClient ESIRawClie
 func (s *MarketService) FetchAndStoreMarketOrders(ctx context.Context, regionID int) (int, error) {
 	// Use esi-client BatchFetcher for parallel pagination (10 workers)
 	config := pagination.DefaultConfig()
-	// Type assert to get PageFetcher interface
-	pageFetcher, ok := s.esiClient.GetRawClient().(pagination.PageFetcher)
-	if !ok {
-		return 0, fmt.Errorf("ESI client does not implement PageFetcher interface")
-	}
-	fetcher := pagination.NewBatchFetcher(pageFetcher, config)
+	fetcher := pagination.NewBatchFetcher(s.esiClient.GetRawClient(), config)
 	endpoint := fmt.Sprintf("/v1/markets/%d/orders/", regionID)
 
 	// Fetch all pages in parallel

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Sternrassler/eve-esi-client/pkg/client"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/testutil"
 	"github.com/stretchr/testify/assert"
@@ -13,10 +14,10 @@ import (
 
 // MockESIRawClient implements ESIRawClient interface
 type MockESIRawClient struct {
-	rawClient interface{}
+	rawClient *client.Client
 }
 
-func (m *MockESIRawClient) GetRawClient() interface{} {
+func (m *MockESIRawClient) GetRawClient() *client.Client {
 	return m.rawClient
 }
 

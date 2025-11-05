@@ -7,19 +7,20 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Sternrassler/eve-esi-client/pkg/pagination"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/gofiber/fiber/v2"
 )
 
 // Handler holds dependencies for HTTP handlers
 type Handler struct {
-	healthChecker database.HealthChecker
-	sdeQuerier    database.SDEQuerier
-	marketQuerier database.MarketQuerier
-	esiClient     *esi.Client
+	healthChecker  database.HealthChecker
+	sdeQuerier     database.SDEQuerier
+	marketQuerier  database.MarketQuerier
+	esiClient      *esi.Client
+	marketService  *services.MarketService
 	// TODO(Phase 2): Remove raw DB access, use services instead
 	db *database.DB // Temporary: for GetMarketDataStaleness and GetRegions
 }
@@ -33,11 +34,15 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 		rawDB = concreteDB
 	}
 
+	// Create MarketService
+	marketService := services.NewMarketService(marketQuerier, esiClient)
+
 	return &Handler{
 		healthChecker: healthChecker,
 		sdeQuerier:    sdeQuerier,
 		marketQuerier: marketQuerier,
 		esiClient:     esiClient,
+		marketService: marketService,
 		db:            rawDB, // Temporary for Phase 1
 	}
 }
@@ -45,11 +50,14 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 // NewWithConcrete creates a handler from concrete types (backward compatibility wrapper)
 // Deprecated: Use New with interfaces instead
 func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRepo *database.MarketRepository, esiClient *esi.Client) *Handler {
+	marketService := services.NewMarketService(marketRepo, esiClient)
+	
 	return &Handler{
 		healthChecker: db,
 		sdeQuerier:    sdeRepo,
 		marketQuerier: marketRepo,
 		esiClient:     esiClient,
+		marketService: marketService,
 		db:            db,
 	}
 }
@@ -104,6 +112,7 @@ func (h *Handler) GetType(c *fiber.Ctx) error {
 
 // GetMarketOrders handles market orders requests
 func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
+	// Parameter validation
 	regionIDStr := c.Params("region")
 	typeIDStr := c.Params("type")
 
@@ -124,56 +133,19 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 	// Check if we should fetch fresh data
 	refresh := c.QueryBool("refresh", false)
 	if refresh {
-		// Use esi-client BatchFetcher for parallel pagination (10 workers)
-		config := pagination.DefaultConfig()
-		fetcher := pagination.NewBatchFetcher(h.esiClient.GetRawClient(), config)
-		endpoint := fmt.Sprintf("/v1/markets/%d/orders/", regionID)
-
-		// Fetch all pages in parallel
-		results, err := fetcher.FetchAllPages(c.Context(), endpoint)
+		// Delegate to MarketService
+		count, err := h.marketService.FetchAndStoreMarketOrders(c.Context(), regionID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   "failed to fetch market data",
 				"details": err.Error(),
 			})
 		}
-
-		// Convert paginated results to MarketOrder structs
-		allOrders := make([]database.MarketOrder, 0)
-		for pageNum := 1; pageNum <= len(results); pageNum++ {
-			pageData, ok := results[pageNum]
-			if !ok {
-				continue
-			}
-
-			// ESI response structure (matches database.MarketOrder fields)
-			var orders []database.MarketOrder
-			if err := json.Unmarshal(pageData, &orders); err != nil {
-				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-					"error":   "failed to parse market data",
-					"details": err.Error(),
-				})
-			}
-
-			// Add region ID and timestamp
-			for i := range orders {
-				orders[i].RegionID = regionID
-				orders[i].FetchedAt = time.Now()
-			}
-
-			allOrders = append(allOrders, orders...)
-		}
-
-		// Store in database
-		if err := h.marketQuerier.UpsertMarketOrders(c.Context(), allOrders); err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   "failed to store market data",
-				"details": err.Error(),
-			})
-		}
+		// Log success
+		_ = count // Stored successfully
 	}
 
-	// Get orders from database
+	// Get orders from database via ESI client (uses cached data)
 	orders, err := h.esiClient.GetMarketOrders(c.Context(), regionID, typeID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
