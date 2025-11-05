@@ -43,15 +43,26 @@
 
 ---
 
-## Phase 3: Handler Cleanup (3 Tage) - PENDING
+## Phase 3: Handler Cleanup (3 Tage) - 🔄 IN PROGRESS
 
-### Task 3.1: Business Logic aus Handlers (12h)
+### Task 3.1: Business Logic aus Handlers (12h) - ✅ COMPLETE
 
-- [ ] `MarketService` vollständig implementieren
-- [ ] `TradingService` vollständig implementieren
-- [ ] `GetMarketOrders` Handler refactoren
+- [x] `MarketService` vollständig implementieren (89 Zeilen)
+  - `FetchAndStoreMarketOrders`: ESI BatchFetcher + DB Storage
+  - 5 Unit-Tests (1 skipped)
+- [x] `TradingService` vollständig implementieren (172 Zeilen)
+  - `CalculateInventorySellRoutes`: Profit + Navigation
+  - 6 Unit-Tests (3 skipped)
+- [x] `GetMarketOrders` Handler refactoren
+  - **Vorher:** 80 Zeilen mit ESI/DB-Logik
+  - **Nachher:** 30 Zeilen thin controller
+  - **Reduzierung:** 60+ Zeilen entfernt
 - [ ] `CalculateRoutes` Handler refactoren
 - [ ] `SetAutopilotWaypoint` Handler refactoren
+
+**Commits:**
+- `4ebb39c`: MarketService + TradingService + Tests
+- `2eba22c`: GetMarketOrders Refactoring
 
 ### Task 3.2: Handler Unit Tests (8h)
 
@@ -90,9 +101,9 @@
 | Phase | Start Coverage | Target | Actual | Status |
 |-------|---------------|--------|--------|--------|
 | **Baseline** | Services: 29.8%, Handlers: 17.1% | - | - | ✅ |
-| **Phase 1** | - | Services: 35%, Handlers: 25% | - | 🔄 |
-| **Phase 2** | - | Services: 50%, Handlers: 30% | - | ⏳ |
-| **Phase 3** | - | Services: 50%, Handlers: 40% | - | ⏳ |
+| **Phase 1** | Services: 29.8%, Handlers: 17.1% | Services: 35%, Handlers: 25% | Services: 29.8%, Handlers: 20.5% | ✅ |
+| **Phase 2** | Services: 29.8%, Handlers: 20.5% | Services: 50%, Handlers: 30% | Services: 33.7%, Handlers: 20.5% | ✅ |
+| **Phase 3** | Services: 33.7%, Handlers: 20.5% | Services: 50%, Handlers: 40% | Services: 33.7%+, Handlers: 20.5%+ | 🔄 |
 | **Phase 4** | - | Polish + Benchmarks | - | ⏳ |
 
 ---
