@@ -15,14 +15,14 @@ func TestCalculateInventorySellRoutes_InvalidTypeID(t *testing.T) {
 	handler := NewTradingHandler(nil, &Handler{}, nil)
 
 	app := fiber.New()
-	
+
 	// Mock auth middleware
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("character_id", 12345)
 		c.Locals("access_token", "test-token")
 		return c.Next()
 	})
-	
+
 	app.Post("/inventory-sell", handler.CalculateInventorySellRoutes)
 
 	tests := []struct {
@@ -86,13 +86,13 @@ func TestCalculateInventorySellRoutes_InvalidQuantity(t *testing.T) {
 	handler := NewTradingHandler(nil, &Handler{}, nil)
 
 	app := fiber.New()
-	
+
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("character_id", 12345)
 		c.Locals("access_token", "test-token")
 		return c.Next()
 	})
-	
+
 	app.Post("/inventory-sell", handler.CalculateInventorySellRoutes)
 
 	tests := []struct {
@@ -156,13 +156,13 @@ func TestCalculateInventorySellRoutes_InvalidBuyPrice(t *testing.T) {
 	handler := NewTradingHandler(nil, &Handler{}, nil)
 
 	app := fiber.New()
-	
+
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("character_id", 12345)
 		c.Locals("access_token", "test-token")
 		return c.Next()
 	})
-	
+
 	app.Post("/inventory-sell", handler.CalculateInventorySellRoutes)
 
 	tests := []struct {
@@ -226,13 +226,13 @@ func TestCalculateInventorySellRoutes_InvalidRegionID(t *testing.T) {
 	handler := NewTradingHandler(nil, &Handler{}, nil)
 
 	app := fiber.New()
-	
+
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("character_id", 12345)
 		c.Locals("access_token", "test-token")
 		return c.Next()
 	})
-	
+
 	app.Post("/inventory-sell", handler.CalculateInventorySellRoutes)
 
 	tests := []struct {
@@ -296,13 +296,13 @@ func TestCalculateInventorySellRoutes_InvalidJSON(t *testing.T) {
 	handler := NewTradingHandler(nil, &Handler{}, nil)
 
 	app := fiber.New()
-	
+
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("character_id", 12345)
 		c.Locals("access_token", "test-token")
 		return c.Next()
 	})
-	
+
 	app.Post("/inventory-sell", handler.CalculateInventorySellRoutes)
 
 	req := httptest.NewRequest("POST", "/inventory-sell", bytes.NewBufferString(`{invalid json}`))
@@ -333,13 +333,13 @@ func TestCalculateInventorySellRoutes_SecurityFilter(t *testing.T) {
 	// Actual filtering logic is tested in integration tests
 
 	app := fiber.New()
-	
+
 	app.Use(func(c *fiber.Ctx) error {
 		c.Locals("character_id", 12345)
 		c.Locals("access_token", "test-token")
 		return c.Next()
 	})
-	
+
 	// Mock character helper to avoid ESI calls
 	app.Post("/inventory-sell", func(c *fiber.Ctx) error {
 		var req models.InventorySellRequest
@@ -348,7 +348,7 @@ func TestCalculateInventorySellRoutes_SecurityFilter(t *testing.T) {
 				"error": "Invalid request body",
 			})
 		}
-		
+
 		// Validate security_filter is one of expected values
 		validFilters := map[string]bool{
 			"":        true,
@@ -356,13 +356,13 @@ func TestCalculateInventorySellRoutes_SecurityFilter(t *testing.T) {
 			"highsec": true,
 			"highlow": true,
 		}
-		
+
 		if !validFilters[req.SecurityFilter] {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": "Invalid security_filter (must be: all, highsec, highlow, or empty)",
 			})
 		}
-		
+
 		return c.JSON(fiber.Map{
 			"security_filter": req.SecurityFilter,
 			"ok":              true,
