@@ -1,9 +1,9 @@
 package services
 
 import (
-	"context"
 	"testing"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -32,32 +32,38 @@ func TestGetMinRouteSecurityStatus(t *testing.T) {
 func TestNewRouteCalculator(t *testing.T) {
 	tests := []struct {
 		name        string
-		withRedis   bool
+		redisClient interface{}
 		expectCache bool
 	}{
 		{
 			name:        "with Redis cache",
-			withRedis:   true,
+			redisClient: &redis.Client{},
 			expectCache: true,
 		},
 		{
-			name:        "without Redis cache",
-			withRedis:   false,
+			name:        "without Redis cache (nil)",
+			redisClient: nil,
 			expectCache: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// This requires full dependencies (SDE, ESI, Redis)
-			// Testing only the concept here
-			ctx := context.Background()
-			assert.NotNil(t, ctx, "Context should be valid")
+			var redisPtr *redis.Client
+			if tt.redisClient != nil {
+				redisPtr = tt.redisClient.(*redis.Client)
+			}
 
-			// Actual test would be:
-			// calculator := NewRouteCalculator(sdeDB, esiClient, navService, redis)
-			// assert.NotNil(t, calculator)
-			// if tt.withRedis { assert.NotNil(t, calculator.cache) }
+			calculator := NewRouteCalculator(nil, nil, nil, nil, redisPtr)
+			assert.NotNil(t, calculator)
+			assert.NotNil(t, calculator.cache)
+			assert.NotNil(t, calculator.workerPool)
+
+			if tt.expectCache {
+				assert.NotNil(t, calculator.navCache, "Navigation cache should be initialized with Redis")
+			} else {
+				assert.Nil(t, calculator.navCache, "Navigation cache should be nil without Redis")
+			}
 		})
 	}
 }
