@@ -100,24 +100,16 @@ func TestGetMarketOrders_Integration(t *testing.T) {
 	// Verify response
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	// Parse response body (handler returns {region_id, type_id, orders, count})
-	var result struct {
-		RegionID int                    `json:"region_id"`
-		TypeID   int                    `json:"type_id"`
-		Orders   []database.MarketOrder `json:"orders"`
-		Count    int                    `json:"count"`
-	}
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	// Parse response body (handler now returns array directly)
+	var orders []database.MarketOrder
+	err = json.NewDecoder(resp.Body).Decode(&orders)
 	require.NoError(t, err)
 
 	// Verify we got the seeded data
-	assert.Equal(t, 10000002, result.RegionID)
-	assert.Equal(t, 34, result.TypeID)
-	assert.GreaterOrEqual(t, result.Count, 2, "Should have at least 2 seeded orders")
-	assert.GreaterOrEqual(t, len(result.Orders), 2, "Should have at least 2 seeded orders")
+	assert.GreaterOrEqual(t, len(orders), 2, "Should have at least 2 seeded orders")
 
 	// Verify order structure
-	for _, order := range result.Orders {
+	for _, order := range orders {
 		assert.Equal(t, 10000002, order.RegionID)
 		assert.Equal(t, 34, order.TypeID)
 		assert.Greater(t, order.Price, 0.0)
@@ -218,17 +210,11 @@ func TestGetMarketOrders_Integration_EmptyResult(t *testing.T) {
 
 	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
 
-	// Parse response body (handler returns {region_id, type_id, orders, count})
-	var result struct {
-		RegionID int                    `json:"region_id"`
-		TypeID   int                    `json:"type_id"`
-		Orders   []database.MarketOrder `json:"orders"`
-		Count    int                    `json:"count"`
-	}
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	// Parse response body (handler now returns array directly)
+	var orders []database.MarketOrder
+	err = json.NewDecoder(resp.Body).Decode(&orders)
 	require.NoError(t, err)
-	assert.Empty(t, result.Orders)
-	assert.Equal(t, 0, result.Count)
+	assert.Empty(t, orders)
 }
 
 // TestHealth_Integration tests health endpoint (requires full DB setup)
@@ -282,13 +268,15 @@ func TestGetMarketDataStaleness_Integration(t *testing.T) {
 	tc.SeedTestData(t)
 
 	marketRepo := database.NewMarketRepository(tc.Pool)
-	handler := New(nil, nil, marketRepo, nil)
+	// Need DB with Postgres for GetMarketDataStaleness (uses postgresQuery)
+	db := &database.DB{Postgres: tc.Pool}
+	handler := New(db, nil, marketRepo, nil)
 
 	app := fiber.New()
-	app.Get("/market/staleness", handler.GetMarketDataStaleness)
+	app.Get("/market/staleness/:region", handler.GetMarketDataStaleness)
 
 	// Test with valid region
-	req := httptest.NewRequest("GET", "/market/staleness?region=10000002", nil)
+	req := httptest.NewRequest("GET", "/market/staleness/10000002", nil)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -300,6 +288,7 @@ func TestGetMarketDataStaleness_Integration(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NotNil(t, result["region_id"])
-	assert.NotNil(t, result["last_update"])
-	assert.NotNil(t, result["age_seconds"])
+	assert.NotNil(t, result["total_orders"])
+	assert.NotNil(t, result["latest_fetch"])
+	assert.NotNil(t, result["age_minutes"])
 }

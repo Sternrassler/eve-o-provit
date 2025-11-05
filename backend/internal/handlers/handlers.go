@@ -135,7 +135,7 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 	typeIDStr := c.Params("type")
 
 	regionID, err := strconv.Atoi(regionIDStr)
-	if err != nil {
+	if err != nil || regionID <= 0 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid region ID",
 		})
