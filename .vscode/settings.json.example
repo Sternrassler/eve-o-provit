@@ -1,0 +1,11 @@
+{
+  "gopls": {
+    "build.buildFlags": [
+      "-tags=unit,integration,load"
+    ],
+    "analyses": {
+      "unusedwrite": false
+    }
+  },
+  "go.testTags": "unit,integration"
+}
