@@ -16,11 +16,11 @@ import (
 
 // Handler holds dependencies for HTTP handlers
 type Handler struct {
-	healthChecker  database.HealthChecker
-	sdeQuerier     database.SDEQuerier
-	marketQuerier  database.MarketQuerier
-	esiClient      *esi.Client
-	marketService  *services.MarketService
+	healthChecker database.HealthChecker
+	sdeQuerier    database.SDEQuerier
+	marketQuerier database.MarketQuerier
+	esiClient     *esi.Client
+	marketService *services.MarketService
 	// TODO(Phase 2): Remove raw DB access, use services instead
 	db *database.DB // Temporary: for GetMarketDataStaleness and GetRegions
 }
@@ -51,7 +51,7 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 // Deprecated: Use New with interfaces instead
 func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRepo *database.MarketRepository, esiClient *esi.Client) *Handler {
 	marketService := services.NewMarketService(marketRepo, esiClient)
-	
+
 	return &Handler{
 		healthChecker: db,
 		sdeQuerier:    sdeRepo,

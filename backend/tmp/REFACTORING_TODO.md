@@ -61,6 +61,7 @@
 - [ ] `SetAutopilotWaypoint` Handler refactoren
 
 **Commits:**
+
 - `4ebb39c`: MarketService + TradingService + Tests
 - `2eba22c`: GetMarketOrders Refactoring
 

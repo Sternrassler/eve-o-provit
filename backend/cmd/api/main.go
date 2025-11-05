@@ -72,12 +72,17 @@ func main() {
 	log.Println("ESI client initialized")
 
 	// Initialize services
+	marketFetcher := services.NewMarketFetcher(esiClient, marketRepo, redisClient)
+	profitAnalyzer := services.NewProfitAnalyzer(db.SDE, sdeRepo)
+	routePlanner := services.NewRoutePlanner(db.SDE, sdeRepo, redisClient)
+	tradingService := services.NewTradingService(marketFetcher, profitAnalyzer, routePlanner, sdeRepo, esiClient, db.SDE)
+
 	routeCalculator := services.NewRouteCalculator(esiClient, db.SDE, sdeRepo, marketRepo, redisClient)
 	characterHelper := services.NewCharacterHelper(redisClient)
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
-	tradingHandler := handlers.NewTradingHandler(routeCalculator, h, characterHelper)
+	tradingHandler := handlers.NewTradingHandler(routeCalculator, h, characterHelper, tradingService)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{

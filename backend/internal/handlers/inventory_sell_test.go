@@ -12,7 +12,7 @@ import (
 
 // TestCalculateInventorySellRoutes_InvalidTypeID tests validation of type_id
 func TestCalculateInventorySellRoutes_InvalidTypeID(t *testing.T) {
-	handler := NewTradingHandler(nil, &Handler{}, nil)
+	handler := NewTradingHandler(nil, &Handler{}, nil, nil)
 
 	app := fiber.New()
 
@@ -83,7 +83,7 @@ func TestCalculateInventorySellRoutes_InvalidTypeID(t *testing.T) {
 
 // TestCalculateInventorySellRoutes_InvalidQuantity tests validation of quantity
 func TestCalculateInventorySellRoutes_InvalidQuantity(t *testing.T) {
-	handler := NewTradingHandler(nil, &Handler{}, nil)
+	handler := NewTradingHandler(nil, &Handler{}, nil, nil)
 
 	app := fiber.New()
 
@@ -153,7 +153,7 @@ func TestCalculateInventorySellRoutes_InvalidQuantity(t *testing.T) {
 
 // TestCalculateInventorySellRoutes_InvalidBuyPrice tests validation of buy_price_per_unit
 func TestCalculateInventorySellRoutes_InvalidBuyPrice(t *testing.T) {
-	handler := NewTradingHandler(nil, &Handler{}, nil)
+	handler := NewTradingHandler(nil, &Handler{}, nil, nil)
 
 	app := fiber.New()
 
@@ -223,7 +223,7 @@ func TestCalculateInventorySellRoutes_InvalidBuyPrice(t *testing.T) {
 
 // TestCalculateInventorySellRoutes_InvalidRegionID tests validation of region_id
 func TestCalculateInventorySellRoutes_InvalidRegionID(t *testing.T) {
-	handler := NewTradingHandler(nil, &Handler{}, nil)
+	handler := NewTradingHandler(nil, &Handler{}, nil, nil)
 
 	app := fiber.New()
 
@@ -293,7 +293,7 @@ func TestCalculateInventorySellRoutes_InvalidRegionID(t *testing.T) {
 
 // TestCalculateInventorySellRoutes_InvalidJSON tests invalid JSON handling
 func TestCalculateInventorySellRoutes_InvalidJSON(t *testing.T) {
-	handler := NewTradingHandler(nil, &Handler{}, nil)
+	handler := NewTradingHandler(nil, &Handler{}, nil, nil)
 
 	app := fiber.New()
 
