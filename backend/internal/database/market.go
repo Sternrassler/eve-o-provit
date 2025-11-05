@@ -6,8 +6,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
+
+// DBPool is an interface for database connections (supports both pgxpool.Pool and pgxmock)
+type DBPool interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Close()
+}
 
 // MarketOrder represents a market order from ESI
 type MarketOrder struct {
@@ -40,11 +49,11 @@ type PriceHistory struct {
 
 // MarketRepository handles market data operations
 type MarketRepository struct {
-	db *pgxpool.Pool
+	db DBPool
 }
 
 // NewMarketRepository creates a new market repository
-func NewMarketRepository(db *pgxpool.Pool) *MarketRepository {
+func NewMarketRepository(db DBPool) *MarketRepository {
 	return &MarketRepository{db: db}
 }
 
