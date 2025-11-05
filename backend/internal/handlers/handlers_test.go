@@ -18,12 +18,6 @@ func TestNew(t *testing.T) {
 	assert.NotNil(t, handler)
 }
 
-// TestGetRegions tests regions endpoint error handling
-func TestGetRegions(t *testing.T) {
-	// Requires database connection - full integration test needed
-	t.Skip("Requires database connection")
-}
-
 // TestGetMarketDataStaleness tests staleness check error handling
 func TestGetMarketDataStaleness(t *testing.T) {
 	app := fiber.New()

@@ -682,6 +682,3 @@ func TestMarketOrderCache_GetCorruptCompression(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, orders)
 }
-
-
-

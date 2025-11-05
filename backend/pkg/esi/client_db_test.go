@@ -65,7 +65,7 @@ func TestGetMarketOrders_WithData(t *testing.T) {
 
 	// Execute
 	orders, err := client.GetMarketOrders(context.Background(), 10000002, 34)
-	
+
 	// Verify
 	require.NoError(t, err)
 	assert.Len(t, orders, 2)
@@ -73,7 +73,7 @@ func TestGetMarketOrders_WithData(t *testing.T) {
 	assert.Equal(t, 34, orders[0].TypeID)
 	assert.Equal(t, 5.50, orders[0].Price)
 	assert.False(t, orders[0].IsBuyOrder)
-	
+
 	assert.Equal(t, int64(987654321), orders[1].OrderID)
 	assert.Equal(t, 5.25, orders[1].Price)
 	assert.True(t, orders[1].IsBuyOrder)
@@ -115,7 +115,7 @@ func TestGetMarketOrders_Empty(t *testing.T) {
 		WillReturnRows(rows)
 
 	orders, err := client.GetMarketOrders(context.Background(), 10000002, 999999)
-	
+
 	require.NoError(t, err)
 	assert.Empty(t, orders)
 	assert.NoError(t, mock.ExpectationsWereMet())
@@ -149,7 +149,7 @@ func TestGetMarketOrders_DatabaseError(t *testing.T) {
 		WillReturnError(assert.AnError)
 
 	orders, err := client.GetMarketOrders(context.Background(), 10000002, 34)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, orders)
 	assert.Contains(t, err.Error(), "failed to query market orders")
