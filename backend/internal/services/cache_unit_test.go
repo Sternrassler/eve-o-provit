@@ -478,3 +478,210 @@ func TestNavigationCache_BidirectionalRoutes(t *testing.T) {
 	keys := s.Keys()
 	assert.Len(t, keys, 2, "Should have 2 separate cache keys for bidirectional routes")
 }
+
+// TestMarketOrderCache_CompressDecompress tests compression round-trip
+func TestMarketOrderCache_CompressDecompress(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	cache := NewMarketOrderCache(redisClient)
+
+	// Create test orders
+	orders := []database.MarketOrder{
+		{
+			OrderID:      123456,
+			TypeID:       34,
+			Price:        5.50,
+			VolumeRemain: 1000,
+		},
+		{
+			OrderID:      789012,
+			TypeID:       35,
+			Price:        10.25,
+			VolumeRemain: 5000,
+		},
+	}
+
+	// Compress
+	compressed, err := cache.compress(orders)
+	require.NoError(t, err)
+	assert.NotEmpty(t, compressed)
+	// Compressed data should be smaller than JSON for large datasets
+	assert.Less(t, len(compressed), 500, "Compressed data should be reasonably small")
+
+	// Decompress
+	decompressed, err := cache.decompress(compressed)
+	require.NoError(t, err)
+	assert.Len(t, decompressed, 2)
+	assert.Equal(t, int64(123456), decompressed[0].OrderID)
+	assert.Equal(t, 34, decompressed[0].TypeID)
+	assert.Equal(t, 5.50, decompressed[0].Price)
+	assert.Equal(t, int64(789012), decompressed[1].OrderID)
+}
+
+// TestMarketOrderCache_DecompressInvalidData tests error handling for corrupt data
+func TestMarketOrderCache_DecompressInvalidData(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	cache := NewMarketOrderCache(redisClient)
+
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{
+			name: "invalid gzip data",
+			data: []byte("not gzip compressed"),
+		},
+		{
+			name: "empty data",
+			data: []byte{},
+		},
+		{
+			name: "truncated gzip",
+			data: []byte{0x1f, 0x8b}, // Gzip magic bytes only
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			orders, err := cache.decompress(tt.data)
+			assert.Error(t, err)
+			assert.Nil(t, orders)
+		})
+	}
+}
+
+// TestNavigationCache_GetMissing tests cache miss behavior
+func TestNavigationCache_GetMissing(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	cache := NewNavigationCache(redisClient)
+	ctx := context.Background()
+
+	// Try to get non-existent route
+	result, err := cache.Get(ctx, 30000142, 30002187)
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "redis: nil") // Redis returns "redis: nil" for missing keys
+}
+
+// TestMarketOrderCache_SetEmpty tests setting empty orders
+func TestMarketOrderCache_SetEmpty(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	cache := NewMarketOrderCache(redisClient)
+	ctx := context.Background()
+
+	// Set empty slice
+	err := cache.Set(ctx, 10000002, []database.MarketOrder{})
+	require.NoError(t, err)
+
+	// Verify it was stored
+	orders, err := cache.Get(ctx, 10000002)
+	require.NoError(t, err)
+	assert.Empty(t, orders)
+}
+
+// TestNavigationCache_SetGet tests navigation cache round-trip
+func TestNavigationCache_SetGet(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	cache := NewNavigationCache(redisClient)
+	ctx := context.Background()
+
+	// Store route
+	result := NavigationResult{
+		TravelTimeSeconds: 350.5,
+		Jumps:             7,
+	}
+	err := cache.Set(ctx, 30000142, 30002187, result)
+	require.NoError(t, err)
+
+	// Retrieve route
+	cached, err := cache.Get(ctx, 30000142, 30002187)
+	require.NoError(t, err)
+	assert.Equal(t, 7, cached.Jumps)
+	assert.InDelta(t, 350.5, cached.TravelTimeSeconds, 0.1)
+}
+
+// TestNavigationCache_GetCorruptData tests handling of corrupt cached data
+func TestNavigationCache_GetCorruptData(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	cache := NewNavigationCache(redisClient)
+	ctx := context.Background()
+
+	// Store corrupt JSON directly in Redis
+	cacheKey := "nav:30000142:30002187"
+	err := redisClient.Set(ctx, cacheKey, "invalid json{", cache.ttl).Err()
+	require.NoError(t, err)
+
+	// Try to retrieve - should fail JSON unmarshal
+	result, err := cache.Get(ctx, 30000142, 30002187)
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "invalid character")
+}
+
+// TestMarketOrderCache_GetCorruptCompression tests handling of corrupt compressed data
+func TestMarketOrderCache_GetCorruptCompression(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	cache := NewMarketOrderCache(redisClient)
+	ctx := context.Background()
+
+	// Store corrupt data (not valid gzip) in Redis
+	cacheKey := "market_orders:10000002"
+	err := redisClient.Set(ctx, cacheKey, []byte("not a valid gzip"), cache.ttl).Err()
+	require.NoError(t, err)
+
+	// Try to retrieve - should fail decompression
+	orders, err := cache.Get(ctx, 10000002)
+	assert.Error(t, err)
+	assert.Nil(t, orders)
+}
+
+
+
