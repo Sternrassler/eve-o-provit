@@ -16,26 +16,48 @@ import (
 
 // Handler holds dependencies for HTTP handlers
 type Handler struct {
-	db         *database.DB
-	sdeRepo    *database.SDERepository
-	marketRepo *database.MarketRepository
-	esiClient  *esi.Client
+	healthChecker database.HealthChecker
+	sdeQuerier    database.SDEQuerier
+	marketQuerier database.MarketQuerier
+	esiClient     *esi.Client
+	// TODO(Phase 2): Remove raw DB access, use services instead
+	db *database.DB // Temporary: for GetMarketDataStaleness and GetRegions
 }
 
-// New creates a new handler instance
-func New(db *database.DB, sdeRepo *database.SDERepository, marketRepo *database.MarketRepository, esiClient *esi.Client) *Handler {
+// New creates a new handler instance with interfaces
+func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, marketQuerier database.MarketQuerier, esiClient *esi.Client) *Handler {
+	// For Phase 1: Accept both interfaces and concrete DB
+	// Type assert to get raw DB access (temporary)
+	var rawDB *database.DB
+	if concreteDB, ok := healthChecker.(*database.DB); ok {
+		rawDB = concreteDB
+	}
+
 	return &Handler{
-		db:         db,
-		sdeRepo:    sdeRepo,
-		marketRepo: marketRepo,
-		esiClient:  esiClient,
+		healthChecker: healthChecker,
+		sdeQuerier:    sdeQuerier,
+		marketQuerier: marketQuerier,
+		esiClient:     esiClient,
+		db:            rawDB, // Temporary for Phase 1
+	}
+}
+
+// NewWithConcrete creates a handler from concrete types (backward compatibility wrapper)
+// Deprecated: Use New with interfaces instead
+func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRepo *database.MarketRepository, esiClient *esi.Client) *Handler {
+	return &Handler{
+		healthChecker: db,
+		sdeQuerier:    sdeRepo,
+		marketQuerier: marketRepo,
+		esiClient:     esiClient,
+		db:            db,
 	}
 }
 
 // Health handles health check requests
 func (h *Handler) Health(c *fiber.Ctx) error {
 	// Check database health
-	if err := h.db.Health(c.Context()); err != nil {
+	if err := h.healthChecker.Health(c.Context()); err != nil {
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"status": "unhealthy",
 			"error":  err.Error(),
@@ -70,7 +92,7 @@ func (h *Handler) GetType(c *fiber.Ctx) error {
 		})
 	}
 
-	typeInfo, err := h.sdeRepo.GetTypeInfo(c.Context(), typeID)
+	typeInfo, err := h.sdeQuerier.GetTypeInfo(c.Context(), typeID)
 	if err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": err.Error(),
@@ -143,7 +165,7 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 		}
 
 		// Store in database
-		if err := h.marketRepo.UpsertMarketOrders(c.Context(), allOrders); err != nil {
+		if err := h.marketQuerier.UpsertMarketOrders(c.Context(), allOrders); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error":   "failed to store market data",
 				"details": err.Error(),

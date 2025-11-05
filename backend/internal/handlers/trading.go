@@ -305,7 +305,7 @@ func (h *TradingHandler) fetchESICharacterShip(ctx context.Context, characterID 
 	}
 
 	// Get ship type name and cargo capacity
-	typeInfo, err := h.handler.sdeRepo.GetTypeInfo(ctx, int(esiShip.ShipTypeID))
+	typeInfo, err := h.handler.sdeQuerier.GetTypeInfo(ctx, int(esiShip.ShipTypeID))
 	if err == nil {
 		ship.ShipTypeName = typeInfo.Name
 	}
@@ -367,7 +367,7 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 		}
 
 		// Get type info to check category
-		typeInfo, err := h.handler.sdeRepo.GetTypeInfo(ctx, int(asset.TypeID))
+		typeInfo, err := h.handler.sdeQuerier.GetTypeInfo(ctx, int(asset.TypeID))
 		if err != nil {
 			continue
 		}
@@ -565,7 +565,7 @@ func (h *TradingHandler) SearchItems(c *fiber.Ctx) error {
 	}
 
 	// Search items via SDE repository
-	items, err := h.handler.sdeRepo.SearchItems(c.Context(), query, limit)
+	items, err := h.handler.sdeQuerier.SearchItems(c.Context(), query, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "failed to search items",
@@ -644,7 +644,7 @@ func (h *TradingHandler) CalculateInventorySellRoutes(c *fiber.Ctx) error {
 	}
 
 	// Get start system ID
-	startSystemID, err := h.handler.sdeRepo.GetSystemIDForLocation(c.Context(), startStationID)
+	startSystemID, err := h.handler.sdeQuerier.GetSystemIDForLocation(c.Context(), startStationID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to determine starting system",
@@ -720,7 +720,7 @@ func (h *TradingHandler) CalculateInventorySellRoutes(c *fiber.Ctx) error {
 		}
 
 		// Get station/system information
-		systemID, err := h.handler.sdeRepo.GetSystemIDForLocation(c.Context(), order.LocationID)
+		systemID, err := h.handler.sdeQuerier.GetSystemIDForLocation(c.Context(), order.LocationID)
 		if err != nil {
 			skipped["invalid_location"]++
 			continue // Skip invalid locations
@@ -746,8 +746,8 @@ func (h *TradingHandler) CalculateInventorySellRoutes(c *fiber.Ctx) error {
 			continue
 		}
 
-		systemName, _ := h.handler.sdeRepo.GetSystemName(c.Context(), systemID)
-		stationName, _ := h.handler.sdeRepo.GetStationName(c.Context(), order.LocationID)
+		systemName, _ := h.handler.sdeQuerier.GetSystemName(c.Context(), systemID)
+		stationName, _ := h.handler.sdeQuerier.GetStationName(c.Context(), order.LocationID)
 
 		route := models.InventorySellRoute{
 			SellStationID:          order.LocationID,
