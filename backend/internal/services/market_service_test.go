@@ -45,7 +45,7 @@ func TestMarketService_FetchAndStoreMarketOrders_IntegrationRequired(t *testing.
 
 func TestMarketService_GetMarketOrders_NotImplemented(t *testing.T) {
 	t.Skip("GetMarketOrders delegates to marketQuerier.GetMarketOrders - tested via repository tests")
-	
+
 	// This method is a simple delegation to the repository layer:
 	// func (s *MarketService) GetMarketOrders(ctx, regionID, typeID) {
 	//     return s.marketQuerier.GetMarketOrders(ctx, regionID, typeID)
