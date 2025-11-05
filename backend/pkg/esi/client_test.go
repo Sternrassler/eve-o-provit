@@ -285,7 +285,7 @@ func TestGetMarketOrders_EmptyResult(t *testing.T) {
 	// Create client with mock repo (type assertion workaround)
 	client := &Client{}
 	client.repo = (*database.MarketRepository)(nil) // Will be replaced by reflection in real code
-	
+
 	// Use mock repo directly for this test
 	ctx := context.Background()
 	orders, err := mockRepo.GetMarketOrders(ctx, 10000002, 99999)
