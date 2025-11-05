@@ -283,6 +283,7 @@ func TestGetMarketOrders_EmptyResult(t *testing.T) {
 	}
 
 	// Create client with mock repo (type assertion workaround)
+	//nolint:unusedwrite // Mock setup for client test
 	client := &Client{}
 	client.repo = (*database.MarketRepository)(nil) // Will be replaced by reflection in real code
 
