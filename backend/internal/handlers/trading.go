@@ -19,19 +19,25 @@ import (
 
 // TradingHandler handles trading-related HTTP requests
 type TradingHandler struct {
-	calculator      *services.RouteCalculator
-	handler         *Handler
-	characterHelper *services.CharacterHelper
-	tradingService  *services.TradingService
+	calculator                *services.RouteCalculator
+	handler                   *Handler
+	characterHelper           *services.CharacterHelper
+	tradingService            *services.TradingService
+	inventorySellOrchestrator services.InventorySellOrchestrator // New: Orchestrator for business logic
 }
 
 // NewTradingHandler creates a new trading handler instance
 func NewTradingHandler(calculator *services.RouteCalculator, baseHandler *Handler, charHelper *services.CharacterHelper, tradingService *services.TradingService) *TradingHandler {
+	// Create orchestrator (Phase 2 refactoring)
+	navigationService := services.NewNavigationService(baseHandler.sdeQuerier)
+	orchestrator := services.NewInventorySellOrchestrator(charHelper, navigationService, tradingService)
+
 	return &TradingHandler{
-		calculator:      calculator,
-		handler:         baseHandler,
-		characterHelper: charHelper,
-		tradingService:  tradingService,
+		calculator:                calculator,
+		handler:                   baseHandler,
+		characterHelper:           charHelper,
+		tradingService:            tradingService,
+		inventorySellOrchestrator: orchestrator,
 	}
 }
 
@@ -590,11 +596,7 @@ func (h *TradingHandler) SearchItems(c *fiber.Ctx) error {
 
 // CalculateInventorySellRoutes handles POST /api/v1/trading/inventory-sell
 func (h *TradingHandler) CalculateInventorySellRoutes(c *fiber.Ctx) error {
-	// Extract auth context
-	characterID := c.Locals("character_id").(int)
-	accessToken := c.Locals("access_token").(string)
-
-	// Parse and validate request
+	// 1. Parse request
 	var req models.InventorySellRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -602,69 +604,36 @@ func (h *TradingHandler) CalculateInventorySellRoutes(c *fiber.Ctx) error {
 		})
 	}
 
-	// Validate request parameters
-	if req.TypeID <= 0 {
+	// 2. Validate request
+	if err := req.Validate(); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid type_id",
-		})
-	}
-	if req.Quantity <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid quantity",
-		})
-	}
-	if req.BuyPricePerUnit <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid buy_price_per_unit",
-		})
-	}
-	if req.RegionID <= 0 {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid region_id",
+			"error": err.Error(),
 		})
 	}
 
-	// Get character location (current station)
-	location, err := h.characterHelper.GetCharacterLocation(c.Context(), characterID, accessToken)
+	// 3. Extract auth context
+	characterID := c.Locals("character_id").(int)
+	accessToken := c.Locals("access_token").(string)
+
+	// 4. Delegate to orchestrator (single call)
+	routes, err := h.inventorySellOrchestrator.CalculateSellRoutes(
+		c.Context(), req, characterID, accessToken,
+	)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch character location",
-			"details": err.Error(),
-		})
-	}
-
-	// Validate character is docked
-	if location.StationID == nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Character must be docked at a station to calculate sell routes",
-		})
-	}
-
-	// Get start system ID
-	startSystemID, err := h.handler.sdeQuerier.GetSystemIDForLocation(c.Context(), *location.StationID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to determine starting system",
-			"details": err.Error(),
-		})
-	}
-
-	// Calculate tax rate based on character skills
-	taxRate, err := h.characterHelper.CalculateTaxRate(c.Context(), characterID, accessToken)
-	if err != nil {
-		// Use fallback tax rate
-		taxRate = 0.055
-	}
-
-	// Delegate to TradingService
-	routes, err := h.tradingService.CalculateInventorySellRoutes(c.Context(), req, startSystemID, taxRate)
-	if err != nil {
+		// Handle business errors with appropriate status codes
+		if be, ok := services.IsBusinessError(err); ok {
+			return c.Status(be.Status).JSON(fiber.Map{
+				"error": be.Message,
+			})
+		}
+		// Handle internal errors
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to calculate sell routes",
 			"details": err.Error(),
 		})
 	}
 
+	// 5. Return response
 	return c.JSON(fiber.Map{
 		"routes": routes,
 		"count":  len(routes),

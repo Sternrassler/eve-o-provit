@@ -143,6 +143,33 @@ type InventorySellRequest struct {
 	SecurityFilter   string  `json:"security_filter"` // "all", "highsec", "highlow"
 }
 
+// Validate validates the inventory sell request parameters
+func (r *InventorySellRequest) Validate() error {
+	if r.TypeID <= 0 {
+		return &ValidationError{Field: "type_id", Message: "Invalid type_id"}
+	}
+	if r.Quantity <= 0 {
+		return &ValidationError{Field: "quantity", Message: "Invalid quantity"}
+	}
+	if r.BuyPricePerUnit <= 0 {
+		return &ValidationError{Field: "buy_price_per_unit", Message: "Invalid buy_price_per_unit"}
+	}
+	if r.RegionID <= 0 {
+		return &ValidationError{Field: "region_id", Message: "Invalid region_id"}
+	}
+	return nil
+}
+
+// ValidationError represents a validation error
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
+
 // InventorySellRoute represents a profitable sell opportunity for inventory
 type InventorySellRoute struct {
 	SellStationID          int64   `json:"sell_station_id"`
