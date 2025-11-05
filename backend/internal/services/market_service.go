@@ -79,9 +79,11 @@ func (s *MarketService) FetchAndStoreMarketOrders(ctx context.Context, regionID 
 
 // GetMarketOrders retrieves market orders from database for a specific region and type
 func (s *MarketService) GetMarketOrders(ctx context.Context, regionID, typeID int) ([]database.MarketOrder, error) {
-	// This would typically call a repository method, but for now we'll leave it
-	// as a placeholder since the original handler uses esiClient.GetMarketOrders
-	// which already handles database queries.
-	// In a future refactoring, this should be moved to MarketRepository.
-	return nil, fmt.Errorf("not implemented - use MarketRepository.GetMarketOrdersByTypeAndRegion")
+	// Delegate to marketQuerier to fetch from database
+	orders, err := s.marketQuerier.GetMarketOrders(ctx, regionID, typeID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query market orders: %w", err)
+	}
+	return orders, nil
 }
+

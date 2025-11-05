@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -14,13 +15,19 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+// MarketServicer defines interface for market data operations (enables mocking)
+type MarketServicer interface {
+	FetchAndStoreMarketOrders(ctx context.Context, regionID int) (int, error)
+	GetMarketOrders(ctx context.Context, regionID, typeID int) ([]database.MarketOrder, error)
+}
+
 // Handler holds dependencies for HTTP handlers
 type Handler struct {
 	healthChecker database.HealthChecker
 	sdeQuerier    database.SDEQuerier
 	marketQuerier database.MarketQuerier
 	esiClient     *esi.Client
-	marketService *services.MarketService
+	marketService MarketServicer // Interface for testability
 	// TODO(Phase 2): Remove raw DB access, use services instead
 	db *database.DB // Temporary: for GetMarketDataStaleness and GetRegions
 }
@@ -133,11 +140,11 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 	// Check if we should fetch fresh data
 	refresh := c.QueryBool("refresh", false)
 	if refresh {
-		// Delegate to MarketService
+		// Delegate to MarketService for fetching and storing
 		count, err := h.marketService.FetchAndStoreMarketOrders(c.Context(), regionID)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   "failed to fetch market data",
+				"error":   "Failed to fetch and store market data",
 				"details": err.Error(),
 			})
 		}
@@ -145,20 +152,16 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 		_ = count // Stored successfully
 	}
 
-	// Get orders from database via ESI client (uses cached data)
-	orders, err := h.esiClient.GetMarketOrders(c.Context(), regionID, typeID)
+	// Get orders from database via MarketService
+	orders, err := h.marketService.GetMarketOrders(c.Context(), regionID, typeID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
+			"error":   "Failed to get market orders",
+			"details": err.Error(),
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"region_id": regionID,
-		"type_id":   typeID,
-		"orders":    orders,
-		"count":     len(orders),
-	})
+	return c.JSON(orders)
 }
 
 // GetMarketDataStaleness returns age of market data for a region
