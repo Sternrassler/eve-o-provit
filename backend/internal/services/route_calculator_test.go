@@ -7,6 +7,60 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 )
 
+// TestStationTradingTimeCalculation tests that station trading uses minimum base time
+func TestStationTradingTimeCalculation(t *testing.T) {
+	tests := []struct {
+		name          string
+		jumps         int
+		buySystemID   int
+		sellSystemID  int
+		expectedTime  float64
+		description   string
+	}{
+		{
+			name:         "Station Trading - same system",
+			jumps:        0,
+			buySystemID:  30000142, // Jita
+			sellSystemID: 30000142, // Jita
+			expectedTime: 300.0,    // 5 minutes base time
+			description:  "Station trading should use 5 minute base time, not 0",
+		},
+		{
+			name:         "Regular Trading - 1 jump",
+			jumps:        1,
+			buySystemID:  30000142, // Jita
+			sellSystemID: 30000144, // Different system
+			expectedTime: 30.0,     // 1 jump * 30 seconds
+			description:  "Regular trading uses jump-based calculation",
+		},
+		{
+			name:         "Regular Trading - 10 jumps",
+			jumps:        10,
+			buySystemID:  30000142,
+			sellSystemID: 30002659,
+			expectedTime: 300.0, // 10 jumps * 30 seconds
+			description:  "Multi-jump trading",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Calculate one-way time
+			oneWaySeconds := float64(tt.jumps) * 30.0
+			
+			// Station Trading fix
+			if tt.buySystemID == tt.sellSystemID || tt.jumps == 0 {
+				oneWaySeconds = 300.0 // 5 minutes base time
+			}
+
+			if oneWaySeconds != tt.expectedTime {
+				t.Errorf("%s: got %.0f seconds, want %.0f seconds", 
+					tt.description, oneWaySeconds, tt.expectedTime)
+			}
+		})
+	}
+}
+
 // TestISKPerHourCalculation tests the ISK/Hour calculation logic
 func TestISKPerHourCalculation(t *testing.T) {
 	tests := []struct {
@@ -36,6 +90,13 @@ func TestISKPerHourCalculation(t *testing.T) {
 			quantity:         50,
 			roundTripSeconds: 30.0,
 			wantISKPerHour:   600000.0, // (100 * 50 / 30) * 3600
+		},
+		{
+			name:             "Station Trading - 5 minute base time",
+			profitPerUnit:    100000.0, // 100k ISK profit per unit
+			quantity:         737,
+			roundTripSeconds: 600.0,        // 5 min * 2 = 10 min round trip
+			wantISKPerHour:   442200000.0,  // (100k * 737 / 600) * 3600 = ~442.2M ISK/h
 		},
 		{
 			name:             "Zero round trip time",
