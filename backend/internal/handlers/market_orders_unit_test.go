@@ -218,8 +218,8 @@ func TestGetMarketOrders_StatusCodes(t *testing.T) {
 			setupMock: func() *MockMarketService {
 				return &MockMarketService{}
 			},
-				expectedStatusCode: 400,
-				expectedBodyPart:   "invalid region ID",
+			expectedStatusCode: 400,
+			expectedBodyPart:   "invalid region ID",
 		},
 		{
 			name: "400 Bad Request - Invalid type ID",
@@ -227,8 +227,8 @@ func TestGetMarketOrders_StatusCodes(t *testing.T) {
 			setupMock: func() *MockMarketService {
 				return &MockMarketService{}
 			},
-				expectedStatusCode: 400,
-				expectedBodyPart:   "invalid type ID",
+			expectedStatusCode: 400,
+			expectedBodyPart:   "invalid type ID",
 		},
 		{
 			name: "500 Internal Server Error - Service error",
