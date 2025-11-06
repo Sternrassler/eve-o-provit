@@ -113,3 +113,37 @@ type CargoServicer interface {
 		items []CargoItem,
 	) (*CargoSolution, error)
 }
+
+// ShipServicer defines the interface for ship-related operations
+type ShipServicer interface {
+	// GetShipCapacities retrieves cargo capacity for a ship type
+	GetShipCapacities(ctx context.Context, shipTypeID int64) (*ShipCapacities, error)
+}
+
+// SystemServicer defines the interface for system-related operations
+type SystemServicer interface {
+	// GetSystemInfo retrieves combined system and region information
+	GetSystemInfo(ctx context.Context, systemID int64) (*SystemInfo, error)
+
+	// GetStationName retrieves station name by ID
+	GetStationName(ctx context.Context, stationID int64) (string, error)
+}
+
+// SystemInfo contains system, region and location information
+type SystemInfo struct {
+	SystemName string
+	RegionID   int64
+	RegionName string
+}
+
+// ShipCapacities represents ship cargo capacity information
+type ShipCapacities struct {
+	ShipTypeID             int64
+	ShipName               string
+	BaseCargoHold          float64
+	EffectiveCargoHold     float64
+	BaseTotalCapacity      float64
+	EffectiveTotalCapacity float64
+	SkillBonus             float64
+	SkillsApplied          bool
+}

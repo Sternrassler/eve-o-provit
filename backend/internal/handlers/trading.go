@@ -8,33 +8,43 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
+	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
-	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
 	"github.com/gofiber/fiber/v2"
 )
 
 // TradingHandler handles trading-related HTTP requests
 type TradingHandler struct {
 	calculator                services.RouteCalculatorServicer // Interface for testability
-	handler                   *Handler
+	sdeQuerier                database.SDEQuerier              // For type info lookups
+	shipService               services.ShipServicer            // For ship capacity queries
+	systemService             services.SystemServicer          // For system/region/station info
 	characterHelper           *services.CharacterHelper
 	tradingService            *services.TradingService
 	inventorySellOrchestrator services.InventorySellOrchestrator // New: Orchestrator for business logic
 }
 
 // NewTradingHandler creates a new trading handler instance
-func NewTradingHandler(calculator *services.RouteCalculator, baseHandler *Handler, charHelper *services.CharacterHelper, tradingService *services.TradingService) *TradingHandler {
+func NewTradingHandler(
+	calculator *services.RouteCalculator,
+	sdeQuerier database.SDEQuerier,
+	shipService services.ShipServicer,
+	systemService services.SystemServicer,
+	charHelper *services.CharacterHelper,
+	tradingService *services.TradingService,
+) *TradingHandler {
 	// Create orchestrator (Phase 2 refactoring)
-	navigationService := services.NewNavigationService(baseHandler.sdeQuerier)
+	navigationService := services.NewNavigationService(sdeQuerier)
 	orchestrator := services.NewInventorySellOrchestrator(charHelper, navigationService, tradingService)
 
 	return &TradingHandler{
 		calculator:                calculator,
-		handler:                   baseHandler,
+		sdeQuerier:                sdeQuerier,
+		shipService:               shipService,
+		systemService:             systemService,
 		characterHelper:           charHelper,
 		tradingService:            tradingService,
 		inventorySellOrchestrator: orchestrator,
@@ -246,7 +256,7 @@ func (h *TradingHandler) fetchESICharacterLocation(ctx context.Context, characte
 	}
 
 	// Get system and region names from SDE
-	systemInfo, err := h.getSystemInfo(ctx, esiLoc.SolarSystemID)
+	systemInfo, err := h.systemService.GetSystemInfo(ctx, esiLoc.SolarSystemID)
 	if err == nil {
 		location.SolarSystemName = systemInfo.SystemName
 		location.RegionID = systemInfo.RegionID
@@ -254,7 +264,7 @@ func (h *TradingHandler) fetchESICharacterLocation(ctx context.Context, characte
 	}
 
 	if esiLoc.StationID != nil {
-		stationName, err := h.getStationName(ctx, *esiLoc.StationID)
+		stationName, err := h.systemService.GetStationName(ctx, *esiLoc.StationID)
 		if err == nil {
 			location.StationName = &stationName
 		}
@@ -310,12 +320,12 @@ func (h *TradingHandler) fetchESICharacterShip(ctx context.Context, characterID 
 	}
 
 	// Get ship type name and cargo capacity
-	typeInfo, err := h.handler.sdeQuerier.GetTypeInfo(ctx, int(esiShip.ShipTypeID))
+	typeInfo, err := h.sdeQuerier.GetTypeInfo(ctx, int(esiShip.ShipTypeID))
 	if err == nil {
 		ship.ShipTypeName = typeInfo.Name
 	}
 
-	capacities, err := cargo.GetShipCapacities(h.handler.db.SDE, esiShip.ShipTypeID, nil)
+	capacities, err := h.shipService.GetShipCapacities(ctx, esiShip.ShipTypeID)
 	if err == nil {
 		ship.CargoCapacity = capacities.BaseCargoHold
 	}
@@ -372,7 +382,7 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 		}
 
 		// Get type info to check category
-		typeInfo, err := h.handler.sdeQuerier.GetTypeInfo(ctx, int(asset.TypeID))
+		typeInfo, err := h.sdeQuerier.GetTypeInfo(ctx, int(asset.TypeID))
 		if err != nil {
 			continue
 		}
@@ -383,13 +393,13 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 		}
 
 		// Get cargo capacity
-		capacities, err := cargo.GetShipCapacities(h.handler.db.SDE, asset.TypeID, nil)
+		capacities, err := h.shipService.GetShipCapacities(ctx, asset.TypeID)
 		if err != nil {
 			// Skip if we can't get ship capacities (probably not a ship)
 			continue
 		}
 
-		locationName, _ := h.getStationName(ctx, asset.LocationID)
+		locationName, _ := h.systemService.GetStationName(ctx, asset.LocationID)
 
 		ships = append(ships, models.CharacterAssetShip{
 			ItemID:        asset.ItemID,
@@ -407,103 +417,6 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 		Ships: ships,
 		Count: len(ships),
 	}, nil
-}
-
-// SDE helper functions
-
-type systemInfo struct {
-	SystemName string
-	RegionID   int64
-	RegionName string
-}
-
-func (h *TradingHandler) getSystemInfo(ctx context.Context, systemID int64) (*systemInfo, error) {
-	query := `
-		SELECT s.name, s.regionID, r.name
-		FROM mapSolarSystems s
-		JOIN mapRegions r ON s.regionID = r._key
-		WHERE s._key = ?
-	`
-
-	var info systemInfo
-	var systemNameJSON, regionNameJSON string
-	err := h.handler.db.SDE.QueryRowContext(ctx, query, systemID).Scan(
-		&systemNameJSON,
-		&info.RegionID,
-		&regionNameJSON,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse JSON names and extract English version
-	var systemNames map[string]string
-	if err := json.Unmarshal([]byte(systemNameJSON), &systemNames); err == nil {
-		if enName, ok := systemNames["en"]; ok {
-			info.SystemName = enName
-		}
-	}
-
-	var regionNames map[string]string
-	if err := json.Unmarshal([]byte(regionNameJSON), &regionNames); err == nil {
-		if enName, ok := regionNames["en"]; ok {
-			info.RegionName = enName
-		}
-	}
-
-	return &info, nil
-}
-
-func (h *TradingHandler) getStationName(ctx context.Context, stationID int64) (string, error) {
-	// Try staStations first (old SDE format)
-	query := `SELECT stationName FROM staStations WHERE stationID = ?`
-
-	var name string
-	err := h.handler.db.SDE.QueryRowContext(ctx, query, stationID).Scan(&name)
-	if err == nil {
-		return name, nil
-	}
-
-	// Try mapDenormalize as fallback
-	query = `SELECT itemName FROM mapDenormalize WHERE itemID = ?`
-	err = h.handler.db.SDE.QueryRowContext(ctx, query, stationID).Scan(&name)
-	if err == nil {
-		return name, nil
-	}
-
-	// For NPC stations, fetch name from ESI Universe Names API
-	type esiNameResponse struct {
-		ID       int64  `json:"id"`
-		Name     string `json:"name"`
-		Category string `json:"category"`
-	}
-
-	url := "https://esi.evetech.net/latest/universe/names/"
-	payload := fmt.Sprintf("[%d]", stationID)
-
-	req, err := http.NewRequestWithContext(ctx, "POST", url, strings.NewReader(payload))
-	if err != nil {
-		return strconv.FormatInt(stationID, 10), nil
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return strconv.FormatInt(stationID, 10), nil
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == 200 {
-		var esiNames []esiNameResponse
-		if err := json.NewDecoder(resp.Body).Decode(&esiNames); err == nil && len(esiNames) > 0 {
-			return esiNames[0].Name, nil
-		}
-	}
-
-	// Final fallback: just return ID as string
-	return strconv.FormatInt(stationID, 10), nil
 }
 
 // setESIAutopilotWaypoint sets a waypoint in the EVE client via ESI UI API
@@ -570,7 +483,7 @@ func (h *TradingHandler) SearchItems(c *fiber.Ctx) error {
 	}
 
 	// Search items via SDE repository
-	items, err := h.handler.sdeQuerier.SearchItems(c.Context(), query, limit)
+	items, err := h.sdeQuerier.SearchItems(c.Context(), query, limit)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "failed to search items",

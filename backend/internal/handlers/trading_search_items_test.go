@@ -90,8 +90,11 @@ func TestSearchItems_Success_Unit(t *testing.T) {
 	}
 
 	// Setup handler
-	baseHandler := &Handler{sdeQuerier: mockSDE}
-	tradingHandler := &TradingHandler{handler: baseHandler}
+	tradingHandler := &TradingHandler{
+		sdeQuerier:    mockSDE,
+		shipService:   &MockShipService{},
+		systemService: &MockSystemService{},
+	}
 
 	// Create request
 	app := fiber.New()
@@ -156,8 +159,12 @@ func TestSearchItems_WithCustomLimit(t *testing.T) {
 		},
 	}
 
-	baseHandler := &Handler{sdeQuerier: mockSDE}
-	tradingHandler := &TradingHandler{handler: baseHandler}
+	// mockSDE is used in tradingHandler
+	tradingHandler := &TradingHandler{
+		sdeQuerier:    mockSDE,
+		shipService:   &MockShipService{},
+		systemService: &MockSystemService{},
+	}
 
 	app := fiber.New()
 	app.Get("/search", tradingHandler.SearchItems)
@@ -179,8 +186,12 @@ func TestSearchItems_LimitExceedsMax(t *testing.T) {
 		},
 	}
 
-	baseHandler := &Handler{sdeQuerier: mockSDE}
-	tradingHandler := &TradingHandler{handler: baseHandler}
+	// mockSDE is used in tradingHandler
+	tradingHandler := &TradingHandler{
+		sdeQuerier:    mockSDE,
+		shipService:   &MockShipService{},
+		systemService: &MockSystemService{},
+	}
 
 	app := fiber.New()
 	app.Get("/search", tradingHandler.SearchItems)
@@ -202,8 +213,12 @@ func TestSearchItems_InvalidLimit(t *testing.T) {
 		},
 	}
 
-	baseHandler := &Handler{sdeQuerier: mockSDE}
-	tradingHandler := &TradingHandler{handler: baseHandler}
+	// mockSDE is used in tradingHandler
+	tradingHandler := &TradingHandler{
+		sdeQuerier:    mockSDE,
+		shipService:   &MockShipService{},
+		systemService: &MockSystemService{},
+	}
 
 	app := fiber.New()
 	app.Get("/search", tradingHandler.SearchItems)
@@ -223,8 +238,12 @@ func TestSearchItems_SDEError_Unit(t *testing.T) {
 		},
 	}
 
-	baseHandler := &Handler{sdeQuerier: mockSDE}
-	tradingHandler := &TradingHandler{handler: baseHandler}
+	// mockSDE is used in tradingHandler
+	tradingHandler := &TradingHandler{
+		sdeQuerier:    mockSDE,
+		shipService:   &MockShipService{},
+		systemService: &MockSystemService{},
+	}
 
 	app := fiber.New()
 	app.Get("/search", tradingHandler.SearchItems)
@@ -247,8 +266,12 @@ func TestSearchItems_EmptyResults(t *testing.T) {
 		},
 	}
 
-	baseHandler := &Handler{sdeQuerier: mockSDE}
-	tradingHandler := &TradingHandler{handler: baseHandler}
+	// mockSDE is used in tradingHandler
+	tradingHandler := &TradingHandler{
+		sdeQuerier:    mockSDE,
+		shipService:   &MockShipService{},
+		systemService: &MockSystemService{},
+	}
 
 	app := fiber.New()
 	app.Get("/search", tradingHandler.SearchItems)
