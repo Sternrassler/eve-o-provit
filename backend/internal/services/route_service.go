@@ -18,6 +18,19 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const (
+	// MinSpreadPercent is the minimum spread percentage to consider profitable
+	MinSpreadPercent = 5.0
+	// MaxRoutes is the maximum number of routes to return
+	MaxRoutes = 50
+	// CalculationTimeout is the total timeout for route calculation
+	CalculationTimeout = 30 * time.Second
+	// MarketFetchTimeout is the timeout for market order fetching
+	MarketFetchTimeout = 15 * time.Second
+	// RouteCalculationTimeout is the timeout for route calculation phase
+	RouteCalculationTimeout = 25 * time.Second
+)
+
 // RouteService orchestrates route calculation workflow
 type RouteService struct {
 	esiClient      *esi.Client

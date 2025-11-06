@@ -7,19 +7,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewRouteCalculator_Initialization tests RouteCalculator initialization
-func TestNewRouteCalculator_Initialization(t *testing.T) {
+// TestNewRouteService_Initialization tests RouteService initialization
+func TestNewRouteService_Initialization(t *testing.T) {
 	t.Run("with nil dependencies", func(t *testing.T) {
-		calc := NewRouteCalculator(nil, nil, nil, nil, nil)
+		svc := NewRouteService(nil, nil, nil, nil, nil)
 
-		assert.NotNil(t, calc, "Calculator should be initialized even with nil dependencies")
+		assert.NotNil(t, svc, "Service should be initialized even with nil dependencies")
 	})
 
 	t.Run("with Redis client", func(t *testing.T) {
 		// Can't test Redis without actual connection, but verify it doesn't panic
-		calc := NewRouteCalculator(nil, nil, nil, nil, nil)
+		svc := NewRouteService(nil, nil, nil, nil, nil)
 
-		assert.NotNil(t, calc)
+		assert.NotNil(t, svc)
 	})
 }
 

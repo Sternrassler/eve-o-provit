@@ -28,8 +28,8 @@ func TestGetMinRouteSecurityStatus(t *testing.T) {
 	t.Skip("Requires navigation service - implement with mocks")
 }
 
-// TestNewRouteCalculator tests route calculator initialization
-func TestNewRouteCalculator(t *testing.T) {
+// TestNewRouteService tests route service initialization
+func TestNewRouteService(t *testing.T) {
 	tests := []struct {
 		name        string
 		redisClient interface{}
@@ -54,21 +54,16 @@ func TestNewRouteCalculator(t *testing.T) {
 				redisPtr = tt.redisClient.(*redis.Client)
 			}
 
-			calculator := NewRouteCalculator(nil, nil, nil, nil, redisPtr)
-			assert.NotNil(t, calculator)
-			assert.NotNil(t, calculator.cache)
-			assert.NotNil(t, calculator.workerPool)
-
-			if tt.expectCache {
-				assert.NotNil(t, calculator.navCache, "Navigation cache should be initialized with Redis")
-			} else {
-				assert.Nil(t, calculator.navCache, "Navigation cache should be nil without Redis")
-			}
+			service := NewRouteService(nil, nil, nil, nil, redisPtr)
+			assert.NotNil(t, service)
+			assert.NotNil(t, service.routeFinder)
+			assert.NotNil(t, service.routeOptimizer)
+			assert.NotNil(t, service.workerPool)
 		})
 	}
 }
 
-// TestRouteCalculatorConcurrency tests concurrent route calculations
-func TestRouteCalculatorConcurrency(t *testing.T) {
+// TestRouteServiceConcurrency tests concurrent route calculations
+func TestRouteServiceConcurrency(t *testing.T) {
 	t.Skip("Requires full integration test setup with worker pool")
 }
