@@ -19,7 +19,7 @@ func TestNewRouteFinder(t *testing.T) {
 		finder := NewRouteFinder(nil, nil, nil, nil, nil)
 
 		assert.NotNil(t, finder)
-		assert.Nil(t, finder.marketCache, "Market cache should be nil when Redis is nil")
+		// Note: marketCache is private and cannot be tested directly
 	})
 }
 

@@ -263,8 +263,8 @@ func TestProfitableItemFiltering(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Calculate spread
-			spread := ((tt.sellPrice - tt.buyPrice) / tt.sellPrice) * 100
+			// Calculate spread (matches implementation in route_finder.go)
+			spread := ((tt.sellPrice - tt.buyPrice) / tt.buyPrice) * 100
 
 			// Filter logic
 			profitable := spread >= 5.0 && tt.volume > 0
