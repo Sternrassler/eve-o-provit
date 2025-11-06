@@ -52,6 +52,14 @@ func (m *MockSDEQuerier) GetStationName(ctx context.Context, stationID int64) (s
 	return "", nil
 }
 
+func (m *MockSDEQuerier) GetRegionName(ctx context.Context, regionID int) (string, error) {
+	return "", nil
+}
+
+func (m *MockSDEQuerier) GetSystemSecurityStatus(ctx context.Context, systemID int64) (float64, error) {
+	return 0, nil
+}
+
 // MockMarketQuerier minimal implementation
 type MockMarketQuerier struct{}
 

@@ -30,6 +30,8 @@ type MockSDEQuerier struct {
 	GetSystemNameFunc          func(ctx context.Context, systemID int64) (string, error)
 	GetStationNameFunc         func(ctx context.Context, stationID int64) (string, error)
 	GetRegionIDForSystemFunc   func(ctx context.Context, systemID int64) (int, error)
+	GetRegionNameFunc          func(ctx context.Context, regionID int) (string, error)
+	GetSystemSecurityStatusFunc func(ctx context.Context, systemID int64) (float64, error)
 	SearchItemsFunc            func(ctx context.Context, searchTerm string, limit int) ([]struct {
 		TypeID    int
 		Name      string
@@ -88,6 +90,22 @@ func (m *MockSDEQuerier) GetRegionIDForSystem(ctx context.Context, systemID int6
 		return m.GetRegionIDForSystemFunc(ctx, systemID)
 	}
 	return 10000002, nil // The Forge by default
+}
+
+// GetRegionName calls the mock function or returns a default name
+func (m *MockSDEQuerier) GetRegionName(ctx context.Context, regionID int) (string, error) {
+	if m.GetRegionNameFunc != nil {
+		return m.GetRegionNameFunc(ctx, regionID)
+	}
+	return fmt.Sprintf("Region-%d", regionID), nil
+}
+
+// GetSystemSecurityStatus calls the mock function or returns a default security status
+func (m *MockSDEQuerier) GetSystemSecurityStatus(ctx context.Context, systemID int64) (float64, error) {
+	if m.GetSystemSecurityStatusFunc != nil {
+		return m.GetSystemSecurityStatusFunc(ctx, systemID)
+	}
+	return 1.0, nil // High-sec by default
 }
 
 // SearchItems calls the mock function or returns empty slice
