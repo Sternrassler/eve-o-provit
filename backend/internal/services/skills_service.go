@@ -5,32 +5,27 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
+	"github.com/redis/go-redis/v9"
 )
 
-// ESIClient defines the interface for ESI operations needed by Skills Service
-// TODO: Move to eve-esi-client package when implementing GetCharacterSkills
-type ESIClient interface {
-	GetCharacterSkills(ctx context.Context, characterID int, accessToken string) (*CharacterSkillsResponse, error)
+// esiSkillsResponse represents ESI /v4/characters/{id}/skills/ response
+type esiSkillsResponse struct {
+	Skills        []esiSkill `json:"skills"`
+	TotalSP       int64      `json:"total_sp"`
+	UnallocatedSP int        `json:"unallocated_sp,omitempty"`
 }
 
-// CharacterSkillsResponse represents ESI character skills response
-// TODO: Move to eve-esi-client package
-type CharacterSkillsResponse struct {
-	Skills        []Skill `json:"skills"`
-	TotalSP       int64   `json:"total_sp"`
-	UnallocatedSP int     `json:"unallocated_sp,omitempty"`
-}
-
-// Skill represents a single character skill from ESI
-// TODO: Move to eve-esi-client package
-type Skill struct {
-	SkillID           int `json:"skill_id"`
-	ActiveSkillLevel  int `json:"active_skill_level"`
-	TrainedSkillLevel int `json:"trained_skill_level"`
+// esiSkill represents a single skill from ESI
+type esiSkill struct {
+	SkillID            int   `json:"skill_id"`
+	ActiveSkillLevel   int   `json:"active_skill_level"`
+	TrainedSkillLevel  int   `json:"trained_skill_level"`
 	SkillPointsInSkill int64 `json:"skillpoints_in_skill"`
 }
 
@@ -60,14 +55,14 @@ type TradingSkills struct {
 
 // SkillsService provides character skills fetching with caching
 type SkillsService struct {
-	esiClient   ESIClient
+	esiClient   *esiclient.Client
 	redisClient *redis.Client
 	logger      *logger.Logger
 }
 
 // NewSkillsService creates a new Skills Service instance
 func NewSkillsService(
-	esiClient ESIClient,
+	esiClient *esiclient.Client,
 	redisClient *redis.Client,
 	logger *logger.Logger,
 ) SkillsServicer {
@@ -95,7 +90,7 @@ func (s *SkillsService) GetCharacterSkills(ctx context.Context, characterID int,
 
 	// 2. Cache miss - fetch from ESI
 	s.logger.Debug("Skills cache miss - fetching from ESI", "characterID", characterID)
-	esiSkills, err := s.esiClient.GetCharacterSkills(ctx, characterID, accessToken)
+	esiSkills, err := s.fetchSkillsFromESI(ctx, characterID, accessToken)
 	if err != nil {
 		s.logger.Error("ESI skills fetch failed - using defaults", "error", err, "characterID", characterID)
 		// Graceful degradation: return default skills (worst-case fees/cargo)
@@ -121,8 +116,48 @@ func (s *SkillsService) GetCharacterSkills(ctx context.Context, characterID int,
 	return skills, nil
 }
 
+// fetchSkillsFromESI fetches character skills from ESI API
+// Follows the pattern from trading.go (direct HTTP request with Authorization header)
+func (s *SkillsService) fetchSkillsFromESI(ctx context.Context, characterID int, accessToken string) (*esiSkillsResponse, error) {
+	endpoint := fmt.Sprintf("/v4/characters/%d/skills/", characterID)
+
+	// Create HTTP request with context
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://esi.evetech.net"+endpoint, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create request: %w", err)
+	}
+
+	// Add authorization header
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	// Execute request through ESI client (handles rate limiting, caching, retries)
+	resp, err := s.esiClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("esi request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Handle HTTP errors
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return nil, fmt.Errorf("unauthorized: status %d", resp.StatusCode)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ESI returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse JSON response
+	var skillsResp esiSkillsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&skillsResp); err != nil {
+		return nil, fmt.Errorf("parse skills response: %w", err)
+	}
+
+	return &skillsResp, nil
+}
+
 // extractTradingSkills extracts relevant trading skills from ESI skill list
-func (s *SkillsService) extractTradingSkills(esiSkills *CharacterSkillsResponse) *TradingSkills {
+func (s *SkillsService) extractTradingSkills(esiSkills *esiSkillsResponse) *TradingSkills {
 	skills := &TradingSkills{
 		// Default faction standing (neutral)
 		FactionStanding: 0.0,

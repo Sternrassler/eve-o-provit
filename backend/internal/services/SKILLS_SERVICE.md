@@ -7,6 +7,7 @@ The Skills Service provides centralized character skills fetching and caching fo
 ## Purpose (Phase 0 - Issue #54)
 
 **Goal:** Create a single source of truth for character skills to be used by:
+
 - Fee Service (Issue #55)
 - Cargo Service (Issue #56)
 - All future features requiring skill-based calculations
@@ -26,11 +27,42 @@ type SkillsServicer interface {
 **File:** `internal/services/skills_service.go`
 
 **Dependencies:**
-- ESI Client (temporary interface until `eve-esi-client` implements `GetCharacterSkills`)
+
+- **eve-esi-client** (`*esiclient.Client`) - Generic HTTP client (returns `*http.Response`)
+- **Redis** - Caching layer
+- **Logger** - Structured logging
+
+**ESI Integration Pattern:**
+
+Follows `trading.go` pattern - direct HTTP request + JSON parsing:
+
+```go
+func (s *SkillsService) fetchSkillsFromESI(ctx context.Context, characterID int, accessToken string) (*esiSkillsResponse, error) {
+    // Create HTTP request with Authorization header
+    req, _ := http.NewRequestWithContext(ctx, "GET", "https://esi.evetech.net/v4/characters/{id}/skills/", nil)
+    req.Header.Set("Authorization", "Bearer "+accessToken)
+    
+    // ESI client handles rate limiting, caching, retries
+    resp, err := s.esiClient.Do(req)
+    
+    // Application parses JSON response
+    var skillsResp esiSkillsResponse
+    json.NewDecoder(resp.Body).Decode(&skillsResp)
+    
+    return &skillsResp, nil
+}
+```
+
+**Why Generic Client?**
+
+- ESI client is agnostic - supports all ESI endpoints
+- Application owns response parsing (type-safe)
+- Same pattern as existing `trading.go` (`fetchESICharacterLocation`, `fetchESICharacterShip`)
 - Redis Client (for caching)
 - Logger (structured logging)
 
 **Key Features:**
+
 1. **Redis Caching (5min TTL)**
    - Cache key: `character_skills:{characterID}`
    - JSON-serialized `TradingSkills` struct
@@ -109,6 +141,7 @@ effectiveTax := baseTax * (1 - taxReduction)
 ## Error Handling
 
 **No Hard Failures:**
+
 - ESI timeout → Default skills (all = 0)
 - Redis unavailable → ESI fetch every time (no cache)
 - Cache corruption → Log warning, re-fetch from ESI
@@ -121,6 +154,7 @@ Trading features should degrade gracefully. Worst-case skills mean higher fees/l
 **Test Suite:** `internal/services/skills_service_test.go`
 
 **Coverage:**
+
 - ✅ Cache hit scenario (ESI not called)
 - ✅ Cache miss scenario (ESI called, result cached)
 - ✅ ESI error scenario (graceful fallback to defaults)
@@ -134,6 +168,7 @@ Trading features should degrade gracefully. Worst-case skills mean higher fees/l
 ## Integration Status
 
 **Current State (v0.1.x):**
+
 - ✅ Service implemented
 - ✅ Tests passing
 - ✅ Logger package created
@@ -141,10 +176,12 @@ Trading features should degrade gracefully. Worst-case skills mean higher fees/l
 - ⏳ Integration commented out in `main.go` (waiting for ESI client implementation)
 
 **Blocked By:**
+
 - `eve-esi-client` package missing `GetCharacterSkills` method
 - Temporary `ESIClient` interface created in `skills_service.go` as workaround
 
 **Next Steps:**
+
 1. Implement `GetCharacterSkills` in `eve-esi-client` package
 2. Move `CharacterSkillsResponse` and `Skill` types to `eve-esi-client`
 3. Uncomment integration in `main.go`
@@ -155,6 +192,7 @@ Trading features should degrade gracefully. Worst-case skills mean higher fees/l
 **TTL:** 5 minutes
 
 **Rationale:**
+
 - Skills change infrequently (training takes hours/days)
 - Active training → want updates within reasonable time
 - Balances freshness vs. ESI load
@@ -162,20 +200,24 @@ Trading features should degrade gracefully. Worst-case skills mean higher fees/l
 **Key Pattern:** `character_skills:{characterID}`
 
 **Invalidation:**
+
 - Automatic (TTL expiry)
 - Manual invalidation not implemented (not needed for skill training timescales)
 
 ## Dependencies
 
 **Internal:**
+
 - `pkg/logger` (simple structured logger)
 - `redis/go-redis/v9` (Redis client)
 
 **External (Temporary):**
+
 - `ESIClient` interface (local definition until `eve-esi-client` implements)
 - `CharacterSkillsResponse`, `Skill` types (local until moved to `eve-esi-client`)
 
 **Future:**
+
 - `github.com/Sternrassler/eve-esi-client` (when `GetCharacterSkills` implemented)
 
 ## Performance
@@ -189,12 +231,14 @@ Trading features should degrade gracefully. Worst-case skills mean higher fees/l
 ## Monitoring
 
 **Logs:**
+
 - `Debug`: Cache hit/miss
 - `Info`: ESI fetch success
 - `Warn`: Cache unmarshal failure, cache write failure
 - `Error`: ESI fetch failure (before fallback)
 
 **Metrics (Future):**
+
 - Cache hit rate
 - ESI fetch latency
 - Default skills fallback count
@@ -202,18 +246,21 @@ Trading features should degrade gracefully. Worst-case skills mean higher fees/l
 ## Migration Path (TODO)
 
 **Phase 1: Implement in eve-esi-client**
+
 1. Add `GetCharacterSkills` method to `eve-esi-client/pkg/client/client.go`
 2. Move types to `eve-esi-client/pkg/client/types.go`
 3. Use ESI endpoint: `GET /characters/{character_id}/skills/`
 4. Include rate limiting, caching, error handling (consistent with existing methods)
 
 **Phase 2: Update skills_service.go**
+
 1. Remove temporary `ESIClient` interface
 2. Remove temporary types (`CharacterSkillsResponse`, `Skill`)
 3. Import from `eve-esi-client` package
 4. Update `NewSkillsService` parameter type
 
 **Phase 3: Activate in main.go**
+
 1. Uncomment `skillsService` instantiation
 2. Pass to Fee Service, Cargo Service constructors
 

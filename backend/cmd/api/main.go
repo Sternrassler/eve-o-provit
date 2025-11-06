@@ -83,11 +83,12 @@ func main() {
 
 	routeCalculator := services.NewRouteCalculator(esiClient, db.SDE, sdeRepo, marketRepo, redisClient)
 	characterHelper := services.NewCharacterHelper(redisClient)
-	
+
 	// Skills Service (Phase 0 - Issue #54)
-	// TODO: Uncomment when GetCharacterSkills is implemented in eve-esi-client
-	// skillsService := services.NewSkillsService(esiClient, redisClient, appLogger)
-	_ = appLogger // Suppress unused warning until Skills Service is activated
+	skillsService := services.NewSkillsService(esiClient.GetRawClient(), redisClient, appLogger)
+
+	// Suppress unused warnings (Skills Service wird in Phase 1 genutzt)
+	_ = skillsService
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)

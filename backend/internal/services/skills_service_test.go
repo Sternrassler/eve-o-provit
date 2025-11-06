@@ -3,7 +3,8 @@ package services
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
@@ -11,19 +12,82 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 )
 
-// MockESIClient mocks the ESI client for testing
-type MockESIClient struct {
-	getCharacterSkillsFunc func(ctx context.Context, characterID int, accessToken string) (*CharacterSkillsResponse, error)
+// mockESIServer creates a test HTTP server that mimics ESI API responses
+type mockESIServer struct {
+	server     *httptest.Server
+	skillsResp *esiSkillsResponse
+	statusCode int
 }
 
-func (m *MockESIClient) GetCharacterSkills(ctx context.Context, characterID int, accessToken string) (*CharacterSkillsResponse, error) {
-	if m.getCharacterSkillsFunc != nil {
-		return m.getCharacterSkillsFunc(ctx, characterID, accessToken)
+func newMockESIServer(skillsResp *esiSkillsResponse, statusCode int) *mockESIServer {
+	mock := &mockESIServer{
+		skillsResp: skillsResp,
+		statusCode: statusCode,
 	}
-	return nil, errors.New("not mocked")
+
+	mock.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify authorization header
+		if r.Header.Get("Authorization") == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		// Return configured status code
+		if mock.statusCode != http.StatusOK {
+			w.WriteHeader(mock.statusCode)
+			w.Write([]byte(`{"error": "test error"}`))
+			return
+		}
+
+		// Return skills response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(mock.skillsResp)
+	}))
+
+	return mock
+}
+
+func (m *mockESIServer) Close() {
+	if m.server != nil {
+		m.server.Close()
+	}
+}
+
+// createTestESIClient creates an ESI client connected to a mock HTTP server
+func createTestESIClient(t *testing.T, mockServer *mockESIServer, redisClient *redis.Client) *esiclient.Client {
+	cfg := esiclient.DefaultConfig(redisClient, "eve-o-provit-test/1.0")
+	cfg.MaxRetries = 0        // No retries in tests
+	cfg.RespectExpires = true // ESI requirement - MUST be true
+
+	client, err := esiclient.New(cfg)
+	require.NoError(t, err)
+
+	// Replace HTTP client with one that redirects to mock server
+	mockHTTPClient := &http.Client{
+		Transport: &mockTransport{
+			mockServer: mockServer,
+		},
+	}
+	client.SetHTTPClient(mockHTTPClient)
+
+	return client
+}
+
+// mockTransport redirects ESI requests to mock server
+type mockTransport struct {
+	mockServer *mockESIServer
+}
+
+func (t *mockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	// Redirect to mock server
+	req.URL.Scheme = "http"
+	req.URL.Host = t.mockServer.server.URL[7:] // Remove "http://"
+	return http.DefaultTransport.RoundTrip(req)
 }
 
 // TestSkillsService_GetCharacterSkills_CacheHit tests cache hit scenario
@@ -46,16 +110,15 @@ func TestSkillsService_GetCharacterSkills_CacheHit(t *testing.T) {
 	cachedData, _ := json.Marshal(cachedSkills)
 	require.NoError(t, redisClient.Set(ctx, cacheKey, cachedData, 0).Err())
 
-	// Mock ESI client (should NOT be called)
-	mockESI := &MockESIClient{
-		getCharacterSkillsFunc: func(ctx context.Context, characterID int, accessToken string) (*CharacterSkillsResponse, error) {
-			t.Fatal("ESI should not be called on cache hit")
-			return nil, nil
-		},
-	}
+	// Mock ESI server (should NOT be called due to cache hit)
+	mockServer := newMockESIServer(nil, http.StatusOK)
+	defer mockServer.Close()
+
+	esiClient := createTestESIClient(t, mockServer, redisClient)
+	defer esiClient.Close()
 
 	// Create service
-	service := NewSkillsService(mockESI, redisClient, logger.NewNoop())
+	service := NewSkillsService(esiClient, redisClient, logger.NewNoop())
 
 	// Execute
 	result, err := service.GetCharacterSkills(ctx, 12345, "test-token")
@@ -79,20 +142,21 @@ func TestSkillsService_GetCharacterSkills_CacheMiss(t *testing.T) {
 	ctx := context.Background()
 
 	// Mock ESI response
-	mockESI := &MockESIClient{
-		getCharacterSkillsFunc: func(ctx context.Context, characterID int, accessToken string) (*CharacterSkillsResponse, error) {
-			return &CharacterSkillsResponse{
-				Skills: []Skill{
-					{SkillID: 16622, ActiveSkillLevel: 4}, // Accounting IV
-					{SkillID: 3446, ActiveSkillLevel: 5},  // Broker Relations V
-					{SkillID: 3449, ActiveSkillLevel: 3},  // Navigation III
-				},
-			}, nil
+	mockSkills := &esiSkillsResponse{
+		Skills: []esiSkill{
+			{SkillID: 16622, ActiveSkillLevel: 4}, // Accounting IV
+			{SkillID: 3446, ActiveSkillLevel: 5},  // Broker Relations V
+			{SkillID: 3449, ActiveSkillLevel: 3},  // Navigation III
 		},
 	}
+	mockServer := newMockESIServer(mockSkills, http.StatusOK)
+	defer mockServer.Close()
+
+	esiClient := createTestESIClient(t, mockServer, redisClient)
+	defer esiClient.Close()
 
 	// Create service
-	service := NewSkillsService(mockESI, redisClient, logger.NewNoop())
+	service := NewSkillsService(esiClient, redisClient, logger.NewNoop())
 
 	// Execute
 	result, err := service.GetCharacterSkills(ctx, 12345, "test-token")
@@ -107,7 +171,7 @@ func TestSkillsService_GetCharacterSkills_CacheMiss(t *testing.T) {
 	cacheKey := "character_skills:12345"
 	cachedData, err := redisClient.Get(ctx, cacheKey).Bytes()
 	require.NoError(t, err)
-	
+
 	var cachedSkills TradingSkills
 	require.NoError(t, json.Unmarshal(cachedData, &cachedSkills))
 	assert.Equal(t, 4, cachedSkills.Accounting)
@@ -125,15 +189,15 @@ func TestSkillsService_GetCharacterSkills_ESIError(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Mock ESI error
-	mockESI := &MockESIClient{
-		getCharacterSkillsFunc: func(ctx context.Context, characterID int, accessToken string) (*CharacterSkillsResponse, error) {
-			return nil, errors.New("ESI timeout")
-		},
-	}
+	// Mock ESI error (500 Internal Server Error)
+	mockServer := newMockESIServer(nil, http.StatusInternalServerError)
+	defer mockServer.Close()
+
+	esiClient := createTestESIClient(t, mockServer, redisClient)
+	defer esiClient.Close()
 
 	// Create service
-	service := NewSkillsService(mockESI, redisClient, logger.NewNoop())
+	service := NewSkillsService(esiClient, redisClient, logger.NewNoop())
 
 	// Execute
 	result, err := service.GetCharacterSkills(ctx, 12345, "test-token")
@@ -149,47 +213,47 @@ func TestSkillsService_GetCharacterSkills_ESIError(t *testing.T) {
 func TestSkillsService_ExtractTradingSkills(t *testing.T) {
 	tests := []struct {
 		name     string
-		esiSkill Skill
+		esiSkill esiSkill
 		validate func(*testing.T, *TradingSkills)
 	}{
 		{
 			name:     "Accounting skill",
-			esiSkill: Skill{SkillID: 16622, ActiveSkillLevel: 5},
+			esiSkill: esiSkill{SkillID: 16622, ActiveSkillLevel: 5},
 			validate: func(t *testing.T, skills *TradingSkills) {
 				assert.Equal(t, 5, skills.Accounting)
 			},
 		},
 		{
 			name:     "Broker Relations skill",
-			esiSkill: Skill{SkillID: 3446, ActiveSkillLevel: 4},
+			esiSkill: esiSkill{SkillID: 3446, ActiveSkillLevel: 4},
 			validate: func(t *testing.T, skills *TradingSkills) {
 				assert.Equal(t, 4, skills.BrokerRelations)
 			},
 		},
 		{
 			name:     "Advanced Broker Relations skill",
-			esiSkill: Skill{SkillID: 3447, ActiveSkillLevel: 3},
+			esiSkill: esiSkill{SkillID: 3447, ActiveSkillLevel: 3},
 			validate: func(t *testing.T, skills *TradingSkills) {
 				assert.Equal(t, 3, skills.AdvancedBrokerRelations)
 			},
 		},
 		{
 			name:     "Navigation skill",
-			esiSkill: Skill{SkillID: 3449, ActiveSkillLevel: 5},
+			esiSkill: esiSkill{SkillID: 3449, ActiveSkillLevel: 5},
 			validate: func(t *testing.T, skills *TradingSkills) {
 				assert.Equal(t, 5, skills.Navigation)
 			},
 		},
 		{
 			name:     "Evasive Maneuvering skill",
-			esiSkill: Skill{SkillID: 3452, ActiveSkillLevel: 4},
+			esiSkill: esiSkill{SkillID: 3452, ActiveSkillLevel: 4},
 			validate: func(t *testing.T, skills *TradingSkills) {
 				assert.Equal(t, 4, skills.EvasiveManeuvering)
 			},
 		},
 		{
 			name:     "Gallente Industrial skill",
-			esiSkill: Skill{SkillID: 3348, ActiveSkillLevel: 5},
+			esiSkill: esiSkill{SkillID: 3348, ActiveSkillLevel: 5},
 			validate: func(t *testing.T, skills *TradingSkills) {
 				assert.Equal(t, 5, skills.GallenteIndustrial)
 			},
@@ -205,12 +269,12 @@ func TestSkillsService_ExtractTradingSkills(t *testing.T) {
 			redisClient := redis.NewClient(&redis.Options{Addr: s.Addr()})
 			defer redisClient.Close()
 
-			esiResponse := &CharacterSkillsResponse{
-				Skills: []Skill{tt.esiSkill},
+			esiResponse := &esiSkillsResponse{
+				Skills: []esiSkill{tt.esiSkill},
 			}
 
 			service := &SkillsService{
-				esiClient:   &MockESIClient{},
+				esiClient:   nil, // Not needed for extraction test
 				redisClient: redisClient,
 				logger:      logger.NewNoop(),
 			}
@@ -234,8 +298,8 @@ func TestSkillsService_MultipleSkills(t *testing.T) {
 	defer redisClient.Close()
 
 	// Mock ESI response with multiple skills
-	esiResponse := &CharacterSkillsResponse{
-		Skills: []Skill{
+	esiResponse := &esiSkillsResponse{
+		Skills: []esiSkill{
 			{SkillID: 16622, ActiveSkillLevel: 5}, // Accounting V
 			{SkillID: 3446, ActiveSkillLevel: 5},  // Broker Relations V
 			{SkillID: 3447, ActiveSkillLevel: 4},  // Advanced Broker Relations IV
@@ -247,7 +311,7 @@ func TestSkillsService_MultipleSkills(t *testing.T) {
 	}
 
 	service := &SkillsService{
-		esiClient:   &MockESIClient{},
+		esiClient:   nil, // Not needed for extraction test
 		redisClient: redisClient,
 		logger:      logger.NewNoop(),
 	}
@@ -275,8 +339,8 @@ func TestSkillsService_UnknownSkills(t *testing.T) {
 	defer redisClient.Close()
 
 	// Mock ESI response with unknown skill IDs
-	esiResponse := &CharacterSkillsResponse{
-		Skills: []Skill{
+	esiResponse := &esiSkillsResponse{
+		Skills: []esiSkill{
 			{SkillID: 99999, ActiveSkillLevel: 5}, // Unknown skill
 			{SkillID: 16622, ActiveSkillLevel: 4}, // Accounting IV
 			{SkillID: 88888, ActiveSkillLevel: 3}, // Unknown skill
@@ -284,7 +348,7 @@ func TestSkillsService_UnknownSkills(t *testing.T) {
 	}
 
 	service := &SkillsService{
-		esiClient:   &MockESIClient{},
+		esiClient:   nil, // Not needed for extraction test
 		redisClient: redisClient,
 		logger:      logger.NewNoop(),
 	}
@@ -307,7 +371,7 @@ func TestSkillsService_GetDefaultSkills(t *testing.T) {
 	defer redisClient.Close()
 
 	service := &SkillsService{
-		esiClient:   &MockESIClient{},
+		esiClient:   nil, // Not needed for default skills
 		redisClient: redisClient,
 		logger:      logger.NewNoop(),
 	}
