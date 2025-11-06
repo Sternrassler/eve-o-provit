@@ -158,7 +158,10 @@ func (rp *RoutePlanner) getLocationNames(ctx context.Context, systemID, stationI
 func (rp *RoutePlanner) getSystemSecurityStatus(ctx context.Context, systemID int64) float64 {
 	security, err := rp.sdeQuerier.GetSystemSecurityStatus(ctx, systemID)
 	if err != nil {
-		return 1.0 // Default to high-sec on error
+		// Default to high-sec (1.0) on error for safety
+		// Changed from 0.0 (nullsec) which was incorrect and could cause
+		// routes to incorrectly include dangerous systems
+		return 1.0
 	}
 	return security
 }

@@ -360,11 +360,16 @@ func (r *SDERepository) GetRegionName(ctx context.Context, regionID int) (string
 
 // GetSystemSecurityStatus retrieves the security status of a solar system
 func (r *SDERepository) GetSystemSecurityStatus(ctx context.Context, systemID int64) (float64, error) {
+	// Note: SDE schema uses different column names across versions
+	// - 'securityStatus' in newer SDE exports
+	// - 'security' in older SDE exports
+	// Using COALESCE ensures compatibility with both schema versions
 	query := `SELECT COALESCE(securityStatus, security, 0.0) FROM mapSolarSystems WHERE _key = ?`
 	var secStatus float64
 	err := r.db.QueryRowContext(ctx, query, systemID).Scan(&secStatus)
 	if err == sql.ErrNoRows {
-		return 1.0, nil // Default to high-sec if system not found
+		// System not found - return error for consistent error handling
+		return 1.0, fmt.Errorf("system %d not found in SDE", systemID)
 	}
 	if err != nil {
 		return 1.0, fmt.Errorf("failed to query security status: %w", err)
