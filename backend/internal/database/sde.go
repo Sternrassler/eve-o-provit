@@ -326,3 +326,48 @@ func (r *SDERepository) GetAllRegions(ctx context.Context) ([]RegionData, error)
 
 	return regions, nil
 }
+
+// GetRegionName retrieves the region name by ID
+func (r *SDERepository) GetRegionName(ctx context.Context, regionID int) (string, error) {
+	query := `SELECT name FROM mapRegions WHERE _key = ?`
+	var nameJSON string
+	err := r.db.QueryRowContext(ctx, query, regionID).Scan(&nameJSON)
+	if err == sql.ErrNoRows {
+		return fmt.Sprintf("Region-%d", regionID), nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to query region name: %w", err)
+	}
+
+	// Parse JSON to get English name
+	// Format: {"en":"The Forge","de":"..."}
+	var nameMap map[string]string
+	if err := json.Unmarshal([]byte(nameJSON), &nameMap); err != nil {
+		return fmt.Sprintf("Region-%d", regionID), nil
+	}
+
+	if enName, ok := nameMap["en"]; ok {
+		return enName, nil
+	}
+
+	// Fallback to first available name
+	for _, name := range nameMap {
+		return name, nil
+	}
+
+	return fmt.Sprintf("Region-%d", regionID), nil
+}
+
+// GetSystemSecurityStatus retrieves the security status of a solar system
+func (r *SDERepository) GetSystemSecurityStatus(ctx context.Context, systemID int64) (float64, error) {
+	query := `SELECT COALESCE(securityStatus, security, 0.0) FROM mapSolarSystems WHERE _key = ?`
+	var secStatus float64
+	err := r.db.QueryRowContext(ctx, query, systemID).Scan(&secStatus)
+	if err == sql.ErrNoRows {
+		return 1.0, nil // Default to high-sec if system not found
+	}
+	if err != nil {
+		return 1.0, fmt.Errorf("failed to query security status: %w", err)
+	}
+	return secStatus, nil
+}

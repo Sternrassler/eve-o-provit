@@ -156,11 +156,9 @@ func (rp *RoutePlanner) getLocationNames(ctx context.Context, systemID, stationI
 
 // getSystemSecurityStatus retrieves security status for a system
 func (rp *RoutePlanner) getSystemSecurityStatus(ctx context.Context, systemID int64) float64 {
-	query := `SELECT COALESCE(security, 0.0) FROM mapSolarSystems WHERE _key = ?`
-	var security float64
-	err := rp.sdeDB.QueryRowContext(ctx, query, systemID).Scan(&security)
+	security, err := rp.sdeQuerier.GetSystemSecurityStatus(ctx, systemID)
 	if err != nil {
-		return 0.0
+		return 1.0 // Default to high-sec on error
 	}
 	return security
 }
