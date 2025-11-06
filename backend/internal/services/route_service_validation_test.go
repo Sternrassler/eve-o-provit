@@ -7,19 +7,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewRouteCalculator_Initialization tests RouteCalculator initialization
-func TestNewRouteCalculator_Initialization(t *testing.T) {
+// TestNewRouteService_Initialization tests RouteService initialization
+func TestNewRouteService_Initialization(t *testing.T) {
 	t.Run("with nil dependencies", func(t *testing.T) {
-		calc := NewRouteCalculator(nil, nil, nil, nil, nil)
+		svc := NewRouteService(nil, nil, nil, nil, nil)
 
-		assert.NotNil(t, calc, "Calculator should be initialized even with nil dependencies")
+		assert.NotNil(t, svc, "Service should be initialized even with nil dependencies")
 	})
 
 	t.Run("with Redis client", func(t *testing.T) {
 		// Can't test Redis without actual connection, but verify it doesn't panic
-		calc := NewRouteCalculator(nil, nil, nil, nil, nil)
+		svc := NewRouteService(nil, nil, nil, nil, nil)
 
-		assert.NotNil(t, calc)
+		assert.NotNil(t, svc)
 	})
 }
 
@@ -263,8 +263,8 @@ func TestProfitableItemFiltering(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Calculate spread
-			spread := ((tt.sellPrice - tt.buyPrice) / tt.sellPrice) * 100
+			// Calculate spread (matches implementation in route_finder.go)
+			spread := ((tt.sellPrice - tt.buyPrice) / tt.buyPrice) * 100
 
 			// Filter logic
 			profitable := spread >= 5.0 && tt.volume > 0

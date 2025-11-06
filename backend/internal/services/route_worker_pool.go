@@ -11,15 +11,15 @@ import (
 
 // RouteWorkerPool handles parallel route calculation
 type RouteWorkerPool struct {
-	workerCount int
-	calculator  *RouteCalculator
+	workerCount    int
+	routeOptimizer *RouteOptimizer
 }
 
 // NewRouteWorkerPool creates a new route worker pool
-func NewRouteWorkerPool(calculator *RouteCalculator) *RouteWorkerPool {
+func NewRouteWorkerPool(routeOptimizer *RouteOptimizer) *RouteWorkerPool {
 	return &RouteWorkerPool{
-		workerCount: 50, // Process 50 item pairs in parallel
-		calculator:  calculator,
+		workerCount:    50, // Process 50 item pairs in parallel
+		routeOptimizer: routeOptimizer,
 	}
 }
 
@@ -85,7 +85,7 @@ func (p *RouteWorkerPool) worker(ctx context.Context, itemQueue <-chan models.It
 		default:
 		}
 
-		route, err := p.calculator.calculateRoute(ctx, item, cargoCapacity)
+		route, err := p.routeOptimizer.CalculateRoute(ctx, item, cargoCapacity)
 		if err != nil {
 			// Log but don't fail the entire operation
 			log.Printf("Warning: skipped route for item %d (%s): %v", item.TypeID, item.ItemName, err)

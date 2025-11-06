@@ -29,7 +29,7 @@ type TradingHandler struct {
 
 // NewTradingHandler creates a new trading handler instance
 func NewTradingHandler(
-	calculator *services.RouteCalculator,
+	calculator services.RouteCalculatorServicer,
 	sdeQuerier database.SDEQuerier,
 	shipService services.ShipServicer,
 	systemService services.SystemServicer,
