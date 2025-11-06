@@ -87,8 +87,12 @@ func main() {
 	// Skills Service (Phase 0 - Issue #54)
 	skillsService := services.NewSkillsService(esiClient.GetRawClient(), redisClient, appLogger)
 
-	// Suppress unused warnings (Skills Service wird in Phase 1 genutzt)
+	// Fee Service (Phase 0 - Issue #55)
+	feeService := services.NewFeeService(skillsService, appLogger)
+
+	// Suppress unused warnings (Services werden in Phase 1 genutzt)
 	_ = skillsService
+	_ = feeService
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
