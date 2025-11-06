@@ -44,9 +44,8 @@ function CallbackContent() {
 
         // Exchange code for token
         const clientId = process.env.NEXT_PUBLIC_EVE_CLIENT_ID || "0828b4bcd20242aeb9b8be10f5451094";
-        const redirectUri = process.env.NEXT_PUBLIC_EVE_CALLBACK_URL || "http://localhost:9000/callback";
 
-        const token = await exchangeCodeForToken(code, clientId, redirectUri);
+        const token = await exchangeCodeForToken(code, clientId);
 
         setMessage("Verifying character information...");
 

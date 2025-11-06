@@ -97,8 +97,7 @@ export async function buildAuthorizationUrl(
  */
 export async function exchangeCodeForToken(
   code: string,
-  clientId: string,
-  redirectUri: string
+  clientId: string
 ): Promise<EVETokenResponse> {
   const codeVerifier = sessionStorage.getItem("eve_oauth_verifier");
   
