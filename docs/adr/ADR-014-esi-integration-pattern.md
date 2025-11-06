@@ -153,11 +153,11 @@ json.NewDecoder(resp.Body).Decode(&result)
 
 ### Risiken
 
-- **eve-esi-client Breaking Changes:** 
+- **eve-esi-client Breaking Changes:**
   - **Mitigation:** SemVer Pinning in go.mod, langsame Upgrades
-- **ESI API Changes:** 
+- **ESI API Changes:**
   - **Mitigation:** Versionierte Endpoints (/v4/), graduelle Migration
-- **Rate Limit Exhaustion:** 
+- **Rate Limit Exhaustion:**
   - **Mitigation:** Monitoring via Prometheus, Alerts bei >80% Rate Limit
 
 ## Implementierung
@@ -270,18 +270,21 @@ func (s *SkillsService) getDefaultSkills() *TradingSkills {
 **Aufwand:** 1 PT (Pattern bereits etabliert, nur Dokumentation)
 
 **Abhängigkeiten:**
+
 - ADR-004: Frontend OAuth PKCE Flow (Bearer Token)
 - ADR-009: Shared Redis Infrastructure (Caching)
 - ADR-013: Timeout Handling (15s max per ESI request)
 - eve-esi-client Package (externe Dependency)
 
 **Validierung:**
+
 - Erfolg gemessen an:
   - Alle Services nutzen gleiches Pattern (Code Reviews)
   - Rate Limit nie überschritten (Prometheus Metrics)
   - Graceful Degradation bei ESI Ausfällen (Integration Tests)
 
 **Migrations-Pfad:**
+
 1. ✅ Skills Service (#54) - Pattern etabliert
 2. 🔜 Fee Service (#55) - Pattern übernehmen
 3. 🔜 Cargo Service (#56) - Pattern übernehmen
@@ -290,7 +293,7 @@ func (s *SkillsService) getDefaultSkills() *TradingSkills {
 ## Referenzen
 
 - **Issues:** #54 (Skills Service), #55 (Fee Service), #56 (Cargo Service)
-- **ADRs:** 
+- **ADRs:**
   - ADR-004 (Frontend OAuth PKCE Flow)
   - ADR-009 (Shared Redis Infrastructure)
   - ADR-012 (Redis Caching Strategy)

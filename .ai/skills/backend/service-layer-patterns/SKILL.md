@@ -18,6 +18,7 @@ Handler → Service → Repository → Database
 ```
 
 **Verantwortlichkeiten:**
+
 - Business Logic Orchestration
 - Multi-Repository Coordination
 - External API Integration (ESI, Redis)
@@ -65,6 +66,7 @@ func NewSkillsService(
 ```
 
 **Why Interface Return?**
+
 - Testing: Mock Interface in Handler Tests
 - Decoupling: Handler doesn't depend on implementation
 - Swappability: Easy to replace implementation
@@ -84,11 +86,13 @@ type SkillsServicer interface {
 ```
 
 **Why Separate File?**
+
 - Clarity: Interface vs. Implementation separated
 - Testing: Import interface for mocking
 - Documentation: Public API at a glance
 
 **Naming Convention:**
+
 - Interface: `XXXServicer` (e.g., `SkillsServicer`, `TradingServicer`)
 - Implementation: `XXXService` (e.g., `SkillsService`, `TradingService`)
 
@@ -132,6 +136,7 @@ func (s *SkillsService) GetCharacterSkills(ctx context.Context, characterID int,
 ```
 
 **Cache Key Naming Convention:**
+
 ```
 {entity}:{identifier}             → character_skills:123456
 {entity}:{id}:{subresource}       → character_assets:123456:jita
@@ -139,6 +144,7 @@ func (s *SkillsService) GetCharacterSkills(ctx context.Context, characterID int,
 ```
 
 **TTL Guidelines (ADR-012):**
+
 - **Character Skills:** 5min (semi-static)
 - **Market Orders:** 5min (ESI updates ~5min)
 - **Character Standing:** 1h (rarely changes)
@@ -189,6 +195,7 @@ func (s *SkillsService) fetchSkillsFromESI(ctx context.Context, characterID int,
 ```
 
 **Error Handling:**
+
 - **401/403:** Return error (Frontend handles re-auth)
 - **404:** Return `ErrNotFound` (resource doesn't exist)
 - **5xx:** Retry handled by eve-esi-client, fallback to defaults
@@ -233,6 +240,7 @@ func (s *SkillsService) getDefaultSkills() *TradingSkills {
 ```
 
 **When to Use Graceful Degradation:**
+
 - ✅ Non-critical data (skills for fee calculation)
 - ✅ Temporary ESI outages (service continues with defaults)
 - ✅ User experience priority (degraded > unavailable)
@@ -284,6 +292,7 @@ func (s *TradingService) CalculateInventorySellRoutes(
 ```
 
 **Orchestration Best Practices:**
+
 - Handle errors per repository (don't fail entire operation on one error)
 - Use context timeout for long operations
 - Log warnings for partial failures
@@ -314,6 +323,7 @@ s.logger.Error("ESI fetch failed - using defaults",
 ```
 
 **Structured Fields (Key-Value Pairs):**
+
 - Always include context: `characterID`, `regionID`, `typeID`
 - Include error: `"error", err` (when logging errors)
 - Avoid sensitive data: No tokens, passwords, PII
@@ -372,16 +382,19 @@ func TestHandler(t *testing.T) {
 ## Integration with Other Layers
 
 ### Handler Layer
+
 - Handlers receive service via constructor injection
 - Handlers call service methods with context from `fiber.Ctx`
 - Handlers handle HTTP-specific errors (status codes, JSON encoding)
 
 ### Repository Layer
+
 - Services call repository methods for data access
 - Services orchestrate multiple repositories
 - Services handle repository errors (retry, fallback)
 
 ### External APIs (ESI)
+
 - Services use eve-esi-client for ESI integration (ADR-014)
 - Services handle ESI errors gracefully (defaults, retries)
 - Services cache ESI responses in Redis (ADR-012)

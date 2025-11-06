@@ -64,14 +64,14 @@ func (l *Logger) Error(msg string, keysAndValues ...interface{}) {
 // logWithKV formats and logs messages with key-value pairs
 func (l *Logger) logWithKV(level, msg string, keysAndValues ...interface{}) {
 	output := level + " " + msg
-	
+
 	// Add key-value pairs
 	for i := 0; i < len(keysAndValues); i += 2 {
 		if i+1 < len(keysAndValues) {
 			output += " " + keysAndValues[i].(string) + "=" + formatValue(keysAndValues[i+1])
 		}
 	}
-	
+
 	l.Println(output)
 }
 

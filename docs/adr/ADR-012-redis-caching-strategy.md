@@ -28,43 +28,43 @@ Market Order Fetching von ESI ist der größte Performance-Bottleneck (383 Seite
 
 ### Option 1: In-Memory Cache (sync.Map)
 
-- **Vorteile:** 
+- **Vorteile:**
   - Keine externe Dependency
   - Sehr schnell (ns Latency)
   - Bereits teilweise implementiert
-- **Nachteile:** 
+- **Nachteile:**
   - Nicht geteilt zwischen Instanzen
   - Memory Exhaustion bei vielen Regions
   - Keine Persistence bei Restart
-- **Risiken:** 
+- **Risiken:**
   - Cache Stampede bei Cold Start
   - Memory Pressure
 
 ### Option 2: Redis Cache mit JSON (unkomprimiert)
 
-- **Vorteile:** 
+- **Vorteile:**
   - Geteilt zwischen Instanzen
   - Persistence Option
   - Einfache Implementierung
-- **Nachteile:** 
+- **Nachteile:**
   - 50 MB pro Region (Memory intensive)
   - Network Overhead
   - Redis Memory Limit kann erreicht werden
-- **Risiken:** 
+- **Risiken:**
   - Redis OOM bei vielen Regions
   - Eviction kann Cache Miss erzeugen
 
 ### Option 3: Redis Cache mit Gzip Kompression
 
-- **Vorteile:** 
+- **Vorteile:**
   - Reduziert Memory auf ~10 MB (80% Kompression)
   - Geteilt zwischen Instanzen
   - Eviction weniger wahrscheinlich
   - Ermöglicht mehr Regions im Cache
-- **Nachteile:** 
+- **Nachteile:**
   - CPU Overhead für Compression/Decompression
   - Komplexere Implementierung
-- **Risiken:** 
+- **Risiken:**
   - CPU Bottleneck bei vielen Requests
   - Gzip Bomb Attack (DoS)
 
@@ -208,10 +208,12 @@ func (s *Server) warmupCache() {
 **Aufwand:** 6 PT (Implementation + Tests + Monitoring)
 
 **Abhängigkeiten:**
+
 - ADR-009: Shared Redis Infrastructure
 - ADR-011: Worker Pool Pattern (für Fetcher)
 
 **Validierung:**
+
 - Benchmark: Cache Hit < 100ms
 - Metrics: `cache_hit_ratio` > 0.95
 - Load Test: 100 req/min ohne Cache Thrashing
@@ -221,14 +223,14 @@ func (s *Server) warmupCache() {
 - **Issues:** #16c (Phase 3)
 - **ADRs:** ADR-009 (Redis Infrastructure), ADR-011 (Worker Pool)
 - **Externe Docs:**
-  - Redis Best Practices: https://redis.io/docs/management/optimization/
+  - Redis Best Practices: <https://redis.io/docs/management/optimization/>
   - Gzip Compression: Go stdlib `compress/gzip`
 
 ## Notizen
 
 **TTL Rationale:**
 
-- **Market Orders (5min):** 
+- **Market Orders (5min):**
   - ESI Updates alle ~5 Minuten
   - Balance zwischen Freshness und Cache Hit Ratio
   - Bei hoher Last: Cache Hit Ratio > 95%
@@ -259,6 +261,7 @@ Basierend auf Skills Service Implementation (Issue #54) wurde Character Data Cac
   - Use Case: Inventory Sell Orchestration
 
 **Character Data Pattern:**
+
 ```go
 // 1. Check Redis
 cachedData, err := redisClient.Get(ctx, cacheKey).Bytes()
@@ -280,6 +283,7 @@ return esiData, nil
 ```
 
 **Key Schema Convention:**
+
 ```
 character_skills:{characterID}
 character_standings:{characterID}
