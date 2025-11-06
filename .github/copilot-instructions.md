@@ -201,6 +201,37 @@ Agents verwenden Skills als **Referenz-Material**:
 
 ---
 
+## Architecture Decision Records (ADRs)
+
+**Location:** `docs/adr/`
+
+**CRITICAL:** Before making architectural changes, ALWAYS check existing ADRs!
+
+**Available ADRs:**
+- ADR-001: Tech Stack (Go + Next.js + PostgreSQL + Redis)
+- ADR-004: Frontend OAuth PKCE Flow
+- ADR-009: Shared Redis Infrastructure
+- ADR-010: SDE Database Path Convention
+- ADR-011: Worker Pool Pattern
+- ADR-012: Redis Caching Strategy
+- ADR-013: Timeout Handling & Partial Content
+
+**When to consult ADRs:**
+- ✅ Before adding new dependencies
+- ✅ Before changing database schemas
+- ✅ Before modifying auth flows
+- ✅ Before implementing caching logic
+- ✅ Before refactoring core architecture
+
+**ADR Template:** `docs/adr/000-template.md`
+
+**Process:**
+1. Check if ADR exists for your change area
+2. If exists → Follow it (or propose supersession with new ADR)
+3. If not exists → Create new ADR for significant decisions
+
+---
+
 ## Backend Development
 
 **Skill Location:** `.ai/skills/generic/git-workflow/SKILL.md`

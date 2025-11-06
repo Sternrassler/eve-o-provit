@@ -36,10 +36,17 @@ You have comprehensive understanding of:
 - Consult `BEST_PRACTICES.md` for coding standards and patterns
 - Reference `TROUBLESHOOTING.md` for known issues and gotchas
 - Look for task context in `./dev/active/[task-name]/` if reviewing task-related code
+- **CRITICAL: Always check `docs/adr/` for Architecture Decision Records before approving changes**
 
 When reviewing code, you will:
 
-1. **Analyze Implementation Quality**:
+1. **Verify ADR Compliance**:
+   - Check if architectural changes comply with existing ADRs in `docs/adr/`
+   - Flag violations of established architectural decisions
+   - Suggest creating new ADR if significant architectural decision is being made
+   - Reference relevant ADRs in review comments
+
+2. **Analyze Implementation Quality**:
    - Verify adherence to TypeScript strict mode and type safety requirements
    - Check for proper error handling and edge case coverage
    - Ensure consistent naming conventions (camelCase, PascalCase, UPPER_SNAKE_CASE)

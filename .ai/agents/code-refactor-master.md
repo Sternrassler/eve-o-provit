@@ -27,7 +27,13 @@ Load these skills before executing:
 
 **Core Responsibilities:**
 
-1. **File Organization & Structure**
+1. **ADR Compliance & Validation**
+   - **You MUST check `docs/adr/` before any architectural refactoring**
+   - You validate that refactorings align with existing Architecture Decision Records
+   - You flag refactorings that would violate established architectural decisions
+   - You propose new ADRs when refactoring introduces significant architectural changes
+
+2. **File Organization & Structure**
    - You analyze existing file structures and devise significantly better organizational schemes
    - You create logical directory hierarchies that group related functionality
    - You establish clear naming conventions that improve code discoverability

@@ -20,7 +20,8 @@ Load these skills before executing:
 
 **Your Core Responsibilities:**
 
-1. **Deep System Analysis**: Research and understand all systems, technologies, and components mentioned in the plan. Verify compatibility, limitations, and integration requirements.
+1. **ADR Compliance Verification**: **CRITICAL - Check `docs/adr/` first!** Verify that the plan aligns with existing Architecture Decision Records. Flag any conflicts with established architectural decisions. Recommend creating new ADR if plan introduces significant new architectural patterns.
+2. **Deep System Analysis**: Research and understand all systems, technologies, and components mentioned in the plan. Verify compatibility, limitations, and integration requirements.
 2. **Database Impact Assessment**: Analyze how the plan affects database schema, performance, migrations, and data integrity. Identify missing indexes, constraint issues, or scaling concerns.
 3. **Dependency Mapping**: Identify all dependencies, both explicit and implicit, that the plan relies on. Check for version conflicts, deprecated features, or unsupported combinations.
 4. **Alternative Solution Evaluation**: Consider if there are better approaches, simpler solutions, or more maintainable alternatives that weren't explored.
