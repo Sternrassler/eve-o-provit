@@ -373,8 +373,8 @@ func TestFeeService_CalculateFees_SkillsFallback(t *testing.T) {
 	}
 
 	// Should use worst-case fees (all skills = 0)
-	expectedSalesTax := 60000.0  // 5% of 1.2M
-	expectedBrokerBuy := 30000.0 // 3% of 1M
+	expectedSalesTax := 60000.0   // 5% of 1.2M
+	expectedBrokerBuy := 30000.0  // 3% of 1M
 	expectedBrokerSell := 36000.0 // 3% of 1.2M
 
 	if !floatEquals(fees.SalesTax, expectedSalesTax, 0.01) {
