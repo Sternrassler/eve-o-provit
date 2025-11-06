@@ -1,4 +1,4 @@
-// Package handlers - Test helper functions
+// Package handlers provides test utilities for handler testing
 package handlers
 
 import (

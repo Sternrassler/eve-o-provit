@@ -1,4 +1,4 @@
-// Package services - Ship Service for ship-related SDE queries
+// Package services provides ship-related operations for EVE Online data
 package services
 
 import (

@@ -1,4 +1,4 @@
-// Package services - System Service for system/region/station information
+// Package services provides system-related operations for EVE Online data
 package services
 
 import (
