@@ -492,27 +492,8 @@ func (rc *RouteCalculator) calculateRoute(ctx context.Context, item models.ItemP
 // Helper functions
 
 func (rc *RouteCalculator) getRegionName(ctx context.Context, regionID int) (string, error) {
-	// Query SDE for region name (name is JSON with language codes)
-	query := `SELECT name FROM mapRegions WHERE _key = ?`
-	var nameJSON string
-	err := rc.sdeDB.QueryRowContext(ctx, query, regionID).Scan(&nameJSON)
-	if err != nil {
-		return "", fmt.Errorf("region %d not found", regionID)
-	}
-
-	// Parse JSON to get English name
-	// Format: {"en":"The Forge","de":"..."}
-	// Simple extraction for "en" key
-	var nameMap map[string]string
-	if err := json.Unmarshal([]byte(nameJSON), &nameMap); err != nil {
-		return fmt.Sprintf("Region-%d", regionID), nil
-	}
-
-	if name, ok := nameMap["en"]; ok {
-		return name, nil
-	}
-
-	return fmt.Sprintf("Region-%d", regionID), nil
+	// Use repository to get region name
+	return rc.sdeRepo.GetRegionName(ctx, regionID)
 }
 
 func (rc *RouteCalculator) getSystemIDFromLocation(ctx context.Context, locationID int64) int64 {
@@ -546,9 +527,7 @@ func (rc *RouteCalculator) getLocationNames(ctx context.Context, systemID, stati
 
 // getSystemSecurityStatus retrieves the security status of a solar system from SDE
 func (rc *RouteCalculator) getSystemSecurityStatus(ctx context.Context, systemID int64) float64 {
-	query := `SELECT securityStatus FROM mapSolarSystems WHERE _key = ?`
-	var secStatus float64
-	err := rc.sdeDB.QueryRowContext(ctx, query, systemID).Scan(&secStatus)
+	secStatus, err := rc.sdeRepo.GetSystemSecurityStatus(ctx, systemID)
 	if err != nil {
 		log.Printf("Warning: failed to get security status for system %d: %v", systemID, err)
 		return 1.0 // Default to high-sec if lookup fails

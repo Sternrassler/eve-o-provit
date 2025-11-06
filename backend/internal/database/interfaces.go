@@ -19,6 +19,8 @@ type SDEQuerier interface {
 	GetSystemName(ctx context.Context, systemID int64) (string, error)
 	GetStationName(ctx context.Context, stationID int64) (string, error)
 	GetRegionIDForSystem(ctx context.Context, systemID int64) (int, error)
+	GetRegionName(ctx context.Context, regionID int) (string, error)
+	GetSystemSecurityStatus(ctx context.Context, systemID int64) (float64, error)
 	SearchItems(ctx context.Context, searchTerm string, limit int) ([]struct {
 		TypeID    int
 		Name      string

@@ -193,9 +193,8 @@ func (s *TradingService) getMinRouteSecurityStatus(ctx context.Context, route []
 
 // getSystemSecurityStatus retrieves security status for a system
 func (s *TradingService) getSystemSecurityStatus(ctx context.Context, systemID int64) float64 {
-	query := `SELECT security FROM mapSolarSystems WHERE _key = ?`
-	var security float64
-	if err := s.sdeDB.QueryRowContext(ctx, query, systemID).Scan(&security); err != nil {
+	security, err := s.sdeQuerier.GetSystemSecurityStatus(ctx, systemID)
+	if err != nil {
 		return 1.0 // Default to high-sec on error
 	}
 	return security

@@ -70,6 +70,14 @@ func (m *MockSDESearcher) GetStationName(ctx context.Context, stationID int64) (
 	return "", nil
 }
 
+func (m *MockSDESearcher) GetRegionName(ctx context.Context, regionID int) (string, error) {
+	return "", nil
+}
+
+func (m *MockSDESearcher) GetSystemSecurityStatus(ctx context.Context, systemID int64) (float64, error) {
+	return 0, nil
+}
+
 func TestSearchItems_Success_Unit(t *testing.T) {
 	// Mock SDE querier
 	mockSDE := &MockSDESearcher{
