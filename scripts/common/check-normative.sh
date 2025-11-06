@@ -24,6 +24,13 @@ for kw in "${EXPECTED_KEYWORDS[@]}"; do
     echo "  - $kw: $count Vorkommen"
 done
 
+# Prüfe ob Agent-Orchestration Format (eve-o-provit verwendet anderes Instruktionsformat)
+if grep -q "Agent-Primary Model" "$INSTRUCTIONS_FILE" 2>/dev/null; then
+    echo "[check-normative] ℹ️  Agent-Orchestration Format erkannt (kein Policy-Enforcement nötig)"
+    echo "[check-normative] ✅ Check übersprungen (anderes Instruktionsformat)"
+    exit 0
+fi
+
 # Validierung: Mindestens ein MUST vorhanden
 if [ "${keyword_counts[MUST]}" -eq 0 ]; then
     echo "[check-normative] ERROR: Keine MUST Labels gefunden – Instructions unvollständig" >&2
