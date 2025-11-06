@@ -186,11 +186,23 @@ Agents verwenden Skills als **Referenz-Material**:
 
 **Backend Skills (Tech-Stack Reference):**
 
-- express-prisma-patterns → Express syntax, Prisma queries, middleware patterns
+- fiber → Fiber web framework patterns, handler structure, middleware
+- service-layer-patterns → Service Layer best practices (Constructor Injection, Caching, ESI Integration, Graceful Degradation)
 
 **Frontend Skills (Tech-Stack Reference):**
 
-- react-typescript-mui-patterns → React hooks, MUI components, TypeScript patterns
+- nextjs → Next.js App Router, Server/Client Components
+- radix-ui → Radix UI components, controlled patterns
+
+**Database Skills (Tech-Stack Reference):**
+
+- postgresql → PostgreSQL patterns, connection pooling
+- redis → Redis caching, key naming conventions
+- sqlite → SQLite read-only patterns (SDE integration)
+
+**Testing Skills (Tech-Stack Reference):**
+
+- playwright → E2E testing, Page Object Model
 
 **Generic Skills (Methodology Reference):**
 
@@ -213,8 +225,9 @@ Agents verwenden Skills als **Referenz-Material**:
 - ADR-009: Shared Redis Infrastructure
 - ADR-010: SDE Database Path Convention
 - ADR-011: Worker Pool Pattern
-- ADR-012: Redis Caching Strategy
+- ADR-012: Redis Caching Strategy (Market Orders + Character Data)
 - ADR-013: Timeout Handling & Partial Content
+- ADR-014: ESI Integration Pattern (eve-esi-client Usage)
 
 **When to consult ADRs:**
 - ✅ Before adding new dependencies

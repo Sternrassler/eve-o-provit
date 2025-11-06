@@ -237,6 +237,56 @@ func (s *Server) warmupCache() {
   - Static Data (ändert sich selten)
   - Längere TTL OK
 
+**Character Data Caching (Amendment 2025-11-06):**
+
+Basierend auf Skills Service Implementation (Issue #54) wurde Character Data Caching Guidelines hinzugefügt:
+
+- **Character Skills (5min TTL):**
+  - Key: `character_skills:{characterID}`
+  - Value: JSON (uncompressed, ~1-5 KB per character)
+  - Rationale: Semi-static data (ändert sich nur bei Skill Training)
+  - Cache Strategy: Redis only (keine Gzip - kleine Payloads)
+  - Graceful Degradation: Default skills (all = 0) bei ESI failure
+
+- **Character Standings (1h TTL - zukünftig):**
+  - Key: `character_standings:{characterID}`
+  - Rationale: Rarely changes (Missionen/Ratting erforderlich)
+  - Use Case: Broker Fee Calculation (Faction Standing Impact)
+
+- **Character Assets (15min TTL - zukünftig):**
+  - Key: `character_assets:{characterID}:{locationID}`
+  - Rationale: Moderate change frequency (Hauling/Trading)
+  - Use Case: Inventory Sell Orchestration
+
+**Character Data Pattern:**
+```go
+// 1. Check Redis
+cachedData, err := redisClient.Get(ctx, cacheKey).Bytes()
+if err == nil {
+    json.Unmarshal(cachedData, &result)
+    return result, nil
+}
+
+// 2. Fetch from ESI (ADR-014 Pattern)
+esiData, err := fetchFromESI(ctx, characterID, accessToken)
+if err != nil {
+    // Graceful Degradation: Return safe defaults
+    return getDefaultValues(), nil
+}
+
+// 3. Cache Result
+redisClient.Set(ctx, cacheKey, marshal(esiData), ttl)
+return esiData, nil
+```
+
+**Key Schema Convention:**
+```
+character_skills:{characterID}
+character_standings:{characterID}
+character_assets:{characterID}:{locationID}
+character_wallet:{characterID}
+```
+
 **Compression Ratio Measurements:**
 
 - The Forge (383k Orders): 50 MB → 10 MB (~80%)
@@ -258,3 +308,4 @@ func (s *Server) warmupCache() {
 **Change Log:**
 
 - 2025-11-01: Status auf Accepted gesetzt (GitHub Copilot, Phase 3 Implementation)
+- 2025-11-06: Character Data Caching Guidelines hinzugefügt (Amendment nach Issue #54)
