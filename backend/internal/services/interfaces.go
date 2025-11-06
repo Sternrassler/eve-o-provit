@@ -92,3 +92,24 @@ type FeeServicer interface {
 		orderValue float64,
 	) float64
 }
+
+// CargoServicer defines the interface for cargo optimization operations
+type CargoServicer interface {
+	// CalculateCargoCapacity calculates effective cargo capacity with skill bonuses
+	// Returns (effectiveCapacity, totalBonusPercent)
+	CalculateCargoCapacity(baseCapacity float64, skills *TradingSkills) (float64, float64)
+
+	// KnapsackDP solves the knapsack problem using dynamic programming
+	// Optimizes for maximum value while respecting capacity constraint
+	KnapsackDP(items []CargoItem, capacity float64) *CargoSolution
+
+	// OptimizeCargo optimizes cargo selection with skill-aware capacity calculation
+	// Includes skill training recommendations when cargo is nearly full
+	OptimizeCargo(
+		ctx context.Context,
+		characterID int,
+		accessToken string,
+		baseCapacity float64,
+		items []CargoItem,
+	) (*CargoSolution, error)
+}
