@@ -58,3 +58,10 @@ type RouteCalculatorServicer interface {
 	// Calculate computes profitable trading routes for a region
 	Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error)
 }
+
+// SkillsServicer defines the interface for character skills operations
+type SkillsServicer interface {
+	// GetCharacterSkills fetches and caches character skills from ESI
+	// Returns default skills (all = 0) if ESI fetch fails (graceful degradation)
+	GetCharacterSkills(ctx context.Context, characterID int, accessToken string) (*TradingSkills, error)
+}

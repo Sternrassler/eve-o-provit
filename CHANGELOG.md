@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Skills Service (Phase 0 - Issue #54)** - Centralized character skills management
+  - `SkillsService` implementation with ESI integration and Redis caching (5min TTL)
+  - `TradingSkills` struct covering 12 trading-relevant skills (fees, cargo, navigation)
+  - Graceful degradation: ESI failure → default skills (all = 0) instead of blocking errors
+  - Comprehensive test suite (8 test cases, miniredis-based)
+  - `pkg/logger` package (simple structured logger for services)
+  - Documentation: `internal/services/SKILLS_SERVICE.md`
+  - Skill extraction logic for: Accounting, Broker Relations, Navigation, Evasive Maneuvering, 4x Racial Industrials
+  - Temporary ESI interface (workaround until `eve-esi-client` implements `GetCharacterSkills`)
+  - Foundation for Fee Service (#55) and Cargo Service (#56)
+
 ## [0.2.0] - 2025-11-04
 
 ### Added

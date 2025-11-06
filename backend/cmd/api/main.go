@@ -12,6 +12,7 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evesso"
+	applogger "github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -71,6 +72,9 @@ func main() {
 
 	log.Println("ESI client initialized")
 
+	// Initialize application logger
+	appLogger := applogger.New()
+
 	// Initialize services
 	marketFetcher := services.NewMarketFetcher(esiClient, marketRepo, redisClient)
 	profitAnalyzer := services.NewProfitAnalyzer(db.SDE, sdeRepo)
@@ -79,6 +83,11 @@ func main() {
 
 	routeCalculator := services.NewRouteCalculator(esiClient, db.SDE, sdeRepo, marketRepo, redisClient)
 	characterHelper := services.NewCharacterHelper(redisClient)
+	
+	// Skills Service (Phase 0 - Issue #54)
+	// TODO: Uncomment when GetCharacterSkills is implemented in eve-esi-client
+	// skillsService := services.NewSkillsService(esiClient, redisClient, appLogger)
+	_ = appLogger // Suppress unused warning until Skills Service is activated
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
