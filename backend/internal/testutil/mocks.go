@@ -24,15 +24,15 @@ func (m *MockHealthChecker) Health(ctx context.Context) error {
 
 // MockSDEQuerier is a mock implementation of database.SDEQuerier
 type MockSDEQuerier struct {
-	GetTypeInfoFunc            func(ctx context.Context, typeID int) (*database.TypeInfo, error)
-	SearchTypesFunc            func(ctx context.Context, searchTerm string, limit int) ([]database.TypeInfo, error)
-	GetSystemIDForLocationFunc func(ctx context.Context, locationID int64) (int64, error)
-	GetSystemNameFunc          func(ctx context.Context, systemID int64) (string, error)
-	GetStationNameFunc         func(ctx context.Context, stationID int64) (string, error)
-	GetRegionIDForSystemFunc   func(ctx context.Context, systemID int64) (int, error)
-	GetRegionNameFunc          func(ctx context.Context, regionID int) (string, error)
+	GetTypeInfoFunc             func(ctx context.Context, typeID int) (*database.TypeInfo, error)
+	SearchTypesFunc             func(ctx context.Context, searchTerm string, limit int) ([]database.TypeInfo, error)
+	GetSystemIDForLocationFunc  func(ctx context.Context, locationID int64) (int64, error)
+	GetSystemNameFunc           func(ctx context.Context, systemID int64) (string, error)
+	GetStationNameFunc          func(ctx context.Context, stationID int64) (string, error)
+	GetRegionIDForSystemFunc    func(ctx context.Context, systemID int64) (int, error)
+	GetRegionNameFunc           func(ctx context.Context, regionID int) (string, error)
 	GetSystemSecurityStatusFunc func(ctx context.Context, systemID int64) (float64, error)
-	SearchItemsFunc            func(ctx context.Context, searchTerm string, limit int) ([]struct {
+	SearchItemsFunc             func(ctx context.Context, searchTerm string, limit int) ([]struct {
 		TypeID    int
 		Name      string
 		GroupName string
