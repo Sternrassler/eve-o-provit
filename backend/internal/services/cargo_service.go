@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
 )
 
 // CargoItem represents an item that can be loaded into cargo
@@ -107,8 +108,11 @@ func (s *CargoService) KnapsackDP(items []CargoItem, capacity float64) *CargoSol
 		item := items[i-1]
 		volumeInt := int(item.Volume * 100)
 
-		// Skip items with invalid volume
+		// Skip items with invalid volume - copy previous row
 		if volumeInt <= 0 {
+			for w := 0; w <= capacityInt; w++ {
+				dp[i][w] = dp[i-1][w]
+			}
 			continue
 		}
 
@@ -198,15 +202,11 @@ func (s *CargoService) knapsackOptimized(items []CargoItem, capacity float64) *C
 		}
 	}
 
-	// Sort by efficiency (value/volume) descending
-	// This greedy approach gives near-optimal results
-	for i := 0; i < len(effItems)-1; i++ {
-		for j := i + 1; j < len(effItems); j++ {
-			if effItems[j].efficiency > effItems[i].efficiency {
-				effItems[i], effItems[j] = effItems[j], effItems[i]
-			}
-		}
-	}
+	// Sort by efficiency (value/volume) descending using Go's built-in sort
+	// This is O(n log n) using introsort
+	sort.Slice(effItems, func(i, j int) bool {
+		return effItems[i].efficiency > effItems[j].efficiency
+	})
 
 	solution := &CargoSolution{
 		Items: []CargoItem{},
