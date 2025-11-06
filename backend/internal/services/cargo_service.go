@@ -63,11 +63,12 @@ func (s *CargoService) CalculateCargoCapacity(baseCapacity float64, skills *Trad
 	}
 	cargoSkillBonus := float64(maxRacialSkill) * 0.05
 
-	// Total bonus percentage
-	totalBonusPercent := (spaceshipBonus + cargoSkillBonus) * 100
-
 	// Calculate effective capacity
 	effectiveCapacity := baseCapacity * (1.0 + spaceshipBonus) * (1.0 + cargoSkillBonus)
+
+	// Total bonus percentage (multiplicative stacking)
+	// Formula: ((final / base) - 1) * 100
+	totalBonusPercent := ((1.0 + spaceshipBonus) * (1.0 + cargoSkillBonus) - 1.0) * 100
 
 	return effectiveCapacity, totalBonusPercent
 }

@@ -70,7 +70,7 @@ func TestCargoService_CalculateCapacity(t *testing.T) {
 				GallenteIndustrial: 5,
 			},
 			expectedCapacity: 1562.5, // 1000 * 1.25 * 1.25
-			expectedBonusPct: 50.0,
+			expectedBonusPct: 56.25,  // (1.25 * 1.25 - 1) * 100
 		},
 		{
 			name: "Spaceship Command III + Caldari Industrial IV",
@@ -79,7 +79,7 @@ func TestCargoService_CalculateCapacity(t *testing.T) {
 				CaldarIndustrial: 4,
 			},
 			expectedCapacity: 1380.0, // 1000 * 1.15 * 1.20
-			expectedBonusPct: 35.0,
+			expectedBonusPct: 38.0,   // (1.15 * 1.20 - 1) * 100
 		},
 		{
 			name: "Multiple racial skills - uses highest",
@@ -91,7 +91,7 @@ func TestCargoService_CalculateCapacity(t *testing.T) {
 				MinmatarIndustrial: 4,
 			},
 			expectedCapacity: 1562.5, // Uses Caldari V (highest)
-			expectedBonusPct: 50.0,
+			expectedBonusPct: 56.25,  // (1.25 * 1.25 - 1) * 100
 		},
 	}
 
@@ -230,7 +230,7 @@ func TestCargoService_OptimizeCargo(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1000.0, solution.BaseCapacity)
 		assert.Equal(t, 1562.5, solution.EffectiveCapacity, "Should apply skill bonuses")
-		assert.Equal(t, 50.0, solution.CapacityBonusPercent)
+		assert.Equal(t, 56.25, solution.CapacityBonusPercent)
 		assert.Greater(t, solution.TotalValue, 0.0)
 	})
 
