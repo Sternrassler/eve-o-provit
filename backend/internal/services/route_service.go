@@ -1,0 +1,155 @@
+// Package services provides business logic for trading operations
+package services
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"log"
+	"sort"
+	"time"
+
+	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/metrics"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
+	"github.com/redis/go-redis/v9"
+)
+
+// RouteService orchestrates route calculation workflow
+type RouteService struct {
+	esiClient      *esi.Client
+	sdeRepo        *database.SDERepository
+	sdeDB          *sql.DB
+	routeFinder    *RouteFinder
+	routeOptimizer *RouteOptimizer
+	workerPool     *RouteWorkerPool
+	redisClient    *redis.Client
+}
+
+// NewRouteService creates a new route service instance
+func NewRouteService(
+	esiClient *esi.Client,
+	sdeDB *sql.DB,
+	sdeRepo *database.SDERepository,
+	marketRepo *database.MarketRepository,
+	redisClient *redis.Client,
+) *RouteService {
+	rs := &RouteService{
+		esiClient:   esiClient,
+		sdeRepo:     sdeRepo,
+		sdeDB:       sdeDB,
+		redisClient: redisClient,
+	}
+
+	// Initialize sub-services
+	rs.routeFinder = NewRouteFinder(esiClient, marketRepo, sdeRepo, sdeDB, redisClient)
+	rs.routeOptimizer = NewRouteOptimizer(sdeRepo, sdeDB)
+
+	// Initialize worker pool
+	rs.workerPool = NewRouteWorkerPool(rs.routeOptimizer)
+
+	return rs
+}
+
+// Compile-time interface compliance check
+var _ RouteCalculatorServicer = (*RouteService)(nil)
+
+// Calculate computes profitable trading routes for a region with timeout support
+func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
+	startTime := time.Now()
+	defer func() {
+		duration := time.Since(startTime).Seconds()
+		metrics.TradingCalculationDuration.Observe(duration)
+		log.Printf("Route calculation completed in %.2fs", duration)
+	}()
+
+	// Create context with timeout
+	calcCtx, cancel := context.WithTimeout(ctx, CalculationTimeout)
+	defer cancel()
+
+	// Get ship info if cargo capacity not provided
+	if cargoCapacity == 0 {
+		shipCap, err := cargo.GetShipCapacities(rs.sdeDB, int64(shipTypeID), nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get ship capacities: %w", err)
+		}
+		cargoCapacity = shipCap.BaseCargoHold
+	}
+
+	// Get ship name
+	shipInfo, err := rs.sdeRepo.GetTypeInfo(calcCtx, shipTypeID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ship info: %w", err)
+	}
+
+	// Get region name
+	regionName, err := rs.getRegionName(calcCtx, regionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get region name: %w", err)
+	}
+
+	// Find profitable items with timeout
+	marketCtx, marketCancel := context.WithTimeout(calcCtx, MarketFetchTimeout)
+	defer marketCancel()
+
+	profitableItems, err := rs.routeFinder.FindProfitableItems(marketCtx, regionID, cargoCapacity)
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("Market order fetch timeout after %v", MarketFetchTimeout)
+			return nil, err
+		}
+		return nil, fmt.Errorf("failed to find profitable items: %w", err)
+	}
+	log.Printf("Found %d profitable items", len(profitableItems))
+
+	// Calculate routes using worker pool with timeout
+	routeCtx, routeCancel := context.WithTimeout(calcCtx, RouteCalculationTimeout)
+	defer routeCancel()
+
+	routes, err := rs.workerPool.ProcessItems(routeCtx, profitableItems, cargoCapacity)
+	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+		return nil, fmt.Errorf("failed to calculate routes: %w", err)
+	}
+
+	// Check if we timed out
+	timedOut := errors.Is(routeCtx.Err(), context.DeadlineExceeded) || errors.Is(calcCtx.Err(), context.DeadlineExceeded)
+
+	// Sort by ISK per hour (descending)
+	sort.Slice(routes, func(i, j int) bool {
+		return routes[i].ISKPerHour > routes[j].ISKPerHour
+	})
+
+	// Limit to top 50
+	if len(routes) > MaxRoutes {
+		routes = routes[:MaxRoutes]
+	}
+
+	calculationTime := time.Since(startTime).Milliseconds()
+
+	response := &models.RouteCalculationResponse{
+		RegionID:          regionID,
+		RegionName:        regionName,
+		ShipTypeID:        shipTypeID,
+		ShipName:          shipInfo.Name,
+		CargoCapacity:     cargoCapacity,
+		CalculationTimeMS: calculationTime,
+		Routes:            routes,
+	}
+
+	// Add timeout warning if applicable
+	if timedOut {
+		response.Warning = fmt.Sprintf("Calculation timeout after %v, showing partial results", CalculationTimeout)
+		log.Printf("WARNING: %s", response.Warning)
+	}
+
+	return response, nil
+}
+
+// Helper functions
+
+func (rs *RouteService) getRegionName(ctx context.Context, regionID int) (string, error) {
+	return rs.sdeRepo.GetRegionName(ctx, regionID)
+}

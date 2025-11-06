@@ -81,7 +81,7 @@ func main() {
 	routePlanner := services.NewRoutePlanner(db.SDE, sdeRepo, redisClient)
 	tradingService := services.NewTradingService(marketFetcher, profitAnalyzer, routePlanner, sdeRepo, esiClient, db.SDE)
 
-	routeCalculator := services.NewRouteCalculator(esiClient, db.SDE, sdeRepo, marketRepo, redisClient)
+	routeService := services.NewRouteService(esiClient, db.SDE, sdeRepo, marketRepo, redisClient)
 	characterHelper := services.NewCharacterHelper(redisClient)
 
 	// Skills Service (Phase 0 - Issue #54)
@@ -102,7 +102,7 @@ func main() {
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
-	tradingHandler := handlers.NewTradingHandler(routeCalculator, sdeRepo, shipService, systemService, characterHelper, tradingService)
+	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper, tradingService)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{

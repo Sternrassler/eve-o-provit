@@ -70,7 +70,7 @@ func NewRouteCalculator(esiClient *esi.Client, sdeDB *sql.DB, sdeRepo *database.
 	}
 
 	// Initialize worker pool
-	rc.workerPool = NewRouteWorkerPool(rc)
+	// rc.workerPool = NewRouteWorkerPool(rc) // Temporarily disabled - being refactored
 
 	return rc
 }
