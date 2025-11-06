@@ -43,7 +43,7 @@ func TestVersion(t *testing.T) {
 
 // TestSearchItems_QueryTooShort tests search with query < 3 characters
 func TestSearchItems_QueryTooShort(t *testing.T) {
-	handler := NewTradingHandler(nil, &Handler{}, nil, nil)
+	handler := newTestTradingHandler()
 
 	app := fiber.New()
 	app.Get("/search", handler.SearchItems)
@@ -84,7 +84,7 @@ func TestSearchItems_QueryTooShort(t *testing.T) {
 
 // TestSetAutopilotWaypoint_InvalidRequest tests waypoint setting with invalid input
 func TestSetAutopilotWaypoint_InvalidRequest(t *testing.T) {
-	handler := NewTradingHandler(nil, &Handler{}, nil, nil)
+	handler := newTestTradingHandler()
 
 	app := fiber.New()
 

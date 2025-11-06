@@ -90,13 +90,19 @@ func main() {
 	// Fee Service (Phase 0 - Issue #55)
 	feeService := services.NewFeeService(skillsService, appLogger)
 
+	// Ship Service (Phase 0 - Issue #57 - Remove Raw DB Access)
+	shipService := services.NewShipService(db.SDE)
+
+	// System Service (Phase 0 - Issue #57 - Remove Raw DB Access)
+	systemService := services.NewSystemService(sdeRepo)
+
 	// Suppress unused warnings (Services werden in Phase 1 genutzt)
 	_ = skillsService
 	_ = feeService
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
-	tradingHandler := handlers.NewTradingHandler(routeCalculator, h, characterHelper, tradingService)
+	tradingHandler := handlers.NewTradingHandler(routeCalculator, sdeRepo, shipService, systemService, characterHelper, tradingService)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{

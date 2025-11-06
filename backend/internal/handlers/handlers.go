@@ -29,19 +29,14 @@ type Handler struct {
 	regionQuerier database.RegionQuerier   // Interface for region data
 	esiClient     *esi.Client
 	marketService MarketServicer // Interface for testability
-	// TODO(Phase 2): Remove raw DB access, use services instead
-	db *database.DB // Temporary: for direct DB access (being phased out)
 }
 
 // New creates a new handler instance with interfaces
 func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, marketQuerier database.MarketQuerier, esiClient *esi.Client) *Handler {
-	// For Phase 1: Accept both interfaces and concrete DB
-	// Type assert to get raw DB access (temporary)
-	var rawDB *database.DB
+	// Type assert to get interfaces from concrete types
 	var postgresQuery database.PostgresQuerier
 	var regionQuerier database.RegionQuerier
 	if concreteDB, ok := healthChecker.(*database.DB); ok {
-		rawDB = concreteDB
 		postgresQuery = concreteDB // DB implements PostgresQuerier
 	}
 	if sdeRepo, ok := sdeQuerier.(*database.SDERepository); ok {
@@ -59,7 +54,6 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 		regionQuerier: regionQuerier,
 		esiClient:     esiClient,
 		marketService: marketService,
-		db:            rawDB, // Temporary for Phase 1
 	}
 }
 
@@ -76,7 +70,6 @@ func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRep
 		regionQuerier: sdeRepo, // SDERepository implements RegionQuerier
 		esiClient:     esiClient,
 		marketService: marketService,
-		db:            db,
 	}
 }
 
