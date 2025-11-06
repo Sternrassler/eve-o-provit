@@ -65,3 +65,30 @@ type SkillsServicer interface {
 	// Returns default skills (all = 0) if ESI fetch fails (graceful degradation)
 	GetCharacterSkills(ctx context.Context, characterID int, accessToken string) (*TradingSkills, error)
 }
+
+// FeeServicer defines the interface for trading fee calculations
+type FeeServicer interface {
+	// CalculateFees calculates all trading fees for a transaction
+	// Integrates with SkillsService for accurate skill-based fee calculation
+	// Falls back to worst-case fees if skills unavailable
+	CalculateFees(
+		ctx context.Context,
+		characterID int,
+		accessToken string,
+		buyValue float64,
+		sellValue float64,
+	) (*Fees, error)
+
+	// CalculateSalesTax calculates sales tax based on Accounting skill level
+	// Base: 5%, Max reduction: 50% (Accounting V), Min fee: 100 ISK
+	CalculateSalesTax(accountingLevel int, orderValue float64) float64
+
+	// CalculateBrokerFee calculates broker fee based on skills and standing
+	// Base: 3%, Reduced by Broker Relations + Advanced + Standing, Min: 1%, Min fee: 100 ISK
+	CalculateBrokerFee(
+		brokerRelationsLevel int,
+		advancedBrokerRelationsLevel int,
+		factionStanding float64,
+		orderValue float64,
+	) float64
+}

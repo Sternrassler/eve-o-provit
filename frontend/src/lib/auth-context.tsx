@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { 
   buildAuthorizationUrl, 
   TokenStorage, 
@@ -70,26 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Background token refresh - check every 60 seconds
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const refreshInterval = setInterval(async () => {
-      try {
-        // Check if token needs refresh (3 minutes before expiry)
-        if (TokenStorage.shouldRefresh()) {
-          console.log("[AuthContext] Token expiring soon, refreshing...");
-          await performTokenRefresh();
-        }
-      } catch (error) {
-        console.error("[AuthContext] Background refresh check failed:", error);
-      }
-    }, 60 * 1000); // Check every 60 seconds
-
-    return () => clearInterval(refreshInterval);
-  }, [isAuthenticated]);
-
-  const performTokenRefresh = async () => {
+  // Token refresh function (wrapped in useCallback to prevent re-creation)
+  const performTokenRefresh = useCallback(async () => {
     try {
       const refreshToken = TokenStorage.getRefreshToken();
       
@@ -113,7 +95,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // On refresh failure, logout user
       logout();
     }
-  };
+  }, []);
+
+  // Background token refresh - check every 60 seconds
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        // Check if token needs refresh (3 minutes before expiry)
+        if (TokenStorage.shouldRefresh()) {
+          console.log("[AuthContext] Token expiring soon, refreshing...");
+          await performTokenRefresh();
+        }
+      } catch (error) {
+        console.error("[AuthContext] Background refresh check failed:", error);
+      }
+    }, 60 * 1000); // Check every 60 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [isAuthenticated, performTokenRefresh]);
 
   const checkSession = async () => {
     try {
