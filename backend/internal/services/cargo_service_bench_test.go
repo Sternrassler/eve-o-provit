@@ -12,9 +12,9 @@ func generateRandomItems(count int) []CargoItem {
 	for i := 0; i < count; i++ {
 		items[i] = CargoItem{
 			TypeID:   1000 + i,
-			Volume:   0.01 + rand.Float64()*100,       // 0.01-100 m³
-			Value:    100 + rand.Float64()*10000,      // 100-10100 ISK
-			Quantity: 1 + rand.Intn(100),              // 1-100 items
+			Volume:   0.01 + rand.Float64()*100,  // 0.01-100 m³
+			Value:    100 + rand.Float64()*10000, // 100-10100 ISK
+			Quantity: 1 + rand.Intn(100),         // 1-100 items
 		}
 	}
 	return items
@@ -129,7 +129,7 @@ func BenchmarkCargoService_LargeCapacity(b *testing.B) {
 // BenchmarkCargoService_HighQuantityItems tests performance with many quantities per item
 func BenchmarkCargoService_HighQuantityItems(b *testing.B) {
 	service := NewCargoService(&mockSkillsService{})
-	
+
 	// Few item types but high quantities
 	items := make([]CargoItem, 50)
 	for i := 0; i < 50; i++ {
@@ -151,7 +151,7 @@ func BenchmarkCargoService_HighQuantityItems(b *testing.B) {
 // BenchmarkCargoService_MixedVolumes tests performance with varied item volumes
 func BenchmarkCargoService_MixedVolumes(b *testing.B) {
 	service := NewCargoService(&mockSkillsService{})
-	
+
 	items := make([]CargoItem, 1000)
 	for i := 0; i < 1000; i++ {
 		var volume float64

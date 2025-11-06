@@ -31,10 +31,10 @@ func TestCargoService_CalculateCapacity(t *testing.T) {
 	baseCapacity := 1000.0
 
 	tests := []struct {
-		name              string
-		skills            *TradingSkills
-		expectedCapacity  float64
-		expectedBonusPct  float64
+		name             string
+		skills           *TradingSkills
+		expectedCapacity float64
+		expectedBonusPct float64
 	}{
 		{
 			name: "No skills",
@@ -75,8 +75,8 @@ func TestCargoService_CalculateCapacity(t *testing.T) {
 		{
 			name: "Spaceship Command III + Caldari Industrial IV",
 			skills: &TradingSkills{
-				SpaceshipCommand:  3,
-				CaldarIndustrial:  4,
+				SpaceshipCommand: 3,
+				CaldarIndustrial: 4,
 			},
 			expectedCapacity: 1380.0, // 1000 * 1.15 * 1.20
 			expectedBonusPct: 35.0,
@@ -112,9 +112,9 @@ func TestCargoService_KnapsackDP(t *testing.T) {
 
 	t.Run("Simple optimal selection", func(t *testing.T) {
 		items := []CargoItem{
-			{TypeID: 1, Volume: 10, Value: 100, Quantity: 5},  // value/vol = 10
-			{TypeID: 2, Volume: 20, Value: 150, Quantity: 3},  // value/vol = 7.5
-			{TypeID: 3, Volume: 5, Value: 60, Quantity: 10},   // value/vol = 12 (best)
+			{TypeID: 1, Volume: 10, Value: 100, Quantity: 5}, // value/vol = 10
+			{TypeID: 2, Volume: 20, Value: 150, Quantity: 3}, // value/vol = 7.5
+			{TypeID: 3, Volume: 5, Value: 60, Quantity: 10},  // value/vol = 12 (best)
 		}
 
 		solution := service.KnapsackDP(items, 50)
@@ -127,9 +127,9 @@ func TestCargoService_KnapsackDP(t *testing.T) {
 
 	t.Run("Mixed quantities", func(t *testing.T) {
 		items := []CargoItem{
-			{TypeID: 1, Volume: 15, Value: 200, Quantity: 2},  // value/vol = 13.33
-			{TypeID: 2, Volume: 10, Value: 120, Quantity: 3},  // value/vol = 12
-			{TypeID: 3, Volume: 5, Value: 50, Quantity: 5},    // value/vol = 10
+			{TypeID: 1, Volume: 15, Value: 200, Quantity: 2}, // value/vol = 13.33
+			{TypeID: 2, Volume: 10, Value: 120, Quantity: 3}, // value/vol = 12
+			{TypeID: 3, Volume: 5, Value: 50, Quantity: 5},   // value/vol = 10
 		}
 
 		solution := service.KnapsackDP(items, 50)
@@ -194,7 +194,7 @@ func TestCargoService_KnapsackDP(t *testing.T) {
 
 	t.Run("Fractional volumes", func(t *testing.T) {
 		items := []CargoItem{
-			{TypeID: 1, Volume: 0.5, Value: 10, Quantity: 100},  // Small items
+			{TypeID: 1, Volume: 0.5, Value: 10, Quantity: 100}, // Small items
 			{TypeID: 2, Volume: 1.25, Value: 30, Quantity: 50}, // Fractional volume
 		}
 		solution := service.KnapsackDP(items, 50)
@@ -317,9 +317,9 @@ func TestCargoService_EdgeCases(t *testing.T) {
 
 	t.Run("Invalid item volume", func(t *testing.T) {
 		items := []CargoItem{
-			{TypeID: 1, Volume: 0, Value: 100, Quantity: 10},    // Zero volume
-			{TypeID: 2, Volume: -5, Value: 100, Quantity: 10},   // Negative volume
-			{TypeID: 3, Volume: 10, Value: 100, Quantity: 10},   // Valid
+			{TypeID: 1, Volume: 0, Value: 100, Quantity: 10},  // Zero volume
+			{TypeID: 2, Volume: -5, Value: 100, Quantity: 10}, // Negative volume
+			{TypeID: 3, Volume: 10, Value: 100, Quantity: 10}, // Valid
 		}
 
 		solution := service.KnapsackDP(items, 100)
@@ -391,16 +391,16 @@ func TestCargoService_CapacityCalculation_SkillCombinations(t *testing.T) {
 		{
 			name: "Advanced - Level 4 skills",
 			skills: &TradingSkills{
-				SpaceshipCommand:   4,
-				CaldarIndustrial:   4,
+				SpaceshipCommand: 4,
+				CaldarIndustrial: 4,
 			},
 			expectedCapacity: 7200.0, // 5000 * 1.20 * 1.20
 		},
 		{
 			name: "Expert - Max skills",
 			skills: &TradingSkills{
-				SpaceshipCommand:   5,
-				AmarrIndustrial:    5,
+				SpaceshipCommand: 5,
+				AmarrIndustrial:  5,
 			},
 			expectedCapacity: 7812.5, // 5000 * 1.25 * 1.25
 		},

@@ -17,14 +17,14 @@ type CargoItem struct {
 
 // CargoSolution represents the optimal cargo selection result
 type CargoSolution struct {
-	Items               []CargoItem // Selected items with quantities
-	TotalVolume         float64     // Total volume used (m³)
-	TotalValue          float64     // Total value/profit (ISK)
-	UsedCapacity        float64     // Percentage of capacity used (0-100)
-	Recommendations     string      // Skill training recommendations
-	EffectiveCapacity   float64     // Actual capacity after skills (m³)
-	BaseCapacity        float64     // Base ship capacity before skills (m³)
-	CapacityBonusPercent float64    // Total bonus from skills (%)
+	Items                []CargoItem // Selected items with quantities
+	TotalVolume          float64     // Total volume used (m³)
+	TotalValue           float64     // Total value/profit (ISK)
+	UsedCapacity         float64     // Percentage of capacity used (0-100)
+	Recommendations      string      // Skill training recommendations
+	EffectiveCapacity    float64     // Actual capacity after skills (m³)
+	BaseCapacity         float64     // Base ship capacity before skills (m³)
+	CapacityBonusPercent float64     // Total bonus from skills (%)
 }
 
 // CargoService provides cargo optimization with skill-aware capacity calculation
