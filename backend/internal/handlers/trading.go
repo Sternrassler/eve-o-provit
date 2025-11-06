@@ -19,9 +19,9 @@ import (
 // TradingHandler handles trading-related HTTP requests
 type TradingHandler struct {
 	calculator                services.RouteCalculatorServicer // Interface for testability
-	sdeQuerier                database.SDEQuerier                // For type info lookups
-	shipService               services.ShipServicer              // For ship capacity queries
-	systemService             services.SystemServicer            // For system/region/station info
+	sdeQuerier                database.SDEQuerier              // For type info lookups
+	shipService               services.ShipServicer            // For ship capacity queries
+	systemService             services.SystemServicer          // For system/region/station info
 	characterHelper           *services.CharacterHelper
 	tradingService            *services.TradingService
 	inventorySellOrchestrator services.InventorySellOrchestrator // New: Orchestrator for business logic
