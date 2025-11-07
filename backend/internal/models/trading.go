@@ -39,16 +39,16 @@ type TradingRoute struct {
 	BaseISKPerHour           float64 `json:"base_isk_per_hour"`           // ISK/h without navigation skills
 	TimeImprovementPercent   float64 `json:"time_improvement_percent"`    // Percentage improvement from skills
 	// Trading Fees fields (Issue #39)
-	BuyBrokerFee       float64 `json:"buy_broker_fee"`        // Broker fee for buy order placement
-	SellBrokerFee      float64 `json:"sell_broker_fee"`       // Broker fee for sell order placement
-	BrokerFees         float64 `json:"broker_fees"`           // Combined broker fees (buy + sell)
-	SalesTax           float64 `json:"sales_tax"`             // Sales tax on sell orders
-	EstimatedRelistFee float64 `json:"estimated_relist_fee"`  // Estimated relist fee (sell broker fee)
-	TotalFees          float64 `json:"total_fees"`            // Sum of all trading fees
-	GrossProfit        float64 `json:"gross_profit"`          // Profit before fees
-	GrossMarginPercent float64 `json:"gross_margin_percent"`  // Gross profit margin %
-	NetProfit          float64 `json:"net_profit"`            // Total profit minus all fees
-	NetProfitPercent   float64 `json:"net_profit_percent"`    // Net profit margin %
+	BuyBrokerFee       float64 `json:"buy_broker_fee"`       // Broker fee for buy order placement
+	SellBrokerFee      float64 `json:"sell_broker_fee"`      // Broker fee for sell order placement
+	BrokerFees         float64 `json:"broker_fees"`          // Combined broker fees (buy + sell)
+	SalesTax           float64 `json:"sales_tax"`            // Sales tax on sell orders
+	EstimatedRelistFee float64 `json:"estimated_relist_fee"` // Estimated relist fee (sell broker fee)
+	TotalFees          float64 `json:"total_fees"`           // Sum of all trading fees
+	GrossProfit        float64 `json:"gross_profit"`         // Profit before fees
+	GrossMarginPercent float64 `json:"gross_margin_percent"` // Gross profit margin %
+	NetProfit          float64 `json:"net_profit"`           // Total profit minus all fees
+	NetProfitPercent   float64 `json:"net_profit_percent"`   // Net profit margin %
 	// Cargo fields
 	CargoUsed         float64 `json:"cargo_used"`          // m³ actually used
 	CargoCapacity     float64 `json:"cargo_capacity"`      // Total effective capacity (with skills)
