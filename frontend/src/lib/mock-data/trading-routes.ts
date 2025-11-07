@@ -23,6 +23,15 @@ export const mockTradingRoutes: TradingRoute[] = [
     number_of_tours: 3,
     profit_per_tour: 117500,
     total_time_minutes: 45,
+    // Fee breakdown
+    gross_profit: 352500,
+    gross_margin_percent: 42.7,
+    sales_tax: 11775, // 1% of revenue
+    broker_fees: 8837.5, // 0.75% of revenue
+    estimated_relist_fee: 5887.5, // 0.5% of revenue
+    total_fees: 26500,
+    net_profit: 326000,
+    net_profit_percent: 39.5,
   },
   {
     rank: 2,
@@ -46,6 +55,15 @@ export const mockTradingRoutes: TradingRoute[] = [
     number_of_tours: 5,
     profit_per_tour: 69350,
     total_time_minutes: 82,
+    // Fee breakdown
+    gross_profit: 346750,
+    gross_margin_percent: 44.2,
+    sales_tax: 11305, // 1% of revenue
+    broker_fees: 8478.75, // 0.75% of revenue
+    estimated_relist_fee: 5652.5, // 0.5% of revenue
+    total_fees: 25436.25,
+    net_profit: 321313.75,
+    net_profit_percent: 41.0,
   },
   {
     rank: 3,
@@ -65,6 +83,15 @@ export const mockTradingRoutes: TradingRoute[] = [
     travel_time_seconds: 180,
     round_trip_seconds: 360,
     isk_per_hour: 4965000,
+    // Fee breakdown
+    gross_profit: 827400,
+    gross_margin_percent: 23.0,
+    sales_tax: 44184, // 1% of revenue
+    broker_fees: 33138, // 0.75% of revenue
+    estimated_relist_fee: 22092, // 0.5% of revenue
+    total_fees: 99414,
+    net_profit: 727986,
+    net_profit_percent: 20.3,
   },
   {
     rank: 4,

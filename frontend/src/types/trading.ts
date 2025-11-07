@@ -49,6 +49,15 @@ export interface TradingRoute {
   cargo_utilization?: number; // Percentage 0-100
   base_cargo_capacity?: number; // Base capacity without skills
   skill_bonus_percent?: number; // Total skill bonus %
+  // Fee fields
+  gross_profit?: number; // Revenue - Investment (before fees)
+  gross_margin_percent?: number; // (gross_profit / total_investment) * 100
+  sales_tax?: number; // Sales tax fee
+  broker_fees?: number; // Broker fees
+  estimated_relist_fee?: number; // Estimated relist fee
+  total_fees?: number; // Sum of all fees
+  net_profit?: number; // Gross profit - total fees
+  net_profit_percent?: number; // Net margin percentage
 }
 
 export interface Region {

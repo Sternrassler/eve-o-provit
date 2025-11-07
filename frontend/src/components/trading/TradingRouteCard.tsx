@@ -2,12 +2,13 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TradingRoute } from "@/types/trading";
-import { ArrowRight, TrendingUp, Repeat, Navigation, Copy } from "lucide-react";
+import { ArrowRight, TrendingUp, Repeat, Navigation, Copy, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { FeeBreakdown } from "./FeeBreakdown";
 
 interface TradingRouteCardProps {
   route: TradingRoute;
@@ -28,6 +29,14 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
     return `${value.toFixed(0)} ISK`;
   };
 
+  const formatISKWithSeparators = (value: number) => {
+    return new Intl.NumberFormat("de-DE", {
+      style: "decimal",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value) + " ISK";
+  };
+
   const formatTime = (seconds: number) => {
     if (seconds === 0) return "Station Trading";
     const minutes = Math.round(seconds / 60);
@@ -37,6 +46,12 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
   const getSpreadColor = (spread: number) => {
     if (spread >= 10) return "text-green-600 dark:text-green-400";
     if (spread >= 5) return "text-yellow-600 dark:text-yellow-400";
+    return "text-red-600 dark:text-red-400";
+  };
+
+  const getProfitColor = (netMarginPercent: number) => {
+    if (netMarginPercent >= 10) return "text-green-600 dark:text-green-400";
+    if (netMarginPercent >= 5) return "text-yellow-600 dark:text-yellow-400";
     return "text-red-600 dark:text-red-400";
   };
 
@@ -283,33 +298,100 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
           </div>
         </div>
 
-        {/* Multi-tour Profit Display */}
-        {isMultiTour ? (
-          <div className="space-y-2 border-t pt-3">
+        {/* Fee Breakdown and Profit Display */}
+        {route.gross_profit !== undefined && route.net_profit !== undefined ? (
+          <div className="space-y-3 border-t pt-3">
+            {/* Gross Profit Section */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="text-sm text-muted-foreground">Pro Tour</div>
-                <div className="font-bold">{formatISK(route.profit_per_tour || 0)}</div>
+                <div className="text-sm text-muted-foreground">Brutto-Gewinn</div>
+                <div className="font-medium">{formatISKWithSeparators(route.gross_profit)}</div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Gesamt</div>
-                <div className="text-lg font-bold">{formatISK(route.total_profit || route.profit || 0)}</div>
+                <div className="text-sm text-muted-foreground">Brutto-Marge</div>
+                <div className={cn("font-medium", getSpreadColor(route.gross_margin_percent || 0))}>
+                  {(route.gross_margin_percent || 0).toFixed(1)}%
+                </div>
+              </div>
+            </div>
+
+            {/* Fees Section with Tooltip */}
+            {route.total_fees !== undefined && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-between cursor-help border-t pt-3">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm text-muted-foreground">Gebühren</span>
+                        <Info className="size-3.5 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                        -{formatISKWithSeparators(route.total_fees)}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs">
+                    <FeeBreakdown
+                      fees={{
+                        salesTax: route.sales_tax || 0,
+                        brokerFees: route.broker_fees || 0,
+                        estimatedRelistFee: route.estimated_relist_fee || 0,
+                        totalFees: route.total_fees,
+                      }}
+                    />
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            {/* Net Profit Section */}
+            <div className="grid grid-cols-2 gap-4 border-t pt-3">
+              <div>
+                <div className="text-sm text-muted-foreground">Netto-Gewinn</div>
+                <div className={cn("text-lg font-bold", getProfitColor(route.net_profit_percent || 0))}>
+                  {formatISKWithSeparators(route.net_profit)}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-muted-foreground">Netto-Marge</div>
+                <div className={cn("text-lg font-bold", getProfitColor(route.net_profit_percent || 0))}>
+                  {(route.net_profit_percent || 0).toFixed(1)}%
+                </div>
               </div>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 border-t pt-3">
-            <div>
-              <div className="text-sm text-muted-foreground">Gewinn</div>
-              <div className="text-lg font-bold">{formatISK(route.total_profit || route.profit || 0)}</div>
-            </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Spread</div>
-              <div className={cn("text-lg font-bold", getSpreadColor(route.spread_percent))}>
-                {route.spread_percent.toFixed(1)}%
+          /* Fallback to old display if fee data not available */
+          <>
+            {/* Multi-tour Profit Display */}
+            {isMultiTour ? (
+              <div className="space-y-2 border-t pt-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Pro Tour</div>
+                    <div className="font-bold">{formatISK(route.profit_per_tour || 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Gesamt</div>
+                    <div className="text-lg font-bold">{formatISK(route.total_profit || route.profit || 0)}</div>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 border-t pt-3">
+                <div>
+                  <div className="text-sm text-muted-foreground">Gewinn</div>
+                  <div className="text-lg font-bold">{formatISK(route.total_profit || route.profit || 0)}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Spread</div>
+                  <div className={cn("text-lg font-bold", getSpreadColor(route.spread_percent))}>
+                    {route.spread_percent.toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Spread for multi-tour (moved below profit) */}
