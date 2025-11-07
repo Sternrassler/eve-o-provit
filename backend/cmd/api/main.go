@@ -97,12 +97,12 @@ func main() {
 	systemService := services.NewSystemService(sdeRepo)
 
 	// Suppress unused warnings (Services werden in Phase 1 genutzt)
-	_ = skillsService
 	_ = feeService
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
 	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper, tradingService)
+	characterHandler := handlers.NewCharacterHandler(skillsService)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -148,6 +148,9 @@ func main() {
 	protected.Get("/character/location", tradingHandler.GetCharacterLocation)
 	protected.Get("/character/ship", tradingHandler.GetCharacterShip)
 	protected.Get("/character/ships", tradingHandler.GetCharacterShips)
+
+	// Character skills endpoint (Issue #54)
+	protected.Get("/characters/:characterId/skills", characterHandler.GetCharacterSkills)
 
 	// ESI UI endpoints (require esi-ui.write_waypoint.v1 scope)
 	esiUI := protected.Group("/esi/ui")
