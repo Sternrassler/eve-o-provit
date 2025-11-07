@@ -57,6 +57,9 @@ type InventorySellOrchestrator interface {
 type RouteCalculatorServicer interface {
 	// Calculate computes profitable trading routes for a region
 	Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error)
+	
+	// CalculateWithFilters computes profitable trading routes with volume filtering
+	CalculateWithFilters(ctx context.Context, req *models.RouteCalculationRequest) (*models.RouteCalculationResponse, error)
 }
 
 // SkillsServicer defines the interface for character skills operations

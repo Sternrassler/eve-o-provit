@@ -51,6 +51,7 @@ type RouteService struct {
 	cargoService   CargoServicer  // For skill-aware cargo calculations
 	skillsService  SkillsServicer // For fetching character skills
 	feeService     FeeServicer    // For fee calculations
+	volumeService  VolumeServicer // For volume metrics and liquidity analysis
 }
 
 // NewRouteService creates a new route service instance
@@ -77,6 +78,7 @@ func NewRouteService(
 	// Initialize sub-services
 	rs.routeFinder = NewRouteFinder(esiClient, marketRepo, sdeRepo, sdeDB, redisClient)
 	rs.routeOptimizer = NewRouteOptimizer(sdeRepo, sdeDB, feeService)
+	rs.volumeService = NewVolumeService(marketRepo, esiClient)
 
 	// Initialize worker pool
 	rs.workerPool = NewRouteWorkerPool(rs.routeOptimizer)
@@ -192,6 +194,82 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 		response.Warning = fmt.Sprintf("Calculation timeout after %v, showing partial results", CalculationTimeout)
 		log.Printf("WARNING: %s", response.Warning)
 	}
+
+	return response, nil
+}
+
+// CalculateWithFilters computes profitable trading routes with volume filtering support
+func (rs *RouteService) CalculateWithFilters(ctx context.Context, req *models.RouteCalculationRequest) (*models.RouteCalculationResponse, error) {
+	startTime := time.Now()
+	defer func() {
+		duration := time.Since(startTime).Seconds()
+		metrics.TradingCalculationDuration.Observe(duration)
+		log.Printf("Route calculation with volume filters completed in %.2fs", duration)
+	}()
+
+	// Call base Calculate method to get routes
+	response, err := rs.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity)
+	if err != nil {
+		return nil, err
+	}
+
+	// Early return if volume metrics not requested
+	if !req.IncludeVolumeMetrics {
+		return response, nil
+	}
+
+	// Enrich routes with volume metrics and apply filters
+	filteredRoutes := make([]models.TradingRoute, 0, len(response.Routes))
+	
+	for _, route := range response.Routes {
+		// Get volume metrics for this item
+		volumeMetrics, err := rs.volumeService.GetVolumeMetrics(ctx, route.ItemTypeID, req.RegionID)
+		if err != nil {
+			log.Printf("Warning: failed to get volume metrics for type %d: %v", route.ItemTypeID, err)
+			// Continue without volume metrics for this route
+			filteredRoutes = append(filteredRoutes, route)
+			continue
+		}
+
+		// Calculate liquidation time
+		liquidationDays := rs.volumeService.CalculateLiquidationTime(route.Quantity, volumeMetrics.DailyVolumeAvg)
+
+		// Apply volume filters
+		if req.MinDailyVolume > 0 && volumeMetrics.DailyVolumeAvg < req.MinDailyVolume {
+			continue // Skip routes with too low volume
+		}
+
+		if req.MaxLiquidationDays > 0 && liquidationDays > req.MaxLiquidationDays {
+			continue // Skip routes with too long liquidation time
+		}
+
+		// Calculate daily profit (use net profit if available, otherwise total profit)
+		dailyProfit := 0.0
+		if liquidationDays > 0 {
+			profitToUse := route.NetProfit
+			if profitToUse == 0 {
+				profitToUse = route.TotalProfit
+			}
+			dailyProfit = profitToUse / liquidationDays
+		}
+
+		// Enrich route with volume metrics
+		route.VolumeMetrics = volumeMetrics
+		route.LiquidationDays = liquidationDays
+		route.DailyProfit = dailyProfit
+
+		filteredRoutes = append(filteredRoutes, route)
+	}
+
+	// Sort by daily profit if volume metrics are included
+	if len(filteredRoutes) > 0 && req.IncludeVolumeMetrics {
+		sort.Slice(filteredRoutes, func(i, j int) bool {
+			return filteredRoutes[i].DailyProfit > filteredRoutes[j].DailyProfit
+		})
+	}
+
+	// Update response with filtered routes
+	response.Routes = filteredRoutes
 
 	return response, nil
 }

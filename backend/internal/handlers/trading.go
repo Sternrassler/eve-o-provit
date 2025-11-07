@@ -61,6 +61,7 @@ const (
 
 // CalculateRoutes handles POST /api/v1/trading/routes/calculate
 // Supports optional authentication for skill-aware cargo calculations
+// Supports optional volume filtering for liquidity-based route selection
 func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	var req models.RouteCalculationRequest
 
@@ -94,8 +95,17 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 		}
 	}
 
-	// Calculate routes
-	result, err := h.calculator.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity)
+	// Calculate routes (with or without volume filtering)
+	var result *models.RouteCalculationResponse
+	var err error
+	
+	// Use CalculateWithFilters if volume metrics requested or filters applied
+	if req.IncludeVolumeMetrics || req.MinDailyVolume > 0 || req.MaxLiquidationDays > 0 {
+		result, err = h.calculator.CalculateWithFilters(ctx, &req)
+	} else {
+		result, err = h.calculator.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity)
+	}
+	
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to calculate routes",
