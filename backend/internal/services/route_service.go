@@ -24,11 +24,11 @@ const (
 	// MaxRoutes is the maximum number of routes to return
 	MaxRoutes = 50
 	// CalculationTimeout is the total timeout for route calculation
-	CalculationTimeout = 30 * time.Second
+	CalculationTimeout = 60 * time.Second
 	// MarketFetchTimeout is the timeout for market order fetching
-	MarketFetchTimeout = 15 * time.Second
+	MarketFetchTimeout = 30 * time.Second
 	// RouteCalculationTimeout is the timeout for route calculation phase
-	RouteCalculationTimeout = 25 * time.Second
+	RouteCalculationTimeout = 50 * time.Second
 )
 
 // Context keys for character information (must match handler keys)
