@@ -79,31 +79,62 @@ func (ro *RouteOptimizer) CalculateRoute(ctx context.Context, item models.ItemPa
 		return route, fmt.Errorf("failed to calculate route: %w", err)
 	}
 
-	// Calculate travel time in seconds (simplified)
-	oneWaySeconds := float64(travelResult.Jumps) * 30.0 // ~30 seconds per jump average
+	// Get ship type for navigation calculations (use default ship type ID 0 for generic hauler)
+	// TODO: In future, get actual ship type from request or character data
+	ship := models.GetShipType(0) // Default hauler
+
+	// Use RoutePlanner for accurate travel time calculation with navigation skills
+	// For now, use default skills (0/0) - future enhancement: fetch character skills
+	planner := &RoutePlanner{sdeDB: ro.sdeDB, sdeQuerier: ro.sdeRepo}
+	
+	// Calculate base travel time (without skills)
+	baseOneWaySeconds := planner.CalculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, 0, 0)
+	
+	// Calculate skilled travel time (with default skills for now)
+	// TODO: Pass actual character skills when available from auth context
+	navigationLevel := 0
+	evasiveLevel := 0
+	skilledOneWaySeconds := planner.CalculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, navigationLevel, evasiveLevel)
 
 	// Station Trading: Use minimum time for order cycling (5 minutes base time)
 	// This prevents division by zero and provides realistic ISK/h for station trading
 	if item.BuySystemID == item.SellSystemID || travelResult.Jumps == 0 {
-		oneWaySeconds = 300.0 // 5 minutes for station trading order updates
+		baseOneWaySeconds = 300.0    // 5 minutes for station trading order updates
+		skilledOneWaySeconds = 300.0 // Same for station trading (no travel)
 	}
 
+	// Use skilled time for main calculations
+	oneWaySeconds := skilledOneWaySeconds
 	roundTripSeconds := oneWaySeconds * 2
+	baseRoundTripSeconds := baseOneWaySeconds * 2
 
 	// Multi-tour time calculation
 	// (numberOfTours - 1) full roundtrips + 1 one-way trip
 	var totalTimeSeconds float64
+	var baseTotalTimeSeconds float64
 	if numberOfTours > 1 {
 		totalTimeSeconds = float64(numberOfTours-1)*roundTripSeconds + oneWaySeconds
+		baseTotalTimeSeconds = float64(numberOfTours-1)*baseRoundTripSeconds + baseOneWaySeconds
 	} else {
 		totalTimeSeconds = roundTripSeconds
+		baseTotalTimeSeconds = baseRoundTripSeconds
 	}
 	totalTimeMinutes := totalTimeSeconds / 60.0
 
-	// Calculate ISK per hour with multi-tour time
+	// Calculate ISK per hour (both base and skilled)
 	var iskPerHour float64
+	var baseISKPerHour float64
 	if totalTimeSeconds > 0 {
 		iskPerHour = (totalProfit / totalTimeSeconds) * 3600
+	}
+	if baseTotalTimeSeconds > 0 {
+		baseISKPerHour = (totalProfit / baseTotalTimeSeconds) * 3600
+	}
+
+	// Calculate improvement percentage
+	var timeImprovement float64
+	if baseTotalTimeSeconds > 0 && baseTotalTimeSeconds != totalTimeSeconds {
+		timeImprovement = ((baseTotalTimeSeconds - totalTimeSeconds) / baseTotalTimeSeconds) * 100
 	}
 
 	// Get system and station names
@@ -146,6 +177,11 @@ func (ro *RouteOptimizer) CalculateRoute(ctx context.Context, item models.ItemPa
 		NumberOfTours:    numberOfTours,
 		ProfitPerTour:    profitPerTour,
 		TotalTimeMinutes: totalTimeMinutes,
+		// Navigation skills fields
+		BaseTravelTimeSeconds:    baseOneWaySeconds,
+		SkilledTravelTimeSeconds: skilledOneWaySeconds,
+		BaseISKPerHour:           baseISKPerHour,
+		TimeImprovementPercent:   timeImprovement,
 	}
 
 	return route, nil
