@@ -35,7 +35,7 @@ const (
 type contextKey string
 
 const (
-	contextKeyCharacterID  contextKey = "character_id"
+	contextKeyCharacterID contextKey = "character_id"
 	contextKeyAccessToken contextKey = "access_token"
 )
 
@@ -48,9 +48,9 @@ type RouteService struct {
 	routeOptimizer *RouteOptimizer
 	workerPool     *RouteWorkerPool
 	redisClient    *redis.Client
-	cargoService   CargoServicer   // For skill-aware cargo calculations
-	skillsService  SkillsServicer  // For fetching character skills
-	feeService     FeeServicer     // For fee calculations
+	cargoService   CargoServicer  // For skill-aware cargo calculations
+	skillsService  SkillsServicer // For fetching character skills
+	feeService     FeeServicer    // For fee calculations
 }
 
 // NewRouteService creates a new route service instance
@@ -115,10 +115,10 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 		}
 		baseCapacity = shipCap.BaseCargoHold
 		effectiveCapacity = baseCapacity // Default: no skills
-		
+
 		// Apply character skills if available in context
 		effectiveCapacity, skillBonusPercent = rs.applyCharacterSkills(calcCtx, baseCapacity)
-		
+
 		cargoCapacity = effectiveCapacity
 	} else {
 		// Capacity was provided explicitly - use as both base and effective
@@ -208,15 +208,15 @@ func (rs *RouteService) getRegionName(ctx context.Context, regionID int) (string
 func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity float64) (float64, float64) {
 	effectiveCapacity := baseCapacity
 	skillBonusPercent := 0.0
-	
+
 	// Extract character_id if available in context metadata
 	characterID := ctx.Value(contextKeyCharacterID)
 	accessToken := ctx.Value(contextKeyAccessToken)
-	
+
 	if characterID != nil && accessToken != nil {
 		charID, ok1 := characterID.(int)
 		token, ok2 := accessToken.(string)
-		
+
 		if ok1 && ok2 && charID > 0 && token != "" {
 			// Fetch skills and apply to capacity
 			if skills, err := rs.skillsService.GetCharacterSkills(ctx, charID, token); err == nil {
@@ -226,6 +226,6 @@ func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity f
 			}
 		}
 	}
-	
+
 	return effectiveCapacity, skillBonusPercent
 }

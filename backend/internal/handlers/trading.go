@@ -55,7 +55,7 @@ func NewTradingHandler(
 type contextKey string
 
 const (
-	contextKeyCharacterID  contextKey = "character_id"
+	contextKeyCharacterID contextKey = "character_id"
 	contextKeyAccessToken contextKey = "access_token"
 )
 
@@ -84,7 +84,7 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 
 	// Create context with optional character info for skill-aware calculations
 	ctx := c.UserContext()
-	
+
 	// Check if character authentication is available (optional)
 	if characterID := c.Locals("character_id"); characterID != nil {
 		if accessToken := c.Locals("access_token"); accessToken != nil {
