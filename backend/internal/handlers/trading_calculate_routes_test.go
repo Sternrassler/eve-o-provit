@@ -17,7 +17,8 @@ import (
 
 // MockRouteCalculator implements services.RouteCalculatorServicer for testing
 type MockRouteCalculator struct {
-	CalculateFunc func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error)
+	CalculateFunc            func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error)
+	CalculateWithFiltersFunc func(ctx context.Context, req *models.RouteCalculationRequest) (*models.RouteCalculationResponse, error)
 }
 
 func (m *MockRouteCalculator) Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
@@ -25,6 +26,14 @@ func (m *MockRouteCalculator) Calculate(ctx context.Context, regionID, shipTypeI
 		return m.CalculateFunc(ctx, regionID, shipTypeID, cargoCapacity)
 	}
 	panic("CalculateFunc not set")
+}
+
+func (m *MockRouteCalculator) CalculateWithFilters(ctx context.Context, req *models.RouteCalculationRequest) (*models.RouteCalculationResponse, error) {
+	if m.CalculateWithFiltersFunc != nil {
+		return m.CalculateWithFiltersFunc(ctx, req)
+	}
+	// Default implementation: call Calculate with basic params
+	return m.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity)
 }
 
 // TestCalculateRoutes_Success_Unit tests successful route calculation
