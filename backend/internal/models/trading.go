@@ -33,6 +33,11 @@ type TradingRoute struct {
 	NumberOfTours    int     `json:"number_of_tours"`
 	ProfitPerTour    float64 `json:"profit_per_tour"`
 	TotalTimeMinutes float64 `json:"total_time_minutes"`
+	// Navigation Skills fields
+	BaseTravelTimeSeconds    float64 `json:"base_travel_time_seconds"`     // Travel time without navigation skills
+	SkilledTravelTimeSeconds float64 `json:"skilled_travel_time_seconds"`  // Travel time with navigation skills applied
+	BaseISKPerHour           float64 `json:"base_isk_per_hour"`            // ISK/h without navigation skills
+	TimeImprovementPercent   float64 `json:"time_improvement_percent"`     // Percentage improvement from skills
 }
 
 // RouteCalculationRequest represents the request to calculate trading routes
@@ -168,6 +173,64 @@ type ValidationError struct {
 
 func (e *ValidationError) Error() string {
 	return e.Message
+}
+
+// ShipType represents a ship with its navigation characteristics
+type ShipType struct {
+	TypeID        int     // EVE Online Type ID
+	Name          string  // Ship name
+	BaseWarpSpeed float64 // Base warp speed in AU/s (typically 3.0 for haulers)
+	BaseAlignTime float64 // Base align time in seconds
+	CargoCapacity float64 // Cargo capacity in m³
+}
+
+// CommonHaulers defines commonly used hauler ships with their base stats
+// Warp speeds are in AU/s, align times in seconds
+var CommonHaulers = map[int]ShipType{
+	648: { // Iteron Mark V (Gallente)
+		TypeID:        648,
+		Name:          "Iteron Mark V",
+		BaseWarpSpeed: 3.0,
+		BaseAlignTime: 8.5,
+		CargoCapacity: 63000,
+	},
+	649: { // Badger (Caldari)
+		TypeID:        649,
+		Name:          "Badger",
+		BaseWarpSpeed: 3.0,
+		BaseAlignTime: 7.2,
+		CargoCapacity: 50000,
+	},
+	650: { // Nereus (Gallente)
+		TypeID:        650,
+		Name:          "Nereus",
+		BaseWarpSpeed: 3.0,
+		BaseAlignTime: 6.8,
+		CargoCapacity: 45000,
+	},
+	651: { // Wreathe (Minmatar)
+		TypeID:        651,
+		Name:          "Wreathe",
+		BaseWarpSpeed: 3.0,
+		BaseAlignTime: 8.0,
+		CargoCapacity: 48000,
+	},
+	// Default hauler (used as fallback)
+	0: {
+		TypeID:        0,
+		Name:          "Generic Hauler",
+		BaseWarpSpeed: 3.0,
+		BaseAlignTime: 8.0,
+		CargoCapacity: 50000,
+	},
+}
+
+// GetShipType returns ship type by ID, or default hauler if not found
+func GetShipType(typeID int) ShipType {
+	if ship, ok := CommonHaulers[typeID]; ok {
+		return ship
+	}
+	return CommonHaulers[0] // Return default hauler
 }
 
 // InventorySellRoute represents a profitable sell opportunity for inventory

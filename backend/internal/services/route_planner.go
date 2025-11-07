@@ -44,6 +44,11 @@ func NewRoutePlanner(sdeDB *sql.DB, sdeQuerier database.SDEQuerier, redisClient 
 
 // CalculateRoute builds a complete trading route with navigation and profit details
 func (rp *RoutePlanner) CalculateRoute(ctx context.Context, item models.ItemPair, cargoCapacity float64, numberOfTours int, quantityPerTour int) (models.TradingRoute, error) {
+	return rp.CalculateRouteWithSkills(ctx, item, cargoCapacity, numberOfTours, quantityPerTour, nil, 0)
+}
+
+// CalculateRouteWithSkills builds a complete trading route with navigation skills applied
+func (rp *RoutePlanner) CalculateRouteWithSkills(ctx context.Context, item models.ItemPair, cargoCapacity float64, numberOfTours int, quantityPerTour int, skills *TradingSkills, shipTypeID int) (models.TradingRoute, error) {
 	var route models.TradingRoute
 
 	// Validate inputs
@@ -68,23 +73,51 @@ func (rp *RoutePlanner) CalculateRoute(ctx context.Context, item models.ItemPair
 		return route, fmt.Errorf("failed to calculate route: %w", err)
 	}
 
-	// Calculate travel time in seconds
-	oneWaySeconds := float64(travelResult.Jumps) * JumpTimeSeconds
-	roundTripSeconds := oneWaySeconds * 2
+	// Get ship type for navigation calculations
+	ship := models.GetShipType(shipTypeID)
+
+	// Calculate base travel time (without skills)
+	baseTravelTime := rp.CalculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, 0, 0)
+	oneWaySecondsBase := baseTravelTime
+	roundTripSecondsBase := oneWaySecondsBase * 2
+
+	// Calculate skilled travel time (with navigation skills)
+	navigationLevel := 0
+	evasiveLevel := 0
+	if skills != nil {
+		navigationLevel = skills.Navigation
+		evasiveLevel = skills.EvasiveManeuvering
+	}
+	skilledTravelTime := rp.CalculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, navigationLevel, evasiveLevel)
+	oneWaySecondsSkilled := skilledTravelTime
+	roundTripSecondsSkilled := oneWaySecondsSkilled * 2
 
 	// Multi-tour time: (numberOfTours - 1) full roundtrips + 1 one-way trip
-	var totalTimeSeconds float64
+	var totalTimeSecondsBase float64
+	var totalTimeSecondsSkilled float64
 	if numberOfTours > 1 {
-		totalTimeSeconds = float64(numberOfTours-1)*roundTripSeconds + oneWaySeconds
+		totalTimeSecondsBase = float64(numberOfTours-1)*roundTripSecondsBase + oneWaySecondsBase
+		totalTimeSecondsSkilled = float64(numberOfTours-1)*roundTripSecondsSkilled + oneWaySecondsSkilled
 	} else {
-		totalTimeSeconds = roundTripSeconds
+		totalTimeSecondsBase = roundTripSecondsBase
+		totalTimeSecondsSkilled = roundTripSecondsSkilled
 	}
-	totalTimeMinutes := totalTimeSeconds / 60.0
+	totalTimeMinutes := totalTimeSecondsSkilled / 60.0
 
-	// Calculate ISK per hour
-	var iskPerHour float64
-	if totalTimeSeconds > 0 {
-		iskPerHour = (totalProfit / totalTimeSeconds) * 3600
+	// Calculate ISK per hour (both base and skilled)
+	var iskPerHourBase float64
+	var iskPerHourSkilled float64
+	if totalTimeSecondsBase > 0 {
+		iskPerHourBase = (totalProfit / totalTimeSecondsBase) * 3600
+	}
+	if totalTimeSecondsSkilled > 0 {
+		iskPerHourSkilled = (totalProfit / totalTimeSecondsSkilled) * 3600
+	}
+
+	// Calculate improvement percentage
+	var timeImprovement float64
+	if totalTimeSecondsBase > 0 {
+		timeImprovement = ((totalTimeSecondsBase - totalTimeSecondsSkilled) / totalTimeSecondsBase) * 100
 	}
 
 	// Get location names
@@ -121,13 +154,53 @@ func (rp *RoutePlanner) CalculateRoute(ctx context.Context, item models.ItemPair
 		ProfitPerTour:          profitPerTour,
 		TotalProfit:            totalProfit,
 		TotalTimeMinutes:       totalTimeMinutes,
-		TravelTimeSeconds:      oneWaySeconds,
-		RoundTripSeconds:       roundTripSeconds,
-		ISKPerHour:             iskPerHour,
+		TravelTimeSeconds:      oneWaySecondsSkilled,
+		RoundTripSeconds:       roundTripSecondsSkilled,
+		ISKPerHour:             iskPerHourSkilled,
 		SpreadPercent:          item.SpreadPercent,
+		// Navigation skills fields
+		BaseTravelTimeSeconds:    oneWaySecondsBase,
+		SkilledTravelTimeSeconds: oneWaySecondsSkilled,
+		BaseISKPerHour:           iskPerHourBase,
+		TimeImprovementPercent:   timeImprovement,
 	}
 
 	return route, nil
+}
+
+// calculateJumpTime calculates total travel time for jumps with navigation skills
+// baseWarpSpeed: AU/s (e.g., 3.0 for haulers)
+// baseAlignTime: seconds (e.g., 8.0 for haulers)
+// navigationLevel: 0-5 (+5% warp speed per level)
+// evasiveLevel: 0-5 (-5% align time per level)
+// CalculateJumpTime calculates total travel time for jumps with navigation skills
+// baseWarpSpeed: AU/s (e.g., 3.0 for haulers)
+// baseAlignTime: seconds (e.g., 8.0 for haulers)
+// navigationLevel: 0-5 (+5% warp speed per level)
+// evasiveLevel: 0-5 (-5% align time per level)
+// Exported for testing purposes
+func (rp *RoutePlanner) CalculateJumpTime(jumps int, baseWarpSpeed, baseAlignTime float64, navigationLevel, evasiveLevel int) float64 {
+	if jumps == 0 {
+		return 0
+	}
+
+	// Apply Navigation skill bonus (+5% warp speed per level)
+	warpSpeed := baseWarpSpeed * (1.0 + 0.05*float64(navigationLevel))
+
+	// Apply Evasive Maneuvering skill bonus (-5% align time per level)
+	alignTime := baseAlignTime * (1.0 - 0.05*float64(evasiveLevel))
+
+	// Average distance per jump (AU) - simplified model
+	// In reality, distances vary, but we use a constant for simplicity
+	const avgDistanceAU = 9.0 // Average distance between gates
+
+	// Calculate time per jump
+	warpTime := avgDistanceAU / warpSpeed
+	dockingTime := 10.0 // Time for undocking/docking/gate activation
+
+	timePerJump := alignTime + warpTime + dockingTime
+
+	return float64(jumps) * timePerJump
 }
 
 // GetSystemIDFromLocation resolves a location ID to its system ID

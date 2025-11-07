@@ -124,3 +124,148 @@ func TestRoutePlanner_NewRoutePlanner_WithRedis(t *testing.T) {
 
 	// TODO: Test with actual Redis when available
 }
+
+func TestRoutePlanner_CalculateJumpTime(t *testing.T) {
+	planner := services.NewRoutePlanner(&sql.DB{}, nil, nil)
+
+	tests := []struct {
+		name            string
+		jumps           int
+		baseWarpSpeed   float64
+		baseAlignTime   float64
+		navigationLevel int
+		evasiveLevel    int
+		expectedMin     float64 // Minimum expected time
+		expectedMax     float64 // Maximum expected time
+	}{
+		{
+			name:            "No skills, 5 jumps",
+			jumps:           5,
+			baseWarpSpeed:   3.0,
+			baseAlignTime:   8.0,
+			navigationLevel: 0,
+			evasiveLevel:    0,
+			expectedMin:     100.0, // 5 jumps × (8s align + 3s warp + 10s docking) = 105s
+			expectedMax:     110.0,
+		},
+		{
+			name:            "Navigation V, 5 jumps",
+			jumps:           5,
+			baseWarpSpeed:   3.0,
+			baseAlignTime:   8.0,
+			navigationLevel: 5,
+			evasiveLevel:    0,
+			expectedMin:     95.0, // Faster warp speed
+			expectedMax:     105.0,
+		},
+		{
+			name:            "Evasive V, 5 jumps",
+			jumps:           5,
+			baseWarpSpeed:   3.0,
+			baseAlignTime:   8.0,
+			navigationLevel: 0,
+			evasiveLevel:    5,
+			expectedMin:     85.0, // Faster align time
+			expectedMax:     95.0,
+		},
+		{
+			name:            "Both skills maxed, 5 jumps",
+			jumps:           5,
+			baseWarpSpeed:   3.0,
+			baseAlignTime:   8.0,
+			navigationLevel: 5,
+			evasiveLevel:    5,
+			expectedMin:     85.0, // Both improvements
+			expectedMax:     95.0,
+		},
+		{
+			name:            "Zero jumps",
+			jumps:           0,
+			baseWarpSpeed:   3.0,
+			baseAlignTime:   8.0,
+			navigationLevel: 5,
+			evasiveLevel:    5,
+			expectedMin:     0.0,
+			expectedMax:     0.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := planner.CalculateJumpTime(tt.jumps, tt.baseWarpSpeed, tt.baseAlignTime, tt.navigationLevel, tt.evasiveLevel)
+
+			assert.GreaterOrEqual(t, result, tt.expectedMin, "Travel time should be >= minimum")
+			assert.LessOrEqual(t, result, tt.expectedMax, "Travel time should be <= maximum")
+
+			// Verify skills reduce travel time (except for zero jumps)
+			if tt.jumps > 0 && (tt.navigationLevel > 0 || tt.evasiveLevel > 0) {
+				baseTime := planner.CalculateJumpTime(tt.jumps, tt.baseWarpSpeed, tt.baseAlignTime, 0, 0)
+				assert.Less(t, result, baseTime, "Skilled travel time should be less than base time")
+			}
+		})
+	}
+}
+
+func TestRoutePlanner_NavigationSkillsImprovement(t *testing.T) {
+	planner := services.NewRoutePlanner(&sql.DB{}, nil, nil)
+
+	// Test different skill combinations
+	tests := []struct {
+		name                    string
+		navigationLevel         int
+		evasiveLevel            int
+		minImprovementPercent   float64
+		maxImprovementPercent   float64
+		jumps                   int
+		baseWarpSpeed           float64
+		baseAlignTime           float64
+	}{
+		{
+			name:                  "Navigation V only",
+			navigationLevel:       5,
+			evasiveLevel:          0,
+			minImprovementPercent: 2.0, // Warp speed improvement is ~3% of total time
+			maxImprovementPercent: 5.0,
+			jumps:                 10,
+			baseWarpSpeed:         3.0,
+			baseAlignTime:         8.0,
+		},
+		{
+			name:                  "Evasive V only",
+			navigationLevel:       0,
+			evasiveLevel:          5,
+			minImprovementPercent: 9.0, // Align time improvement is ~10% of total time
+			maxImprovementPercent: 12.0,
+			jumps:                 10,
+			baseWarpSpeed:         3.0,
+			baseAlignTime:         8.0,
+		},
+		{
+			name:                  "Both skills maxed",
+			navigationLevel:       5,
+			evasiveLevel:          5,
+			minImprovementPercent: 11.0, // Combined improvement ~12%
+			maxImprovementPercent: 15.0,
+			jumps:                 10,
+			baseWarpSpeed:         3.0,
+			baseAlignTime:         8.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseTime := planner.CalculateJumpTime(tt.jumps, tt.baseWarpSpeed, tt.baseAlignTime, 0, 0)
+			skilledTime := planner.CalculateJumpTime(tt.jumps, tt.baseWarpSpeed, tt.baseAlignTime, tt.navigationLevel, tt.evasiveLevel)
+
+			improvement := ((baseTime - skilledTime) / baseTime) * 100
+
+			assert.GreaterOrEqual(t, improvement, tt.minImprovementPercent,
+				"Skills should provide at least %.1f%% improvement", tt.minImprovementPercent)
+			assert.LessOrEqual(t, improvement, tt.maxImprovementPercent,
+				"Improvement should be at most %.1f%%", tt.maxImprovementPercent)
+
+			t.Logf("Base time: %.1fs, Skilled time: %.1fs, Improvement: %.1f%%",
+				baseTime, skilledTime, improvement)
+		})
+	}
+}
