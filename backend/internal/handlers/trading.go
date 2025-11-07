@@ -52,6 +52,7 @@ func NewTradingHandler(
 }
 
 // CalculateRoutes handles POST /api/v1/trading/routes/calculate
+// Supports optional authentication for skill-aware cargo calculations
 func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	var req models.RouteCalculationRequest
 
@@ -73,8 +74,20 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 		})
 	}
 
+	// Create context with optional character info for skill-aware calculations
+	ctx := c.UserContext()
+	
+	// Check if character authentication is available (optional)
+	if characterID := c.Locals("character_id"); characterID != nil {
+		if accessToken := c.Locals("access_token"); accessToken != nil {
+			// Add character context for skill-aware cargo calculations
+			ctx = context.WithValue(ctx, "character_id", characterID)
+			ctx = context.WithValue(ctx, "access_token", accessToken)
+		}
+	}
+
 	// Calculate routes
-	result, err := h.calculator.Calculate(c.Context(), req.RegionID, req.ShipTypeID, req.CargoCapacity)
+	result, err := h.calculator.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to calculate routes",

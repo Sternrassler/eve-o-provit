@@ -44,6 +44,12 @@ type TradingRoute struct {
 	SalesTax      float64 `json:"sales_tax"`       // Sales tax on sell orders
 	TotalFees     float64 `json:"total_fees"`      // Sum of all trading fees
 	NetProfit     float64 `json:"net_profit"`      // Total profit minus all fees
+	// Cargo fields
+	CargoUsed         float64 `json:"cargo_used"`          // m³ actually used
+	CargoCapacity     float64 `json:"cargo_capacity"`      // Total effective capacity (with skills)
+	CargoUtilization  float64 `json:"cargo_utilization"`   // Percentage 0-100
+	BaseCargoCapacity float64 `json:"base_cargo_capacity"` // Base capacity without skills
+	SkillBonusPercent float64 `json:"skill_bonus_percent"` // Total skill bonus %
 }
 
 // RouteCalculationRequest represents the request to calculate trading routes

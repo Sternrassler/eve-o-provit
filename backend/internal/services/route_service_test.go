@@ -54,7 +54,7 @@ func TestNewRouteService(t *testing.T) {
 				redisPtr = tt.redisClient.(*redis.Client)
 			}
 
-			service := NewRouteService(nil, nil, nil, nil, redisPtr, nil)
+			service := NewRouteService(nil, nil, nil, nil, redisPtr, nil, nil, nil)
 			assert.NotNil(t, service)
 			assert.NotNil(t, service.routeFinder)
 			assert.NotNil(t, service.routeOptimizer)

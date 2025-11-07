@@ -40,7 +40,9 @@ type RouteService struct {
 	routeOptimizer *RouteOptimizer
 	workerPool     *RouteWorkerPool
 	redisClient    *redis.Client
-	feeService     FeeServicer
+	cargoService   CargoServicer   // For skill-aware cargo calculations
+	skillsService  SkillsServicer  // For fetching character skills
+	feeService     FeeServicer     // For fee calculations
 }
 
 // NewRouteService creates a new route service instance
@@ -50,14 +52,18 @@ func NewRouteService(
 	sdeRepo *database.SDERepository,
 	marketRepo *database.MarketRepository,
 	redisClient *redis.Client,
+	cargoService CargoServicer,
+	skillsService SkillsServicer,
 	feeService FeeServicer,
 ) *RouteService {
 	rs := &RouteService{
-		esiClient:   esiClient,
-		sdeRepo:     sdeRepo,
-		sdeDB:       sdeDB,
-		redisClient: redisClient,
-		feeService:  feeService,
+		esiClient:     esiClient,
+		sdeRepo:       sdeRepo,
+		sdeDB:         sdeDB,
+		redisClient:   redisClient,
+		cargoService:  cargoService,
+		skillsService: skillsService,
+		feeService:    feeService,
 	}
 
 	// Initialize sub-services
@@ -74,6 +80,8 @@ func NewRouteService(
 var _ RouteCalculatorServicer = (*RouteService)(nil)
 
 // Calculate computes profitable trading routes for a region with timeout support
+// If cargoCapacity is provided in the request, it's used directly
+// Otherwise, ship capacity is fetched from SDE and skills are applied if available in context
 func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
 	startTime := time.Now()
 	defer func() {
@@ -86,13 +94,43 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	calcCtx, cancel := context.WithTimeout(ctx, CalculationTimeout)
 	defer cancel()
 
+	// Variables to track capacity calculation
+	var baseCapacity float64
+	var effectiveCapacity float64
+	var skillBonusPercent float64
+
 	// Get ship info if cargo capacity not provided
 	if cargoCapacity == 0 {
 		shipCap, err := cargo.GetShipCapacities(rs.sdeDB, int64(shipTypeID), nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get ship capacities: %w", err)
 		}
-		cargoCapacity = shipCap.BaseCargoHold
+		baseCapacity = shipCap.BaseCargoHold
+		effectiveCapacity = baseCapacity // Default: no skills
+		
+		// Try to get character skills from context (optional)
+		// Extract character_id if available in context metadata
+		if characterID := ctx.Value("character_id"); characterID != nil {
+			if accessToken := ctx.Value("access_token"); accessToken != nil {
+				charID, ok1 := characterID.(int)
+				token, ok2 := accessToken.(string)
+				if ok1 && ok2 && charID > 0 && token != "" {
+					// Fetch skills and apply to capacity
+					if skills, err := rs.skillsService.GetCharacterSkills(calcCtx, charID, token); err == nil {
+						effectiveCapacity, skillBonusPercent = rs.cargoService.CalculateCargoCapacity(baseCapacity, skills)
+						log.Printf("Applied cargo skills: base=%.2f, effective=%.2f, bonus=%.2f%%",
+							baseCapacity, effectiveCapacity, skillBonusPercent)
+					}
+				}
+			}
+		}
+		
+		cargoCapacity = effectiveCapacity
+	} else {
+		// Capacity was provided explicitly - use as both base and effective
+		baseCapacity = cargoCapacity
+		effectiveCapacity = cargoCapacity
+		skillBonusPercent = 0
 	}
 
 	// Get ship name
@@ -125,7 +163,7 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	routeCtx, routeCancel := context.WithTimeout(calcCtx, RouteCalculationTimeout)
 	defer routeCancel()
 
-	routes, err := rs.workerPool.ProcessItems(routeCtx, profitableItems, cargoCapacity)
+	routes, err := rs.workerPool.ProcessItemsWithCapacityInfo(routeCtx, profitableItems, effectiveCapacity, baseCapacity, skillBonusPercent)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		return nil, fmt.Errorf("failed to calculate routes: %w", err)
 	}

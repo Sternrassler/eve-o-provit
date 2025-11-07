@@ -29,8 +29,18 @@ func NewRouteOptimizer(sdeRepo *database.SDERepository, sdeDB *sql.DB, feeServic
 }
 
 // CalculateRoute calculates a complete trading route with travel time and profit
+// cargoCapacity is the effective capacity (with skills already applied)
+// baseCapacity and skillBonus are optional - if 0, they'll match cargoCapacity
 func (ro *RouteOptimizer) CalculateRoute(ctx context.Context, item models.ItemPair, cargoCapacity float64) (models.TradingRoute, error) {
+	return ro.CalculateRouteWithCapacityInfo(ctx, item, cargoCapacity, cargoCapacity, 0)
+}
+
+// CalculateRouteWithCapacityInfo calculates a route with detailed capacity information
+func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, item models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent float64) (models.TradingRoute, error) {
 	var route models.TradingRoute
+
+	// Use effective capacity for calculations
+	cargoCapacity := effectiveCapacity
 
 	// Calculate quantity that fits in cargo (per tour)
 	if item.ItemVolume <= 0 {
@@ -182,6 +192,13 @@ func (ro *RouteOptimizer) CalculateRoute(ctx context.Context, item models.ItemPa
 	// Calculate net profit (total profit minus all fees)
 	netProfit := totalProfit - totalFees
 
+	// Calculate cargo utilization
+	cargoUsed := item.ItemVolume * float64(quantityPerTour)
+	cargoUtilization := 0.0
+	if cargoCapacity > 0 {
+		cargoUtilization = (cargoUsed / cargoCapacity) * 100
+	}
+
 	route = models.TradingRoute{
 		ItemTypeID:             item.TypeID,
 		ItemName:               item.ItemName,
@@ -222,6 +239,12 @@ func (ro *RouteOptimizer) CalculateRoute(ctx context.Context, item models.ItemPa
 		SalesTax:      salesTax,
 		TotalFees:     totalFees,
 		NetProfit:     netProfit,
+		// Cargo fields
+		CargoUsed:         cargoUsed,
+		CargoCapacity:     cargoCapacity,
+		CargoUtilization:  cargoUtilization,
+		BaseCargoCapacity: baseCapacity,
+		SkillBonusPercent: skillBonusPercent,
 	}
 
 	return route, nil

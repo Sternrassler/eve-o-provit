@@ -86,11 +86,14 @@ func main() {
 	// Skills Service (Phase 0 - Issue #54)
 	skillsService := services.NewSkillsService(esiClient.GetRawClient(), redisClient, appLogger)
 
+	// Cargo Service (Phase 0 - Issue #56 - Cargo Skills Integration)
+	cargoService := services.NewCargoService(skillsService)
+
 	// Fee Service (Phase 0 - Issue #55)
 	feeService := services.NewFeeService(skillsService, appLogger)
 
-	// Route Service (Issue #39 - Integrate fee calculations)
-	routeService := services.NewRouteService(esiClient, db.SDE, sdeRepo, marketRepo, redisClient, feeService)
+	// Route Service with cargo + fee integration
+	routeService := services.NewRouteService(esiClient, db.SDE, sdeRepo, marketRepo, redisClient, cargoService, skillsService, feeService)
 
 	// Ship Service (Phase 0 - Issue #57 - Remove Raw DB Access)
 	shipService := services.NewShipService(db.SDE)

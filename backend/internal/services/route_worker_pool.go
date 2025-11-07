@@ -24,7 +24,13 @@ func NewRouteWorkerPool(routeOptimizer *RouteOptimizer) *RouteWorkerPool {
 }
 
 // ProcessItems calculates routes for all items in parallel
-func (p *RouteWorkerPool) ProcessItems(ctx context.Context, items []models.ItemPair, cargoCapacity float64) ([]models.TradingRoute, error) {
+// Accepts effective capacity (with skills), base capacity, and skill bonus percentage
+func (p *RouteWorkerPool) ProcessItems(ctx context.Context, items []models.ItemPair, effectiveCapacity float64) ([]models.TradingRoute, error) {
+	return p.ProcessItemsWithCapacityInfo(ctx, items, effectiveCapacity, effectiveCapacity, 0)
+}
+
+// ProcessItemsWithCapacityInfo calculates routes with detailed capacity information
+func (p *RouteWorkerPool) ProcessItemsWithCapacityInfo(ctx context.Context, items []models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent float64) ([]models.TradingRoute, error) {
 	if len(items) == 0 {
 		return []models.TradingRoute{}, nil
 	}
@@ -46,7 +52,7 @@ func (p *RouteWorkerPool) ProcessItems(ctx context.Context, items []models.ItemP
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			p.worker(ctx, itemQueue, results, errors, cargoCapacity)
+			p.workerWithCapacityInfo(ctx, itemQueue, results, errors, effectiveCapacity, baseCapacity, skillBonusPercent)
 		}(i)
 	}
 
@@ -75,8 +81,13 @@ func (p *RouteWorkerPool) ProcessItems(ctx context.Context, items []models.ItemP
 	return routes, nil
 }
 
-// worker processes items from the queue
-func (p *RouteWorkerPool) worker(ctx context.Context, itemQueue <-chan models.ItemPair, results chan<- models.TradingRoute, _ chan<- error, cargoCapacity float64) {
+// worker processes items from the queue (backward compatibility)
+func (p *RouteWorkerPool) worker(ctx context.Context, itemQueue <-chan models.ItemPair, results chan<- models.TradingRoute, errors chan<- error, cargoCapacity float64) {
+	p.workerWithCapacityInfo(ctx, itemQueue, results, errors, cargoCapacity, cargoCapacity, 0)
+}
+
+// workerWithCapacityInfo processes items with detailed capacity tracking
+func (p *RouteWorkerPool) workerWithCapacityInfo(ctx context.Context, itemQueue <-chan models.ItemPair, results chan<- models.TradingRoute, _ chan<- error, effectiveCapacity, baseCapacity, skillBonusPercent float64) {
 	for item := range itemQueue {
 		// Check for context cancellation
 		select {
@@ -85,7 +96,7 @@ func (p *RouteWorkerPool) worker(ctx context.Context, itemQueue <-chan models.It
 		default:
 		}
 
-		route, err := p.routeOptimizer.CalculateRoute(ctx, item, cargoCapacity)
+		route, err := p.routeOptimizer.CalculateRouteWithCapacityInfo(ctx, item, effectiveCapacity, baseCapacity, skillBonusPercent)
 		if err != nil {
 			// Log but don't fail the entire operation
 			log.Printf("Warning: skipped route for item %d (%s): %v", item.TypeID, item.ItemName, err)
