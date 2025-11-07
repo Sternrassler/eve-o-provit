@@ -48,7 +48,7 @@ type TradingSkills struct {
 
 	// Ship-specific Industrial Skills (each +5% cargo per level)
 	GallenteIndustrial int // Iteron, Nereus, etc.
-	CaldarIndustrial   int // Badger, Crane, etc.
+	CaldariIndustrial  int // Badger, Crane, etc.
 	AmarrIndustrial    int // Bestower, Sigil, etc.
 	MinmatarIndustrial int // Wreathe, Hoarder, etc.
 }
@@ -189,7 +189,7 @@ func (s *SkillsService) extractTradingSkills(esiSkills *esiSkillsResponse) *Trad
 		case 3348: // Gallente Industrial
 			skills.GallenteIndustrial = skill.ActiveSkillLevel
 		case 3346: // Caldari Industrial
-			skills.CaldarIndustrial = skill.ActiveSkillLevel
+			skills.CaldariIndustrial = skill.ActiveSkillLevel
 		case 3347: // Amarr Industrial
 			skills.AmarrIndustrial = skill.ActiveSkillLevel
 		case 3349: // Minmatar Industrial
@@ -219,7 +219,7 @@ func (s *SkillsService) getDefaultSkills() *TradingSkills {
 		Navigation:              0,
 		EvasiveManeuvering:      0,
 		GallenteIndustrial:      0,
-		CaldarIndustrial:        0,
+		CaldariIndustrial:       0,
 		AmarrIndustrial:         0,
 		MinmatarIndustrial:      0,
 	}

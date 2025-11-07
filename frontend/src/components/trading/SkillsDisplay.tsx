@@ -149,8 +149,8 @@ export function SkillsDisplay() {
     },
     {
       name: "Caldari Industrial",
-      level: skills.CaldarIndustrial,
-      description: `Cargo (Caldari): +${skills.CaldarIndustrial * 5}%`,
+      level: skills.CaldariIndustrial,
+      description: `Cargo (Caldari): +${skills.CaldariIndustrial * 5}%`,
     },
     {
       name: "Amarr Industrial",

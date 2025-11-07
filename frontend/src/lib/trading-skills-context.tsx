@@ -27,7 +27,7 @@ const getDefaultSkills = (): TradingSkills => ({
   Navigation: 0,
   EvasiveManeuvering: 0,
   GallenteIndustrial: 0,
-  CaldarIndustrial: 0,
+  CaldariIndustrial: 0,
   AmarrIndustrial: 0,
   MinmatarIndustrial: 0,
 });

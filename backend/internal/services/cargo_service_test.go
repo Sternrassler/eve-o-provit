@@ -75,8 +75,8 @@ func TestCargoService_CalculateCapacity(t *testing.T) {
 		{
 			name: "Spaceship Command III + Caldari Industrial IV",
 			skills: &TradingSkills{
-				SpaceshipCommand: 3,
-				CaldarIndustrial: 4,
+				SpaceshipCommand:  3,
+				CaldariIndustrial: 4,
 			},
 			expectedCapacity: 1380.0, // 1000 * 1.15 * 1.20
 			expectedBonusPct: 38.0,   // (1.15 * 1.20 - 1) * 100
@@ -86,7 +86,7 @@ func TestCargoService_CalculateCapacity(t *testing.T) {
 			skills: &TradingSkills{
 				SpaceshipCommand:   5,
 				GallenteIndustrial: 3,
-				CaldarIndustrial:   5, // Highest
+				CaldariIndustrial:  5, // Highest
 				AmarrIndustrial:    2,
 				MinmatarIndustrial: 4,
 			},
@@ -391,8 +391,8 @@ func TestCargoService_CapacityCalculation_SkillCombinations(t *testing.T) {
 		{
 			name: "Advanced - Level 4 skills",
 			skills: &TradingSkills{
-				SpaceshipCommand: 4,
-				CaldarIndustrial: 4,
+				SpaceshipCommand:  4,
+				CaldariIndustrial: 4,
 			},
 			expectedCapacity: 7200.0, // 5000 * 1.20 * 1.20
 		},

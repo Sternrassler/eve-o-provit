@@ -52,8 +52,8 @@ func (s *CargoService) CalculateCargoCapacity(baseCapacity float64, skills *Trad
 	if skills.GallenteIndustrial > maxRacialSkill {
 		maxRacialSkill = skills.GallenteIndustrial
 	}
-	if skills.CaldarIndustrial > maxRacialSkill {
-		maxRacialSkill = skills.CaldarIndustrial
+	if skills.CaldariIndustrial > maxRacialSkill {
+		maxRacialSkill = skills.CaldariIndustrial
 	}
 	if skills.AmarrIndustrial > maxRacialSkill {
 		maxRacialSkill = skills.AmarrIndustrial
@@ -293,7 +293,7 @@ func (s *CargoService) OptimizeCargo(
 		maxSkills := &TradingSkills{
 			SpaceshipCommand:   5,
 			GallenteIndustrial: 5,
-			CaldarIndustrial:   5,
+			CaldariIndustrial:  5,
 			AmarrIndustrial:    5,
 			MinmatarIndustrial: 5,
 		}

@@ -38,7 +38,7 @@ export interface TradingSkills {
 
   // Ship-specific Industrial Skills (each +5% cargo per level)
   GallenteIndustrial: number;      // Iteron, Nereus, etc.
-  CaldarIndustrial: number;        // Badger, Crane, etc.
+  CaldariIndustrial: number;       // Badger, Crane, etc.
   AmarrIndustrial: number;         // Bestower, Sigil, etc.
   MinmatarIndustrial: number;      // Wreathe, Hoarder, etc.
 }
