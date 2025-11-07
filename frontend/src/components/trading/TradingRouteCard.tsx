@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TradingRoute } from "@/types/trading";
 import { ArrowRight, TrendingUp, Repeat, Navigation, Copy, Info } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatISKWithSeparators } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
@@ -27,14 +27,6 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
       return `${(value / 1000).toFixed(0)}k ISK`;
     }
     return `${value.toFixed(0)} ISK`;
-  };
-
-  const formatISKWithSeparators = (value: number) => {
-    return new Intl.NumberFormat("de-DE", {
-      style: "decimal",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value) + " ISK";
   };
 
   const formatTime = (seconds: number) => {

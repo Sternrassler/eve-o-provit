@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 /**
  * Trading Route Fee Breakdown E2E Tests
  * 
- * Tests für Fee-Breakdown-Display in Trading Route Cards
+ * Tests for fee breakdown display in trading route cards
  */
 
 test.describe('Trading Route Fee Breakdown', () => {
