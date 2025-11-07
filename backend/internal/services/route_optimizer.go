@@ -86,10 +86,10 @@ func (ro *RouteOptimizer) CalculateRoute(ctx context.Context, item models.ItemPa
 	// Use RoutePlanner for accurate travel time calculation with navigation skills
 	// For now, use default skills (0/0) - future enhancement: fetch character skills
 	planner := &RoutePlanner{sdeDB: ro.sdeDB, sdeQuerier: ro.sdeRepo}
-	
+
 	// Calculate base travel time (without skills)
 	baseOneWaySeconds := planner.CalculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, 0, 0)
-	
+
 	// Calculate skilled travel time (with default skills for now)
 	// TODO: Pass actual character skills when available from auth context
 	navigationLevel := 0

@@ -211,14 +211,14 @@ func TestRoutePlanner_NavigationSkillsImprovement(t *testing.T) {
 
 	// Test different skill combinations
 	tests := []struct {
-		name                    string
-		navigationLevel         int
-		evasiveLevel            int
-		minImprovementPercent   float64
-		maxImprovementPercent   float64
-		jumps                   int
-		baseWarpSpeed           float64
-		baseAlignTime           float64
+		name                  string
+		navigationLevel       int
+		evasiveLevel          int
+		minImprovementPercent float64
+		maxImprovementPercent float64
+		jumps                 int
+		baseWarpSpeed         float64
+		baseAlignTime         float64
 	}{
 		{
 			name:                  "Navigation V only",

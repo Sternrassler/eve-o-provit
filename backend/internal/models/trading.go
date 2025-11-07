@@ -34,10 +34,10 @@ type TradingRoute struct {
 	ProfitPerTour    float64 `json:"profit_per_tour"`
 	TotalTimeMinutes float64 `json:"total_time_minutes"`
 	// Navigation Skills fields
-	BaseTravelTimeSeconds    float64 `json:"base_travel_time_seconds"`     // Travel time without navigation skills
-	SkilledTravelTimeSeconds float64 `json:"skilled_travel_time_seconds"`  // Travel time with navigation skills applied
-	BaseISKPerHour           float64 `json:"base_isk_per_hour"`            // ISK/h without navigation skills
-	TimeImprovementPercent   float64 `json:"time_improvement_percent"`     // Percentage improvement from skills
+	BaseTravelTimeSeconds    float64 `json:"base_travel_time_seconds"`    // Travel time without navigation skills
+	SkilledTravelTimeSeconds float64 `json:"skilled_travel_time_seconds"` // Travel time with navigation skills applied
+	BaseISKPerHour           float64 `json:"base_isk_per_hour"`           // ISK/h without navigation skills
+	TimeImprovementPercent   float64 `json:"time_improvement_percent"`    // Percentage improvement from skills
 }
 
 // RouteCalculationRequest represents the request to calculate trading routes
