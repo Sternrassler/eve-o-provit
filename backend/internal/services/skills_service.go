@@ -238,7 +238,7 @@ func (s *SkillsService) extractHighestStandings(standings []esiStanding) (float6
 				maxCorpStanding = standing.Standing
 				hasCorp = true
 			}
-		// Ignore "agent" standings - not relevant for broker fees
+			// Ignore "agent" standings - not relevant for broker fees
 		}
 	}
 

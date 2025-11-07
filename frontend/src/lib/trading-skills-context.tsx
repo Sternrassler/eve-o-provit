@@ -22,6 +22,7 @@ const getDefaultSkills = (): TradingSkills => ({
   BrokerRelations: 0,
   AdvancedBrokerRelations: 0,
   FactionStanding: 0.0,
+  CorpStanding: 0.0,
   SpaceshipCommand: 0,
   CargoOptimization: 0,
   Navigation: 0,
