@@ -38,6 +38,12 @@ type TradingRoute struct {
 	SkilledTravelTimeSeconds float64 `json:"skilled_travel_time_seconds"` // Travel time with navigation skills applied
 	BaseISKPerHour           float64 `json:"base_isk_per_hour"`           // ISK/h without navigation skills
 	TimeImprovementPercent   float64 `json:"time_improvement_percent"`    // Percentage improvement from skills
+	// Trading Fees fields (Issue #39)
+	BuyBrokerFee  float64 `json:"buy_broker_fee"`  // Broker fee for buy order placement
+	SellBrokerFee float64 `json:"sell_broker_fee"` // Broker fee for sell order placement
+	SalesTax      float64 `json:"sales_tax"`       // Sales tax on sell orders
+	TotalFees     float64 `json:"total_fees"`      // Sum of all trading fees
+	NetProfit     float64 `json:"net_profit"`      // Total profit minus all fees
 }
 
 // RouteCalculationRequest represents the request to calculate trading routes

@@ -14,15 +14,17 @@ import (
 
 // RouteOptimizer handles route calculation and optimization
 type RouteOptimizer struct {
-	sdeRepo *database.SDERepository
-	sdeDB   *sql.DB
+	sdeRepo    *database.SDERepository
+	sdeDB      *sql.DB
+	feeService FeeServicer
 }
 
 // NewRouteOptimizer creates a new route optimizer instance
-func NewRouteOptimizer(sdeRepo *database.SDERepository, sdeDB *sql.DB) *RouteOptimizer {
+func NewRouteOptimizer(sdeRepo *database.SDERepository, sdeDB *sql.DB, feeService FeeServicer) *RouteOptimizer {
 	return &RouteOptimizer{
-		sdeRepo: sdeRepo,
-		sdeDB:   sdeDB,
+		sdeRepo:    sdeRepo,
+		sdeDB:      sdeDB,
+		feeService: feeService,
 	}
 }
 
@@ -148,6 +150,38 @@ func (ro *RouteOptimizer) CalculateRoute(ctx context.Context, item models.ItemPa
 	// Calculate minimum security status across entire route
 	minRouteSecurity := ro.getMinRouteSecurityStatus(ctx, travelResult.Route)
 
+	// Calculate trading fees (Issue #39)
+	// Use worst-case assumptions (all skills = 0) for conservative estimates
+	// Fees are calculated based on total buy/sell order values
+	buyValue := item.BuyPrice * float64(totalQuantity)
+	sellValue := item.SellPrice * float64(totalQuantity)
+
+	// Calculate individual fees using worst-case skills (all = 0)
+	buyBrokerFee := ro.feeService.CalculateBrokerFee(
+		0, // BrokerRelations = 0
+		0, // AdvancedBrokerRelations = 0
+		0, // FactionStanding = 0
+		0, // CorpStanding = 0
+		buyValue,
+	)
+	sellBrokerFee := ro.feeService.CalculateBrokerFee(
+		0, // BrokerRelations = 0
+		0, // AdvancedBrokerRelations = 0
+		0, // FactionStanding = 0
+		0, // CorpStanding = 0
+		sellValue,
+	)
+	salesTax := ro.feeService.CalculateSalesTax(
+		0, // Accounting = 0
+		sellValue,
+	)
+
+	// Sum all fees
+	totalFees := buyBrokerFee + sellBrokerFee + salesTax
+
+	// Calculate net profit (total profit minus all fees)
+	netProfit := totalProfit - totalFees
+
 	route = models.TradingRoute{
 		ItemTypeID:             item.TypeID,
 		ItemName:               item.ItemName,
@@ -182,6 +216,12 @@ func (ro *RouteOptimizer) CalculateRoute(ctx context.Context, item models.ItemPa
 		SkilledTravelTimeSeconds: skilledOneWaySeconds,
 		BaseISKPerHour:           baseISKPerHour,
 		TimeImprovementPercent:   timeImprovement,
+		// Trading fees fields (Issue #39)
+		BuyBrokerFee:  buyBrokerFee,
+		SellBrokerFee: sellBrokerFee,
+		SalesTax:      salesTax,
+		TotalFees:     totalFees,
+		NetProfit:     netProfit,
 	}
 
 	return route, nil

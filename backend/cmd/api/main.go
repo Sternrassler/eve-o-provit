@@ -81,7 +81,6 @@ func main() {
 	routePlanner := services.NewRoutePlanner(db.SDE, sdeRepo, redisClient)
 	tradingService := services.NewTradingService(marketFetcher, profitAnalyzer, routePlanner, sdeRepo, esiClient, db.SDE)
 
-	routeService := services.NewRouteService(esiClient, db.SDE, sdeRepo, marketRepo, redisClient)
 	characterHelper := services.NewCharacterHelper(redisClient)
 
 	// Skills Service (Phase 0 - Issue #54)
@@ -90,14 +89,14 @@ func main() {
 	// Fee Service (Phase 0 - Issue #55)
 	feeService := services.NewFeeService(skillsService, appLogger)
 
+	// Route Service (Issue #39 - Integrate fee calculations)
+	routeService := services.NewRouteService(esiClient, db.SDE, sdeRepo, marketRepo, redisClient, feeService)
+
 	// Ship Service (Phase 0 - Issue #57 - Remove Raw DB Access)
 	shipService := services.NewShipService(db.SDE)
 
 	// System Service (Phase 0 - Issue #57 - Remove Raw DB Access)
 	systemService := services.NewSystemService(sdeRepo)
-
-	// Suppress unused warnings (Services werden in Phase 1 genutzt)
-	_ = feeService
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)

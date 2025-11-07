@@ -40,6 +40,7 @@ type RouteService struct {
 	routeOptimizer *RouteOptimizer
 	workerPool     *RouteWorkerPool
 	redisClient    *redis.Client
+	feeService     FeeServicer
 }
 
 // NewRouteService creates a new route service instance
@@ -49,17 +50,19 @@ func NewRouteService(
 	sdeRepo *database.SDERepository,
 	marketRepo *database.MarketRepository,
 	redisClient *redis.Client,
+	feeService FeeServicer,
 ) *RouteService {
 	rs := &RouteService{
 		esiClient:   esiClient,
 		sdeRepo:     sdeRepo,
 		sdeDB:       sdeDB,
 		redisClient: redisClient,
+		feeService:  feeService,
 	}
 
 	// Initialize sub-services
 	rs.routeFinder = NewRouteFinder(esiClient, marketRepo, sdeRepo, sdeDB, redisClient)
-	rs.routeOptimizer = NewRouteOptimizer(sdeRepo, sdeDB)
+	rs.routeOptimizer = NewRouteOptimizer(sdeRepo, sdeDB, feeService)
 
 	// Initialize worker pool
 	rs.workerPool = NewRouteWorkerPool(rs.routeOptimizer)

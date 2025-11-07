@@ -9,7 +9,7 @@ import (
 // TestNewRouteOptimizer tests RouteOptimizer initialization
 func TestNewRouteOptimizer(t *testing.T) {
 	t.Run("with nil dependencies", func(t *testing.T) {
-		optimizer := NewRouteOptimizer(nil, nil)
+		optimizer := NewRouteOptimizer(nil, nil, nil)
 
 		assert.NotNil(t, optimizer, "RouteOptimizer should be initialized even with nil dependencies")
 	})
