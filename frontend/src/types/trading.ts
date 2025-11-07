@@ -38,6 +38,11 @@ export interface TradingRoute {
   number_of_tours?: number;
   profit_per_tour?: number;
   total_time_minutes?: number;
+  // Navigation Skills fields
+  base_travel_time_seconds?: number; // Travel time without navigation skills
+  skilled_travel_time_seconds?: number; // Travel time with navigation skills applied
+  base_isk_per_hour?: number; // ISK/h without navigation skills
+  time_improvement_percent?: number; // Percentage improvement from skills
 }
 
 export interface Region {
