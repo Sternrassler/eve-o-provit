@@ -105,6 +105,8 @@ func TestSkillsService_GetCharacterSkills_CacheHit(t *testing.T) {
 		Accounting:      4,
 		BrokerRelations: 5,
 		Navigation:      3,
+		FactionStanding: 0.0,
+		CorpStanding:    0.0,
 	}
 	cacheKey := "character_skills:12345"
 	cachedData, _ := json.Marshal(cachedSkills)
@@ -207,6 +209,8 @@ func TestSkillsService_GetCharacterSkills_ESIError(t *testing.T) {
 	assert.Equal(t, 0, result.Accounting, "Default skills should be 0")
 	assert.Equal(t, 0, result.BrokerRelations)
 	assert.Equal(t, 0, result.Navigation)
+	assert.Equal(t, 0.0, result.FactionStanding)
+	assert.Equal(t, 0.0, result.CorpStanding)
 }
 
 // TestSkillsService_ExtractTradingSkills tests skill extraction logic
@@ -384,6 +388,7 @@ func TestSkillsService_GetDefaultSkills(t *testing.T) {
 	assert.Equal(t, 0, result.BrokerRelations)
 	assert.Equal(t, 0, result.AdvancedBrokerRelations)
 	assert.Equal(t, 0.0, result.FactionStanding)
+	assert.Equal(t, 0.0, result.CorpStanding)
 	assert.Equal(t, 0, result.SpaceshipCommand)
 	assert.Equal(t, 0, result.CargoOptimization)
 	assert.Equal(t, 0, result.Navigation)
@@ -392,4 +397,105 @@ func TestSkillsService_GetDefaultSkills(t *testing.T) {
 	assert.Equal(t, 0, result.CaldariIndustrial)
 	assert.Equal(t, 0, result.AmarrIndustrial)
 	assert.Equal(t, 0, result.MinmatarIndustrial)
+}
+
+// TestSkillsService_ExtractHighestStandings tests standing extraction logic
+func TestSkillsService_ExtractHighestStandings(t *testing.T) {
+	tests := []struct {
+		name                    string
+		standings               []esiStanding
+		expectedFactionStanding float64
+		expectedCorpStanding    float64
+	}{
+		{
+			name: "Multiple faction and corp standings - takes max",
+			standings: []esiStanding{
+				{FromID: 500001, FromType: "faction", Standing: 5.5},
+				{FromID: 500002, FromType: "faction", Standing: 3.2},
+				{FromID: 1000035, FromType: "npc_corp", Standing: 7.1},
+				{FromID: 1000081, FromType: "npc_corp", Standing: 4.8},
+			},
+			expectedFactionStanding: 5.5,
+			expectedCorpStanding:    7.1,
+		},
+		{
+			name: "Only faction standings",
+			standings: []esiStanding{
+				{FromID: 500001, FromType: "faction", Standing: 8.0},
+				{FromID: 500002, FromType: "faction", Standing: 2.5},
+			},
+			expectedFactionStanding: 8.0,
+			expectedCorpStanding:    0.0,
+		},
+		{
+			name: "Only corp standings",
+			standings: []esiStanding{
+				{FromID: 1000035, FromType: "npc_corp", Standing: 6.3},
+				{FromID: 1000081, FromType: "npc_corp", Standing: 9.1},
+			},
+			expectedFactionStanding: 0.0,
+			expectedCorpStanding:    9.1,
+		},
+		{
+			name: "Negative standings (still take max)",
+			standings: []esiStanding{
+				{FromID: 500001, FromType: "faction", Standing: -5.0},
+				{FromID: 500002, FromType: "faction", Standing: -2.0},
+				{FromID: 1000035, FromType: "npc_corp", Standing: -3.5},
+				{FromID: 1000081, FromType: "npc_corp", Standing: -1.2},
+			},
+			expectedFactionStanding: -2.0,
+			expectedCorpStanding:    -1.2,
+		},
+		{
+			name: "Agent standings ignored",
+			standings: []esiStanding{
+				{FromID: 3008416, FromType: "agent", Standing: 10.0},
+				{FromID: 500001, FromType: "faction", Standing: 3.0},
+			},
+			expectedFactionStanding: 3.0,
+			expectedCorpStanding:    0.0,
+		},
+		{
+			name:                    "Empty standings",
+			standings:               []esiStanding{},
+			expectedFactionStanding: 0.0,
+			expectedCorpStanding:    0.0,
+		},
+		{
+			name: "Max positive standings (10.0)",
+			standings: []esiStanding{
+				{FromID: 500001, FromType: "faction", Standing: 10.0},
+				{FromID: 1000035, FromType: "npc_corp", Standing: 10.0},
+			},
+			expectedFactionStanding: 10.0,
+			expectedCorpStanding:    10.0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup
+			s := miniredis.RunT(t)
+			defer s.Close()
+
+			redisClient := redis.NewClient(&redis.Options{Addr: s.Addr()})
+			defer redisClient.Close()
+
+			service := &SkillsService{
+				esiClient:   nil,
+				redisClient: redisClient,
+				logger:      logger.NewNoop(),
+			}
+
+			// Execute
+			factionStanding, corpStanding := service.extractHighestStandings(tt.standings)
+
+			// Verify
+			assert.Equal(t, tt.expectedFactionStanding, factionStanding,
+				"Faction standing mismatch")
+			assert.Equal(t, tt.expectedCorpStanding, corpStanding,
+				"Corp standing mismatch")
+		})
+	}
 }

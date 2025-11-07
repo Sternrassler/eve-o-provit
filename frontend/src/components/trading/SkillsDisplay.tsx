@@ -46,6 +46,45 @@ function SkillBar({ name, level, description }: SkillBarProps) {
   );
 }
 
+interface StandingBarProps {
+  name: string;
+  value: number;
+  description?: string;
+}
+
+function StandingBar({ name, value, description }: StandingBarProps) {
+  // Standing range: -10.0 to +10.0
+  const percentage = ((value + 10) / 20) * 100; // Map -10..+10 to 0..100%
+
+  // Color based on standing value
+  const getColor = (standing: number) => {
+    if (standing < 0) return "bg-red-500 dark:bg-red-600";
+    if (standing === 0) return "bg-gray-400 dark:bg-gray-600";
+    if (standing < 5) return "bg-yellow-500 dark:bg-yellow-600";
+    return "bg-green-500 dark:bg-green-600";
+  };
+
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between items-center text-sm">
+        <span className="font-medium">{name}</span>
+        <span className="text-muted-foreground">
+          {value.toFixed(2)} / 10.0
+        </span>
+      </div>
+      {description && (
+        <p className="text-xs text-muted-foreground">{description}</p>
+      )}
+      <div className="w-full h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+        <div
+          className={`h-full ${getColor(value)} transition-all duration-300`}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 interface SkillsSectionProps {
   title: string;
   skills: Array<{
@@ -123,6 +162,27 @@ export function SkillsDisplay() {
     },
   ];
 
+  const standingsData = [
+    {
+      name: "Faction Standing",
+      value: skills.FactionStanding,
+      description: `Broker Fee reduction: ${(skills.FactionStanding * 0.03).toFixed(2)}%`,
+    },
+    {
+      name: "Corp Standing",
+      value: skills.CorpStanding,
+      description: `Broker Fee reduction: ${(skills.CorpStanding * 0.02).toFixed(2)}%`,
+    },
+  ];
+
+  // Calculate total broker fee reduction
+  const totalBrokerReduction = 
+    skills.BrokerRelations * 0.3 +
+    skills.AdvancedBrokerRelations * 0.3 +
+    skills.FactionStanding * 0.03 +
+    skills.CorpStanding * 0.02;
+  const effectiveBrokerFee = Math.max(1.0, 3.0 - totalBrokerReduction);
+
   const navigationSkills = [
     {
       name: "Navigation",
@@ -189,16 +249,35 @@ export function SkillsDisplay() {
       </CardHeader>
       <CardContent className="space-y-6">
         <SkillsSection title="Trading Skills" skills={tradingSkills} />
-        <SkillsSection title="Navigation Skills" skills={navigationSkills} />
-        <SkillsSection title="Cargo Skills" skills={cargoSkills} />
         
-        {skills.FactionStanding !== 0 && (
-          <div className="pt-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              Faction Standing: <span className="font-medium">{skills.FactionStanding.toFixed(2)}</span>
+        {/* Standings Section */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            NPC Standings
+          </h4>
+          <div className="space-y-3">
+            {standingsData.map((standing) => (
+              <StandingBar
+                key={standing.name}
+                name={standing.name}
+                value={standing.value}
+                description={standing.description}
+              />
+            ))}
+          </div>
+          <div className="pt-2 text-xs text-muted-foreground bg-muted/50 p-3 rounded-md">
+            <div className="flex justify-between items-center">
+              <span>Effective Broker Fee:</span>
+              <span className="font-semibold text-foreground">{effectiveBrokerFee.toFixed(2)}%</span>
+            </div>
+            <p className="mt-1 text-xs">
+              Base 3.0% - Skills {(skills.BrokerRelations * 0.3 + skills.AdvancedBrokerRelations * 0.3).toFixed(1)}% - Standings {(skills.FactionStanding * 0.03 + skills.CorpStanding * 0.02).toFixed(2)}% = {effectiveBrokerFee.toFixed(2)}% (min 1.0%)
             </p>
           </div>
-        )}
+        </div>
+
+        <SkillsSection title="Navigation Skills" skills={navigationSkills} />
+        <SkillsSection title="Cargo Skills" skills={cargoSkills} />
       </CardContent>
     </Card>
   );

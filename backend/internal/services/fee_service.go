@@ -55,6 +55,7 @@ func (s *FeeService) CalculateFees(
 			BrokerRelations:         0,
 			AdvancedBrokerRelations: 0,
 			FactionStanding:         0.0,
+			CorpStanding:            0.0,
 		}
 	}
 
@@ -64,12 +65,14 @@ func (s *FeeService) CalculateFees(
 		skills.BrokerRelations,
 		skills.AdvancedBrokerRelations,
 		skills.FactionStanding,
+		skills.CorpStanding,
 		buyValue,
 	)
 	brokerFeeSell := s.CalculateBrokerFee(
 		skills.BrokerRelations,
 		skills.AdvancedBrokerRelations,
 		skills.FactionStanding,
+		skills.CorpStanding,
 		sellValue,
 	)
 
@@ -135,12 +138,14 @@ func (s *FeeService) CalculateSalesTax(accountingLevel int, orderValue float64) 
 // EVE Formula: Base 3% → Reduced by skills + standings → Min 1%
 // - Broker Relations: -0.3% per level (max -1.5%)
 // - Advanced Broker Relations: -0.3% per level (max -1.5%)
-// - Faction/Corp Standing: -0.03% per 1.0 standing (max -0.3% at 10.0)
+// - Faction Standing: -0.03% per 1.0 standing (max -0.3% at 10.0)
+// - Corp Standing: -0.02% per 1.0 standing (max -0.2% at 10.0)
 // Minimum fee: 100 ISK
 func (s *FeeService) CalculateBrokerFee(
 	brokerRelationsLevel int,
 	advancedBrokerRelationsLevel int,
 	factionStanding float64,
+	corpStanding float64,
 	orderValue float64,
 ) float64 {
 	// Base broker fee: 3%
@@ -158,18 +163,28 @@ func (s *FeeService) CalculateBrokerFee(
 		advBrokerSkillReduction = 0.015
 	}
 
-	// Faction/Corp Standing: -0.03% per 1.0 standing (max -0.3% at 10.0 standing)
-	// Standing range: -10.0 to +10.0 (but we only care about positive)
-	standingReduction := 0.0
+	// Faction Standing: -0.03% per 1.0 standing (max -0.3% at 10.0 standing)
+	// Only positive standings reduce fees (negative ignored)
+	factionReduction := 0.0
 	if factionStanding > 0 {
-		standingReduction = 0.003 * (factionStanding / 10.0)
-		if standingReduction > 0.003 {
-			standingReduction = 0.003
+		factionReduction = 0.0003 * factionStanding
+		if factionReduction > 0.003 {
+			factionReduction = 0.003
+		}
+	}
+
+	// Corp Standing: -0.02% per 1.0 standing (max -0.2% at 10.0 standing)
+	// Only positive standings reduce fees (negative ignored)
+	corpReduction := 0.0
+	if corpStanding > 0 {
+		corpReduction = 0.0002 * corpStanding
+		if corpReduction > 0.002 {
+			corpReduction = 0.002
 		}
 	}
 
 	// Calculate effective fee rate
-	feeRate := baseFeeRate - brokerSkillReduction - advBrokerSkillReduction - standingReduction
+	feeRate := baseFeeRate - brokerSkillReduction - advBrokerSkillReduction - factionReduction - corpReduction
 
 	// Enforce minimum 1% fee
 	if feeRate < 0.01 {

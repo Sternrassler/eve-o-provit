@@ -22,6 +22,7 @@ func (m *MockSkillsService) GetCharacterSkills(ctx context.Context, characterID 
 		BrokerRelations:         0,
 		AdvancedBrokerRelations: 0,
 		FactionStanding:         0.0,
+		CorpStanding:            0.0,
 	}, nil
 }
 
@@ -124,103 +125,164 @@ func TestFeeService_CalculateBrokerFee(t *testing.T) {
 	service := NewFeeService(mockSkills, testLogger)
 
 	tests := []struct {
-		name           string
-		brokerLvl      int
-		advBrokerLvl   int
-		standing       float64
-		orderValue     float64
-		expectedFee    float64
-		expectedFeePct float64
+		name             string
+		brokerLvl        int
+		advBrokerLvl     int
+		factionStanding  float64
+		corpStanding     float64
+		orderValue       float64
+		expectedFee      float64
+		expectedFeePct   float64
 	}{
 		{
-			name:           "No skills, no standing",
-			brokerLvl:      0,
-			advBrokerLvl:   0,
-			standing:       0.0,
-			orderValue:     1000000,
-			expectedFee:    30000, // 3%
-			expectedFeePct: 0.03,
+			name:             "No skills, no standing",
+			brokerLvl:        0,
+			advBrokerLvl:     0,
+			factionStanding:  0.0,
+			corpStanding:     0.0,
+			orderValue:       1000000,
+			expectedFee:      30000, // 3%
+			expectedFeePct:   0.03,
 		},
 		{
-			name:           "Broker Relations V only",
-			brokerLvl:      5,
-			advBrokerLvl:   0,
-			standing:       0.0,
-			orderValue:     1000000,
-			expectedFee:    15000, // 1.5% (3% - 1.5%)
-			expectedFeePct: 0.015,
+			name:             "Broker Relations V only",
+			brokerLvl:        5,
+			advBrokerLvl:     0,
+			factionStanding:  0.0,
+			corpStanding:     0.0,
+			orderValue:       1000000,
+			expectedFee:      15000, // 1.5% (3% - 1.5%)
+			expectedFeePct:   0.015,
 		},
 		{
-			name:           "Advanced Broker Relations V only",
-			brokerLvl:      0,
-			advBrokerLvl:   5,
-			standing:       0.0,
-			orderValue:     1000000,
-			expectedFee:    15000, // 1.5% (3% - 1.5%)
-			expectedFeePct: 0.015,
+			name:             "Advanced Broker Relations V only",
+			brokerLvl:        0,
+			advBrokerLvl:     5,
+			factionStanding:  0.0,
+			corpStanding:     0.0,
+			orderValue:       1000000,
+			expectedFee:      15000, // 1.5% (3% - 1.5%)
+			expectedFeePct:   0.015,
 		},
 		{
-			name:           "Both Broker skills V (max skills)",
-			brokerLvl:      5,
-			advBrokerLvl:   5,
-			standing:       0.0,
-			orderValue:     1000000,
-			expectedFee:    10000, // 1% (min enforced: 3% - 1.5% - 1.5% = 0%, but min 1%)
-			expectedFeePct: 0.01,
+			name:             "Both Broker skills V (max skills)",
+			brokerLvl:        5,
+			advBrokerLvl:     5,
+			factionStanding:  0.0,
+			corpStanding:     0.0,
+			orderValue:       1000000,
+			expectedFee:      10000, // 1% (min enforced: 3% - 1.5% - 1.5% = 0%, but min 1%)
+			expectedFeePct:   0.01,
 		},
 		{
-			name:           "Both Broker V + 10.0 standing (all bonuses)",
-			brokerLvl:      5,
-			advBrokerLvl:   5,
-			standing:       10.0,
-			orderValue:     1000000,
-			expectedFee:    10000, // 1% (min enforced even with standing bonus)
-			expectedFeePct: 0.01,
+			name:             "Both Broker V + max faction standing (10.0)",
+			brokerLvl:        5,
+			advBrokerLvl:     5,
+			factionStanding:  10.0,
+			corpStanding:     0.0,
+			orderValue:       1000000,
+			expectedFee:      10000, // 1% (min enforced: 3% - 3% - 0.3% = -0.3%, but min 1%)
+			expectedFeePct:   0.01,
 		},
 		{
-			name:           "Partial skills (III + II)",
-			brokerLvl:      3,
-			advBrokerLvl:   2,
-			standing:       0.0,
-			orderValue:     1000000,
-			expectedFee:    15000, // 1.5% (3% - 0.9% - 0.6% = 1.5%)
-			expectedFeePct: 0.015,
+			name:             "Both Broker V + max corp standing (10.0)",
+			brokerLvl:        5,
+			advBrokerLvl:     5,
+			factionStanding:  0.0,
+			corpStanding:     10.0,
+			orderValue:       1000000,
+			expectedFee:      10000, // 1% (min enforced: 3% - 3% - 0.2% = -0.2%, but min 1%)
+			expectedFeePct:   0.01,
 		},
 		{
-			name:           "Standing bonus only (5.0 standing)",
-			brokerLvl:      0,
-			advBrokerLvl:   0,
-			standing:       5.0,
-			orderValue:     1000000,
-			expectedFee:    28500, // 2.85% (3% - 0.15% standing bonus)
-			expectedFeePct: 0.0285,
+			name:             "Both Broker V + max faction + max corp (all bonuses)",
+			brokerLvl:        5,
+			advBrokerLvl:     5,
+			factionStanding:  10.0,
+			corpStanding:     10.0,
+			orderValue:       1000000,
+			expectedFee:      10000, // 1% (min enforced: 3% - 3% - 0.3% - 0.2% = -0.5%, but min 1%)
+			expectedFeePct:   0.01,
 		},
 		{
-			name:           "Minimum fee enforcement (100 ISK)",
-			brokerLvl:      5,
-			advBrokerLvl:   5,
-			standing:       10.0,
-			orderValue:     5000, // Small order
-			expectedFee:    100,  // Min 100 ISK enforced
-			expectedFeePct: 0.02, // Would be 1%, but min kicks in
+			name:             "Partial skills (III + II)",
+			brokerLvl:        3,
+			advBrokerLvl:     2,
+			factionStanding:  0.0,
+			corpStanding:     0.0,
+			orderValue:       1000000,
+			expectedFee:      15000, // 1.5% (3% - 0.9% - 0.6% = 1.5%)
+			expectedFeePct:   0.015,
 		},
 		{
-			name:           "Large order (100M ISK)",
-			brokerLvl:      5,
-			advBrokerLvl:   5,
-			standing:       0.0,
-			orderValue:     100000000,
-			expectedFee:    1000000, // 1% = 1M ISK
-			expectedFeePct: 0.01,
+			name:             "Faction standing bonus only (5.0)",
+			brokerLvl:        0,
+			advBrokerLvl:     0,
+			factionStanding:  5.0,
+			corpStanding:     0.0,
+			orderValue:       1000000,
+			expectedFee:      28500, // 2.85% (3% - 0.15%)
+			expectedFeePct:   0.0285,
 		},
 		{
-			name:           "Negative standing (ignored)",
-			brokerLvl:      0,
-			advBrokerLvl:   0,
-			standing:       -5.0, // Negative standings don't increase fees
-			orderValue:     1000000,
-			expectedFee:    30000, // 3% (standing ignored)
-			expectedFeePct: 0.03,
+			name:             "Corp standing bonus only (5.0)",
+			brokerLvl:        0,
+			advBrokerLvl:     0,
+			factionStanding:  0.0,
+			corpStanding:     5.0,
+			orderValue:       1000000,
+			expectedFee:      29000, // 2.9% (3% - 0.1%)
+			expectedFeePct:   0.029,
+		},
+		{
+			name:             "Both standings (faction 5.0, corp 5.0)",
+			brokerLvl:        0,
+			advBrokerLvl:     0,
+			factionStanding:  5.0,
+			corpStanding:     5.0,
+			orderValue:       1000000,
+			expectedFee:      27500, // 2.75% (3% - 0.15% - 0.1%)
+			expectedFeePct:   0.0275,
+		},
+		{
+			name:             "Minimum fee enforcement (100 ISK)",
+			brokerLvl:        5,
+			advBrokerLvl:     5,
+			factionStanding:  10.0,
+			corpStanding:     10.0,
+			orderValue:       5000, // Small order
+			expectedFee:      100,  // Min 100 ISK enforced
+			expectedFeePct:   0.02, // Would be 1%, but min kicks in
+		},
+		{
+			name:             "Large order (100M ISK)",
+			brokerLvl:        5,
+			advBrokerLvl:     5,
+			factionStanding:  0.0,
+			corpStanding:     0.0,
+			orderValue:       100000000,
+			expectedFee:      1000000, // 1% = 1M ISK
+			expectedFeePct:   0.01,
+		},
+		{
+			name:             "Negative faction standing (ignored)",
+			brokerLvl:        0,
+			advBrokerLvl:     0,
+			factionStanding:  -5.0,
+			corpStanding:     0.0,
+			orderValue:       1000000,
+			expectedFee:      30000, // 3% (standing ignored)
+			expectedFeePct:   0.03,
+		},
+		{
+			name:             "Negative corp standing (ignored)",
+			brokerLvl:        0,
+			advBrokerLvl:     0,
+			factionStanding:  0.0,
+			corpStanding:     -5.0,
+			orderValue:       1000000,
+			expectedFee:      30000, // 3% (standing ignored)
+			expectedFeePct:   0.03,
 		},
 	}
 
@@ -229,7 +291,8 @@ func TestFeeService_CalculateBrokerFee(t *testing.T) {
 			fee := service.(*FeeService).CalculateBrokerFee(
 				tt.brokerLvl,
 				tt.advBrokerLvl,
-				tt.standing,
+				tt.factionStanding,
+				tt.corpStanding,
 				tt.orderValue,
 			)
 
@@ -271,6 +334,7 @@ func TestFeeService_CalculateFees(t *testing.T) {
 				BrokerRelations:         0,
 				AdvancedBrokerRelations: 0,
 				FactionStanding:         0.0,
+				CorpStanding:            0.0,
 			},
 			buyValue:           1000000,
 			sellValue:          1200000,
@@ -285,6 +349,7 @@ func TestFeeService_CalculateFees(t *testing.T) {
 				BrokerRelations:         5,
 				AdvancedBrokerRelations: 5,
 				FactionStanding:         10.0,
+				CorpStanding:            10.0,
 			},
 			buyValue:           1000000,
 			sellValue:          1200000,
@@ -299,12 +364,13 @@ func TestFeeService_CalculateFees(t *testing.T) {
 				BrokerRelations:         3,
 				AdvancedBrokerRelations: 2,
 				FactionStanding:         5.0,
+				CorpStanding:            3.0,
 			},
 			buyValue:           5000000,
 			sellValue:          6000000,
 			expectedSalesTax:   180000, // 3% of 6M (5% - 40% = 3%)
-			expectedBrokerBuy:  67500,  // 1.35% of 5M (3% - 0.9% - 0.6% - 0.15% = 1.35%)
-			expectedBrokerSell: 81000,  // 1.35% of 6M
+			expectedBrokerBuy:  64500,  // 1.29% of 5M (3% - 0.9% - 0.6% - 0.15% - 0.06% = 1.29%)
+			expectedBrokerSell: 77400,  // 1.29% of 6M
 		},
 	}
 

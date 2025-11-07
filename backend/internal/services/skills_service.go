@@ -29,6 +29,13 @@ type esiSkill struct {
 	SkillPointsInSkill int64 `json:"skillpoints_in_skill"`
 }
 
+// esiStanding represents a single standing entry from ESI /v2/characters/{id}/standings/
+type esiStanding struct {
+	FromID   int     `json:"from_id"`
+	FromType string  `json:"from_type"` // "faction", "npc_corp", "agent"
+	Standing float64 `json:"standing"`  // -10.0 to +10.0
+}
+
 // TradingSkills contains all trading-relevant character skills
 // All skill levels are 0-5 (0 = untrained, 5 = max level)
 type TradingSkills struct {
@@ -36,7 +43,8 @@ type TradingSkills struct {
 	Accounting              int     // Sales Tax reduction (-10% per level, max -50%)
 	BrokerRelations         int     // Broker Fee reduction (-0.3% per level, max -1.5%)
 	AdvancedBrokerRelations int     // Additional Broker Fee reduction (-0.3% per level, max -1.5%)
-	FactionStanding         float64 // Station/Corp standing (0.0-10.0, affects broker fees)
+	FactionStanding         float64 // Faction standing (-10.0 to +10.0, affects broker fees: -0.03% per 1.0)
+	CorpStanding            float64 // Corp standing (-10.0 to +10.0, affects broker fees: -0.02% per 1.0)
 
 	// Cargo Skills
 	SpaceshipCommand  int // +5% cargo capacity per level (max +25%)
@@ -88,7 +96,7 @@ func (s *SkillsService) GetCharacterSkills(ctx context.Context, characterID int,
 		s.logger.Warn("Failed to unmarshal cached skills", "error", err)
 	}
 
-	// 2. Cache miss - fetch from ESI
+	// 2. Cache miss - fetch from ESI (skills + standings in parallel for efficiency)
 	s.logger.Debug("Skills cache miss - fetching from ESI", "characterID", characterID)
 	esiSkills, err := s.fetchSkillsFromESI(ctx, characterID, accessToken)
 	if err != nil {
@@ -97,10 +105,15 @@ func (s *SkillsService) GetCharacterSkills(ctx context.Context, characterID int,
 		return s.getDefaultSkills(), nil
 	}
 
-	// 3. Extract trading skills
-	skills := s.extractTradingSkills(esiSkills)
+	// 3. Fetch standings from ESI (separate endpoint, best-effort)
+	factionStanding, corpStanding := s.fetchStandingsFromESI(ctx, characterID, accessToken)
 
-	// 4. Cache the result (5min TTL)
+	// 4. Extract trading skills
+	skills := s.extractTradingSkills(esiSkills)
+	skills.FactionStanding = factionStanding
+	skills.CorpStanding = corpStanding
+
+	// 5. Cache the result (5min TTL)
 	if skillsData, err := json.Marshal(skills); err == nil {
 		if err := s.redisClient.Set(ctx, cacheKey, skillsData, 5*time.Minute).Err(); err != nil {
 			s.logger.Warn("Failed to cache skills", "error", err)
@@ -111,6 +124,8 @@ func (s *SkillsService) GetCharacterSkills(ctx context.Context, characterID int,
 		"characterID", characterID,
 		"accounting", skills.Accounting,
 		"brokerRelations", skills.BrokerRelations,
+		"factionStanding", skills.FactionStanding,
+		"corpStanding", skills.CorpStanding,
 	)
 
 	return skills, nil
@@ -156,11 +171,91 @@ func (s *SkillsService) fetchSkillsFromESI(ctx context.Context, characterID int,
 	return &skillsResp, nil
 }
 
+// fetchStandingsFromESI fetches character standings from ESI API
+// Returns (factionStanding, corpStanding) - uses max standing per category
+// Gracefully degrades to (0.0, 0.0) on error (no impact on fee calculation)
+func (s *SkillsService) fetchStandingsFromESI(ctx context.Context, characterID int, accessToken string) (float64, float64) {
+	endpoint := fmt.Sprintf("/v2/characters/%d/standings/", characterID)
+
+	// Create HTTP request with context
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://esi.evetech.net"+endpoint, nil)
+	if err != nil {
+		s.logger.Warn("Failed to create standings request", "error", err)
+		return 0.0, 0.0
+	}
+
+	// Add authorization header
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	// Execute request through ESI client
+	resp, err := s.esiClient.Do(req)
+	if err != nil {
+		s.logger.Warn("ESI standings request failed - using neutral standings", "error", err)
+		return 0.0, 0.0
+	}
+	defer resp.Body.Close()
+
+	// Handle HTTP errors (401/403 = no standings, treat as neutral)
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		s.logger.Debug("Standings unauthorized - using neutral", "status", resp.StatusCode)
+		return 0.0, 0.0
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		s.logger.Warn("ESI standings returned error", "status", resp.StatusCode)
+		return 0.0, 0.0
+	}
+
+	// Parse JSON response
+	var standings []esiStanding
+	if err := json.NewDecoder(resp.Body).Decode(&standings); err != nil {
+		s.logger.Warn("Failed to parse standings response", "error", err)
+		return 0.0, 0.0
+	}
+
+	// Extract highest standings per category
+	return s.extractHighestStandings(standings)
+}
+
+// extractHighestStandings finds the highest standing per category (faction, npc_corp)
+// EVE Broker Fee formula uses highest faction and corp standings
+// Note: Negative standings don't reduce fees (ignored in formula), but we track max value
+func (s *SkillsService) extractHighestStandings(standings []esiStanding) (float64, float64) {
+	var maxFactionStanding float64 = 0.0
+	var maxCorpStanding float64 = 0.0
+	hasFaction := false
+	hasCorp := false
+
+	for _, standing := range standings {
+		switch standing.FromType {
+		case "faction":
+			if !hasFaction || standing.Standing > maxFactionStanding {
+				maxFactionStanding = standing.Standing
+				hasFaction = true
+			}
+		case "npc_corp":
+			if !hasCorp || standing.Standing > maxCorpStanding {
+				maxCorpStanding = standing.Standing
+				hasCorp = true
+			}
+		// Ignore "agent" standings - not relevant for broker fees
+		}
+	}
+
+	s.logger.Debug("Extracted standings",
+		"faction", maxFactionStanding,
+		"corp", maxCorpStanding,
+	)
+
+	return maxFactionStanding, maxCorpStanding
+}
+
 // extractTradingSkills extracts relevant trading skills from ESI skill list
 func (s *SkillsService) extractTradingSkills(esiSkills *esiSkillsResponse) *TradingSkills {
 	skills := &TradingSkills{
-		// Default faction standing (neutral)
+		// Standings are fetched separately and assigned by caller
 		FactionStanding: 0.0,
+		CorpStanding:    0.0,
 	}
 
 	for _, skill := range esiSkills.Skills {
@@ -197,10 +292,6 @@ func (s *SkillsService) extractTradingSkills(esiSkills *esiSkillsResponse) *Trad
 		}
 	}
 
-	// TODO: Fetch faction standing from ESI /characters/{character_id}/standings/
-	// This is a separate endpoint and requires additional API call
-	// For now, default to 0.0 (neutral standing)
-
 	return skills
 }
 
@@ -214,6 +305,7 @@ func (s *SkillsService) getDefaultSkills() *TradingSkills {
 		BrokerRelations:         0,
 		AdvancedBrokerRelations: 0,
 		FactionStanding:         0.0,
+		CorpStanding:            0.0,
 		SpaceshipCommand:        0,
 		CargoOptimization:       0,
 		Navigation:              0,

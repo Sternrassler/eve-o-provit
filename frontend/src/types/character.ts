@@ -26,7 +26,8 @@ export interface TradingSkills {
   Accounting: number;              // Sales Tax reduction (-10% per level, max -50%)
   BrokerRelations: number;         // Broker Fee reduction (-0.3% per level, max -1.5%)
   AdvancedBrokerRelations: number; // Additional Broker Fee reduction (-0.3% per level, max -1.5%)
-  FactionStanding: number;         // Station/Corp standing (0.0-10.0, affects broker fees)
+  FactionStanding: number;         // Faction standing (-10.0 to +10.0, affects broker fees: -0.03% per 1.0)
+  CorpStanding: number;            // Corp standing (-10.0 to +10.0, affects broker fees: -0.02% per 1.0)
 
   // Cargo Skills
   SpaceshipCommand: number;        // +5% cargo capacity per level (max +25%)

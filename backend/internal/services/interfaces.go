@@ -84,11 +84,12 @@ type FeeServicer interface {
 	CalculateSalesTax(accountingLevel int, orderValue float64) float64
 
 	// CalculateBrokerFee calculates broker fee based on skills and standing
-	// Base: 3%, Reduced by Broker Relations + Advanced + Standing, Min: 1%, Min fee: 100 ISK
+	// Base: 3%, Reduced by Broker Relations + Advanced + Faction + Corp Standing, Min: 1%, Min fee: 100 ISK
 	CalculateBrokerFee(
 		brokerRelationsLevel int,
 		advancedBrokerRelationsLevel int,
 		factionStanding float64,
+		corpStanding float64,
 		orderValue float64,
 	) float64
 }
