@@ -111,6 +111,15 @@ export const mockTradingRoutes: TradingRoute[] = [
     travel_time_seconds: 240,
     round_trip_seconds: 480,
     isk_per_hour: 4550000,
+    // Fee breakdown
+    gross_profit: 1092500,
+    gross_margin_percent: 30.0,
+    sales_tax: 47310, // 1% of revenue
+    broker_fees: 35482.5, // 0.75% of revenue
+    estimated_relist_fee: 23655, // 0.5% of revenue
+    total_fees: 106447.5,
+    net_profit: 986052.5,
+    net_profit_percent: 27.1,
   },
   {
     rank: 5,
@@ -814,6 +823,15 @@ export const mockTradingRoutes: TradingRoute[] = [
     travel_time_seconds: 2460,
     round_trip_seconds: 4920,
     isk_per_hour: 56200,
+    // Fee breakdown - exactly at 10% threshold (green)
+    gross_profit: 76700,
+    gross_margin_percent: 10.0,
+    sales_tax: 8437, // 1% of revenue
+    broker_fees: 6327.75, // 0.75% of revenue
+    estimated_relist_fee: 4218.5, // 0.5% of revenue
+    total_fees: 18983.25,
+    net_profit: 57716.75,
+    net_profit_percent: 7.5,
   },
   {
     rank: 42,
@@ -833,6 +851,15 @@ export const mockTradingRoutes: TradingRoute[] = [
     travel_time_seconds: 2520,
     round_trip_seconds: 5040,
     isk_per_hour: 42500,
+    // Fee breakdown - between 5-10% (yellow)
+    gross_profit: 59500,
+    gross_margin_percent: 9.2,
+    sales_tax: 7070, // 1% of revenue
+    broker_fees: 5302.5, // 0.75% of revenue
+    estimated_relist_fee: 3535, // 0.5% of revenue
+    total_fees: 15907.5,
+    net_profit: 43592.5,
+    net_profit_percent: 6.7,
   },
   {
     rank: 43,
@@ -947,6 +974,15 @@ export const mockTradingRoutes: TradingRoute[] = [
     travel_time_seconds: 2700,
     round_trip_seconds: 5400,
     isk_per_hour: 400000,
+    // Fee breakdown - below 5% (red)
+    gross_profit: 600000,
+    gross_margin_percent: 7.5,
+    sales_tax: 86100, // 1% of revenue
+    broker_fees: 64575, // 0.75% of revenue
+    estimated_relist_fee: 43050, // 0.5% of revenue
+    total_fees: 193725,
+    net_profit: 406275,
+    net_profit_percent: 5.1,
   },
   {
     rank: 49,
@@ -985,5 +1021,14 @@ export const mockTradingRoutes: TradingRoute[] = [
     travel_time_seconds: 2700,
     round_trip_seconds: 5400,
     isk_per_hour: 565000,
+    // Fee breakdown - low margin (red) - below 5%
+    gross_profit: 848250,
+    gross_margin_percent: 7.1,
+    sales_tax: 128732.5, // 1% of revenue
+    broker_fees: 96549.375, // 0.75% of revenue
+    estimated_relist_fee: 64366.25, // 0.5% of revenue
+    total_fees: 289648.125,
+    net_profit: 558601.875,
+    net_profit_percent: 4.6,
   },
 ];
