@@ -58,6 +58,19 @@ export interface TradingRoute {
   total_fees?: number; // Sum of all fees
   net_profit?: number; // Gross profit - total fees
   net_profit_percent?: number; // Net margin percentage
+  // Volume & Liquidity fields (Issue #53)
+  volume_metrics?: VolumeMetrics; // Market volume and liquidity data
+  liquidation_days?: number; // Estimated days to sell inventory
+  daily_profit?: number; // Profit per day (net_profit / liquidation_days)
+}
+
+export interface VolumeMetrics {
+  type_id: number;
+  region_id: number;
+  daily_volume_avg: number; // 30-day average daily volume
+  daily_isk_turnover: number; // Average daily ISK traded (volume × avg_price)
+  liquidity_score: number; // 0-100 score based on volume stability
+  data_days: number; // Number of days of historical data available
 }
 
 export interface Region {
@@ -78,6 +91,10 @@ export interface TradingFilters {
   allowHighSec: boolean;
   allowLowSec: boolean;
   allowNullSec: boolean;
+  // Volume filters (Issue #53)
+  minDailyVolume?: number; // Minimum daily volume (items/day)
+  maxLiquidationDays?: number; // Maximum liquidation time (days)
+  includeVolumeMetrics?: boolean; // Whether to include volume metrics
 }
 
 export interface ItemSearchResult {
