@@ -220,7 +220,7 @@ func (rs *RouteService) CalculateWithFilters(ctx context.Context, req *models.Ro
 
 	// Enrich routes with volume metrics and apply filters
 	filteredRoutes := make([]models.TradingRoute, 0, len(response.Routes))
-	
+
 	for _, route := range response.Routes {
 		// Get volume metrics for this item
 		volumeMetrics, err := rs.volumeService.GetVolumeMetrics(ctx, route.ItemTypeID, req.RegionID)

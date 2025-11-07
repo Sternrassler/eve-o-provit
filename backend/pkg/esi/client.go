@@ -218,12 +218,12 @@ func (c *Client) GetMarketOrders(ctx context.Context, regionID, typeID int) ([]d
 
 // ESIMarketHistory represents a single day's market history from ESI
 type ESIMarketHistory struct {
-	Average    float64   `json:"average"`
-	Date       string    `json:"date"` // Format: "2015-05-01"
-	Highest    float64   `json:"highest"`
-	Lowest     float64   `json:"lowest"`
-	OrderCount int64     `json:"order_count"`
-	Volume     int64     `json:"volume"`
+	Average    float64 `json:"average"`
+	Date       string  `json:"date"` // Format: "2015-05-01"
+	Highest    float64 `json:"highest"`
+	Lowest     float64 `json:"lowest"`
+	OrderCount int64   `json:"order_count"`
+	Volume     int64   `json:"volume"`
 }
 
 // FetchMarketHistory fetches market history from ESI for a specific type and region

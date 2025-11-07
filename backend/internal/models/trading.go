@@ -7,10 +7,10 @@ import "time"
 type VolumeMetrics struct {
 	TypeID           int     `json:"type_id"`
 	RegionID         int     `json:"region_id"`
-	DailyVolumeAvg   float64 `json:"daily_volume_avg"`    // 30-day average daily volume
-	DailyISKTurnover float64 `json:"daily_isk_turnover"`  // Average daily ISK traded (volume × avg_price)
-	LiquidityScore   int     `json:"liquidity_score"`     // 0-100 score based on volume stability
-	DataDays         int     `json:"data_days"`           // Number of days of historical data available
+	DailyVolumeAvg   float64 `json:"daily_volume_avg"`   // 30-day average daily volume
+	DailyISKTurnover float64 `json:"daily_isk_turnover"` // Average daily ISK traded (volume × avg_price)
+	LiquidityScore   int     `json:"liquidity_score"`    // 0-100 score based on volume stability
+	DataDays         int     `json:"data_days"`          // Number of days of historical data available
 }
 
 // TradingRoute represents a profitable trading route

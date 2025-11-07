@@ -14,14 +14,14 @@ import (
 const (
 	// IlliquidMarketDays represents the liquidation time for markets with zero volume
 	IlliquidMarketDays = 999.0
-	
+
 	// DefaultMarketSharePercent is the assumed market share a trader can capture (10%)
 	DefaultMarketSharePercent = 0.10
-	
+
 	// Liquidity score calculation constants
-	liquidityScoreVolumeMax   = 50.0 // Maximum points from volume component
-	liquidityScoreVolatilityMax = 50.0 // Maximum points from volatility component
-	liquidityScoreVolumeScale = 5.0  // Scaling factor for volume score (100 items/day = 10 points)
+	liquidityScoreVolumeMax     = 50.0  // Maximum points from volume component
+	liquidityScoreVolatilityMax = 50.0  // Maximum points from volatility component
+	liquidityScoreVolumeScale   = 5.0   // Scaling factor for volume score (100 items/day = 10 points)
 	liquidityScoreVolumeDivisor = 100.0 // Divisor for volume normalization
 )
 
