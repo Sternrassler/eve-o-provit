@@ -189,8 +189,29 @@ func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, it
 	// Sum all fees
 	totalFees := buyBrokerFee + sellBrokerFee + salesTax
 
+	// Calculate broker fees (combined)
+	brokerFees := buyBrokerFee + sellBrokerFee
+
+	// Estimated relist fee is the sell broker fee
+	// (represents the cost if the order needs to be modified/relisted)
+	estimatedRelistFee := sellBrokerFee
+
 	// Calculate net profit (total profit minus all fees)
 	netProfit := totalProfit - totalFees
+
+	// Calculate gross profit (this is totalProfit before fees)
+	grossProfit := totalProfit
+
+	// Calculate investment (total cost to buy)
+	totalInvestment := item.BuyPrice * float64(totalQuantity)
+
+	// Calculate margin percentages
+	var grossMarginPercent float64
+	var netProfitPercent float64
+	if totalInvestment > 0 {
+		grossMarginPercent = (grossProfit / totalInvestment) * 100
+		netProfitPercent = (netProfit / totalInvestment) * 100
+	}
 
 	// Calculate cargo utilization
 	cargoUsed := item.ItemVolume * float64(quantityPerTour)
@@ -234,11 +255,16 @@ func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, it
 		BaseISKPerHour:           baseISKPerHour,
 		TimeImprovementPercent:   timeImprovement,
 		// Trading fees fields (Issue #39)
-		BuyBrokerFee:  buyBrokerFee,
-		SellBrokerFee: sellBrokerFee,
-		SalesTax:      salesTax,
-		TotalFees:     totalFees,
-		NetProfit:     netProfit,
+		BuyBrokerFee:       buyBrokerFee,
+		SellBrokerFee:      sellBrokerFee,
+		BrokerFees:         brokerFees,
+		SalesTax:           salesTax,
+		EstimatedRelistFee: estimatedRelistFee,
+		TotalFees:          totalFees,
+		GrossProfit:        grossProfit,
+		GrossMarginPercent: grossMarginPercent,
+		NetProfit:          netProfit,
+		NetProfitPercent:   netProfitPercent,
 		// Cargo fields
 		CargoUsed:         cargoUsed,
 		CargoCapacity:     cargoCapacity,
