@@ -255,3 +255,95 @@ func (r *MarketRepository) CleanOldMarketOrders(ctx context.Context, olderThan t
 
 	return result.RowsAffected(), nil
 }
+
+// UpsertPriceHistory inserts or updates price history records
+func (r *MarketRepository) UpsertPriceHistory(ctx context.Context, history []PriceHistory) error {
+	if len(history) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+		INSERT INTO price_history (
+			type_id, region_id, date, highest, lowest, average, volume, order_count
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (type_id, region_id, date) DO UPDATE SET
+			highest = EXCLUDED.highest,
+			lowest = EXCLUDED.lowest,
+			average = EXCLUDED.average,
+			volume = EXCLUDED.volume,
+			order_count = EXCLUDED.order_count
+	`
+
+	for _, h := range history {
+		_, err := tx.Exec(ctx, query,
+			h.TypeID,
+			h.RegionID,
+			h.Date,
+			h.Highest,
+			h.Lowest,
+			h.Average,
+			h.Volume,
+			h.OrderCount,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to upsert price history: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// GetVolumeHistory retrieves volume history for a type in a region
+// Returns data for the last 'days' days, ordered by date descending
+func (r *MarketRepository) GetVolumeHistory(ctx context.Context, typeID, regionID, days int) ([]PriceHistory, error) {
+	query := `
+		SELECT 
+			id, type_id, region_id, date, highest, lowest, average, volume, order_count
+		FROM price_history
+		WHERE type_id = $1 AND region_id = $2
+			AND date >= CURRENT_DATE - $3::INTEGER
+		ORDER BY date DESC
+	`
+
+	rows, err := r.db.Query(ctx, query, typeID, regionID, days)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query volume history: %w", err)
+	}
+	defer rows.Close()
+
+	var history []PriceHistory
+	for rows.Next() {
+		var h PriceHistory
+		err := rows.Scan(
+			&h.ID,
+			&h.TypeID,
+			&h.RegionID,
+			&h.Date,
+			&h.Highest,
+			&h.Lowest,
+			&h.Average,
+			&h.Volume,
+			&h.OrderCount,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan price history: %w", err)
+		}
+		history = append(history, h)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return history, nil
+}

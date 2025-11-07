@@ -3,6 +3,16 @@ package models
 
 import "time"
 
+// VolumeMetrics represents market volume and liquidity metrics for an item
+type VolumeMetrics struct {
+	TypeID           int     `json:"type_id"`
+	RegionID         int     `json:"region_id"`
+	DailyVolumeAvg   float64 `json:"daily_volume_avg"`    // 30-day average daily volume
+	DailyISKTurnover float64 `json:"daily_isk_turnover"`  // Average daily ISK traded (volume × avg_price)
+	LiquidityScore   int     `json:"liquidity_score"`     // 0-100 score based on volume stability
+	DataDays         int     `json:"data_days"`           // Number of days of historical data available
+}
+
 // TradingRoute represents a profitable trading route
 type TradingRoute struct {
 	ItemTypeID             int     `json:"item_type_id"`
@@ -55,13 +65,20 @@ type TradingRoute struct {
 	CargoUtilization  float64 `json:"cargo_utilization"`   // Percentage 0-100
 	BaseCargoCapacity float64 `json:"base_cargo_capacity"` // Base capacity without skills
 	SkillBonusPercent float64 `json:"skill_bonus_percent"` // Total skill bonus %
+	// Volume & Liquidity fields (Issue #53)
+	VolumeMetrics   *VolumeMetrics `json:"volume_metrics,omitempty"`   // Market volume and liquidity data
+	LiquidationDays float64        `json:"liquidation_days,omitempty"` // Estimated days to sell inventory
+	DailyProfit     float64        `json:"daily_profit,omitempty"`     // Profit per day (net_profit / liquidation_days)
 }
 
 // RouteCalculationRequest represents the request to calculate trading routes
 type RouteCalculationRequest struct {
-	RegionID      int     `json:"region_id"`
-	ShipTypeID    int     `json:"ship_type_id"`
-	CargoCapacity float64 `json:"cargo_capacity,omitempty"`
+	RegionID             int     `json:"region_id"`
+	ShipTypeID           int     `json:"ship_type_id"`
+	CargoCapacity        float64 `json:"cargo_capacity,omitempty"`
+	MinDailyVolume       float64 `json:"min_daily_volume,omitempty"`       // Minimum daily volume filter (items/day)
+	MaxLiquidationDays   float64 `json:"max_liquidation_days,omitempty"`   // Maximum liquidation time (days)
+	IncludeVolumeMetrics bool    `json:"include_volume_metrics,omitempty"` // Whether to include volume metrics
 }
 
 // RouteCalculationResponse represents the response with calculated routes

@@ -215,3 +215,78 @@ func (c *Client) FetchMarketOrdersPage(ctx context.Context, regionID, page int) 
 func (c *Client) GetMarketOrders(ctx context.Context, regionID, typeID int) ([]database.MarketOrder, error) {
 	return c.repo.GetMarketOrders(ctx, regionID, typeID)
 }
+
+// ESIMarketHistory represents a single day's market history from ESI
+type ESIMarketHistory struct {
+	Average    float64   `json:"average"`
+	Date       string    `json:"date"` // Format: "2015-05-01"
+	Highest    float64   `json:"highest"`
+	Lowest     float64   `json:"lowest"`
+	OrderCount int64     `json:"order_count"`
+	Volume     int64     `json:"volume"`
+}
+
+// FetchMarketHistory fetches market history from ESI for a specific type and region
+// ESI Endpoint: GET /v1/markets/{region_id}/history/?type_id={type_id}
+// Returns up to 13 months of historical data
+func (c *Client) FetchMarketHistory(ctx context.Context, regionID, typeID int) ([]database.PriceHistory, error) {
+	endpoint := fmt.Sprintf("/v1/markets/%d/history/?type_id=%d", regionID, typeID)
+
+	resp, err := c.esi.Get(ctx, endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("ESI request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Handle Not Modified (cache hit) - return empty slice
+	if resp.StatusCode == 304 {
+		return []database.PriceHistory{}, nil
+	}
+
+	// Check for errors
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("unexpected ESI status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var esiHistory []ESIMarketHistory
+	if err := json.Unmarshal(body, &esiHistory); err != nil {
+		return nil, fmt.Errorf("failed to parse ESI response: %w", err)
+	}
+
+	// Convert to database models
+	dbHistory := make([]database.PriceHistory, 0, len(esiHistory))
+	for _, h := range esiHistory {
+		// Parse date string
+		date, err := time.Parse("2006-01-02", h.Date)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse date %s: %w", h.Date, err)
+		}
+
+		// Create pointers for optional fields
+		highest := h.Highest
+		lowest := h.Lowest
+		average := h.Average
+		volume := h.Volume
+		orderCount := int(h.OrderCount)
+
+		dbHistory = append(dbHistory, database.PriceHistory{
+			TypeID:     typeID,
+			RegionID:   regionID,
+			Date:       date,
+			Highest:    &highest,
+			Lowest:     &lowest,
+			Average:    &average,
+			Volume:     &volume,
+			OrderCount: &orderCount,
+		})
+	}
+
+	return dbHistory, nil
+}
