@@ -43,6 +43,12 @@ export interface TradingRoute {
   skilled_travel_time_seconds?: number; // Travel time with navigation skills applied
   base_isk_per_hour?: number; // ISK/h without navigation skills
   time_improvement_percent?: number; // Percentage improvement from skills
+  // Cargo fields
+  cargo_used?: number; // m³ actually used
+  cargo_capacity?: number; // Total effective capacity (with skills)
+  cargo_utilization?: number; // Percentage 0-100
+  base_cargo_capacity?: number; // Base capacity without skills
+  skill_bonus_percent?: number; // Total skill bonus %
 }
 
 export interface Region {
