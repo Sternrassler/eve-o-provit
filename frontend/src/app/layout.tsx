@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Navigation } from "@/components/navigation";
 import { AuthProvider } from "@/lib/auth-context";
+import { TradingSkillsProvider } from "@/lib/trading-skills-context";
 import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
@@ -31,9 +32,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <Navigation />
-          <main className="min-h-[calc(100vh-4rem)]">{children}</main>
-          <Toaster />
+          <TradingSkillsProvider>
+            <Navigation />
+            <main className="min-h-[calc(100vh-4rem)]">{children}</main>
+            <Toaster />
+          </TradingSkillsProvider>
         </AuthProvider>
       </body>
     </html>

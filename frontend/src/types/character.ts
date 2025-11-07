@@ -16,3 +16,38 @@ export interface CharacterShip {
   ship_type_name: string;
   cargo_capacity: number;
 }
+
+/**
+ * TradingSkills contains all trading-relevant character skills
+ * All skill levels are 0-5 (0 = untrained, 5 = max level)
+ */
+export interface TradingSkills {
+  // Trading Skills (Fees)
+  Accounting: number;              // Sales Tax reduction (-10% per level, max -50%)
+  BrokerRelations: number;         // Broker Fee reduction (-0.3% per level, max -1.5%)
+  AdvancedBrokerRelations: number; // Additional Broker Fee reduction (-0.3% per level, max -1.5%)
+  FactionStanding: number;         // Station/Corp standing (0.0-10.0, affects broker fees)
+
+  // Cargo Skills
+  SpaceshipCommand: number;        // +5% cargo capacity per level (max +25%)
+  CargoOptimization: number;       // Ship-specific cargo bonus (+5% per level, max +25%)
+
+  // Navigation Skills
+  Navigation: number;              // Warp speed increase (+5% per level, max +25%)
+  EvasiveManeuvering: number;      // Align time reduction (-5% per level, max -25%)
+
+  // Ship-specific Industrial Skills (each +5% cargo per level)
+  GallenteIndustrial: number;      // Iteron, Nereus, etc.
+  CaldarIndustrial: number;        // Badger, Crane, etc.
+  AmarrIndustrial: number;         // Bestower, Sigil, etc.
+  MinmatarIndustrial: number;      // Wreathe, Hoarder, etc.
+}
+
+/**
+ * CharacterSkillsResponse from GET /api/v1/characters/:characterId/skills
+ */
+export interface CharacterSkillsResponse {
+  character_id: number;
+  skills: TradingSkills;
+}
+

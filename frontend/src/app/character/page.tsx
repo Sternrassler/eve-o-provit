@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CharacterLocation, CharacterShip } from "@/types/character";
+import { SkillsDisplay } from "@/components/trading/SkillsDisplay";
 
 interface CharacterDetails {
   character_id: number;
@@ -231,6 +232,9 @@ export default function CharacterPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Trading Skills Display */}
+      <SkillsDisplay />
 
       <Card>
         <CardHeader>
