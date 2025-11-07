@@ -113,8 +113,8 @@ func TestNetProfit_WithFees(t *testing.T) {
 			quantity:      1000,
 			buyPrice:      10000.0,
 			sellPrice:     11000.0,
-			wantGross:     1000000.0,  // 1000 * 1000
-			wantNetProfit: -180000.0,  // 1M gross - 1.18M fees
+			wantGross:     1000000.0, // 1000 * 1000
+			wantNetProfit: -180000.0, // 1M gross - 1.18M fees
 		},
 		{
 			name:          "High margin trade - 100% markup",
