@@ -31,6 +31,14 @@ const (
 	RouteCalculationTimeout = 25 * time.Second
 )
 
+// Context keys for character information (must match handler keys)
+type contextKey string
+
+const (
+	contextKeyCharacterID  contextKey = "character_id"
+	contextKeyAccessToken contextKey = "access_token"
+)
+
 // RouteService orchestrates route calculation workflow
 type RouteService struct {
 	esiClient      *esi.Client
@@ -108,22 +116,8 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 		baseCapacity = shipCap.BaseCargoHold
 		effectiveCapacity = baseCapacity // Default: no skills
 		
-		// Try to get character skills from context (optional)
-		// Extract character_id if available in context metadata
-		if characterID := ctx.Value("character_id"); characterID != nil {
-			if accessToken := ctx.Value("access_token"); accessToken != nil {
-				charID, ok1 := characterID.(int)
-				token, ok2 := accessToken.(string)
-				if ok1 && ok2 && charID > 0 && token != "" {
-					// Fetch skills and apply to capacity
-					if skills, err := rs.skillsService.GetCharacterSkills(calcCtx, charID, token); err == nil {
-						effectiveCapacity, skillBonusPercent = rs.cargoService.CalculateCargoCapacity(baseCapacity, skills)
-						log.Printf("Applied cargo skills: base=%.2f, effective=%.2f, bonus=%.2f%%",
-							baseCapacity, effectiveCapacity, skillBonusPercent)
-					}
-				}
-			}
-		}
+		// Apply character skills if available in context
+		effectiveCapacity, skillBonusPercent = rs.applyCharacterSkills(calcCtx, baseCapacity)
 		
 		cargoCapacity = effectiveCapacity
 	} else {
@@ -206,4 +200,32 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 
 func (rs *RouteService) getRegionName(ctx context.Context, regionID int) (string, error) {
 	return rs.sdeRepo.GetRegionName(ctx, regionID)
+}
+
+// applyCharacterSkills extracts character context and applies skills to cargo capacity
+// Returns (effectiveCapacity, skillBonusPercent)
+// Falls back to base capacity if skills unavailable
+func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity float64) (float64, float64) {
+	effectiveCapacity := baseCapacity
+	skillBonusPercent := 0.0
+	
+	// Extract character_id if available in context metadata
+	characterID := ctx.Value(contextKeyCharacterID)
+	accessToken := ctx.Value(contextKeyAccessToken)
+	
+	if characterID != nil && accessToken != nil {
+		charID, ok1 := characterID.(int)
+		token, ok2 := accessToken.(string)
+		
+		if ok1 && ok2 && charID > 0 && token != "" {
+			// Fetch skills and apply to capacity
+			if skills, err := rs.skillsService.GetCharacterSkills(ctx, charID, token); err == nil {
+				effectiveCapacity, skillBonusPercent = rs.cargoService.CalculateCargoCapacity(baseCapacity, skills)
+				log.Printf("Applied cargo skills: base=%.2f, effective=%.2f, bonus=%.2f%%",
+					baseCapacity, effectiveCapacity, skillBonusPercent)
+			}
+		}
+	}
+	
+	return effectiveCapacity, skillBonusPercent
 }
