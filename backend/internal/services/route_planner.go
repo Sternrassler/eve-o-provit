@@ -168,11 +168,6 @@ func (rp *RoutePlanner) CalculateRouteWithSkills(ctx context.Context, item model
 	return route, nil
 }
 
-// calculateJumpTime calculates total travel time for jumps with navigation skills
-// baseWarpSpeed: AU/s (e.g., 3.0 for haulers)
-// baseAlignTime: seconds (e.g., 8.0 for haulers)
-// navigationLevel: 0-5 (+5% warp speed per level)
-// evasiveLevel: 0-5 (-5% align time per level)
 // CalculateJumpTime calculates total travel time for jumps with navigation skills
 // baseWarpSpeed: AU/s (e.g., 3.0 for haulers)
 // baseAlignTime: seconds (e.g., 8.0 for haulers)
