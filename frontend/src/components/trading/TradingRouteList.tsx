@@ -22,7 +22,8 @@ export function TradingRouteList({
   error,
   onRetry,
 }: TradingRouteListProps) {
-  const [sortBy, setSortBy] = useState<"isk_per_hour" | "total_profit" | "daily_profit" | "liquidation">("isk_per_hour");
+  type SortOption = "isk_per_hour" | "total_profit" | "daily_profit" | "liquidation";
+  const [sortBy, setSortBy] = useState<SortOption>("isk_per_hour");
 
   // Check if routes have volume metrics
   const hasVolumeMetrics = routes.some(r => r.volume_metrics !== undefined);
@@ -98,7 +99,7 @@ export function TradingRouteList({
       {/* Sort Controls */}
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium">Sortieren nach:</span>
-        <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+        <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
           <SelectTrigger className="w-[250px]">
             <SelectValue />
           </SelectTrigger>

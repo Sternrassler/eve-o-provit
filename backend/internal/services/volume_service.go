@@ -10,6 +10,21 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 )
 
+// Constants for volume and liquidity calculations
+const (
+	// IlliquidMarketDays represents the liquidation time for markets with zero volume
+	IlliquidMarketDays = 999.0
+	
+	// DefaultMarketSharePercent is the assumed market share a trader can capture (10%)
+	DefaultMarketSharePercent = 0.10
+	
+	// Liquidity score calculation constants
+	liquidityScoreVolumeMax   = 50.0 // Maximum points from volume component
+	liquidityScoreVolatilityMax = 50.0 // Maximum points from volatility component
+	liquidityScoreVolumeScale = 5.0  // Scaling factor for volume score (100 items/day = 10 points)
+	liquidityScoreVolumeDivisor = 100.0 // Divisor for volume normalization
+)
+
 // VolumeServicer defines the interface for volume metrics calculations
 type VolumeServicer interface {
 	GetVolumeMetrics(ctx context.Context, typeID, regionID int) (*models.VolumeMetrics, error)
@@ -121,18 +136,17 @@ func (vs *VolumeService) GetVolumeMetrics(ctx context.Context, typeID, regionID 
 }
 
 // CalculateLiquidationTime estimates the number of days to sell inventory
-// Assumes trader can capture 10% of daily market volume
+// Assumes trader can capture DefaultMarketSharePercent (10%) of daily market volume
 func (vs *VolumeService) CalculateLiquidationTime(quantity int, dailyVolume float64) float64 {
 	if dailyVolume <= 0 {
-		return 999.0 // Illiquid market
+		return IlliquidMarketDays // Illiquid market
 	}
 
-	// Assume trader can capture 10% of daily volume
-	const marketSharePercent = 0.10
-	yourDailyVolume := dailyVolume * marketSharePercent
+	// Assume trader can capture configured percentage of daily volume
+	yourDailyVolume := dailyVolume * DefaultMarketSharePercent
 
 	if yourDailyVolume <= 0 {
-		return 999.0
+		return IlliquidMarketDays
 	}
 
 	days := float64(quantity) / yourDailyVolume
@@ -149,12 +163,12 @@ func (vs *VolumeService) calculateLiquidityScore(dailyVolumeAvg float64, history
 	// Volume score component (0-50 points)
 	// Higher volume = better liquidity
 	// 100 items/day = 10 points, 1000 items/day = 50 points (capped)
-	volumeScore := math.Min(50, (dailyVolumeAvg/100)*5)
+	volumeScore := math.Min(liquidityScoreVolumeMax, (dailyVolumeAvg/liquidityScoreVolumeDivisor)*liquidityScoreVolumeScale)
 
 	// Volatility score component (0-50 points)
 	// Lower volatility = more stable market = better liquidity
 	volatility := vs.calculateVolatility(history)
-	volatilityScore := math.Max(0, 50*(1-volatility))
+	volatilityScore := math.Max(0, liquidityScoreVolatilityMax*(1-volatility))
 
 	totalScore := int(math.Round(volumeScore + volatilityScore))
 	if totalScore > 100 {

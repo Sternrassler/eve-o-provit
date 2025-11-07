@@ -269,21 +269,17 @@ func (c *Client) FetchMarketHistory(ctx context.Context, regionID, typeID int) (
 			return nil, fmt.Errorf("failed to parse date %s: %w", h.Date, err)
 		}
 
-		// Create pointers for optional fields
-		highest := h.Highest
-		lowest := h.Lowest
-		average := h.Average
-		volume := h.Volume
+		// Convert orderCount from int64 to int
 		orderCount := int(h.OrderCount)
 
 		dbHistory = append(dbHistory, database.PriceHistory{
 			TypeID:     typeID,
 			RegionID:   regionID,
 			Date:       date,
-			Highest:    &highest,
-			Lowest:     &lowest,
-			Average:    &average,
-			Volume:     &volume,
+			Highest:    &h.Highest,
+			Lowest:     &h.Lowest,
+			Average:    &h.Average,
+			Volume:     &h.Volume,
 			OrderCount: &orderCount,
 		})
 	}

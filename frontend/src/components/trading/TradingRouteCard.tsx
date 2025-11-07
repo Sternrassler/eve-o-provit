@@ -10,6 +10,10 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { FeeBreakdown } from "./FeeBreakdown";
 
+// Liquidation thresholds for color coding and warnings
+const LIQUIDATION_WARNING_DAYS = 7;
+const LIQUIDATION_MEDIUM_DAYS = 14;
+
 interface TradingRouteCardProps {
   route: TradingRoute;
 }
@@ -502,18 +506,18 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
                   <span
                     className={cn(
                       "font-medium",
-                      route.liquidation_days <= 7
+                      route.liquidation_days <= LIQUIDATION_WARNING_DAYS
                         ? "text-green-600 dark:text-green-400"
-                        : route.liquidation_days <= 14
+                        : route.liquidation_days <= LIQUIDATION_MEDIUM_DAYS
                         ? "text-yellow-600 dark:text-yellow-400"
                         : "text-red-600 dark:text-red-400"
                     )}
                   >
                     {route.liquidation_days.toFixed(1)} Tage
-                    {route.liquidation_days > 7 && " ⚠️"}
+                    {route.liquidation_days > LIQUIDATION_WARNING_DAYS && " ⚠️"}
                   </span>
                 </div>
-                {route.liquidation_days > 7 && (
+                {route.liquidation_days > LIQUIDATION_WARNING_DAYS && (
                   <p className="text-xs text-muted-foreground mt-1">
                     ⚠️ Niedrige Liquidität: Verkauf dauert{" "}
                     {route.liquidation_days > 30
