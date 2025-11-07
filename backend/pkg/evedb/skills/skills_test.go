@@ -58,6 +58,30 @@ func TestIsNavigationSkill(t *testing.T) {
 	}
 }
 
+func TestIsSocialSkill(t *testing.T) {
+	tests := []struct {
+		name   string
+		typeID int
+		want   bool
+	}{
+		{"Connections", TypeIDConnections, true},
+		{"Diplomacy", TypeIDDiplomacy, true},
+		{"Criminal Connections", TypeIDCriminalConnections, true},
+		{"Not a social skill", 9999, false},
+		{"Trading skill", TypeIDAccounting, false},
+		{"Cargo skill", TypeIDAmarrIndustrial, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsSocialSkill(tt.typeID)
+			if got != tt.want {
+				t.Errorf("IsSocialSkill(%d) = %v, want %v", tt.typeID, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIsCargoSkill(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -153,6 +177,17 @@ func TestConstantValues(t *testing.T) {
 	}
 	if TypeIDSpaceshipCommand != 3327 {
 		t.Errorf("TypeIDSpaceshipCommand = %d, want 3327", TypeIDSpaceshipCommand)
+	}
+
+	// Social Skills
+	if TypeIDConnections != 3359 {
+		t.Errorf("TypeIDConnections = %d, want 3359", TypeIDConnections)
+	}
+	if TypeIDDiplomacy != 3357 {
+		t.Errorf("TypeIDDiplomacy = %d, want 3357", TypeIDDiplomacy)
+	}
+	if TypeIDCriminalConnections != 3361 {
+		t.Errorf("TypeIDCriminalConnections = %d, want 3361", TypeIDCriminalConnections)
 	}
 
 	// Cargo Skills

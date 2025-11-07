@@ -1,5 +1,5 @@
 // Package skills provides EVE Online skill type ID constants and helper functions
-// for trading, navigation, and cargo skills.
+// for trading, navigation, cargo, and social skills.
 package skills
 
 // Trading Skills
@@ -82,6 +82,17 @@ func IsCargoSkill(typeID int) bool {
 		TypeIDCaldariFreighter,
 		TypeIDGallenteFreighter,
 		TypeIDMinmatarFreighter:
+		return true
+	}
+	return false
+}
+
+// IsSocialSkill returns true if the given type ID is a social skill
+func IsSocialSkill(typeID int) bool {
+	switch typeID {
+	case TypeIDConnections,
+		TypeIDDiplomacy,
+		TypeIDCriminalConnections:
 		return true
 	}
 	return false
