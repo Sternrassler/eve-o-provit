@@ -175,12 +175,10 @@ export function SkillsDisplay() {
     },
   ];
 
-  // Calculate total broker fee reduction
-  const totalBrokerReduction = 
-    skills.BrokerRelations * 0.3 +
-    skills.AdvancedBrokerRelations * 0.3 +
-    skills.FactionStanding * 0.03 +
-    skills.CorpStanding * 0.02;
+  // Calculate total broker fee reduction and effective fee
+  const skillsReduction = skills.BrokerRelations * 0.3 + skills.AdvancedBrokerRelations * 0.3;
+  const standingsReduction = skills.FactionStanding * 0.03 + skills.CorpStanding * 0.02;
+  const totalBrokerReduction = skillsReduction + standingsReduction;
   const effectiveBrokerFee = Math.max(1.0, 3.0 - totalBrokerReduction);
 
   const navigationSkills = [
@@ -271,7 +269,7 @@ export function SkillsDisplay() {
               <span className="font-semibold text-foreground">{effectiveBrokerFee.toFixed(2)}%</span>
             </div>
             <p className="mt-1 text-xs">
-              Base 3.0% - Skills {(skills.BrokerRelations * 0.3 + skills.AdvancedBrokerRelations * 0.3).toFixed(1)}% - Standings {(skills.FactionStanding * 0.03 + skills.CorpStanding * 0.02).toFixed(2)}% = {effectiveBrokerFee.toFixed(2)}% (min 1.0%)
+              Base 3.0% - Skills {skillsReduction.toFixed(1)}% - Standings {standingsReduction.toFixed(2)}% = {effectiveBrokerFee.toFixed(2)}% (min 1.0%)
             </p>
           </div>
         </div>

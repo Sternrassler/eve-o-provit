@@ -219,7 +219,7 @@ func (s *SkillsService) fetchStandingsFromESI(ctx context.Context, characterID i
 
 // extractHighestStandings finds the highest standing per category (faction, npc_corp)
 // EVE Broker Fee formula uses highest faction and corp standings
-// Note: Negative standings don't reduce fees (ignored in formula), but we track max value
+// Note: Agent standings are ignored - not relevant for broker fees
 func (s *SkillsService) extractHighestStandings(standings []esiStanding) (float64, float64) {
 	var maxFactionStanding float64 = 0.0
 	var maxCorpStanding float64 = 0.0
@@ -238,7 +238,6 @@ func (s *SkillsService) extractHighestStandings(standings []esiStanding) (float6
 				maxCorpStanding = standing.Standing
 				hasCorp = true
 			}
-			// Ignore "agent" standings - not relevant for broker fees
 		}
 	}
 

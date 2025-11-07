@@ -148,28 +148,38 @@ func (s *FeeService) CalculateBrokerFee(
 	corpStanding float64,
 	orderValue float64,
 ) float64 {
-	// Base broker fee: 3%
-	baseFeeRate := 0.03
+	// Fee rate constants
+	const (
+		baseFeeRate         = 0.03   // Base 3%
+		brokerSkillRate     = 0.003  // -0.3% per level
+		maxBrokerReduction  = 0.015  // Max -1.5% at level V
+		factionStandingRate = 0.0003 // -0.03% per 1.0 standing
+		maxFactionReduction = 0.003  // Max -0.3% at 10.0 standing
+		corpStandingRate    = 0.0002 // -0.02% per 1.0 standing
+		maxCorpReduction    = 0.002  // Max -0.2% at 10.0 standing
+		minFeeRate          = 0.01   // Min 1%
+		minFeeISK           = 100.0  // Min 100 ISK
+	)
 
 	// Broker Relations: -0.3% per level (max -1.5% at level V)
-	brokerSkillReduction := 0.003 * float64(brokerRelationsLevel)
-	if brokerSkillReduction > 0.015 {
-		brokerSkillReduction = 0.015
+	brokerSkillReduction := brokerSkillRate * float64(brokerRelationsLevel)
+	if brokerSkillReduction > maxBrokerReduction {
+		brokerSkillReduction = maxBrokerReduction
 	}
 
 	// Advanced Broker Relations: -0.3% per level (max -1.5% at level V)
-	advBrokerSkillReduction := 0.003 * float64(advancedBrokerRelationsLevel)
-	if advBrokerSkillReduction > 0.015 {
-		advBrokerSkillReduction = 0.015
+	advBrokerSkillReduction := brokerSkillRate * float64(advancedBrokerRelationsLevel)
+	if advBrokerSkillReduction > maxBrokerReduction {
+		advBrokerSkillReduction = maxBrokerReduction
 	}
 
 	// Faction Standing: -0.03% per 1.0 standing (max -0.3% at 10.0 standing)
 	// Only positive standings reduce fees (negative ignored)
 	factionReduction := 0.0
 	if factionStanding > 0 {
-		factionReduction = 0.0003 * factionStanding
-		if factionReduction > 0.003 {
-			factionReduction = 0.003
+		factionReduction = factionStandingRate * factionStanding
+		if factionReduction > maxFactionReduction {
+			factionReduction = maxFactionReduction
 		}
 	}
 
@@ -177,9 +187,9 @@ func (s *FeeService) CalculateBrokerFee(
 	// Only positive standings reduce fees (negative ignored)
 	corpReduction := 0.0
 	if corpStanding > 0 {
-		corpReduction = 0.0002 * corpStanding
-		if corpReduction > 0.002 {
-			corpReduction = 0.002
+		corpReduction = corpStandingRate * corpStanding
+		if corpReduction > maxCorpReduction {
+			corpReduction = maxCorpReduction
 		}
 	}
 
@@ -187,16 +197,16 @@ func (s *FeeService) CalculateBrokerFee(
 	feeRate := baseFeeRate - brokerSkillReduction - advBrokerSkillReduction - factionReduction - corpReduction
 
 	// Enforce minimum 1% fee
-	if feeRate < 0.01 {
-		feeRate = 0.01
+	if feeRate < minFeeRate {
+		feeRate = minFeeRate
 	}
 
 	// Calculate fee
 	fee := orderValue * feeRate
 
 	// Enforce minimum 100 ISK
-	if fee < 100 {
-		return 100
+	if fee < minFeeISK {
+		return minFeeISK
 	}
 
 	return fee
