@@ -69,6 +69,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("eve-login-success", handleLoginSuccess);
     };
+  }, [checkSession]);
+
+  const logout = useCallback(() => {
+    TokenStorage.clear();
+    setIsAuthenticated(false);
+    setCharacter(null);
+    setAccessToken(null);
   }, []);
 
   // Token refresh function (wrapped in useCallback to prevent re-creation)
@@ -96,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // On refresh failure, logout user
       logout();
     }
-  }, []);
+  }, [logout]);
 
   // Background token refresh - check every 60 seconds
   useEffect(() => {
@@ -117,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(refreshInterval);
   }, [isAuthenticated, performTokenRefresh]);
 
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const token = TokenStorage.getAccessToken();
       
@@ -167,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const login = async () => {
     try {
@@ -182,21 +189,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => {
-    TokenStorage.clear();
-    setIsAuthenticated(false);
-    setCharacter(null);
-    setAccessToken(null);
-  };
+  const refreshSession = useCallback(async () => {
+    await checkSession();
+  }, [checkSession]);
 
-  const getAuthHeader = (): string | null => {
+  const getAuthHeader = useCallback((): string | null => {
     if (!accessToken) return null;
     return `Bearer ${accessToken}`;
-  };
-
-  const refreshSession = async () => {
-    await checkSession();
-  };
+  }, [accessToken]);
 
   return (
     <AuthContext.Provider
