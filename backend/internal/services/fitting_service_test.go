@@ -295,11 +295,11 @@ func TestApplyStackingPenalty_TwoModules(t *testing.T) {
 	// 2nd: 0.20 × S(1) = 0.20 × e^(-(1/2.67)^2) ≈ 0.20 × 0.8694 ≈ 0.1739
 	// Total: ≈ 0.3739
 	result := applyStackingPenalty([]float64{0.20, 0.20})
-	
+
 	// Calculate expected value
 	penalty2nd := math.Exp(-math.Pow(1.0/2.67, 2))
 	expected := 0.20 + 0.20*penalty2nd
-	
+
 	assert.InDelta(t, expected, result, 0.0001, "Two modules: 1st at 100%, 2nd at ~86.9%")
 	assert.InDelta(t, 0.3739, result, 0.001, "Two 20% bonuses ≈ 37.39% total")
 }
@@ -312,11 +312,11 @@ func TestApplyStackingPenalty_ThreeModules(t *testing.T) {
 	// 3rd: 0.20 × S(2) = 0.20 × e^(-(2/2.67)^2) ≈ 0.20 × 0.5707 ≈ 0.1141
 	// Total: ≈ 0.4880
 	result := applyStackingPenalty([]float64{0.20, 0.20, 0.20})
-	
+
 	penalty2nd := math.Exp(-math.Pow(1.0/2.67, 2))
 	penalty3rd := math.Exp(-math.Pow(2.0/2.67, 2))
 	expected := 0.20 + 0.20*penalty2nd + 0.20*penalty3rd
-	
+
 	assert.InDelta(t, expected, result, 0.0001, "Three modules with correct penalties")
 	assert.InDelta(t, 0.4880, result, 0.001, "Three 20% bonuses ≈ 48.8% total")
 }
@@ -330,13 +330,13 @@ func TestApplyStackingPenalty_FourModules(t *testing.T) {
 	// 4th: 0.10 × S(3) = 0.10 × e^(-(3/2.67)^2) ≈ 0.10 × 0.2830 ≈ 0.0283
 	// Total: ≈ 0.2723
 	result := applyStackingPenalty([]float64{0.10, 0.10, 0.10, 0.10})
-	
+
 	total := 0.0
 	for i := 0; i < 4; i++ {
 		penalty := math.Exp(-math.Pow(float64(i)/2.67, 2))
 		total += 0.10 * penalty
 	}
-	
+
 	assert.InDelta(t, total, result, 0.0001, "Four modules with correct penalties")
 	assert.InDelta(t, 0.2723, result, 0.001, "Four 10% bonuses ≈ 27.23% total")
 }
@@ -349,11 +349,11 @@ func TestApplyStackingPenalty_SortingOrder(t *testing.T) {
 	// 2nd: 0.15 × S(1) ≈ 0.1304
 	// 3rd: 0.10 × S(2) ≈ 0.0571
 	result := applyStackingPenalty([]float64{0.10, 0.20, 0.15})
-	
+
 	penalty2nd := math.Exp(-math.Pow(1.0/2.67, 2))
 	penalty3rd := math.Exp(-math.Pow(2.0/2.67, 2))
 	expected := 0.20 + 0.15*penalty2nd + 0.10*penalty3rd
-	
+
 	assert.InDelta(t, expected, result, 0.0001, "Strongest bonuses should apply first")
 	assert.InDelta(t, 0.3875, result, 0.001, "Mixed bonuses with correct order")
 }
@@ -365,10 +365,10 @@ func TestApplyStackingPenalty_NegativeBonuses(t *testing.T) {
 	// 2nd: -0.13 × S(1) ≈ -0.1130
 	// Total: ≈ -0.243
 	result := applyStackingPenalty([]float64{-0.13, -0.13})
-	
+
 	penalty2nd := math.Exp(-math.Pow(1.0/2.67, 2))
 	expected := -0.13 + (-0.13)*penalty2nd
-	
+
 	assert.InDelta(t, expected, result, 0.0001, "Negative bonuses with penalties")
 	assert.InDelta(t, -0.243, result, 0.001, "Two -13% bonuses ≈ -24.3% total")
 }
@@ -380,17 +380,17 @@ func TestApplyStackingPenalty_RealWorldExample(t *testing.T) {
 	// Expected: +48.8% total (NOT +72.8% without penalties!)
 	bonuses := []float64{0.20, 0.20, 0.20}
 	result := applyStackingPenalty(bonuses)
-	
+
 	// Verify against EVE University formula
 	penalty1 := math.Exp(-math.Pow(0.0/2.67, 2)) // 1.0
 	penalty2 := math.Exp(-math.Pow(1.0/2.67, 2)) // ~0.8694
 	penalty3 := math.Exp(-math.Pow(2.0/2.67, 2)) // ~0.5707
-	
+
 	expected := 0.20*penalty1 + 0.20*penalty2 + 0.20*penalty3
-	
+
 	assert.InDelta(t, expected, result, 0.0001, "Real-world example matches EVE formula")
 	assert.InDelta(t, 0.4880, result, 0.001, "3x Hyperspatial = +48.8% (not +72.8%!)")
-	
+
 	// WITHOUT stacking penalties (wrong calculation):
 	wrongResult := 0.20 + 0.20 + 0.20 // 0.60 = +60%
 	assert.NotEqual(t, wrongResult, result, "Stacking penalties must apply!")
@@ -413,6 +413,106 @@ func TestCalculateBonuses_CargoStacking(t *testing.T) {
 	// Cargo capacity is absolute (+m³) - NO stacking penalties!
 	// 2,500 + 2,500 + 2,500 = 7,500 m³
 	assert.Equal(t, 7500.0, bonuses.CargoBonus, "Cargo simple addition (no stacking)")
+}
+
+// TestCalculateBonuses_MultiAttributeModule tests modules with BOTH positive and negative effects
+// Example: Cargo Expander gives +cargo BUT -inertia (drawback)
+func TestCalculateBonuses_MultiAttributeModule(t *testing.T) {
+	service := &FittingService{}
+
+	// Hypothetical "Cargo Expander" module:
+	// ✅ +2,500 m³ cargo (positive)
+	// ❌ -10% inertia (negative drawback - worse agility)
+	modules := []FittedModule{
+		{
+			TypeID:   9999, // Hypothetical module
+			TypeName: "Cargo Expander (Multi-Attribute)",
+			Slot:     "LoSlot0",
+			DogmaAttribs: map[int]float64{
+				38: 2500.0, // +2,500 m³ cargo (POSITIVE)
+				70: -0.10,  // -10% inertia modifier (NEGATIVE drawback)
+			},
+		},
+		{
+			TypeID:   9999,
+			TypeName: "Cargo Expander (Multi-Attribute)",
+			Slot:     "LoSlot1",
+			DogmaAttribs: map[int]float64{
+				38: 2500.0, // +2,500 m³ cargo
+				70: -0.10,  // -10% inertia modifier
+			},
+		},
+	}
+
+	bonuses := service.calculateBonuses(modules)
+
+	// Cargo: Simple addition (absolute bonus, no stacking)
+	// 2,500 + 2,500 = 5,000 m³
+	assert.Equal(t, 5000.0, bonuses.CargoBonus, "Cargo bonus: +5,000 m³")
+
+	// Inertia: Stacking penalties apply to negative effects too!
+	// 1st: -0.10 × S(0) = -0.10 × 1.0 = -0.10
+	// 2nd: -0.10 × S(1) = -0.10 × 0.8694 ≈ -0.0869
+	// Total: -0.10 + -0.0869 ≈ -0.1869
+	// Multiplier: 1 + (-0.1869) ≈ 0.8131
+	penalty2nd := math.Exp(-math.Pow(1.0/2.67, 2))
+	expectedInertia := 1 + (-0.10 + -0.10*penalty2nd)
+
+	assert.InDelta(t, expectedInertia, bonuses.InertiaModifier, 0.001, "Inertia drawback with stacking penalties")
+	assert.InDelta(t, 0.8131, bonuses.InertiaModifier, 0.001, "2x -10% inertia ≈ 0.8131 (not 0.81!)")
+
+	// No warp modules
+	assert.Equal(t, 1.0, bonuses.WarpSpeedMultiplier, "No warp modules")
+}
+
+// TestCalculateBonuses_OverdriveInjectorRealistic tests REAL EVE module with trade-offs
+// Overdrive Injector System II (Real EVE module):
+// ✅ +Velocity (not tracked in our system, but shows multi-attribute concept)
+// ❌ -20% Cargo Capacity (drawback)
+// EVE Wiki: "velocity bonus is stacking-penalized, but cargo drawback is NOT"
+func TestCalculateBonuses_OverdriveInjectorRealistic(t *testing.T) {
+	service := &FittingService{}
+
+	// Overdrive Injector System II (Type ID: 1405)
+	// In reality: +velocity (not in our 3 attributes)
+	// Drawback: -cargo capacity (but as PERCENTAGE, not absolute)
+	//
+	// NOTE: Our current system tracks Attribute 38 (absolute cargo +m³)
+	// Overdrive's -20% cargo would be a DIFFERENT attribute (percentage modifier)
+	// For this test, we simulate with absolute values to demonstrate the concept
+
+	modules := []FittedModule{
+		{
+			TypeID:   1405, // Overdrive Injector System II
+			TypeName: "Overdrive Injector System II",
+			Slot:     "LoSlot0",
+			DogmaAttribs: map[int]float64{
+				// Note: In real EVE, this would be attribute 588 (capacityMultiplier)
+				// but for demonstration, we use our tracked attributes
+				70: -0.05, // Simulated negative effect (worse inertia as drawback)
+			},
+		},
+		{
+			TypeID:   1405,
+			TypeName: "Overdrive Injector System II",
+			Slot:     "LoSlot1",
+			DogmaAttribs: map[int]float64{
+				70: -0.05,
+			},
+		},
+	}
+
+	bonuses := service.calculateBonuses(modules)
+
+	// Inertia drawback: Stacking penalties apply
+	// 1st: -0.05 × 1.0 = -0.05
+	// 2nd: -0.05 × 0.8694 ≈ -0.0435
+	// Total: -0.0935 → Multiplier: 0.9065
+	penalty2nd := math.Exp(-math.Pow(1.0/2.67, 2))
+	expectedInertia := 1 + (-0.05 + -0.05*penalty2nd)
+
+	assert.InDelta(t, expectedInertia, bonuses.InertiaModifier, 0.001, "Overdrive drawback with stacking")
+	assert.InDelta(t, 0.9065, bonuses.InertiaModifier, 0.001, "2x Overdrive inertia penalty")
 }
 
 // TestGetCharacterFitting_Integration would be an integration test
