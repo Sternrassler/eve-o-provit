@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-11-08
+
+### Removed
+
+- **Legacy Service Cleanup (Issue #75)** - Removed 6 service files containing ~730 LOC of unused/redundant code
+  - Deleted `MarketFetcher` service (functionality integrated in RouteFinder)
+  - Deleted `ProfitAnalyzer` service (100% code duplication with RouteFinder.FindProfitableItems)
+  - Deleted `RoutePlanner` service (navigation logic integrated in RouteCalculator)
+  - Deleted `TradingService` (only used for removed `/inventory-sell` endpoint)
+  - Deleted `/api/v1/trading/inventory-sell` endpoint and all related code (InventorySellOrchestrator, handlers, models)
+
+### Changed
+
+- **Service Architecture Simplification** - Reduced service count from 11 to 7 (-36%)
+  - Renamed `RouteOptimizer` → `RouteCalculator` for clarity (consistent with interface naming)
+  - Inlined `CalculateJumpTime` logic in RouteCalculator (previously delegated to RoutePlanner)
+  - Improved code organization and removed naming confusion
+
+### Technical
+
+- Service reduction improves build times, test execution, and code maintainability
+- Clearer separation of concerns between remaining services
+- No functionality lost - all features remain intact through consolidation
+
 ## [0.3.0] - 2025-11-08
 
 ### Added

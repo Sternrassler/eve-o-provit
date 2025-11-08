@@ -12,11 +12,11 @@ import (
 // RouteWorkerPool handles parallel route calculation
 type RouteWorkerPool struct {
 	workerCount    int
-	routeOptimizer *RouteOptimizer
+	routeOptimizer *RouteCalculator
 }
 
 // NewRouteWorkerPool creates a new route worker pool
-func NewRouteWorkerPool(routeOptimizer *RouteOptimizer) *RouteWorkerPool {
+func NewRouteWorkerPool(routeOptimizer *RouteCalculator) *RouteWorkerPool {
 	return &RouteWorkerPool{
 		workerCount:    50, // Process 50 item pairs in parallel
 		routeOptimizer: routeOptimizer,

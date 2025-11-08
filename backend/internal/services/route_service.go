@@ -58,7 +58,7 @@ type RouteService struct {
 	sdeRepo        *database.SDERepository
 	sdeDB          *sql.DB
 	routeFinder    *RouteFinder
-	routeOptimizer *RouteOptimizer
+	routeOptimizer *RouteCalculator
 	workerPool     *RouteWorkerPool
 	redisClient    *redis.Client
 	cargoService   CargoServicer  // For skill-aware cargo calculations
@@ -92,7 +92,7 @@ func NewRouteService(
 	}
 
 	rs.routeFinder = NewRouteFinder(esiClient, marketRepo, sdeRepo, sdeDB, redisClient)
-	rs.routeOptimizer = NewRouteOptimizer(sdeRepo, sdeDB, feeService)
+	rs.routeOptimizer = NewRouteCalculator(sdeRepo, sdeDB, feeService)
 	rs.volumeService = NewVolumeService(marketRepo, esiClient)
 
 	// Initialize worker pool

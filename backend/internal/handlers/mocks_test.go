@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
-	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 )
 
 // MockMarketService is a mock implementation of MarketService for testing

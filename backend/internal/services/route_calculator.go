@@ -12,16 +12,16 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
 )
 
-// RouteOptimizer handles route calculation and optimization
-type RouteOptimizer struct {
+// RouteCalculator handles route calculation and optimization
+type RouteCalculator struct {
 	sdeRepo    *database.SDERepository
 	sdeDB      *sql.DB
 	feeService FeeServicer
 }
 
-// NewRouteOptimizer creates a new route optimizer instance
-func NewRouteOptimizer(sdeRepo *database.SDERepository, sdeDB *sql.DB, feeService FeeServicer) *RouteOptimizer {
-	return &RouteOptimizer{
+// NewRouteCalculator creates a new route optimizer instance
+func NewRouteCalculator(sdeRepo *database.SDERepository, sdeDB *sql.DB, feeService FeeServicer) *RouteCalculator {
+	return &RouteCalculator{
 		sdeRepo:    sdeRepo,
 		sdeDB:      sdeDB,
 		feeService: feeService,
@@ -31,12 +31,12 @@ func NewRouteOptimizer(sdeRepo *database.SDERepository, sdeDB *sql.DB, feeServic
 // CalculateRoute calculates a complete trading route with travel time and profit
 // cargoCapacity is the effective capacity (with skills already applied)
 // baseCapacity and skillBonus are optional - if 0, they'll match cargoCapacity
-func (ro *RouteOptimizer) CalculateRoute(ctx context.Context, item models.ItemPair, cargoCapacity float64) (models.TradingRoute, error) {
+func (ro *RouteCalculator) CalculateRoute(ctx context.Context, item models.ItemPair, cargoCapacity float64) (models.TradingRoute, error) {
 	return ro.CalculateRouteWithCapacityInfo(ctx, item, cargoCapacity, cargoCapacity, 0)
 }
 
 // CalculateRouteWithCapacityInfo calculates a route with detailed capacity information
-func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, item models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent float64) (models.TradingRoute, error) {
+func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, item models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent float64) (models.TradingRoute, error) {
 	var route models.TradingRoute
 
 	// Use effective capacity for calculations
@@ -95,18 +95,39 @@ func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, it
 	// TODO: In future, get actual ship type from request or character data
 	ship := models.GetShipType(0) // Default hauler
 
-	// Use RoutePlanner for accurate travel time calculation with navigation skills
-	// For now, use default skills (0/0) - future enhancement: fetch character skills
-	planner := &RoutePlanner{sdeDB: ro.sdeDB, sdeQuerier: ro.sdeRepo}
+	// Calculate jump time with navigation skills
+	// Inline implementation (previously in RoutePlanner)
+	calculateJumpTime := func(jumps int, baseWarpSpeed, baseAlignTime float64, navigationLevel, evasiveLevel int) float64 {
+		if jumps == 0 {
+			return 0
+		}
+
+		// Apply Navigation skill bonus (+5% warp speed per level)
+		warpSpeed := baseWarpSpeed * (1.0 + 0.05*float64(navigationLevel))
+
+		// Apply Evasive Maneuvering skill bonus (-5% align time per level)
+		alignTime := baseAlignTime * (1.0 - 0.05*float64(evasiveLevel))
+
+		// Average distance per jump (AU) - simplified model
+		const avgDistanceAU = 9.0 // Average distance between gates
+
+		// Calculate time per jump
+		warpTime := avgDistanceAU / warpSpeed
+		dockingTime := 10.0 // Time for undocking/docking/gate activation
+
+		timePerJump := alignTime + warpTime + dockingTime
+
+		return float64(jumps) * timePerJump
+	}
 
 	// Calculate base travel time (without skills)
-	baseOneWaySeconds := planner.CalculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, 0, 0)
+	baseOneWaySeconds := calculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, 0, 0)
 
 	// Calculate skilled travel time (with default skills for now)
 	// TODO: Pass actual character skills when available from auth context
 	navigationLevel := 0
 	evasiveLevel := 0
-	skilledOneWaySeconds := planner.CalculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, navigationLevel, evasiveLevel)
+	skilledOneWaySeconds := calculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, navigationLevel, evasiveLevel)
 
 	// Station Trading: Use minimum time for order cycling (5 minutes base time)
 	// This prevents division by zero and provides realistic ISK/h for station trading
@@ -295,7 +316,7 @@ func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, it
 
 // Helper functions
 
-func (ro *RouteOptimizer) getLocationNames(ctx context.Context, systemID, stationID int64) (string, string) {
+func (ro *RouteCalculator) getLocationNames(ctx context.Context, systemID, stationID int64) (string, string) {
 	// Get system name from SDE
 	systemName, err := ro.sdeRepo.GetSystemName(ctx, systemID)
 	if err != nil {
@@ -314,7 +335,7 @@ func (ro *RouteOptimizer) getLocationNames(ctx context.Context, systemID, statio
 }
 
 // getSystemSecurityStatus retrieves the security status of a solar system from SDE
-func (ro *RouteOptimizer) getSystemSecurityStatus(ctx context.Context, systemID int64) float64 {
+func (ro *RouteCalculator) getSystemSecurityStatus(ctx context.Context, systemID int64) float64 {
 	secStatus, err := ro.sdeRepo.GetSystemSecurityStatus(ctx, systemID)
 	if err != nil {
 		log.Printf("Warning: failed to get security status for system %d: %v", systemID, err)
@@ -324,7 +345,7 @@ func (ro *RouteOptimizer) getSystemSecurityStatus(ctx context.Context, systemID 
 }
 
 // getMinRouteSecurityStatus finds the minimum security status across all systems in a route
-func (ro *RouteOptimizer) getMinRouteSecurityStatus(ctx context.Context, route []int64) float64 {
+func (ro *RouteCalculator) getMinRouteSecurityStatus(ctx context.Context, route []int64) float64 {
 	if len(route) == 0 {
 		return 1.0 // Default to high-sec if no route
 	}

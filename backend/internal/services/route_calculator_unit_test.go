@@ -6,12 +6,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestNewRouteOptimizer tests RouteOptimizer initialization
-func TestNewRouteOptimizer(t *testing.T) {
+// TestNewRouteCalculator tests RouteCalculator initialization
+func TestNewRouteCalculator(t *testing.T) {
 	t.Run("with nil dependencies", func(t *testing.T) {
-		optimizer := NewRouteOptimizer(nil, nil, nil)
+		optimizer := NewRouteCalculator(nil, nil, nil)
 
-		assert.NotNil(t, optimizer, "RouteOptimizer should be initialized even with nil dependencies")
+		assert.NotNil(t, optimizer, "RouteCalculator should be initialized even with nil dependencies")
 	})
 }
 
