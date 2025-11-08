@@ -30,18 +30,21 @@ type CargoSolution struct {
 
 // CargoService provides cargo optimization with skill-aware capacity calculation
 type CargoService struct {
-	skillsService SkillsServicer
+	skillsService   SkillsServicer
+	fittingService  FittingServicer
 }
 
 // NewCargoService creates a new cargo optimization service
-func NewCargoService(skillsService SkillsServicer) *CargoService {
+func NewCargoService(skillsService SkillsServicer, fittingService FittingServicer) *CargoService {
 	return &CargoService{
-		skillsService: skillsService,
+		skillsService:  skillsService,
+		fittingService: fittingService,
 	}
 }
 
 // CalculateCargoCapacity calculates effective cargo capacity with skill bonuses
 // Base formula: baseCapacity * (1 + SpaceshipCommand*0.05) * (1 + CargoOptimization*0.05)
+// Does NOT include fitting bonuses - use GetEffectiveCargoCapacity for total capacity
 func (s *CargoService) CalculateCargoCapacity(baseCapacity float64, skills *TradingSkills) (float64, float64) {
 	// Spaceship Command: +5% cargo capacity per level (max +25%)
 	spaceshipBonus := float64(skills.SpaceshipCommand) * 0.05
@@ -71,6 +74,45 @@ func (s *CargoService) CalculateCargoCapacity(baseCapacity float64, skills *Trad
 	totalBonusPercent := ((1.0+spaceshipBonus)*(1.0+cargoSkillBonus) - 1.0) * 100
 
 	return effectiveCapacity, totalBonusPercent
+}
+
+// GetEffectiveCargoCapacity calculates total effective cargo capacity including skills AND fitting
+// Formula: (baseCapacity × (1 + skillBonuses)) + fittingBonus
+// Skills: Spaceship Command + Racial Industrial (multiplicative %)
+// Fitting: Expanded Cargohold modules (additive m³)
+func (s *CargoService) GetEffectiveCargoCapacity(
+	ctx context.Context,
+	characterID int,
+	shipTypeID int,
+	baseCapacity float64,
+	accessToken string,
+) (float64, error) {
+	// Calculate skill-modified capacity
+	skills, err := s.skillsService.GetCharacterSkills(ctx, characterID, accessToken)
+	if err != nil {
+		// Fallback to no skills (worst case)
+		skills = &TradingSkills{}
+	}
+	
+	capacityWithSkills, _ := s.CalculateCargoCapacity(baseCapacity, skills)
+	
+	// Get fitting bonuses (nil check for optional dependency)
+	if s.fittingService == nil {
+		// No fitting service available, return skill-only capacity
+		return capacityWithSkills, nil
+	}
+	
+	fitting, err := s.fittingService.GetCharacterFitting(ctx, characterID, shipTypeID, accessToken)
+	if err != nil {
+		// Fitting data unavailable (not an error - ship might not be fitted)
+		// Return skill-modified capacity only
+		return capacityWithSkills, nil
+	}
+	
+	// Apply fitting bonus (additive m³)
+	totalCapacity := capacityWithSkills + fitting.Bonuses.CargoBonus
+	
+	return totalCapacity, nil
 }
 
 // KnapsackDP solves the knapsack problem using dynamic programming

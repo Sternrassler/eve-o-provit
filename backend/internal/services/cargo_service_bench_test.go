@@ -22,7 +22,7 @@ func generateRandomItems(count int) []CargoItem {
 
 // BenchmarkCargoService_KnapsackDP_100Items benchmarks knapsack with 100 items
 func BenchmarkCargoService_KnapsackDP_100Items(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{})
+	service := NewCargoService(&mockSkillsService{}, nil)
 	items := generateRandomItems(100)
 	capacity := 5000.0
 
@@ -34,7 +34,7 @@ func BenchmarkCargoService_KnapsackDP_100Items(b *testing.B) {
 
 // BenchmarkCargoService_KnapsackDP_500Items benchmarks knapsack with 500 items
 func BenchmarkCargoService_KnapsackDP_500Items(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{})
+	service := NewCargoService(&mockSkillsService{}, nil)
 	items := generateRandomItems(500)
 	capacity := 5000.0
 
@@ -46,7 +46,7 @@ func BenchmarkCargoService_KnapsackDP_500Items(b *testing.B) {
 
 // BenchmarkCargoService_KnapsackDP_1000Items benchmarks knapsack with 1000 items
 func BenchmarkCargoService_KnapsackDP_1000Items(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{})
+	service := NewCargoService(&mockSkillsService{}, nil)
 	items := generateRandomItems(1000)
 	capacity := 5000.0
 
@@ -59,7 +59,7 @@ func BenchmarkCargoService_KnapsackDP_1000Items(b *testing.B) {
 // BenchmarkCargoService_KnapsackDP_10000Items benchmarks knapsack with 10k items
 // Acceptance criteria: Must complete in < 100ms
 func BenchmarkCargoService_KnapsackDP_10000Items(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{})
+	service := NewCargoService(&mockSkillsService{}, nil)
 	items := generateRandomItems(10000)
 	capacity := 5000.0
 
@@ -77,7 +77,7 @@ func BenchmarkCargoService_OptimizeCargo(b *testing.B) {
 			GallenteIndustrial: 5,
 		},
 	}
-	service := NewCargoService(mockSkills)
+	service := NewCargoService(mockSkills, nil)
 	items := generateRandomItems(1000)
 	ctx := context.Background()
 
@@ -89,7 +89,7 @@ func BenchmarkCargoService_OptimizeCargo(b *testing.B) {
 
 // BenchmarkCargoService_CalculateCapacity benchmarks capacity calculation
 func BenchmarkCargoService_CalculateCapacity(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{})
+	service := NewCargoService(&mockSkillsService{}, nil)
 	skills := &TradingSkills{
 		SpaceshipCommand:   5,
 		GallenteIndustrial: 5,
@@ -104,7 +104,7 @@ func BenchmarkCargoService_CalculateCapacity(b *testing.B) {
 
 // BenchmarkCargoService_SmallCapacity tests performance with small cargo holds
 func BenchmarkCargoService_SmallCapacity(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{})
+	service := NewCargoService(&mockSkillsService{}, nil)
 	items := generateRandomItems(1000)
 	capacity := 100.0 // Small capacity (e.g., frigate)
 
@@ -116,7 +116,7 @@ func BenchmarkCargoService_SmallCapacity(b *testing.B) {
 
 // BenchmarkCargoService_LargeCapacity tests performance with large cargo holds
 func BenchmarkCargoService_LargeCapacity(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{})
+	service := NewCargoService(&mockSkillsService{}, nil)
 	items := generateRandomItems(1000)
 	capacity := 50000.0 // Large capacity (e.g., freighter)
 
@@ -128,7 +128,7 @@ func BenchmarkCargoService_LargeCapacity(b *testing.B) {
 
 // BenchmarkCargoService_HighQuantityItems tests performance with many quantities per item
 func BenchmarkCargoService_HighQuantityItems(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{})
+	service := NewCargoService(&mockSkillsService{}, nil)
 
 	// Few item types but high quantities
 	items := make([]CargoItem, 50)
@@ -150,7 +150,7 @@ func BenchmarkCargoService_HighQuantityItems(b *testing.B) {
 
 // BenchmarkCargoService_MixedVolumes tests performance with varied item volumes
 func BenchmarkCargoService_MixedVolumes(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{})
+	service := NewCargoService(&mockSkillsService{}, nil)
 
 	items := make([]CargoItem, 1000)
 	for i := 0; i < 1000; i++ {
