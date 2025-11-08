@@ -42,6 +42,18 @@ type SkillsServicer interface {
 	GetCharacterSkills(ctx context.Context, characterID int, accessToken string) (*TradingSkills, error)
 }
 
+// FittingServicer defines the interface for ship fitting operations
+type FittingServicer interface {
+	// GetCharacterFitting fetches and caches ship fitting from ESI
+	// Returns empty fitting (no bonuses) if ESI fetch fails (graceful degradation)
+	GetCharacterFitting(
+		ctx context.Context,
+		characterID int,
+		shipTypeID int,
+		accessToken string,
+	) (*FittingData, error)
+}
+
 // FeeServicer defines the interface for trading fee calculations
 type FeeServicer interface {
 	// CalculateFees calculates all trading fees for a transaction
