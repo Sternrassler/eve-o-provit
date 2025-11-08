@@ -18,10 +18,10 @@ export default function Home() {
         </p>
         <div className="mt-8 flex flex-col gap-4 sm:flex-row">
           <Button asChild size="lg">
-            <Link href="/navigation">Navigation</Link>
+            <Link href="/trading">Start Trading</Link>
           </Button>
           <Button asChild size="lg" variant="outline">
-            <Link href="/cargo">Cargo Calculator</Link>
+            <Link href="/character">Character Skills</Link>
           </Button>
         </div>
       </section>
@@ -34,36 +34,36 @@ export default function Home() {
         <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle>Market Analysis</CardTitle>
-              <CardDescription>Echtzeit ESI Daten</CardDescription>
+              <CardTitle>Trading Routes</CardTitle>
+              <CardDescription>Profit Optimization</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Analysiere Marktpreise, Handelsvolumen und Preistrends für profitable Trades.
+                Finde profitable Handelsrouten mit optimaler Gewinnspanne und minimaler Reisezeit.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Navigation</CardTitle>
-              <CardDescription>Route Planning</CardDescription>
+              <CardTitle>Character Skills</CardTitle>
+              <CardDescription>Skill Integration</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Finde optimale Handelsrouten zwischen Systemen mit Trade-Hub Integration.
+                Nutze deine Trading-Skills für präzise Broker-Fee und Tax Berechnungen.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Industry Calculator</CardTitle>
-              <CardDescription>Blueprint Calculation</CardDescription>
+              <CardTitle>Multi-Hub Analysis</CardTitle>
+              <CardDescription>Coming in Phase 2</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Berechne Material-Kosten und Profit für Manufacturing-Projekte.
+                Vergleiche Margen über Jita, Dodixie, Amarr und weitere Trading Hubs hinweg.
               </p>
             </CardContent>
           </Card>

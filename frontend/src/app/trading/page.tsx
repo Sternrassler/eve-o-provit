@@ -24,7 +24,7 @@ const defaultFilters: TradingFiltersType = {
   allowNullSec: false,
 };
 
-export default function IntraRegionPage() {
+export default function TradingPage() {
   const { isAuthenticated, getAuthHeader } = useAuth();
   const [selectedRegion, setSelectedRegion] = useState<string>(DEFAULT_REGION);
   const [selectedShip, setSelectedShip] = useState<string>("648");
@@ -151,9 +151,9 @@ export default function IntraRegionPage() {
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold">Intra-Region Trading</h1>
-        <p className="mt-2 text-muted-foreground">
-          Optimiere deine Handelsrouten innerhalb einer Region
+        <h1 className="mb-2 text-3xl font-bold">Trading</h1>
+        <p className="text-muted-foreground">
+          Optimiere deine Handelsrouten für maximalen Profit
         </p>
       </div>
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -11,10 +12,12 @@ import { CharacterInfo } from "@/components/character-info";
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/navigation", label: "Navigation" },
-  { href: "/cargo", label: "Cargo" },
-  { href: "/market", label: "Market" },
-  { href: "/intra-region", label: "Intra-Region" },
+  { href: "/trading", label: "Trading" },
+  { href: "/character", label: "Character" },
+  { href: "/multi-hub", label: "Multi-Hub", badge: "Phase 2" },
+  { href: "/roi-calculator", label: "ROI Calculator", badge: "Phase 2" },
+  { href: "/trends", label: "Trends", badge: "Phase 3" },
+  { href: "/watchlist", label: "Watchlist", badge: "Phase 3" },
 ];
 
 export function Navigation() {
@@ -35,9 +38,14 @@ export function Navigation() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm font-medium transition-colors hover:text-primary"
+              className="text-sm font-medium transition-colors hover:text-primary inline-flex items-center gap-1.5"
             >
               {item.label}
+              {item.badge && (
+                <Badge variant="outline" className="text-xs">
+                  {item.badge}
+                </Badge>
+              )}
             </Link>
           ))}
           
@@ -65,9 +73,14 @@ export function Navigation() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsOpen(false)}
-                    className="text-lg font-medium transition-colors hover:text-primary"
+                    className="text-lg font-medium transition-colors hover:text-primary inline-flex items-center gap-2"
                   >
                     {item.label}
+                    {item.badge && (
+                      <Badge variant="outline" className="text-xs">
+                        {item.badge}
+                      </Badge>
+                    )}
                   </Link>
                 ))}
               </nav>
