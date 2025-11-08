@@ -81,11 +81,6 @@ func (p *RouteWorkerPool) ProcessItemsWithCapacityInfo(ctx context.Context, item
 	return routes, nil
 }
 
-// worker processes items from the queue (backward compatibility)
-func (p *RouteWorkerPool) worker(ctx context.Context, itemQueue <-chan models.ItemPair, results chan<- models.TradingRoute, errors chan<- error, cargoCapacity float64) {
-	p.workerWithCapacityInfo(ctx, itemQueue, results, errors, cargoCapacity, cargoCapacity, 0)
-}
-
 // workerWithCapacityInfo processes items with detailed capacity tracking
 func (p *RouteWorkerPool) workerWithCapacityInfo(ctx context.Context, itemQueue <-chan models.ItemPair, results chan<- models.TradingRoute, _ chan<- error, effectiveCapacity, baseCapacity, skillBonusPercent float64) {
 	for item := range itemQueue {
