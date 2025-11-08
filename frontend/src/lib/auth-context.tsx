@@ -96,10 +96,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       TokenStorage.saveCharacterInfo(charInfo);
     } catch (error) {
       console.error("[AuthContext] Session verification failed:", error);
+      
+      // Don't clear tokens on verification errors - might be temporary network issue
+      // Only clear UI state
       setIsAuthenticated(false);
       setCharacter(null);
       setAccessToken(null);
-      TokenStorage.clear();
+      
+      // Only clear tokens if it's an auth error (401/403), not network errors
+      if (error instanceof Error && error.message.includes("401")) {
+        console.log("[AuthContext] Token invalid (401), clearing storage");
+        TokenStorage.clear();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -109,23 +117,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     checkSession();
     
-    // Listen for storage changes (e.g., after login in callback)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "eve_access_token" || e.key === "eve_character_info") {
-        checkSession();
-      }
-    };
-    
     // Listen for custom event from callback page
     const handleLoginSuccess = () => {
-      checkSession();
+      console.log("[AuthContext] Login success event received, checking session...");
+      // Small delay to ensure localStorage is fully written
+      setTimeout(() => {
+        checkSession();
+      }, 100);
     };
     
-    window.addEventListener("storage", handleStorageChange);
     window.addEventListener("eve-login-success", handleLoginSuccess);
     
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("eve-login-success", handleLoginSuccess);
     };
   }, [checkSession]);
