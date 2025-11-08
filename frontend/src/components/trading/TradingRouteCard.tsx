@@ -410,9 +410,9 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
           </div>
           
           {/* Show skills improvement if available */}
-          {route.time_improvement_percent && route.time_improvement_percent > 0 && (
+          {route.time_improvement_percent != null && route.time_improvement_percent > 0 && (
             <div className="flex items-center gap-2 text-xs">
-              {route.base_travel_time_seconds && (
+              {route.base_travel_time_seconds && route.base_travel_time_seconds > 0 && (
                 <span className="text-muted-foreground line-through">
                   {formatTime(route.base_travel_time_seconds)}
                 </span>
