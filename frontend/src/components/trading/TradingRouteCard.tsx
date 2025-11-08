@@ -425,7 +425,7 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
         </div>
 
         {/* ISK/h Improvement Badge */}
-        {route.time_improvement_percent && route.time_improvement_percent > 5 && (
+        {route.time_improvement_percent != null && route.time_improvement_percent > 5 && (
           <div className="border-t pt-3 flex items-center justify-between text-sm">
             <span className="text-muted-foreground">ISK/h Boost</span>
             <span className="inline-flex items-center gap-1 rounded-md bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-600 dark:text-green-400">
