@@ -111,6 +111,10 @@ export default function IntraRegionPage() {
       const travelTimeMinutes = route.travel_time_seconds / 60;
       const totalProfit = route.total_profit ?? route.profit ?? 0;
       
+      // Filter out routes with negative net profit (loss)
+      const netProfit = route.net_profit ?? totalProfit;
+      if (netProfit < 0) return false;
+      
       // Check basic filters
       if (route.spread_percent < filters.minSpread) return false;
       if (totalProfit < filters.minProfit) return false;

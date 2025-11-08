@@ -209,7 +209,12 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1 text-lg font-bold text-primary">
+          <div className={cn(
+            "flex items-center gap-1 text-lg font-bold",
+            (route.net_profit ?? route.total_profit ?? 0) < 0 
+              ? "text-red-600 dark:text-red-400" 
+              : "text-primary"
+          )}>
             <TrendingUp className="size-5" />
             {formatISK(route.isk_per_hour)}/h
           </div>
