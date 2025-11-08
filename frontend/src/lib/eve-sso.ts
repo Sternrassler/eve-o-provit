@@ -224,8 +224,18 @@ export const TokenStorage = {
 
   isExpired(): boolean {
     const expiresAt = localStorage.getItem("eve_token_expires_at");
-    if (!expiresAt) return true;
-    return Date.now() >= parseInt(expiresAt, 10);
+    console.log("[TokenStorage] Checking expiry, expires_at:", expiresAt);
+    if (!expiresAt) {
+      console.log("[TokenStorage] No expiry timestamp found, considering expired");
+      return true;
+    }
+    const now = Date.now();
+    const expiryTime = parseInt(expiresAt, 10);
+    const isExpired = now >= expiryTime;
+    console.log("[TokenStorage] Now:", new Date(now).toISOString());
+    console.log("[TokenStorage] Expires:", new Date(expiryTime).toISOString());
+    console.log("[TokenStorage] Is expired:", isExpired);
+    return isExpired;
   },
 
   getTimeUntilExpiry(): number {
