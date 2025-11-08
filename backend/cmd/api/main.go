@@ -81,8 +81,11 @@ func main() {
 	// Skills Service (Phase 0 - Issue #54)
 	skillsService := services.NewSkillsService(esiClient.GetRawClient(), redisClient, appLogger)
 
-	// Cargo Service (Phase 0 - Issue #56 - Cargo Skills Integration)
-	cargoService := services.NewCargoService(skillsService)
+	// Fitting Service (Phase 3 - Issue #76 - Ship Fitting Integration)
+	fittingService := services.NewFittingService(esiClient.GetRawClient(), db.SDE, redisClient, appLogger)
+
+	// Cargo Service (Phase 0 - Issue #56 - Cargo Skills Integration + Phase 3 Fitting)
+	cargoService := services.NewCargoService(skillsService, fittingService)
 
 	// Fee Service (Phase 0 - Issue #55)
 	feeService := services.NewFeeService(skillsService, appLogger)
@@ -103,10 +106,15 @@ func main() {
 	// System Service (Phase 0 - Issue #57 - Remove Raw DB Access)
 	systemService := services.NewSystemService(sdeRepo)
 
+	// Navigation Service (Phase 3 - Issue #76 - Ship Fitting Integration)
+	// TODO: Use in route calculation (Phase 4)
+	_ = services.NewNavigationService(sdeRepo, fittingService)
+
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
 	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper)
 	characterHandler := handlers.NewCharacterHandler(skillsService)
+	fittingHandler := handlers.NewFittingHandler(fittingService)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -149,12 +157,12 @@ func main() {
 	protected.Get("/character", handleCharacterInfo)
 
 	// Character context endpoints
-	protected.Get("/character/location", tradingHandler.GetCharacterLocation)
-	protected.Get("/character/ship", tradingHandler.GetCharacterShip)
-	protected.Get("/character/ships", tradingHandler.GetCharacterShips)
-
+	// Character skills endpoint (Issue #54)
 	// Character skills endpoint (Issue #54)
 	protected.Get("/characters/:characterId/skills", characterHandler.GetCharacterSkills)
+
+	// Character fitting endpoint (Issue #76 - Phase 3)
+	protected.Get("/characters/:characterId/fitting/:shipTypeId", fittingHandler.GetCharacterFitting)
 
 	// ESI UI endpoints (require esi-ui.write_waypoint.v1 scope)
 	esiUI := protected.Group("/esi/ui")
