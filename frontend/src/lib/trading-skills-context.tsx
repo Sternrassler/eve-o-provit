@@ -54,7 +54,7 @@ export function TradingSkillsProvider({ children }: { children: React.ReactNode 
       console.log("[TradingSkillsContext] Fetching skills for character:", character.character_id);
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/v1/characters/${character.character_id}/skills`,
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001"}/api/v1/characters/${character.character_id}/skills`,
         {
           headers: {
             "Authorization": `Bearer ${accessToken}`,
