@@ -123,6 +123,7 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	var baseCapacity float64
 	var effectiveCapacity float64
 	var skillBonusPercent float64
+	var fittingBonusM3 float64
 
 	// Get ship info if cargo capacity not provided
 	if cargoCapacity == 0 {
@@ -133,8 +134,8 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 		baseCapacity = shipCap.BaseCargoHold
 		effectiveCapacity = baseCapacity // Default: no skills
 
-		// Apply character skills if available in context
-		effectiveCapacity, skillBonusPercent = rs.applyCharacterSkills(calcCtx, baseCapacity)
+		// Apply character skills and fitting if available in context
+		effectiveCapacity, skillBonusPercent, fittingBonusM3 = rs.applyCharacterSkills(calcCtx, baseCapacity, shipTypeID)
 
 		cargoCapacity = effectiveCapacity
 	} else {
@@ -142,6 +143,7 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 		baseCapacity = cargoCapacity
 		effectiveCapacity = cargoCapacity
 		skillBonusPercent = 0
+		fittingBonusM3 = 0
 	}
 
 	// Get ship name
@@ -174,7 +176,7 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	routeCtx, routeCancel := context.WithTimeout(calcCtx, rs.config.RouteCalculationTimeout)
 	defer routeCancel()
 
-	routes, err := rs.workerPool.ProcessItemsWithCapacityInfo(routeCtx, profitableItems, effectiveCapacity, baseCapacity, skillBonusPercent)
+	routes, err := rs.workerPool.ProcessItemsWithCapacityInfo(routeCtx, profitableItems, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		return nil, fmt.Errorf("failed to calculate routes: %w", err)
 	}
@@ -313,11 +315,12 @@ func (rs *RouteService) getRegionName(ctx context.Context, regionID int) (string
 }
 
 // applyCharacterSkills extracts character context and applies skills to cargo capacity
-// Returns (effectiveCapacity, skillBonusPercent)
+// Returns (effectiveCapacity, skillBonusPercent, fittingBonusM3)
 // Falls back to base capacity if skills unavailable
-func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity float64) (float64, float64) {
+func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity float64, shipTypeID int) (float64, float64, float64) {
 	effectiveCapacity := baseCapacity
 	skillBonusPercent := 0.0
+	fittingBonusM3 := 0.0
 
 	// Extract character_id if available in context metadata
 	characterID := ctx.Value(contextKeyCharacterID)
@@ -328,14 +331,28 @@ func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity f
 		token, ok2 := accessToken.(string)
 
 		if ok1 && ok2 && charID > 0 && token != "" {
-			// Fetch skills and apply to capacity
-			if skills, err := rs.skillsService.GetCharacterSkills(ctx, charID, token); err == nil {
-				effectiveCapacity, skillBonusPercent = rs.cargoService.CalculateCargoCapacity(baseCapacity, skills)
-				log.Printf("Applied cargo skills: base=%.2f, effective=%.2f, bonus=%.2f%%",
-					baseCapacity, effectiveCapacity, skillBonusPercent)
+			// Fetch effective cargo capacity (skills + fitting)
+			if totalCapacity, err := rs.cargoService.GetEffectiveCargoCapacity(ctx, charID, shipTypeID, baseCapacity, token); err == nil {
+				// Calculate skill bonus (percentage)
+				if skills, err := rs.skillsService.GetCharacterSkills(ctx, charID, token); err == nil {
+					capacityWithSkills, skillBonus := rs.cargoService.CalculateCargoCapacity(baseCapacity, skills)
+					skillBonusPercent = skillBonus
+					
+					// Fitting bonus is the difference between total and skills-only capacity
+					fittingBonusM3 = totalCapacity - capacityWithSkills
+					effectiveCapacity = totalCapacity
+					
+					log.Printf("Applied cargo bonuses: base=%.2f, skills_bonus=%.2f%%, fitting_bonus=%.2f m³, total=%.2f",
+						baseCapacity, skillBonusPercent, fittingBonusM3, effectiveCapacity)
+				} else {
+					// Fallback: no skill breakdown, use total capacity
+					effectiveCapacity = totalCapacity
+					log.Printf("Applied total cargo capacity: base=%.2f, total=%.2f (skills unavailable)",
+						baseCapacity, effectiveCapacity)
+				}
 			}
 		}
 	}
 
-	return effectiveCapacity, skillBonusPercent
+	return effectiveCapacity, skillBonusPercent, fittingBonusM3
 }

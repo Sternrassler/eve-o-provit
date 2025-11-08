@@ -26,11 +26,11 @@ func NewRouteWorkerPool(routeOptimizer *RouteCalculator) *RouteWorkerPool {
 // ProcessItems calculates routes for all items in parallel
 // Accepts effective capacity (with skills), base capacity, and skill bonus percentage
 func (p *RouteWorkerPool) ProcessItems(ctx context.Context, items []models.ItemPair, effectiveCapacity float64) ([]models.TradingRoute, error) {
-	return p.ProcessItemsWithCapacityInfo(ctx, items, effectiveCapacity, effectiveCapacity, 0)
+	return p.ProcessItemsWithCapacityInfo(ctx, items, effectiveCapacity, effectiveCapacity, 0, 0)
 }
 
 // ProcessItemsWithCapacityInfo calculates routes with detailed capacity information
-func (p *RouteWorkerPool) ProcessItemsWithCapacityInfo(ctx context.Context, items []models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent float64) ([]models.TradingRoute, error) {
+func (p *RouteWorkerPool) ProcessItemsWithCapacityInfo(ctx context.Context, items []models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3 float64) ([]models.TradingRoute, error) {
 	if len(items) == 0 {
 		return []models.TradingRoute{}, nil
 	}
@@ -52,7 +52,7 @@ func (p *RouteWorkerPool) ProcessItemsWithCapacityInfo(ctx context.Context, item
 		wg.Add(1)
 		go func(workerID int) {
 			defer wg.Done()
-			p.workerWithCapacityInfo(ctx, itemQueue, results, errors, effectiveCapacity, baseCapacity, skillBonusPercent)
+			p.workerWithCapacityInfo(ctx, itemQueue, results, errors, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3)
 		}(i)
 	}
 
@@ -82,7 +82,7 @@ func (p *RouteWorkerPool) ProcessItemsWithCapacityInfo(ctx context.Context, item
 }
 
 // workerWithCapacityInfo processes items with detailed capacity tracking
-func (p *RouteWorkerPool) workerWithCapacityInfo(ctx context.Context, itemQueue <-chan models.ItemPair, results chan<- models.TradingRoute, _ chan<- error, effectiveCapacity, baseCapacity, skillBonusPercent float64) {
+func (p *RouteWorkerPool) workerWithCapacityInfo(ctx context.Context, itemQueue <-chan models.ItemPair, results chan<- models.TradingRoute, _ chan<- error, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3 float64) {
 	for item := range itemQueue {
 		// Check for context cancellation
 		select {
@@ -91,7 +91,7 @@ func (p *RouteWorkerPool) workerWithCapacityInfo(ctx context.Context, itemQueue 
 		default:
 		}
 
-		route, err := p.routeOptimizer.CalculateRouteWithCapacityInfo(ctx, item, effectiveCapacity, baseCapacity, skillBonusPercent)
+		route, err := p.routeOptimizer.CalculateRouteWithCapacityInfo(ctx, item, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3)
 		if err != nil {
 			// Log but don't fail the entire operation
 			log.Printf("Warning: skipped route for item %d (%s): %v", item.TypeID, item.ItemName, err)

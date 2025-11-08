@@ -76,9 +76,9 @@ func (h *FittingHandler) GetCharacterFitting(c *fiber.Ctx) error {
 		"ship_type_id":   shipTypeID,
 		"fitted_modules": fitting.FittedModules,
 		"bonuses": fiber.Map{
-			"cargo_bonus_m3":         fitting.Bonuses.CargoBonus,
-			"warp_speed_multiplier":  fitting.Bonuses.WarpSpeedMultiplier,
-			"inertia_modifier":       fitting.Bonuses.InertiaModifier,
+			"cargo_bonus_m3":        fitting.Bonuses.CargoBonus,
+			"warp_speed_multiplier": fitting.Bonuses.WarpSpeedMultiplier,
+			"inertia_modifier":      fitting.Bonuses.InertiaModifier,
 		},
 		"cached": fitting.Cached,
 	})

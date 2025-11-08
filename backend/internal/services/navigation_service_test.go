@@ -11,16 +11,16 @@ func TestGetEffectiveWarpSpeed_NoFitting(t *testing.T) {
 	mockFitting := &mockFittingService{
 		err: errors.New("no fitting data"),
 	}
-	
+
 	service := NewNavigationService(nil, mockFitting)
-	
+
 	ctx := context.Background()
 	warpSpeed, err := service.GetEffectiveWarpSpeed(ctx, 12345, 20183, 3.0, "token")
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Base 3.0 AU/s (no fitting bonuses)
 	expected := 3.0
 	if warpSpeed != expected {
@@ -37,16 +37,16 @@ func TestGetEffectiveWarpSpeed_WithFitting(t *testing.T) {
 			},
 		},
 	}
-	
+
 	service := NewNavigationService(nil, mockFitting)
-	
+
 	ctx := context.Background()
 	warpSpeed, err := service.GetEffectiveWarpSpeed(ctx, 12345, 20183, 3.0, "token")
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Base 3.0 × 1.488 = 4.464 AU/s
 	expected := 4.464
 	if warpSpeed != expected {
@@ -57,14 +57,14 @@ func TestGetEffectiveWarpSpeed_WithFitting(t *testing.T) {
 // TestGetEffectiveWarpSpeed_NilFittingService tests graceful degradation
 func TestGetEffectiveWarpSpeed_NilFittingService(t *testing.T) {
 	service := NewNavigationService(nil, nil)
-	
+
 	ctx := context.Background()
 	warpSpeed, err := service.GetEffectiveWarpSpeed(ctx, 12345, 20183, 4.5, "token")
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Base 4.5 AU/s (no fitting service)
 	expected := 4.5
 	if warpSpeed != expected {
@@ -77,16 +77,16 @@ func TestGetEffectiveInertia_NoFitting(t *testing.T) {
 	mockFitting := &mockFittingService{
 		err: errors.New("no fitting data"),
 	}
-	
+
 	service := NewNavigationService(nil, mockFitting)
-	
+
 	ctx := context.Background()
 	inertia, err := service.GetEffectiveInertia(ctx, 12345, 20183, 0.5, "token")
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Base 0.5 (no fitting bonuses)
 	expected := 0.5
 	if inertia != expected {
@@ -103,16 +103,16 @@ func TestGetEffectiveInertia_WithFitting(t *testing.T) {
 			},
 		},
 	}
-	
+
 	service := NewNavigationService(nil, mockFitting)
-	
+
 	ctx := context.Background()
 	inertia, err := service.GetEffectiveInertia(ctx, 12345, 20183, 0.5, "token")
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Base 0.5 × 0.7566 = 0.3783 (better agility)
 	expected := 0.3783
 	if inertia != expected {
@@ -123,14 +123,14 @@ func TestGetEffectiveInertia_WithFitting(t *testing.T) {
 // TestGetEffectiveInertia_NilFittingService tests graceful degradation
 func TestGetEffectiveInertia_NilFittingService(t *testing.T) {
 	service := NewNavigationService(nil, nil)
-	
+
 	ctx := context.Background()
 	inertia, err := service.GetEffectiveInertia(ctx, 12345, 20183, 1.2, "token")
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Base 1.2 (no fitting service)
 	expected := 1.2
 	if inertia != expected {
@@ -148,16 +148,16 @@ func TestGetEffectiveInertia_OverdriveInjectorPenalty(t *testing.T) {
 			},
 		},
 	}
-	
+
 	service := NewNavigationService(nil, mockFitting)
-	
+
 	ctx := context.Background()
 	inertia, err := service.GetEffectiveInertia(ctx, 12345, 20183, 0.8, "token")
-	
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	
+
 	// Base 0.8 × 1.10 = 0.88 (worse agility due to cargo expansion)
 	expected := 0.88
 	delta := 0.001 // Allow small floating point error

@@ -45,23 +45,23 @@ func (s *NavigationService) GetEffectiveWarpSpeed(
 	// TODO: Add skill bonuses when SkillsService supports navigation skills
 	// For now: base warp speed only (no skill bonuses)
 	warpSpeedWithSkills := baseWarpSpeed
-	
+
 	// Get fitting bonuses (nil check for optional dependency)
 	if s.fittingService == nil {
 		// No fitting service available, return base warp speed
 		return warpSpeedWithSkills, nil
 	}
-	
+
 	fitting, err := s.fittingService.GetCharacterFitting(ctx, characterID, shipTypeID, accessToken)
 	if err != nil {
 		// Fitting data unavailable (not an error - ship might not be fitted)
 		// Return base warp speed only
 		return warpSpeedWithSkills, nil
 	}
-	
+
 	// Apply fitting multiplier (e.g., 1.20 = +20% warp speed)
 	effectiveWarpSpeed := warpSpeedWithSkills * fitting.Bonuses.WarpSpeedMultiplier
-	
+
 	return effectiveWarpSpeed, nil
 }
 
@@ -80,22 +80,22 @@ func (s *NavigationService) GetEffectiveInertia(
 	// TODO: Add skill bonuses when SkillsService supports navigation skills
 	// For now: base inertia only (no skill bonuses)
 	inertiaWithSkills := baseInertia
-	
+
 	// Get fitting bonuses (nil check for optional dependency)
 	if s.fittingService == nil {
 		// No fitting service available, return base inertia
 		return inertiaWithSkills, nil
 	}
-	
+
 	fitting, err := s.fittingService.GetCharacterFitting(ctx, characterID, shipTypeID, accessToken)
 	if err != nil {
 		// Fitting data unavailable (not an error - ship might not be fitted)
 		// Return base inertia only
 		return inertiaWithSkills, nil
 	}
-	
+
 	// Apply fitting modifier (e.g., 0.87 = -13% inertia = better agility)
 	effectiveInertia := inertiaWithSkills * fitting.Bonuses.InertiaModifier
-	
+
 	return effectiveInertia, nil
 }

@@ -88,6 +88,16 @@ type CargoServicer interface {
 	// Returns (effectiveCapacity, totalBonusPercent)
 	CalculateCargoCapacity(baseCapacity float64, skills *TradingSkills) (float64, float64)
 
+	// GetEffectiveCargoCapacity calculates total effective cargo capacity including skills AND fitting
+	// Returns final effective capacity (base × skills + fitting)
+	GetEffectiveCargoCapacity(
+		ctx context.Context,
+		characterID int,
+		shipTypeID int,
+		baseCapacity float64,
+		accessToken string,
+	) (float64, error)
+
 	// KnapsackDP solves the knapsack problem using dynamic programming
 	// Optimizes for maximum value while respecting capacity constraint
 	KnapsackDP(items []CargoItem, capacity float64) *CargoSolution

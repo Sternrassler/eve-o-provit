@@ -32,11 +32,11 @@ func NewRouteCalculator(sdeRepo *database.SDERepository, sdeDB *sql.DB, feeServi
 // cargoCapacity is the effective capacity (with skills already applied)
 // baseCapacity and skillBonus are optional - if 0, they'll match cargoCapacity
 func (ro *RouteCalculator) CalculateRoute(ctx context.Context, item models.ItemPair, cargoCapacity float64) (models.TradingRoute, error) {
-	return ro.CalculateRouteWithCapacityInfo(ctx, item, cargoCapacity, cargoCapacity, 0)
+	return ro.CalculateRouteWithCapacityInfo(ctx, item, cargoCapacity, cargoCapacity, 0, 0)
 }
 
 // CalculateRouteWithCapacityInfo calculates a route with detailed capacity information
-func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, item models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent float64) (models.TradingRoute, error) {
+func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, item models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3 float64) (models.TradingRoute, error) {
 	var route models.TradingRoute
 
 	// Use effective capacity for calculations
@@ -309,6 +309,7 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 		CargoUtilization:  cargoUtilization,
 		BaseCargoCapacity: baseCapacity,
 		SkillBonusPercent: skillBonusPercent,
+		FittingBonusM3:    fittingBonusM3,
 	}
 
 	return route, nil

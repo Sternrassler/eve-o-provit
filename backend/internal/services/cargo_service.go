@@ -30,8 +30,8 @@ type CargoSolution struct {
 
 // CargoService provides cargo optimization with skill-aware capacity calculation
 type CargoService struct {
-	skillsService   SkillsServicer
-	fittingService  FittingServicer
+	skillsService  SkillsServicer
+	fittingService FittingServicer
 }
 
 // NewCargoService creates a new cargo optimization service
@@ -93,25 +93,25 @@ func (s *CargoService) GetEffectiveCargoCapacity(
 		// Fallback to no skills (worst case)
 		skills = &TradingSkills{}
 	}
-	
+
 	capacityWithSkills, _ := s.CalculateCargoCapacity(baseCapacity, skills)
-	
+
 	// Get fitting bonuses (nil check for optional dependency)
 	if s.fittingService == nil {
 		// No fitting service available, return skill-only capacity
 		return capacityWithSkills, nil
 	}
-	
+
 	fitting, err := s.fittingService.GetCharacterFitting(ctx, characterID, shipTypeID, accessToken)
 	if err != nil {
 		// Fitting data unavailable (not an error - ship might not be fitted)
 		// Return skill-modified capacity only
 		return capacityWithSkills, nil
 	}
-	
+
 	// Apply fitting bonus (additive m³)
 	totalCapacity := capacityWithSkills + fitting.Bonuses.CargoBonus
-	
+
 	return totalCapacity, nil
 }
 

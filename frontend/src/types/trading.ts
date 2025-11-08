@@ -45,10 +45,11 @@ export interface TradingRoute {
   time_improvement_percent?: number; // Percentage improvement from skills
   // Cargo fields
   cargo_used?: number; // m³ actually used
-  cargo_capacity?: number; // Total effective capacity (with skills)
+  cargo_capacity?: number; // Total effective capacity (with skills + fitting)
   cargo_utilization?: number; // Percentage 0-100
   base_cargo_capacity?: number; // Base capacity without skills
   skill_bonus_percent?: number; // Total skill bonus %
+  fitting_bonus_m3?: number; // Fitting modules bonus (absolute m³)
   // Fee fields
   gross_profit?: number; // Revenue - Investment (before fees)
   gross_margin_percent?: number; // (gross_profit / total_investment) * 100
