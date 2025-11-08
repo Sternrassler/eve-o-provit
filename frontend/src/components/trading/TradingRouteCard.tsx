@@ -275,6 +275,11 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
         {/* Quantity */}
         <div className="text-sm text-muted-foreground">
           Menge: {route.quantity.toLocaleString("de-DE")}
+          {route.item_volume && (
+            <span className="text-xs ml-1">
+              ({route.item_volume} m³/Einheit, {(route.quantity * route.item_volume).toFixed(0)} m³ gesamt)
+            </span>
+          )}
           {isMultiTour && route.number_of_tours && (
             <span className="block sm:inline">
               {" "}(≈{Math.ceil(route.quantity / route.number_of_tours).toLocaleString("de-DE")} pro Tour)
@@ -407,6 +412,11 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
             {isMultiTour && route.total_time_minutes
               ? `${Math.round(route.total_time_minutes)} min (${route.number_of_tours} Touren)`
               : formatTime(route.round_trip_seconds)}
+            {route.jumps !== undefined && (
+              <span className="text-xs text-muted-foreground ml-1">
+                ({route.jumps} {route.jumps === 1 ? 'Jump' : 'Jumps'})
+              </span>
+            )}
           </div>
           
           {/* Show skills improvement if available */}
