@@ -58,7 +58,8 @@ func TestCalculateBonuses_EmptyModules(t *testing.T) {
 	assert.Equal(t, 1.0, bonuses.InertiaModifier, "Empty modules should have 1.0 inertia modifier")
 }
 
-// TestCalculateBonuses_CargoModules tests cargo bonus calculation with stacking penalties
+// TestCalculateBonuses_CargoModules tests cargo bonus calculation WITHOUT stacking penalties
+// Cargo capacity is an ABSOLUTE bonus (+m³), not percentage, so NOT stacking-penalized
 func TestCalculateBonuses_CargoModules(t *testing.T) {
 	service := &FittingService{}
 
@@ -69,7 +70,7 @@ func TestCalculateBonuses_CargoModules(t *testing.T) {
 			TypeName: "Expanded Cargohold II",
 			Slot:     "LoSlot0",
 			DogmaAttribs: map[int]float64{
-				38: 2500.0, // Cargo capacity bonus
+				38: 2500.0, // Cargo capacity bonus (ABSOLUTE)
 			},
 		},
 		{
@@ -84,15 +85,9 @@ func TestCalculateBonuses_CargoModules(t *testing.T) {
 
 	bonuses := service.calculateBonuses(modules)
 
-	// With stacking penalties:
-	// 1st: 2,500 × S(0) = 2,500.0
-	// 2nd: 2,500 × S(1) = 2,500 × e^(-(1/2.67)^2) ≈ 2,500 × 0.8694 ≈ 2,173.5
-	// Total: ≈ 4,673.5 m³ (not 5,000!)
-	penalty2nd := math.Exp(-math.Pow(1.0/2.67, 2))
-	expected := 2500.0 + 2500.0*penalty2nd
-
-	assert.InDelta(t, expected, bonuses.CargoBonus, 1.0, "Cargo bonus with stacking penalties")
-	assert.InDelta(t, 4673.5, bonuses.CargoBonus, 1.0, "2x Cargo ≈ 4,673 m³ (not 5,000!)")
+	// Cargo bonuses are absolute (+m³) and NOT stacking-penalized
+	// 2,500 + 2,500 = 5,000 m³ (simple addition)
+	assert.Equal(t, 5000.0, bonuses.CargoBonus, "Cargo bonus should be simple addition (no stacking)")
 	assert.Equal(t, 1.0, bonuses.WarpSpeedMultiplier, "No warp modules")
 	assert.Equal(t, 1.0, bonuses.InertiaModifier, "No inertia modules")
 }
@@ -232,8 +227,8 @@ func TestCalculateBonuses_MixedModules(t *testing.T) {
 
 	bonuses := service.calculateBonuses(modules)
 
-	// Cargo: 2,500 × S(0) + 2,500 × S(1) = 2,500 + 2,173.5 ≈ 4,673.5
-	assert.InDelta(t, 4673.5, bonuses.CargoBonus, 1.0, "Cargo with stacking penalties")
+	// Cargo: 2,500 + 2,500 = 5,000 (no stacking penalty - absolute bonus)
+	assert.Equal(t, 5000.0, bonuses.CargoBonus, "Cargo simple addition")
 	// Warp: 1 + (0.20×S(0) + 0.20×S(1) + 0.20×S(2)) ≈ 1.4879
 	assert.InDelta(t, 1.4879, bonuses.WarpSpeedMultiplier, 0.001, "Warp with stacking penalties")
 	assert.Equal(t, 1.0, bonuses.InertiaModifier, "No inertia modules")
@@ -401,7 +396,8 @@ func TestApplyStackingPenalty_RealWorldExample(t *testing.T) {
 	assert.NotEqual(t, wrongResult, result, "Stacking penalties must apply!")
 }
 
-// TestCalculateBonuses_CargoStacking tests cargo modules with stacking penalties
+// TestCalculateBonuses_CargoStacking tests cargo modules WITHOUT stacking penalties
+// Cargo capacity is ABSOLUTE (+m³), so NOT stacking-penalized per EVE University Wiki
 func TestCalculateBonuses_CargoStacking(t *testing.T) {
 	service := &FittingService{}
 
@@ -414,17 +410,9 @@ func TestCalculateBonuses_CargoStacking(t *testing.T) {
 
 	bonuses := service.calculateBonuses(modules)
 
-	// With stacking penalties:
-	// 1st: 2,500 × S(0) = 2,500.0
-	// 2nd: 2,500 × S(1) ≈ 2,173.5
-	// 3rd: 2,500 × S(2) ≈ 1,426.75
-	// Total: ≈ 6,100.25 (not 7,500!)
-	penalty2 := math.Exp(-math.Pow(1.0/2.67, 2))
-	penalty3 := math.Exp(-math.Pow(2.0/2.67, 2))
-	expected := 2500.0 + 2500.0*penalty2 + 2500.0*penalty3
-	
-	assert.InDelta(t, expected, bonuses.CargoBonus, 1.0, "Cargo with stacking penalties")
-	assert.InDelta(t, 6100.25, bonuses.CargoBonus, 10.0, "3x Cargo ≈ 6,100 m³ (not 7,500!)")
+	// Cargo capacity is absolute (+m³) - NO stacking penalties!
+	// 2,500 + 2,500 + 2,500 = 7,500 m³
+	assert.Equal(t, 7500.0, bonuses.CargoBonus, "Cargo simple addition (no stacking)")
 }
 
 // TestGetCharacterFitting_Integration would be an integration test

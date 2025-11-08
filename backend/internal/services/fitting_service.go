@@ -273,6 +273,10 @@ func (s *FittingService) fetchDogmaAttributes(ctx context.Context, typeID int) (
 // calculateBonuses aggregates bonuses from all fitted modules
 // Applies EVE Online stacking penalties: S(u) = e^(-(u/2.67)^2)
 // where u is 0-based position after sorting by bonus strength (descending)
+//
+// NOTE: Cargo capacity bonuses (Attribute 38) are ABSOLUTE values (+m³)
+// and are NOT stacking-penalized per EVE University Wiki.
+// Only PERCENTAGE bonuses (warp, inertia) are stacking-penalized.
 func (s *FittingService) calculateBonuses(modules []FittedModule) FittingBonuses {
 	// Group modules by attribute ID
 	cargoMods := []float64{}
@@ -280,23 +284,30 @@ func (s *FittingService) calculateBonuses(modules []FittedModule) FittingBonuses
 	inertiaMods := []float64{}
 
 	for _, mod := range modules {
-		// Cargo bonus (Attribute 38)
+		// Cargo bonus (Attribute 38) - ABSOLUTE bonus in m³
 		if cargoBonus, ok := mod.DogmaAttribs[38]; ok {
 			cargoMods = append(cargoMods, cargoBonus)
 		}
-		// Warp speed multiplier (Attribute 20)
+		// Warp speed multiplier (Attribute 20) - PERCENTAGE bonus
 		if warpBonus, ok := mod.DogmaAttribs[20]; ok {
 			warpMods = append(warpMods, warpBonus)
 		}
-		// Inertia modifier (Attribute 70)
+		// Inertia modifier (Attribute 70) - PERCENTAGE bonus
 		if inertiaBonus, ok := mod.DogmaAttribs[70]; ok {
 			inertiaMods = append(inertiaMods, inertiaBonus)
 		}
 	}
 
+	// Cargo: Absolute bonuses are NOT stacking-penalized (EVE Wiki)
+	// Simply sum all cargo bonuses
+	cargoTotal := 0.0
+	for _, bonus := range cargoMods {
+		cargoTotal += bonus
+	}
+
 	// Apply stacking penalties and aggregate
 	bonuses := FittingBonuses{
-		CargoBonus:          applyStackingPenalty(cargoMods),
+		CargoBonus:          cargoTotal, // NO stacking penalty (absolute bonus)
 		WarpSpeedMultiplier: 1 + applyStackingPenalty(warpMods),
 		InertiaModifier:     1 + applyStackingPenalty(inertiaMods),
 	}
