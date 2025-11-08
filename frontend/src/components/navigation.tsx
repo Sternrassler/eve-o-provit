@@ -15,7 +15,6 @@ const navItems = [
   { href: "/cargo", label: "Cargo" },
   { href: "/market", label: "Market" },
   { href: "/intra-region", label: "Intra-Region" },
-  { href: "/inventory-sell", label: "Inventory Sell" },
 ];
 
 export function Navigation() {
