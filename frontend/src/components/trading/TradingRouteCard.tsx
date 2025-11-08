@@ -309,9 +309,9 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
                 <div className="font-medium">{formatISKWithSeparators(route.gross_profit)}</div>
               </div>
               <div>
-                <div className="text-sm text-muted-foreground">Brutto-Marge</div>
-                <div className={cn("font-medium", getSpreadColor(route.gross_margin_percent || 0))}>
-                  {(route.gross_margin_percent || 0).toFixed(1)}%
+                <div className="text-sm text-muted-foreground">Spread</div>
+                <div className={cn("font-medium", getSpreadColor(route.spread_percent))}>
+                  {route.spread_percent.toFixed(1)}%
                 </div>
               </div>
             </div>
