@@ -7,13 +7,6 @@ import { ShipSelect } from "@/components/trading/ShipSelect";
 import { TradingRouteList } from "@/components/trading/TradingRouteList";
 import { TradingFilters } from "@/components/trading/TradingFilters";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { TradingFilters as TradingFiltersType, TradingRoute } from "@/types/trading";
 import { fetchCharacterLocation, fetchCharacterShip } from "@/lib/api-client";
 import { Loader2 } from "lucide-react";
@@ -39,9 +32,6 @@ export default function IntraRegionPage() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [hasCalculated, setHasCalculated] = useState(false);
   const [displayedRoutes, setDisplayedRoutes] = useState(10);
-  const [sortBy, setSortBy] = useState<
-    "isk_per_hour" | "profit" | "spread_percent" | "travel_time_seconds"
-  >("isk_per_hour");
   const [apiRoutes, setApiRoutes] = useState<TradingRoute[]>([]);
   const [apiError, setApiError] = useState<string | null>(null);
   const [characterDataLoading, setCharacterDataLoading] = useState(false);
@@ -117,7 +107,7 @@ export default function IntraRegionPage() {
   const filteredRoutes = useMemo(() => {
     if (!hasCalculated) return [];
 
-    const routes = apiRoutes.filter((route) => {
+    return apiRoutes.filter((route) => {
       const travelTimeMinutes = route.travel_time_seconds / 60;
       const totalProfit = route.total_profit ?? route.profit ?? 0;
       
@@ -142,26 +132,7 @@ export default function IntraRegionPage() {
 
       return true;
     });
-
-    routes.sort((a, b) => {
-      switch (sortBy) {
-        case "isk_per_hour":
-          return b.isk_per_hour - a.isk_per_hour;
-        case "profit":
-          const profitA = a.total_profit ?? a.profit ?? 0;
-          const profitB = b.total_profit ?? b.profit ?? 0;
-          return profitB - profitA;
-        case "spread_percent":
-          return b.spread_percent - a.spread_percent;
-        case "travel_time_seconds":
-          return a.travel_time_seconds - b.travel_time_seconds;
-        default:
-          return 0;
-      }
-    });
-
-    return routes;
-  }, [hasCalculated, apiRoutes, filters, sortBy]);
+  }, [hasCalculated, apiRoutes, filters]);
 
   const visibleRoutes = filteredRoutes.slice(0, displayedRoutes);
   const hasMoreRoutes = displayedRoutes < filteredRoutes.length && displayedRoutes < MAX_DISPLAYED_ROUTES;
@@ -213,24 +184,6 @@ export default function IntraRegionPage() {
 
           {/* Filters */}
           <TradingFilters filters={filters} onChange={setFilters} />
-
-          {/* Sort Options */}
-          {hasCalculated && filteredRoutes.length > 0 && (
-            <div className="space-y-2 rounded-lg border p-4">
-              <label className="text-sm font-medium">Sortieren nach</label>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="isk_per_hour">ISK/Hour</SelectItem>
-                  <SelectItem value="profit">Gewinn</SelectItem>
-                  <SelectItem value="spread_percent">Spread</SelectItem>
-                  <SelectItem value="travel_time_seconds">Reisezeit</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
 
         {/* Results Section */}
