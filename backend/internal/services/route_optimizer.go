@@ -133,35 +133,7 @@ func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, it
 	}
 	totalTimeMinutes := totalTimeSeconds / 60.0
 
-	// Calculate ISK per hour (both base and skilled)
-	var iskPerHour float64
-	var baseISKPerHour float64
-	if totalTimeSeconds > 0 {
-		// Calculate theoretical ISK/h (assuming infinite supply)
-		theoreticalISKPerHour := (totalProfit / totalTimeSeconds) * 3600
-		
-		// Calculate realistic ISK/h based on available quantity
-		// If the trip takes >1 hour, cap ISK/h to actual profit achievable
-		maxTripsPerHour := 3600.0 / totalTimeSeconds
-		
-		// If we can't complete even one full trip set per hour, use proportional profit
-		if maxTripsPerHour < 1.0 {
-			// Less than 1 full trip set per hour - use proportional profit
-			iskPerHour = totalProfit * maxTripsPerHour
-		} else {
-			// Can do multiple trip sets - use theoretical ISK/h
-			iskPerHour = theoreticalISKPerHour
-		}
-	}
-	if baseTotalTimeSeconds > 0 {
-		baseISKPerHour = (totalProfit / baseTotalTimeSeconds) * 3600
-	}
-
-	// Calculate improvement percentage
-	var timeImprovement float64
-	if baseTotalTimeSeconds > 0 && baseTotalTimeSeconds != totalTimeSeconds {
-		timeImprovement = ((baseTotalTimeSeconds - totalTimeSeconds) / baseTotalTimeSeconds) * 100
-	}
+	// ISK/h calculation moved after fee calculation to use net profit
 
 	// Get system and station names
 	buySystemName, buyStationName := ro.getLocationNames(ctx, item.BuySystemID, item.BuyStationID)
@@ -215,6 +187,37 @@ func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, it
 
 	// Calculate gross profit (this is totalProfit before fees)
 	grossProfit := totalProfit
+
+	// Calculate ISK per hour using NET profit (after fees)
+	var iskPerHour float64
+	var baseISKPerHour float64
+	if totalTimeSeconds > 0 {
+		// Calculate theoretical ISK/h (assuming infinite supply)
+		theoreticalISKPerHour := (netProfit / totalTimeSeconds) * 3600
+		
+		// Calculate realistic ISK/h based on available quantity
+		// If the trip takes >1 hour, cap ISK/h to actual profit achievable
+		maxTripsPerHour := 3600.0 / totalTimeSeconds
+		
+		// If we can't complete even one full trip set per hour, use proportional profit
+		if maxTripsPerHour < 1.0 {
+			// Less than 1 full trip set per hour - use proportional profit
+			iskPerHour = netProfit * maxTripsPerHour
+		} else {
+			// Can do multiple trip sets - use theoretical ISK/h
+			iskPerHour = theoreticalISKPerHour
+		}
+	}
+	if baseTotalTimeSeconds > 0 {
+		// Use gross profit for base ISK/h (before skills but before fees too)
+		baseISKPerHour = (netProfit / baseTotalTimeSeconds) * 3600
+	}
+
+	// Calculate time improvement percentage
+	var timeImprovement float64
+	if baseTotalTimeSeconds > 0 && baseTotalTimeSeconds != totalTimeSeconds {
+		timeImprovement = ((baseTotalTimeSeconds - totalTimeSeconds) / baseTotalTimeSeconds) * 100
+	}
 
 	// Calculate investment (total cost to buy)
 	totalInvestment := item.BuyPrice * float64(totalQuantity)
