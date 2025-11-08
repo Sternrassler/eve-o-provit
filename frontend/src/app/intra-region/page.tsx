@@ -212,9 +212,7 @@ export default function IntraRegionPage() {
           </div>
 
           {/* Filters */}
-          {hasCalculated && (
-            <TradingFilters filters={filters} onChange={setFilters} />
-          )}
+          <TradingFilters filters={filters} onChange={setFilters} />
 
           {/* Sort Options */}
           {hasCalculated && filteredRoutes.length > 0 && (
