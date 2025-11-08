@@ -116,7 +116,7 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	}()
 
 	// Create context with timeout
-	calcCtx, cancel := context.WithTimeout(ctx, CalculationTimeout)
+	calcCtx, cancel := context.WithTimeout(ctx, rs.config.CalculationTimeout)
 	defer cancel()
 
 	// Variables to track capacity calculation

@@ -18,13 +18,11 @@ import (
 
 // TradingHandler handles trading-related HTTP requests
 type TradingHandler struct {
-	calculator                services.RouteCalculatorServicer // Interface for testability
-	sdeQuerier                database.SDEQuerier              // For type info lookups
-	shipService               services.ShipServicer            // For ship capacity queries
-	systemService             services.SystemServicer          // For system/region/station info
-	characterHelper           *services.CharacterHelper
-	tradingService            *services.TradingService
-	inventorySellOrchestrator services.InventorySellOrchestrator // New: Orchestrator for business logic
+	calculator      services.RouteCalculatorServicer // Interface for testability
+	sdeQuerier      database.SDEQuerier              // For type info lookups
+	shipService     services.ShipServicer            // For ship capacity queries
+	systemService   services.SystemServicer          // For system/region/station info
+	characterHelper *services.CharacterHelper
 }
 
 // NewTradingHandler creates a new trading handler instance
@@ -34,20 +32,13 @@ func NewTradingHandler(
 	shipService services.ShipServicer,
 	systemService services.SystemServicer,
 	charHelper *services.CharacterHelper,
-	tradingService *services.TradingService,
 ) *TradingHandler {
-	// Create orchestrator (Phase 2 refactoring)
-	navigationService := services.NewNavigationService(sdeQuerier)
-	orchestrator := services.NewInventorySellOrchestrator(charHelper, navigationService, tradingService)
-
 	return &TradingHandler{
-		calculator:                calculator,
-		sdeQuerier:                sdeQuerier,
-		shipService:               shipService,
-		systemService:             systemService,
-		characterHelper:           charHelper,
-		tradingService:            tradingService,
-		inventorySellOrchestrator: orchestrator,
+		calculator:      calculator,
+		sdeQuerier:      sdeQuerier,
+		shipService:     shipService,
+		systemService:   systemService,
+		characterHelper: charHelper,
 	}
 }
 
@@ -535,51 +526,5 @@ func (h *TradingHandler) SearchItems(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"items": results,
 		"count": len(results),
-	})
-}
-
-// CalculateInventorySellRoutes handles POST /api/v1/trading/inventory-sell
-func (h *TradingHandler) CalculateInventorySellRoutes(c *fiber.Ctx) error {
-	// 1. Parse request
-	var req models.InventorySellRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
-	}
-
-	// 2. Validate request
-	if err := req.Validate(); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
-	// 3. Extract auth context
-	characterID := c.Locals("character_id").(int)
-	accessToken := c.Locals("access_token").(string)
-
-	// 4. Delegate to orchestrator (single call)
-	routes, err := h.inventorySellOrchestrator.CalculateSellRoutes(
-		c.Context(), req, characterID, accessToken,
-	)
-	if err != nil {
-		// Handle business errors with appropriate status codes
-		if be, ok := services.IsBusinessError(err); ok {
-			return c.Status(be.Status).JSON(fiber.Map{
-				"error": be.Message,
-			})
-		}
-		// Handle internal errors
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to calculate sell routes",
-			"details": err.Error(),
-		})
-	}
-
-	// 5. Return response
-	return c.JSON(fiber.Map{
-		"routes": routes,
-		"count":  len(routes),
 	})
 }

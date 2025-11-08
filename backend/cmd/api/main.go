@@ -76,15 +76,6 @@ func main() {
 	// Initialize application logger
 	appLogger := applogger.New()
 
-	// Initialize services
-	marketFetcherConfig := services.MarketFetcherConfig{
-		FetchTimeout: time.Duration(getEnvInt("ROUTE_MARKET_FETCH_TIMEOUT", 60)) * time.Second,
-	}
-	marketFetcher := services.NewMarketFetcher(esiClient, marketRepo, redisClient, marketFetcherConfig)
-	profitAnalyzer := services.NewProfitAnalyzer(db.SDE, sdeRepo)
-	routePlanner := services.NewRoutePlanner(db.SDE, sdeRepo, redisClient)
-	tradingService := services.NewTradingService(marketFetcher, profitAnalyzer, routePlanner, sdeRepo, esiClient, db.SDE)
-
 	characterHelper := services.NewCharacterHelper(redisClient)
 
 	// Skills Service (Phase 0 - Issue #54)
@@ -114,7 +105,7 @@ func main() {
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
-	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper, tradingService)
+	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper)
 	characterHandler := handlers.NewCharacterHandler(skillsService)
 
 	// Create Fiber app
@@ -172,7 +163,6 @@ func main() {
 	// Trading endpoints
 	trading := protected.Group("/trading")
 	trading.Get("/profit-margins", handleProfitMargins)
-	trading.Post("/inventory-sell", tradingHandler.CalculateInventorySellRoutes)
 
 	// Manufacturing endpoints
 	manufacturing := protected.Group("/manufacturing")

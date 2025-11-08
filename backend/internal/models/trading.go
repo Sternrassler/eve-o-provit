@@ -172,33 +172,6 @@ type ItemSearchResult struct {
 	GroupName string `json:"group_name"`
 }
 
-// InventorySellRequest represents a request to find profitable sell routes for inventory
-type InventorySellRequest struct {
-	TypeID           int     `json:"type_id"`
-	Quantity         int     `json:"quantity"`
-	BuyPricePerUnit  float64 `json:"buy_price_per_unit"`
-	RegionID         int     `json:"region_id"`
-	MinProfitPerUnit float64 `json:"min_profit_per_unit"`
-	SecurityFilter   string  `json:"security_filter"` // "all", "highsec", "highlow"
-}
-
-// Validate validates the inventory sell request parameters
-func (r *InventorySellRequest) Validate() error {
-	if r.TypeID <= 0 {
-		return &ValidationError{Field: "type_id", Message: "Invalid type_id"}
-	}
-	if r.Quantity <= 0 {
-		return &ValidationError{Field: "quantity", Message: "Invalid quantity"}
-	}
-	if r.BuyPricePerUnit <= 0 {
-		return &ValidationError{Field: "buy_price_per_unit", Message: "Invalid buy_price_per_unit"}
-	}
-	if r.RegionID <= 0 {
-		return &ValidationError{Field: "region_id", Message: "Invalid region_id"}
-	}
-	return nil
-}
-
 // ValidationError represents a validation error
 type ValidationError struct {
 	Field   string
@@ -265,22 +238,4 @@ func GetShipType(typeID int) ShipType {
 		return ship
 	}
 	return CommonHaulers[0] // Return default hauler
-}
-
-// InventorySellRoute represents a profitable sell opportunity for inventory
-type InventorySellRoute struct {
-	SellStationID          int64   `json:"sell_station_id"`
-	SellStationName        string  `json:"sell_station_name"`
-	SellSystemID           int64   `json:"sell_system_id"`
-	SellSystemName         string  `json:"sell_system_name"`
-	SellSecurityStatus     float64 `json:"sell_security_status"`
-	BuyOrderPrice          float64 `json:"buy_order_price"`
-	TaxRate                float64 `json:"tax_rate"`
-	NetPricePerUnit        float64 `json:"net_price_per_unit"`
-	ProfitPerUnit          float64 `json:"profit_per_unit"`
-	AvailableQuantity      int     `json:"available_quantity"`
-	TotalProfit            float64 `json:"total_profit"`
-	RouteJumps             int     `json:"route_jumps"`
-	RouteSystemIDs         []int64 `json:"route_system_ids"`
-	MinRouteSecurityStatus float64 `json:"min_route_security_status"`
 }

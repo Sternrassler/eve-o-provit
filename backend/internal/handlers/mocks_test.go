@@ -29,21 +29,3 @@ func (m *MockMarketService) GetMarketOrders(ctx context.Context, regionID, typeI
 	}
 	return nil, nil
 }
-
-// MockTradingService is a mock implementation of TradingService for testing
-type MockTradingService struct {
-	CalculateInventorySellRoutesFunc func(ctx context.Context, req models.InventorySellRequest, startSystemID int64, taxRate float64) ([]models.InventorySellRoute, error)
-}
-
-// CalculateInventorySellRoutes mock implementation
-func (m *MockTradingService) CalculateInventorySellRoutes(
-	ctx context.Context,
-	req models.InventorySellRequest,
-	startSystemID int64,
-	taxRate float64,
-) ([]models.InventorySellRoute, error) {
-	if m.CalculateInventorySellRoutesFunc != nil {
-		return m.CalculateInventorySellRoutesFunc(ctx, req, startSystemID, taxRate)
-	}
-	return nil, nil
-}
