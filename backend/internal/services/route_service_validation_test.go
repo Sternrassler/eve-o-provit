@@ -10,14 +10,14 @@ import (
 // TestNewRouteService_Initialization tests RouteService initialization
 func TestNewRouteService_Initialization(t *testing.T) {
 	t.Run("with nil dependencies", func(t *testing.T) {
-		svc := NewRouteService(nil, nil, nil, nil, nil, nil, nil, nil)
+		svc := NewRouteService(nil, nil, nil, nil, nil, nil, nil, nil, DefaultConfig())
 
 		assert.NotNil(t, svc, "Service should be initialized even with nil dependencies")
 	})
 
 	t.Run("with Redis client", func(t *testing.T) {
 		// Can't test Redis without actual connection, but verify it doesn't panic
-		svc := NewRouteService(nil, nil, nil, nil, nil, nil, nil, nil)
+		svc := NewRouteService(nil, nil, nil, nil, nil, nil, nil, nil, DefaultConfig())
 
 		assert.NotNil(t, svc)
 	})

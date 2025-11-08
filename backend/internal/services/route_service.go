@@ -23,13 +23,26 @@ const (
 	MinSpreadPercent = 5.0
 	// MaxRoutes is the maximum number of routes to return
 	MaxRoutes = 50
-	// CalculationTimeout is the total timeout for route calculation
-	CalculationTimeout = 60 * time.Second
-	// MarketFetchTimeout is the timeout for market order fetching
-	MarketFetchTimeout = 30 * time.Second
-	// RouteCalculationTimeout is the timeout for route calculation phase
-	RouteCalculationTimeout = 50 * time.Second
 )
+
+// Config holds route service configuration
+type Config struct {
+	// CalculationTimeout is the total timeout for route calculation (default: 120s)
+	CalculationTimeout time.Duration
+	// MarketFetchTimeout is the timeout for market order fetching (default: 60s)
+	MarketFetchTimeout time.Duration
+	// RouteCalculationTimeout is the timeout for route calculation phase (default: 90s)
+	RouteCalculationTimeout time.Duration
+}
+
+// DefaultConfig returns default configuration values
+func DefaultConfig() Config {
+	return Config{
+		CalculationTimeout:      120 * time.Second,
+		MarketFetchTimeout:      60 * time.Second,
+		RouteCalculationTimeout: 90 * time.Second,
+	}
+}
 
 // Context keys for character information (must match handler keys)
 type contextKey string
@@ -52,6 +65,7 @@ type RouteService struct {
 	skillsService  SkillsServicer // For fetching character skills
 	feeService     FeeServicer    // For fee calculations
 	volumeService  VolumeServicer // For volume metrics and liquidity analysis
+	config         Config         // Timeouts and configuration
 }
 
 // NewRouteService creates a new route service instance
@@ -64,6 +78,7 @@ func NewRouteService(
 	cargoService CargoServicer,
 	skillsService SkillsServicer,
 	feeService FeeServicer,
+	config Config,
 ) *RouteService {
 	rs := &RouteService{
 		esiClient:     esiClient,
@@ -73,9 +88,9 @@ func NewRouteService(
 		cargoService:  cargoService,
 		skillsService: skillsService,
 		feeService:    feeService,
+		config:        config,
 	}
 
-	// Initialize sub-services
 	rs.routeFinder = NewRouteFinder(esiClient, marketRepo, sdeRepo, sdeDB, redisClient)
 	rs.routeOptimizer = NewRouteOptimizer(sdeRepo, sdeDB, feeService)
 	rs.volumeService = NewVolumeService(marketRepo, esiClient)
@@ -142,13 +157,13 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	}
 
 	// Find profitable items with timeout
-	marketCtx, marketCancel := context.WithTimeout(calcCtx, MarketFetchTimeout)
+	marketCtx, marketCancel := context.WithTimeout(calcCtx, rs.config.MarketFetchTimeout)
 	defer marketCancel()
 
 	profitableItems, err := rs.routeFinder.FindProfitableItems(marketCtx, regionID, cargoCapacity)
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			log.Printf("Market order fetch timeout after %v", MarketFetchTimeout)
+			log.Printf("Market order fetch timeout after %v", rs.config.MarketFetchTimeout)
 			return nil, err
 		}
 		return nil, fmt.Errorf("failed to find profitable items: %w", err)
@@ -156,7 +171,7 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	log.Printf("Found %d profitable items", len(profitableItems))
 
 	// Calculate routes using worker pool with timeout
-	routeCtx, routeCancel := context.WithTimeout(calcCtx, RouteCalculationTimeout)
+	routeCtx, routeCancel := context.WithTimeout(calcCtx, rs.config.RouteCalculationTimeout)
 	defer routeCancel()
 
 	routes, err := rs.workerPool.ProcessItemsWithCapacityInfo(routeCtx, profitableItems, effectiveCapacity, baseCapacity, skillBonusPercent)
@@ -200,7 +215,7 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 
 	// Add timeout warning if applicable
 	if timedOut {
-		response.Warning = fmt.Sprintf("Calculation timeout after %v, showing partial results", CalculationTimeout)
+		response.Warning = fmt.Sprintf("Calculation timeout after %v, showing partial results", rs.config.CalculationTimeout)
 		log.Printf("WARNING: %s", response.Warning)
 	}
 

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/handlers"
@@ -76,7 +77,10 @@ func main() {
 	appLogger := applogger.New()
 
 	// Initialize services
-	marketFetcher := services.NewMarketFetcher(esiClient, marketRepo, redisClient)
+	marketFetcherConfig := services.MarketFetcherConfig{
+		FetchTimeout: time.Duration(getEnvInt("ROUTE_MARKET_FETCH_TIMEOUT", 60)) * time.Second,
+	}
+	marketFetcher := services.NewMarketFetcher(esiClient, marketRepo, redisClient, marketFetcherConfig)
 	profitAnalyzer := services.NewProfitAnalyzer(db.SDE, sdeRepo)
 	routePlanner := services.NewRoutePlanner(db.SDE, sdeRepo, redisClient)
 	tradingService := services.NewTradingService(marketFetcher, profitAnalyzer, routePlanner, sdeRepo, esiClient, db.SDE)
@@ -92,8 +96,15 @@ func main() {
 	// Fee Service (Phase 0 - Issue #55)
 	feeService := services.NewFeeService(skillsService, appLogger)
 
+	// Route Service Configuration
+	routeConfig := services.Config{
+		CalculationTimeout:      time.Duration(getEnvInt("ROUTE_CALCULATION_TIMEOUT", 120)) * time.Second,
+		MarketFetchTimeout:      time.Duration(getEnvInt("ROUTE_MARKET_FETCH_TIMEOUT", 60)) * time.Second,
+		RouteCalculationTimeout: time.Duration(getEnvInt("ROUTE_ROUTE_CALC_TIMEOUT", 90)) * time.Second,
+	}
+
 	// Route Service with cargo + fee integration
-	routeService := services.NewRouteService(esiClient, db.SDE, sdeRepo, marketRepo, redisClient, cargoService, skillsService, feeService)
+	routeService := services.NewRouteService(esiClient, db.SDE, sdeRepo, marketRepo, redisClient, cargoService, skillsService, feeService, routeConfig)
 
 	// Ship Service (Phase 0 - Issue #57 - Remove Raw DB Access)
 	shipService := services.NewShipService(db.SDE)

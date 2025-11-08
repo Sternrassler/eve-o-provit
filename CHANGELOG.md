@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-11-08
+
+### Added
+
+- **Configurable Route Service Timeouts** - Environment variable support for timeout configuration
+  - `Config` struct pattern in RouteService with three configurable timeouts
+  - Environment variables: `ROUTE_CALCULATION_TIMEOUT` (default: 120s), `ROUTE_MARKET_FETCH_TIMEOUT` (default: 60s), `ROUTE_ROUTE_CALC_TIMEOUT` (default: 90s)
+  - `DefaultConfig()` function for standard timeout values
+  - Updated all tests to use DefaultConfig() pattern
+
+### Changed
+
+- Refactored RouteService from hardcoded timeout constants to configurable Config struct
+- Increased default timeouts to support large regions like The Forge (388 market order pages)
+- Updated `.env.example` and `deployments/.env` with timeout configuration documentation
+
+### Fixed
+
+- The Forge region route calculation timeout issues (30s → 60s market fetch timeout)
+
+## [Unreleased - Skills Service]
+
 ### Added
 
 - **Skills Service (Phase 0 - Issue #54)** - Centralized character skills management
