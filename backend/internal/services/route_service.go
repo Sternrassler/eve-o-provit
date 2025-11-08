@@ -167,6 +167,15 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	// Check if we timed out
 	timedOut := errors.Is(routeCtx.Err(), context.DeadlineExceeded) || errors.Is(calcCtx.Err(), context.DeadlineExceeded)
 
+	// Filter out routes with negative net profit (unprofitable after fees)
+	profitableRoutes := make([]models.TradingRoute, 0, len(routes))
+	for _, route := range routes {
+		if route.NetProfit > 0 {
+			profitableRoutes = append(profitableRoutes, route)
+		}
+	}
+	routes = profitableRoutes
+
 	// Sort by ISK per hour (descending)
 	sort.Slice(routes, func(i, j int) bool {
 		return routes[i].ISKPerHour > routes[j].ISKPerHour
@@ -218,10 +227,18 @@ func (rs *RouteService) CalculateWithFilters(ctx context.Context, req *models.Ro
 		return response, nil
 	}
 
-	// Enrich routes with volume metrics and apply filters
-	filteredRoutes := make([]models.TradingRoute, 0, len(response.Routes))
-
+	// Filter out routes with negative net profit first
+	profitableRoutes := make([]models.TradingRoute, 0, len(response.Routes))
 	for _, route := range response.Routes {
+		if route.NetProfit > 0 {
+			profitableRoutes = append(profitableRoutes, route)
+		}
+	}
+
+	// Enrich routes with volume metrics and apply filters
+	filteredRoutes := make([]models.TradingRoute, 0, len(profitableRoutes))
+
+	for _, route := range profitableRoutes {
 		// Get volume metrics for this item
 		volumeMetrics, err := rs.volumeService.GetVolumeMetrics(ctx, route.ItemTypeID, req.RegionID)
 		if err != nil {
