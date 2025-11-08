@@ -54,7 +54,7 @@ describe("TradingRouteCard - Fee Display", () => {
 
     // Check for fee section labels
     expect(screen.getByText("Brutto-Gewinn")).toBeInTheDocument();
-    expect(screen.getByText("Brutto-Marge")).toBeInTheDocument();
+    expect(screen.getByText("Spread")).toBeInTheDocument(); // Changed from "Brutto-Marge"
     expect(screen.getByText("Gebühren")).toBeInTheDocument();
     expect(screen.getByText("Netto-Gewinn")).toBeInTheDocument();
     expect(screen.getByText("Netto-Marge")).toBeInTheDocument();
