@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"sort"
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
@@ -28,26 +30,26 @@ type esiAsset struct {
 
 // FittedModule represents a single fitted module with dogma attributes
 type FittedModule struct {
-	TypeID       int                `json:"type_id"`
-	TypeName     string             `json:"type_name"`
-	Slot         string             `json:"slot"` // HiSlot0-7, MedSlot0-7, LoSlot0-7, RigSlot0-2
-	DogmaAttribs map[int]float64    `json:"dogma_attributes"`
+	TypeID       int             `json:"type_id"`
+	TypeName     string          `json:"type_name"`
+	Slot         string          `json:"slot"` // HiSlot0-7, MedSlot0-7, LoSlot0-7, RigSlot0-2
+	DogmaAttribs map[int]float64 `json:"dogma_attributes"`
 }
 
 // FittingBonuses contains aggregated bonuses from all fitted modules
 type FittingBonuses struct {
-	CargoBonus            float64 `json:"cargo_bonus"`             // m³ (ADDITIVE)
-	WarpSpeedMultiplier   float64 `json:"warp_speed_multiplier"`   // 1.0 = no change (MULTIPLICATIVE)
-	InertiaModifier       float64 `json:"inertia_modifier"`        // 1.0 = no change (MULTIPLICATIVE)
+	CargoBonus          float64 `json:"cargo_bonus"`           // m³ (ADDITIVE)
+	WarpSpeedMultiplier float64 `json:"warp_speed_multiplier"` // 1.0 = no change (MULTIPLICATIVE)
+	InertiaModifier     float64 `json:"inertia_modifier"`      // 1.0 = no change (MULTIPLICATIVE)
 }
 
 // FittingData contains all fitting information for a ship
 type FittingData struct {
-	ShipTypeID     int              `json:"ship_type_id"`
-	FittedModules  []FittedModule   `json:"fitted_modules"`
-	Bonuses        FittingBonuses   `json:"bonuses"`
-	Cached         bool             `json:"cached"`
-	CacheExpiresAt time.Time        `json:"cache_expires_at,omitempty"`
+	ShipTypeID     int            `json:"ship_type_id"`
+	FittedModules  []FittedModule `json:"fitted_modules"`
+	Bonuses        FittingBonuses `json:"bonuses"`
+	Cached         bool           `json:"cached"`
+	CacheExpiresAt time.Time      `json:"cache_expires_at,omitempty"`
 }
 
 // FittingService provides ship fitting detection and bonus calculations
@@ -96,7 +98,7 @@ func (s *FittingService) GetCharacterFitting(
 
 	// 2. Cache miss - fetch from ESI
 	s.logger.Debug("Fitting cache miss - fetching from ESI", "characterID", characterID, "shipTypeID", shipTypeID)
-	
+
 	fitting, err := s.fetchFittingFromESI(ctx, characterID, shipTypeID, accessToken)
 	if err != nil {
 		// Graceful degradation: Return empty fitting on error
@@ -182,7 +184,7 @@ func (s *FittingService) fetchESIAssets(
 	accessToken string,
 ) ([]esiAsset, error) {
 	endpoint := fmt.Sprintf("/latest/characters/%d/assets/", characterID)
-	
+
 	// Create HTTP request with context
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://esi.evetech.net"+endpoint, nil)
 	if err != nil {
@@ -269,32 +271,62 @@ func (s *FittingService) fetchDogmaAttributes(ctx context.Context, typeID int) (
 }
 
 // calculateBonuses aggregates bonuses from all fitted modules
+// Applies EVE Online stacking penalties: S(u) = e^(-(u/2.67)^2)
+// where u is 0-based position after sorting by bonus strength (descending)
 func (s *FittingService) calculateBonuses(modules []FittedModule) FittingBonuses {
-	bonuses := FittingBonuses{
-		CargoBonus:          0.0,
-		WarpSpeedMultiplier: 1.0,
-		InertiaModifier:     1.0,
+	// Group modules by attribute ID
+	cargoMods := []float64{}
+	warpMods := []float64{}
+	inertiaMods := []float64{}
+
+	for _, mod := range modules {
+		// Cargo bonus (Attribute 38)
+		if cargoBonus, ok := mod.DogmaAttribs[38]; ok {
+			cargoMods = append(cargoMods, cargoBonus)
+		}
+		// Warp speed multiplier (Attribute 20)
+		if warpBonus, ok := mod.DogmaAttribs[20]; ok {
+			warpMods = append(warpMods, warpBonus)
+		}
+		// Inertia modifier (Attribute 70)
+		if inertiaBonus, ok := mod.DogmaAttribs[70]; ok {
+			inertiaMods = append(inertiaMods, inertiaBonus)
+		}
 	}
 
-	// Aggregate bonuses
-	for _, mod := range modules {
-		// Cargo bonus (Attribute 38) - ADDITIVE
-		if cargoBonus, ok := mod.DogmaAttribs[38]; ok {
-			bonuses.CargoBonus += cargoBonus
-		}
-
-		// Warp speed multiplier (Attribute 20) - MULTIPLICATIVE
-		if warpBonus, ok := mod.DogmaAttribs[20]; ok {
-			bonuses.WarpSpeedMultiplier *= (1 + warpBonus)
-		}
-
-		// Inertia modifier (Attribute 70) - MULTIPLICATIVE
-		if inertiaBonus, ok := mod.DogmaAttribs[70]; ok {
-			bonuses.InertiaModifier *= (1 + inertiaBonus)
-		}
+	// Apply stacking penalties and aggregate
+	bonuses := FittingBonuses{
+		CargoBonus:          applyStackingPenalty(cargoMods),
+		WarpSpeedMultiplier: 1 + applyStackingPenalty(warpMods),
+		InertiaModifier:     1 + applyStackingPenalty(inertiaMods),
 	}
 
 	return bonuses
+}
+
+// applyStackingPenalty applies EVE Online stacking penalty formula
+// Formula: S(u) = e^(-(u/2.67)^2) where u = position (0-based)
+// 1st module: 100% effectiveness (S(0) = 1.0)
+// 2nd module: ~86.9% effectiveness (S(1) ≈ 0.869)
+// 3rd module: ~57.1% effectiveness (S(2) ≈ 0.571)
+// 4th module: ~28.3% effectiveness (S(3) ≈ 0.283)
+func applyStackingPenalty(bonuses []float64) float64 {
+	if len(bonuses) == 0 {
+		return 0.0
+	}
+
+	// Sort bonuses descending (strongest first)
+	sort.Sort(sort.Reverse(sort.Float64Slice(bonuses)))
+
+	result := 0.0
+	for i, bonus := range bonuses {
+		// EVE Online formula: S(u) = e^(-(u/2.67)^2)
+		u := float64(i)
+		penalty := math.Exp(-math.Pow(u/2.67, 2))
+		result += bonus * penalty
+	}
+
+	return result
 }
 
 // getDefaultFitting returns empty fitting with no bonuses (graceful degradation)
