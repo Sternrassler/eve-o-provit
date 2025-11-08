@@ -137,7 +137,23 @@ func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, it
 	var iskPerHour float64
 	var baseISKPerHour float64
 	if totalTimeSeconds > 0 {
-		iskPerHour = (totalProfit / totalTimeSeconds) * 3600
+		// Calculate theoretical ISK/h (assuming infinite supply)
+		theoreticalISKPerHour := (totalProfit / totalTimeSeconds) * 3600
+		
+		// Calculate realistic ISK/h based on available quantity
+		// If the available quantity only supports limited trips per hour, cap the ISK/h
+		tripsNeeded := float64(numberOfTours)
+		timePerTripSet := totalTimeSeconds // Time for all tours
+		maxTripsPerHour := 3600.0 / timePerTripSet
+		
+		// If we can't do enough trips to reach theoretical ISK/h, use actual
+		if maxTripsPerHour < 1.0 {
+			// Less than 1 full trip set per hour - use proportional profit
+			iskPerHour = totalProfit * maxTripsPerHour
+		} else {
+			// Can do multiple trip sets - use theoretical ISK/h
+			iskPerHour = theoreticalISKPerHour
+		}
 	}
 	if baseTotalTimeSeconds > 0 {
 		baseISKPerHour = (totalProfit / baseTotalTimeSeconds) * 3600
