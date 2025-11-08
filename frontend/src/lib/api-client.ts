@@ -1,5 +1,9 @@
 // API client utilities for backend communication
-import { CharacterLocation, CharacterShip } from "@/types/character";
+import { 
+  CharacterLocation, 
+  CharacterShip, 
+  CharacterFittingResponse 
+} from "@/types/character";
 import { Region, Ship } from "@/types/trading";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
@@ -89,4 +93,31 @@ export async function fetchCharacterShips(authHeader: string): Promise<Ship[]> {
     name: ship.type_name,
     cargo_capacity: ship.cargo_capacity,
   })) || [];
+}
+
+/**
+ * Fetch character's ship fitting (requires authentication)
+ * @param authHeader - Authorization header (Bearer token)
+ * @param characterId - Character ID
+ * @param shipTypeId - Ship type ID
+ */
+export async function fetchCharacterFitting(
+  authHeader: string,
+  characterId: number,
+  shipTypeId: number
+): Promise<CharacterFittingResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/characters/${characterId}/fitting/${shipTypeId}`,
+    {
+      headers: {
+        Authorization: authHeader,
+      },
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Failed to fetch character fitting: ${response.statusText}`);
+  }
+  
+  return response.json();
 }

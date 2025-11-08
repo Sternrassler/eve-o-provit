@@ -1,5 +1,6 @@
 // types/character.ts
 export interface CharacterLocation {
+  character_id: number;
   solar_system_id: number;
   solar_system_name: string;
   region_id: number;
@@ -52,3 +53,32 @@ export interface CharacterSkillsResponse {
   skills: TradingSkills;
 }
 
+/**
+ * FittedModule represents a single module fitted to a ship
+ */
+export interface FittedModule {
+  type_id: number;
+  type_name: string;
+  slot: string; // HiSlot0-7, MedSlot0-7, LoSlot0-7, RigSlot0-2
+  dogma_attributes: Record<number, number>; // attribute_id -> value
+}
+
+/**
+ * FittingBonuses contains aggregated bonuses from all fitted modules
+ */
+export interface FittingBonuses {
+  cargo_bonus_m3: number;         // Additive m³ bonus (e.g., 5000.0 from 2x Expanded Cargohold II)
+  warp_speed_multiplier: number;  // Multiplicative warp speed (e.g., 1.488 = +48.8% from 3x Hyperspatial)
+  inertia_modifier: number;       // Multiplicative inertia (e.g., 0.7566 = -24.34% from 2x Inertial Stabilizers)
+}
+
+/**
+ * CharacterFittingResponse from GET /api/v1/characters/:characterId/fitting/:shipTypeId
+ */
+export interface CharacterFittingResponse {
+  character_id: number;
+  ship_type_id: number;
+  fitted_modules: FittedModule[];
+  bonuses: FittingBonuses;
+  cached: boolean;
+}

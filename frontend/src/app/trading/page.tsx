@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { RegionSelect } from "@/components/trading/RegionSelect";
 import { ShipSelect } from "@/components/trading/ShipSelect";
+import { ShipFittingCard } from "@/components/trading/ShipFittingCard";
 import { TradingRouteList } from "@/components/trading/TradingRouteList";
 import { TradingFilters } from "@/components/trading/TradingFilters";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export default function TradingPage() {
   const { isAuthenticated, getAuthHeader } = useAuth();
   const [selectedRegion, setSelectedRegion] = useState<string>(DEFAULT_REGION);
   const [selectedShip, setSelectedShip] = useState<string>("648");
+  const [characterId, setCharacterId] = useState<number | null>(null);
   const [filters, setFilters] = useState<TradingFiltersType>(defaultFilters);
   const [isCalculating, setIsCalculating] = useState(false);
   const [hasCalculated, setHasCalculated] = useState(false);
@@ -52,6 +54,10 @@ export default function TradingPage() {
         const location = await fetchCharacterLocation(authHeader);
         if (location.region_id) {
           setSelectedRegion(location.region_id.toString());
+        }
+        // Store character ID for fitting display
+        if (location.character_id) {
+          setCharacterId(location.character_id);
         }
 
         // Fetch current ship
@@ -185,6 +191,15 @@ export default function TradingPage() {
               {characterDataLoading ? "Lade Character-Daten..." : isCalculating ? "Berechne..." : "Berechnen"}
             </Button>
           </div>
+
+          {/* Ship Fitting Display */}
+          {isAuthenticated && characterId && selectedShip && (
+            <ShipFittingCard
+              characterId={characterId}
+              shipTypeId={parseInt(selectedShip)}
+              authHeader={getAuthHeader()}
+            />
+          )}
 
           {/* Filters */}
           <TradingFilters filters={filters} onChange={setFilters} />
