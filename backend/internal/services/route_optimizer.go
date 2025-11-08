@@ -82,8 +82,8 @@ func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, it
 
 	// Calculate profit per tour and total profit
 	profitPerUnit := item.SellPrice - item.BuyPrice
-	profitPerTour := profitPerUnit * float64(quantityPerTour)
 	totalProfit := profitPerUnit * float64(totalQuantity)
+	profitPerTour := totalProfit / float64(numberOfTours)
 
 	// Calculate travel time
 	travelResult, err := navigation.ShortestPath(ro.sdeDB, item.BuySystemID, item.SellSystemID, false)
@@ -194,11 +194,11 @@ func (ro *RouteOptimizer) CalculateRouteWithCapacityInfo(ctx context.Context, it
 	if totalTimeSeconds > 0 {
 		// Calculate theoretical ISK/h (assuming infinite supply)
 		theoreticalISKPerHour := (netProfit / totalTimeSeconds) * 3600
-		
+
 		// Calculate realistic ISK/h based on available quantity
 		// If the trip takes >1 hour, cap ISK/h to actual profit achievable
 		maxTripsPerHour := 3600.0 / totalTimeSeconds
-		
+
 		// If we can't complete even one full trip set per hour, use proportional profit
 		if maxTripsPerHour < 1.0 {
 			// Less than 1 full trip set per hour - use proportional profit

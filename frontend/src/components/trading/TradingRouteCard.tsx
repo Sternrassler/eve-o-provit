@@ -406,7 +406,7 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
           <div className="font-medium">
             {isMultiTour && route.total_time_minutes
               ? `${Math.round(route.total_time_minutes)} min (${route.number_of_tours} Touren)`
-              : formatTime(route.travel_time_seconds)}
+              : formatTime(route.round_trip_seconds)}
           </div>
           
           {/* Show skills improvement if available */}
