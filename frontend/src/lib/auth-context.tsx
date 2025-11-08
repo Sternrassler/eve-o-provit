@@ -46,83 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  // Check for existing session on mount
-  useEffect(() => {
-    checkSession();
-    
-    // Listen for storage changes (e.g., after login in callback)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "eve_access_token" || e.key === "eve_character_info") {
-        checkSession();
-      }
-    };
-    
-    // Listen for custom event from callback page
-    const handleLoginSuccess = () => {
-      checkSession();
-    };
-    
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("eve-login-success", handleLoginSuccess);
-    
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("eve-login-success", handleLoginSuccess);
-    };
-  }, [checkSession]);
-
   const logout = useCallback(() => {
     TokenStorage.clear();
     setIsAuthenticated(false);
     setCharacter(null);
     setAccessToken(null);
   }, []);
-
-  // Token refresh function (wrapped in useCallback to prevent re-creation)
-  const performTokenRefresh = useCallback(async () => {
-    try {
-      const refreshToken = TokenStorage.getRefreshToken();
-      
-      if (!refreshToken) {
-        console.warn("[AuthContext] No refresh token available");
-        logout();
-        return;
-      }
-
-      console.log("[AuthContext] Refreshing access token...");
-      
-      const newToken = await refreshAccessToken(refreshToken, EVE_CLIENT_ID);
-      
-      // Save new token
-      TokenStorage.save(newToken);
-      setAccessToken(newToken.access_token);
-      
-      console.log("[AuthContext] Token refreshed successfully");
-    } catch (error) {
-      console.error("[AuthContext] Token refresh failed:", error);
-      // On refresh failure, logout user
-      logout();
-    }
-  }, [logout]);
-
-  // Background token refresh - check every 60 seconds
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const refreshInterval = setInterval(async () => {
-      try {
-        // Check if token needs refresh (3 minutes before expiry)
-        if (TokenStorage.shouldRefresh()) {
-          console.log("[AuthContext] Token expiring soon, refreshing...");
-          await performTokenRefresh();
-        }
-      } catch (error) {
-        console.error("[AuthContext] Background refresh check failed:", error);
-      }
-    }, 60 * 1000); // Check every 60 seconds
-
-    return () => clearInterval(refreshInterval);
-  }, [isAuthenticated, performTokenRefresh]);
 
   const checkSession = useCallback(async () => {
     try {
@@ -175,6 +104,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   }, []);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    checkSession();
+    
+    // Listen for storage changes (e.g., after login in callback)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === "eve_access_token" || e.key === "eve_character_info") {
+        checkSession();
+      }
+    };
+    
+    // Listen for custom event from callback page
+    const handleLoginSuccess = () => {
+      checkSession();
+    };
+    
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("eve-login-success", handleLoginSuccess);
+    
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("eve-login-success", handleLoginSuccess);
+    };
+  }, [checkSession]);
+
+  // Token refresh function (wrapped in useCallback to prevent re-creation)
+  const performTokenRefresh = useCallback(async () => {
+    try {
+      const refreshToken = TokenStorage.getRefreshToken();
+      
+      if (!refreshToken) {
+        console.warn("[AuthContext] No refresh token available");
+        logout();
+        return;
+      }
+
+      console.log("[AuthContext] Refreshing access token...");
+      
+      const newToken = await refreshAccessToken(refreshToken, EVE_CLIENT_ID);
+      
+      // Save new token
+      TokenStorage.save(newToken);
+      setAccessToken(newToken.access_token);
+      
+      console.log("[AuthContext] Token refreshed successfully");
+    } catch (error) {
+      console.error("[AuthContext] Token refresh failed:", error);
+      // On refresh failure, logout user
+      logout();
+    }
+  }, [logout]);
+
+  // Background token refresh - check every 60 seconds
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        // Check if token needs refresh (3 minutes before expiry)
+        if (TokenStorage.shouldRefresh()) {
+          console.log("[AuthContext] Token expiring soon, refreshing...");
+          await performTokenRefresh();
+        }
+      } catch (error) {
+        console.error("[AuthContext] Background refresh check failed:", error);
+      }
+    }, 60 * 1000); // Check every 60 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [isAuthenticated, performTokenRefresh]);
 
   const login = async () => {
     try {
