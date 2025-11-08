@@ -108,10 +108,15 @@ backend/
 ├── cmd/api/                    # Entrypoint
 ├── internal/
 │   ├── handlers/              # HTTP Request Handler
-│   │   └── handlers.go        # Market, SDE, Trading Endpoints
-│   ├── services/
+│   │   ├── handlers.go        # Market, SDE, Trading Endpoints
+│   │   └── trading.go         # Character Ships, Location
+│   ├── services/              # Business Logic Layer
 │   │   ├── route_calculator.go  # Trading Route Logic
-│   │   └── cache.go            # Market Data Cache (TODO)
+│   │   ├── cargo_service.go   # Cargo Capacity Calculations (Skills + Fitting)
+│   │   ├── navigation_service.go # Warp Time & Align Time Calculations
+│   │   ├── skills_service.go  # ESI Skills Integration (ADR-014)
+│   │   ├── fitting_service.go # Ship Fitting Detection (ADR-015) [Planned]
+│   │   └── cache.go          # Market Data Cache (TODO)
 │   ├── database/              # Repository Layer
 │   │   ├── db.go              # DB Connection Pool
 │   │   ├── sde_repository.go  # SDE Queries
@@ -138,6 +143,10 @@ backend/
 | `/api/v1/trading/inventory-sell` | POST | Best Sell Locations |
 | `/api/v1/auth/login` | GET | EVE SSO Login |
 | `/api/v1/character/location` | GET | Character Location |
+| `/api/v1/character/ships` | GET | Character Ships (ESI Assets) |
+| `/api/v1/characters/:id/skills` | GET | Character Skills (ESI Skills) |
+| `/api/v1/characters/:id/ships/:shipId/fitting` | GET | Ship Fitting [Planned] |
+| `/api/v1/characters/:id/ships/:shipId/cargo-capacity` | GET | Effective Cargo [Planned] |
 
 ### Market Data Fetching (BatchFetcher Pattern)
 
