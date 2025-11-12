@@ -20,6 +20,12 @@ func TestFittingService_DeterministicWarpSpeedIntegration(t *testing.T) {
 		dbPath = "../../data/sde/eve-sde.db" // Default for local testing (from backend/internal/services/)
 	}
 
+	// Skip test if SDE database not available (e.g., in CI without SDE download)
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		t.Skipf("SDE database not found at %s - skipping integration test (expected in CI)", dbPath)
+		return
+	}
+
 	// Open real SDE database
 	db, err := sql.Open("sqlite3", "file:"+dbPath+"?mode=ro")
 	require.NoError(t, err, "Failed to open SDE database")
