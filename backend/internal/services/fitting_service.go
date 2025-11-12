@@ -41,6 +41,7 @@ type FittingBonuses struct {
 	CargoBonus          float64 `json:"cargo_bonus_m3"`        // Total effective capacity in m³ (base + skills + modules)
 	WarpSpeedMultiplier float64 `json:"warp_speed_multiplier"` // 1.0 = no change (MULTIPLICATIVE)
 	InertiaModifier     float64 `json:"inertia_modifier"`      // 1.0 = no change (MULTIPLICATIVE)
+	AlignTime           float64 `json:"align_time_seconds"`    // Calculated align time in seconds (NEW: Issue #79)
 
 	// Deterministic Breakdown (Issue #77)
 	BaseCargo      float64 `json:"base_cargo_m3"`      // Base cargo from SDE (Attr 38)
@@ -371,15 +372,23 @@ func (s *FittingService) fetchFittingFromESI(
 		effectiveWarpSpeed = warpSpeedResult.EffectiveWarpSpeed
 	}
 
-	// 11. Calculate Inertia with module bonuses (TODO: Issue #79 - make deterministic)
-	moduleInertiaModifier := 1.0
-	for _, mod := range fittedModules {
-		// Attribute 70: inertiaModifier (e.g., 0.87 = -13% align time)
-		if inertiaMod, exists := mod.DogmaAttribs[70]; exists && inertiaMod != 0 {
-			moduleInertiaModifier *= inertiaMod
-		}
+	// 11. Calculate deterministic Inertia + Align Time (Issue #79 - with skills + modules + stacking penalties)
+	var effectiveInertia, alignTime float64
+	inertiaResult, err := navigation.GetShipInertiaDeterministic(
+		ctx,
+		s.sdeDB,
+		int64(shipTypeID),
+		charSkills,
+		fittedItems,
+	)
+	if err != nil {
+		s.logger.Warn("Failed to calculate inertia deterministically, using fallback", "error", err)
+		effectiveInertia = baseInertia // Fallback to base inertia
+		alignTime = 0                  // Unknown align time
+	} else {
+		effectiveInertia = inertiaResult.EffectiveInertia
+		alignTime = inertiaResult.AlignTime
 	}
-	effectiveInertia := baseInertia * moduleInertiaModifier
 
 	return &FittingData{
 		ShipTypeID:    shipTypeID,
@@ -388,6 +397,7 @@ func (s *FittingService) fetchFittingFromESI(
 			CargoBonus:          cargoBonus,
 			WarpSpeedMultiplier: effectiveWarpSpeed, // Changed: Now absolute AU/s value
 			InertiaModifier:     effectiveInertia,   // Changed: Now absolute inertia value
+			AlignTime:           alignTime,          // NEW: Calculated align time in seconds
 			// Deterministic breakdown
 			BaseCargo:      baseCargo,
 			SkillsBonusM3:  skillsBonusM3,
