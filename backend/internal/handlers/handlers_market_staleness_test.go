@@ -53,11 +53,11 @@ func TestGetMarketDataStaleness_Success_Unit(t *testing.T) {
 				ScanFunc: func(dest ...interface{}) error {
 					// Simulate query result: 1500 orders, fetched 5 minutes ago
 					*dest[0].(*int) = 1500 // total_orders
-					
+
 					// latest_fetch is *time.Time (nullable), so dest[1] is **time.Time
 					fetchTime := time.Now().Add(-5 * time.Minute)
 					*dest[1].(**time.Time) = &fetchTime
-					
+
 					// age_minutes is *float64 (nullable), so dest[2] is **float64
 					ageMin := 5.0
 					*dest[2].(**float64) = &ageMin
