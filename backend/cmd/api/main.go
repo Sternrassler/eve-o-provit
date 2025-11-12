@@ -180,15 +180,15 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Public endpoints
-	app.Get("/health", h.Health)
-	app.Get("/version", h.Version)
-
-	// Swagger UI
+	// Swagger UI (public, no auth)
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	// API Routes
 	api := app.Group("/api/v1")
+
+	// Public health endpoints
+	api.Get("/health", h.Health)
+	api.Get("/version", h.Version)
 
 	// Public SDE endpoints
 	api.Get("/types/:id", h.GetType)
