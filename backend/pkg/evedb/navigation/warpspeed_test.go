@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"testing"
 
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -72,7 +73,7 @@ func TestGetShipWarpSpeedDeterministic_Scenario2_NavigationSkills(t *testing.T) 
 
 	for _, tc := range testCases {
 		// Mock character skills (Navigation skill at given level)
-		charSkills := &CharacterSkills{
+		charSkills := &cargo.CharacterSkills{
 			Skills: []struct {
 				SkillID           int64 `json:"skill_id"`
 				ActiveSkillLevel  int   `json:"active_skill_level"`
@@ -132,7 +133,7 @@ func TestGetShipWarpSpeedDeterministic_Scenario3_FullFitting(t *testing.T) {
 	// 3× Hyperspatial Rigs: ×1.20, ×1.14, ×1.08 (with stacking)
 	// Expected: ~5.52 AU/s (+84% total improvement)
 
-	charSkills := &CharacterSkills{
+	charSkills := &cargo.CharacterSkills{
 		Skills: []struct {
 			SkillID           int64 `json:"skill_id"`
 			ActiveSkillLevel  int   `json:"active_skill_level"`
@@ -142,7 +143,7 @@ func TestGetShipWarpSpeedDeterministic_Scenario3_FullFitting(t *testing.T) {
 		},
 	}
 
-	fittedItems := []FittedItem{
+	fittedItems := []cargo.FittedItem{
 		{TypeID: 31161, Slot: "Rig0"}, // Medium Hyperspatial Velocity Optimizer I
 		{TypeID: 31161, Slot: "Rig1"}, // Medium Hyperspatial Velocity Optimizer I
 		{TypeID: 31161, Slot: "Rig2"}, // Medium Hyperspatial Velocity Optimizer I
@@ -203,7 +204,7 @@ func TestGetShipWarpSpeedDeterministic_Scenario4_ErrorHandling(t *testing.T) {
 
 	// Test 2: Character lacks required skill level (if ship requires Navigation I+)
 	// Note: Most industrials don't require Navigation skill, so this test may not trigger error
-	charSkillsNoNav := &CharacterSkills{
+	charSkillsNoNav := &cargo.CharacterSkills{
 		Skills: []struct {
 			SkillID           int64 `json:"skill_id"`
 			ActiveSkillLevel  int   `json:"active_skill_level"`

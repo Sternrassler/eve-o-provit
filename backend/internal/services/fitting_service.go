@@ -12,6 +12,7 @@ import (
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 	"github.com/redis/go-redis/v9"
 )
@@ -354,25 +355,30 @@ func (s *FittingService) fetchFittingFromESI(
 	// Base warp speed is 1 AU/s × multiplier from SDE (e.g., 3.0 for cruisers)
 	baseWarpSpeed := 1.0 * baseWarpSpeedMultiplier
 
-	// 10. Calculate effective Warp Speed and Agility with module bonuses
-	moduleWarpMultiplier := 1.0
+	// 10. Calculate deterministic Warp Speed (Issue #78 - with skills + modules + stacking penalties)
+	var effectiveWarpSpeed float64
+	warpSpeedResult, err := navigation.GetShipWarpSpeedDeterministic(
+		ctx,
+		s.sdeDB,
+		int64(shipTypeID),
+		charSkills,
+		fittedItems,
+	)
+	if err != nil {
+		s.logger.Warn("Failed to calculate warp speed deterministically, using fallback", "error", err)
+		effectiveWarpSpeed = baseWarpSpeed // Fallback to base speed
+	} else {
+		effectiveWarpSpeed = warpSpeedResult.EffectiveWarpSpeed
+	}
+
+	// 11. Calculate Inertia with module bonuses (TODO: Issue #79 - make deterministic)
 	moduleInertiaModifier := 1.0
-
 	for _, mod := range fittedModules {
-		// Attribute 20: warpSpeedMultiplier (e.g., 1.20 = +20% warp speed)
-		if warpMod, exists := mod.DogmaAttribs[20]; exists && warpMod != 0 {
-			moduleWarpMultiplier *= warpMod
-		}
-
 		// Attribute 70: inertiaModifier (e.g., 0.87 = -13% align time)
 		if inertiaMod, exists := mod.DogmaAttribs[70]; exists && inertiaMod != 0 {
 			moduleInertiaModifier *= inertiaMod
 		}
 	}
-
-	// Calculate effective values (base × skills × modules)
-	// TODO: Add skill bonuses (Navigation skill +5% per level, max +25%)
-	effectiveWarpSpeed := baseWarpSpeed * moduleWarpMultiplier
 	effectiveInertia := baseInertia * moduleInertiaModifier
 
 	return &FittingData{

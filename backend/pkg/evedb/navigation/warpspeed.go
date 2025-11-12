@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/dogma"
 )
 
@@ -28,29 +29,15 @@ type AppliedBonus struct {
 	Count     int     `json:"count"`     // Skill level or module quantity
 }
 
-// CharacterSkills represents ESI character skills response
-type CharacterSkills struct {
-	Skills []struct {
-		SkillID           int64 `json:"skill_id"`
-		ActiveSkillLevel  int   `json:"active_skill_level"`
-		TrainedSkillLevel int   `json:"trained_skill_level"`
-	} `json:"skills"`
-}
-
-// FittedItem represents a fitted module or rig from ESI assets
-type FittedItem struct {
-	TypeID int64  `json:"type_id"`
-	Slot   string `json:"slot"`
-}
-
 // GetShipWarpSpeedDeterministic calculates warp speed deterministically from SDE + ESI data
 // Implements the 7-step workflow from Issue #78
+// Uses cargo.CharacterSkills and cargo.FittedItem for consistency with cargo calculations
 func GetShipWarpSpeedDeterministic(
 	ctx context.Context,
 	db *sql.DB,
 	shipTypeID int64,
-	characterSkills *CharacterSkills,
-	fittedItems []FittedItem,
+	characterSkills *cargo.CharacterSkills,
+	fittedItems []cargo.FittedItem,
 ) (*ShipWarpSpeed, error) {
 
 	// Step 1: Get base warp speed from SDE (Attribut 20: warpSpeedMultiplier)
@@ -196,7 +183,7 @@ func getBaseWarpSpeed(db *sql.DB, shipTypeID int64) (float64, string, error) {
 }
 
 // getCharacterSkillLevel retrieves character's skill level from ESI data
-func getCharacterSkillLevel(charSkills *CharacterSkills, skillTypeID int64) int {
+func getCharacterSkillLevel(charSkills *cargo.CharacterSkills, skillTypeID int64) int {
 	if charSkills == nil {
 		return 0
 	}
@@ -209,8 +196,8 @@ func getCharacterSkillLevel(charSkills *CharacterSkills, skillTypeID int64) int 
 }
 
 // groupItemsByType groups fitted items by TypeID
-func groupItemsByType(items []FittedItem) map[int64][]FittedItem {
-	groups := make(map[int64][]FittedItem)
+func groupItemsByType(items []cargo.FittedItem) map[int64][]cargo.FittedItem {
+	groups := make(map[int64][]cargo.FittedItem)
 	for _, item := range items {
 		groups[item.TypeID] = append(groups[item.TypeID], item)
 	}
