@@ -149,10 +149,10 @@ func (tc *TestPostgresContainer) CreateTestSchema(t *testing.T) {
 			volume_total INTEGER NOT NULL,
 			volume_remain INTEGER NOT NULL,
 			min_volume INTEGER,
-			issued TIMESTAMP NOT NULL,
+			issued_at TIMESTAMP NOT NULL,
 			duration INTEGER NOT NULL,
-			fetched_at TIMESTAMP NOT NULL,
-			PRIMARY KEY (order_id, fetched_at)
+			cached_at TIMESTAMP NOT NULL,
+			PRIMARY KEY (order_id, cached_at)
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_market_orders_region_type 
