@@ -202,7 +202,7 @@ function groupModulesBySlot(modules: FittedModule[]): Record<string, FittedModul
 
   // Remove empty groups
   return Object.fromEntries(
-    Object.entries(groups).filter(([_, mods]) => mods.length > 0)
+    Object.entries(groups).filter(([_slot, mods]) => mods.length > 0)
   );
 }
 

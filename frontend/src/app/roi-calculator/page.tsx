@@ -43,7 +43,7 @@ export default function ROICalculatorPage() {
           <CardContent>
             <div className="text-2xl font-bold">Auto-Allocate</div>
             <p className="text-xs text-muted-foreground">
-              "Invest 500M optimally"
+              &ldquo;Invest 500M optimally&rdquo;
             </p>
           </CardContent>
         </Card>
