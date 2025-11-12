@@ -4,6 +4,7 @@ package handlers
 import (
 	"strconv"
 
+	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/gofiber/fiber/v2"
 )
@@ -23,6 +24,20 @@ func NewCharacterHandler(skillsService services.SkillsServicer) *CharacterHandle
 // GetCharacterSkills handles GET /api/v1/characters/:characterId/skills
 // Fetches and returns character skills from ESI with caching
 // Returns default skills (all = 0) if ESI fails (graceful degradation)
+//
+// @Summary Get character skills
+// @Description Retrieve character skills from ESI with Redis caching
+// @Description Graceful degradation: Returns default skills (level 0) if ESI fails
+// @Tags Character
+// @Security BearerAuth
+// @Produce json
+// @Param characterId path int true "Character ID" example(12345678)
+// @Success 200 {object} models.CharacterSkillsResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /characters/{characterId}/skills [get]
 func (h *CharacterHandler) GetCharacterSkills(c *fiber.Ctx) error {
 	// Get character ID from path parameter
 	characterIDParam := c.Params("characterId")

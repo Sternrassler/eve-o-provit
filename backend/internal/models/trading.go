@@ -167,13 +167,6 @@ type RegionsResponse struct {
 	Count   int      `json:"count"`
 }
 
-// ItemSearchResult represents a search result for items
-type ItemSearchResult struct {
-	TypeID    int    `json:"type_id"`
-	Name      string `json:"name"`
-	GroupName string `json:"group_name"`
-}
-
 // ValidationError represents a validation error
 type ValidationError struct {
 	Field   string

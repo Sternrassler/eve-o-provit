@@ -9,6 +9,7 @@ import (
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
+	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/gofiber/fiber/v2"
@@ -74,6 +75,14 @@ func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRep
 }
 
 // Health handles health check requests
+//
+// @Summary Health check
+// @Description Check API and database health status
+// @Tags Health
+// @Produce json
+// @Success 200 {object} models.HealthResponse
+// @Failure 503 {object} models.ErrorResponse
+// @Router /health [get]
 func (h *Handler) Health(c *fiber.Ctx) error {
 	// Check database health
 	if err := h.healthChecker.Health(c.Context()); err != nil {
@@ -94,6 +103,13 @@ func (h *Handler) Health(c *fiber.Ctx) error {
 }
 
 // Version handles version requests
+//
+// @Summary API version
+// @Description Get API version information
+// @Tags Health
+// @Produce json
+// @Success 200 {object} models.VersionResponse
+// @Router /version [get]
 func (h *Handler) Version(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"version": "0.1.0",
@@ -102,6 +118,16 @@ func (h *Handler) Version(c *fiber.Ctx) error {
 }
 
 // GetType handles SDE type lookup requests
+//
+// @Summary Get item type information
+// @Description Retrieve detailed information about an EVE Online item type from SDE
+// @Tags SDE
+// @Produce json
+// @Param id path int true "Type ID"
+// @Success 200 {object} models.TypeResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Router /types/{id} [get]
 func (h *Handler) GetType(c *fiber.Ctx) error {
 	typeIDStr := c.Params("id")
 	typeID, err := strconv.Atoi(typeIDStr)
@@ -122,6 +148,19 @@ func (h *Handler) GetType(c *fiber.Ctx) error {
 }
 
 // GetMarketOrders handles market orders requests
+//
+// @Summary Get market orders
+// @Description Retrieve market orders for a specific item type in a region
+// @Description Supports optional refresh from ESI (cached for 5 minutes)
+// @Tags Market
+// @Produce json
+// @Param region path int true "Region ID" example(10000002)
+// @Param type path int true "Type ID" example(34)
+// @Param refresh query bool false "Force refresh from ESI" default(false)
+// @Success 200 {array} models.MarketOrderResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /market/{region}/{type} [get]
 func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 	// Parameter validation
 	regionIDStr := c.Params("region")
@@ -169,6 +208,18 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 }
 
 // GetMarketDataStaleness returns age of market data for a region
+//
+// @Summary Get market data staleness
+// @Description Check how old the cached market data is for a region
+// @Description Status: fresh (<30min), stale (30-60min), very_stale (>60min)
+// @Tags Market
+// @Produce json
+// @Param region path int true "Region ID" example(10000002)
+// @Success 200 {object} models.MarketDataStalenessResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /market/staleness/{region} [get]
 func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 	regionIDStr := c.Params("region")
 	if regionIDStr == "" {
@@ -195,7 +246,7 @@ func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 	`
 	var totalOrders int
 	var latestFetch *time.Time // Nullable for empty regions
-	var ageMinutes *float64     // Nullable for empty regions
+	var ageMinutes *float64    // Nullable for empty regions
 
 	err = h.postgresQuery.QueryRow(c.Context(), query, regionID).Scan(&totalOrders, &latestFetch, &ageMinutes)
 	if err != nil {
@@ -225,6 +276,14 @@ func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 }
 
 // GetRegions handles SDE regions list requests
+//
+// @Summary List all EVE regions
+// @Description Get list of all EVE Online regions from SDE
+// @Tags SDE
+// @Produce json
+// @Success 200 {array} models.RegionResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /sde/regions [get]
 func (h *Handler) GetRegions(c *fiber.Ctx) error {
 	if h.regionQuerier == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

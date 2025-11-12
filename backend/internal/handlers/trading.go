@@ -12,6 +12,7 @@ import (
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
+	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/gofiber/fiber/v2"
 )
@@ -54,6 +55,22 @@ const (
 // CalculateRoutes handles POST /api/v1/trading/routes/calculate
 // Supports optional authentication for skill-aware cargo calculations
 // Supports optional volume filtering for liquidity-based route selection
+//
+// @Summary Calculate trading routes
+// @Description Calculate optimal intra-region trading routes with profit analysis
+// @Description Uses character skills and ship fitting for accurate cargo capacity
+// @Description Supports volume filtering for liquidity-based selection
+// @Tags Trading
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body models.TradingRouteRequest true "Route calculation request"
+// @Success 200 {array} models.TradingRouteResponse
+// @Success 206 {array} models.TradingRouteResponse "Partial results (timeout)"
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /trading/routes/calculate [post]
 func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	var req models.RouteCalculationRequest
 
@@ -495,6 +512,17 @@ func (h *TradingHandler) setESIAutopilotWaypoint(ctx context.Context, accessToke
 }
 
 // SearchItems handles GET /api/v1/items/search
+//
+// @Summary Search EVE items
+// @Description Search for EVE Online items by name (fuzzy matching)
+// @Tags Trading
+// @Produce json
+// @Param q query string true "Search query (min 3 characters)" minlength(3)
+// @Param limit query int false "Maximum results (default 20, max 100)" minimum(1) maximum(100) default(20)
+// @Success 200 {array} models.ItemSearchResult
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /items/search [get]
 func (h *TradingHandler) SearchItems(c *fiber.Ctx) error {
 	query := c.Query("q")
 	if len(query) < 3 {

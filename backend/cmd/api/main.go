@@ -1,3 +1,51 @@
+// Package main is the entry point for EVE-O-Provit API
+//
+// @title EVE-O-Provit API
+// @version 0.1.0
+// @description REST API for EVE Online trading, manufacturing and profit optimization
+// @description
+// @description Features:
+// @description - Intra-region trading route calculation
+// @description - Character skills and ship fitting integration
+// @description - Deterministic cargo/warp speed calculations
+// @description - Market data caching with staleness tracking
+// @description - EVE SSO authentication
+//
+// @contact.name EVE-O-Provit Team
+// @contact.url https://github.com/Sternrassler/eve-o-provit
+// @contact.email support@example.com
+//
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+//
+// @host localhost:8080
+// @BasePath /api/v1
+//
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description EVE SSO Bearer Token. Format: "Bearer {token}"
+//
+// @tag.name Health
+// @tag.description Health check and version endpoints
+//
+// @tag.name SDE
+// @tag.description Static Data Export (regions, types, etc.)
+//
+// @tag.name Market
+// @tag.description Market orders and data staleness
+//
+// @tag.name Character
+// @tag.description Character information, skills, location
+//
+// @tag.name Trading
+// @tag.description Trading route calculation and item search
+//
+// @tag.name Fitting
+// @tag.description Ship fitting with deterministic bonus calculations
+//
+// @tag.name ESI
+// @tag.description Direct ESI proxy endpoints (UI operations)
 package main
 
 import (
@@ -18,6 +66,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/redis/go-redis/v9"
+	fiberSwagger "github.com/swaggo/fiber-swagger"
+
+	_ "github.com/Sternrassler/eve-o-provit/backend/docs" // Import generated docs
 )
 
 func main() {
@@ -132,6 +183,9 @@ func main() {
 	// Public endpoints
 	app.Get("/health", h.Health)
 	app.Get("/version", h.Version)
+
+	// Swagger UI
+	app.Get("/swagger/*", fiberSwagger.WrapHandler)
 
 	// API Routes
 	api := app.Group("/api/v1")

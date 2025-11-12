@@ -4,6 +4,7 @@ package handlers
 import (
 	"strconv"
 
+	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/gofiber/fiber/v2"
 )
@@ -26,6 +27,23 @@ func NewFittingHandler(fittingService services.FittingServicer) *FittingHandler 
 // - List of fitted modules with dogma attributes
 // - Aggregated bonuses (cargo, warp speed, inertia)
 // - Cache status (5min TTL)
+//
+// @Summary Get character ship fitting
+// @Description Retrieve character's ship fitting with deterministic bonus calculations
+// @Description Calculates effective cargo capacity, warp speed with skills and modules
+// @Description Uses EVE dogma engine with stacking penalties
+// @Tags Fitting
+// @Security BearerAuth
+// @Produce json
+// @Param characterId path int true "Character ID" example(12345678)
+// @Param shipTypeId path int true "Ship Type ID" example(650)
+// @Param refresh query bool false "Force cache refresh" default(false)
+// @Success 200 {object} models.CharacterFittingResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /characters/{characterId}/fitting/{shipTypeId} [get]
 func (h *FittingHandler) GetCharacterFitting(c *fiber.Ctx) error {
 	// Get character ID from path parameter
 	characterIDParam := c.Params("characterId")

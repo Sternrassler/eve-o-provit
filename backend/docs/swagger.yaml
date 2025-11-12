@@ -1,0 +1,648 @@
+basePath: /api/v1
+definitions:
+  CharacterFittingResponse:
+    properties:
+      applied_skills:
+        example:
+        - Gallente Hauler V
+        - Navigation V
+        items:
+          type: string
+        type: array
+      base_cargo_hold_m3:
+        example: 2700
+        type: number
+      base_fuel_bay_m3:
+        example: 0
+        type: number
+      base_warp_speed_au_s:
+        example: 3
+        type: number
+      cached_until:
+        example: "2025-11-12T11:00:00Z"
+        type: string
+      character_id:
+        example: 12345678
+        type: integer
+      effective_cargo_m3:
+        example: 9656.9
+        type: number
+      fitted_modules:
+        example: 5
+        type: integer
+      inertia_modifier:
+        example: 1
+        type: number
+      ship_name:
+        example: Nereus
+        type: string
+      ship_type_id:
+        example: 650
+        type: integer
+      warp_speed_au_s:
+        example: 6.87
+        type: number
+    type: object
+  CharacterSkill:
+    properties:
+      active_skill_level:
+        example: 5
+        type: integer
+      skill_id:
+        example: 3340
+        type: integer
+      skillpoints_in_skill:
+        example: 256000
+        type: integer
+      trained_skill_level:
+        example: 5
+        type: integer
+    type: object
+  CharacterSkillsResponse:
+    properties:
+      cached_until:
+        example: "2025-11-12T11:00:00Z"
+        type: string
+      character_id:
+        example: 12345678
+        type: integer
+      skills:
+        items:
+          $ref: '#/definitions/CharacterSkill'
+        type: array
+      total_sp:
+        example: 50000000
+        type: integer
+      unallocated_sp:
+        example: 0
+        type: integer
+    type: object
+  ErrorResponse:
+    properties:
+      code:
+        example: 400
+        type: integer
+      error:
+        example: Invalid request
+        type: string
+      message:
+        example: Detailed error message
+        type: string
+    type: object
+  HealthResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+      timestamp:
+        example: "2025-11-12T10:00:00Z"
+        type: string
+    type: object
+  ItemSearchResult:
+    properties:
+      group_name:
+        example: Mineral
+        type: string
+      name:
+        example: Tritanium
+        type: string
+      type_id:
+        example: 34
+        type: integer
+    type: object
+  MarketDataStalenessResponse:
+    properties:
+      age_minutes:
+        example: 15
+        type: integer
+      last_update:
+        example: "2025-11-12T10:00:00Z"
+        type: string
+      refresh_allowed:
+        example: true
+        type: boolean
+      region_id:
+        example: 10000002
+        type: integer
+      region_name:
+        example: The Forge
+        type: string
+      status:
+        description: fresh, stale, very_stale
+        example: fresh
+        type: string
+    type: object
+  MarketOrderResponse:
+    properties:
+      duration:
+        example: 90
+        type: integer
+      is_buy_order:
+        example: false
+        type: boolean
+      issued:
+        example: "2025-11-12T10:00:00Z"
+        type: string
+      location_id:
+        example: 60003760
+        type: integer
+      min_volume:
+        example: 1
+        type: integer
+      order_id:
+        example: 123456789
+        type: integer
+      price:
+        example: 5.5
+        type: number
+      range:
+        example: region
+        type: string
+      system_id:
+        example: 30000142
+        type: integer
+      type_id:
+        example: 34
+        type: integer
+      volume_remain:
+        example: 100000
+        type: integer
+      volume_total:
+        example: 100000
+        type: integer
+    type: object
+  RegionResponse:
+    properties:
+      region_id:
+        example: 10000002
+        type: integer
+      region_name:
+        example: The Forge
+        type: string
+    type: object
+  TradingRouteRequest:
+    properties:
+      cargo_capacity:
+        example: 9656.9
+        type: number
+      character_id:
+        example: 12345678
+        type: integer
+      max_investment:
+        example: 1000000000
+        type: number
+      max_jumps:
+        example: 5
+        type: integer
+      region_id:
+        example: 10000002
+        type: integer
+      ship_type_id:
+        example: 650
+        type: integer
+      type_ids:
+        example:
+        - 34
+        - 35
+        - 36
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - region_id
+    - type_ids
+    type: object
+  TradingRouteResponse:
+    properties:
+      buy_location:
+        example: Jita IV - Moon 4 - Caldari Navy Assembly Plant
+        type: string
+      buy_price:
+        example: 5.5
+        type: number
+      investment:
+        example: 550000
+        type: number
+      jumps:
+        example: 5
+        type: integer
+      profit:
+        example: 50000
+        type: number
+      profit_per_jump:
+        example: 10000
+        type: number
+      quantity:
+        example: 100000
+        type: integer
+      revenue:
+        example: 600000
+        type: number
+      roi_percent:
+        example: 9.09
+        type: number
+      sell_location:
+        example: Amarr VIII (Oris) - Emperor Family Academy
+        type: string
+      sell_price:
+        example: 6
+        type: number
+      type_id:
+        example: 34
+        type: integer
+      type_name:
+        example: Tritanium
+        type: string
+    type: object
+  TypeResponse:
+    properties:
+      category_id:
+        example: 4
+        type: integer
+      group_id:
+        example: 18
+        type: integer
+      packaged_volume:
+        example: 0.01
+        type: number
+      type_id:
+        example: 34
+        type: integer
+      type_name:
+        example: Tritanium
+        type: string
+      volume:
+        example: 0.01
+        type: number
+    type: object
+  VersionResponse:
+    properties:
+      build_time:
+        example: "2025-11-12T10:00:00Z"
+        type: string
+      git_commit:
+        example: abc123def
+        type: string
+      version:
+        example: 0.1.0
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@example.com
+    name: EVE-O-Provit Team
+    url: https://github.com/Sternrassler/eve-o-provit
+  description: |-
+    REST API for EVE Online trading, manufacturing and profit optimization
+
+    Features:
+    - Intra-region trading route calculation
+    - Character skills and ship fitting integration
+    - Deterministic cargo/warp speed calculations
+    - Market data caching with staleness tracking
+    - EVE SSO authentication
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: EVE-O-Provit API
+  version: 0.1.0
+paths:
+  /characters/{characterId}/fitting/{shipTypeId}:
+    get:
+      description: |-
+        Retrieve character's ship fitting with deterministic bonus calculations
+        Calculates effective cargo capacity, warp speed with skills and modules
+        Uses EVE dogma engine with stacking penalties
+      parameters:
+      - description: Character ID
+        example: 12345678
+        in: path
+        name: characterId
+        required: true
+        type: integer
+      - description: Ship Type ID
+        example: 650
+        in: path
+        name: shipTypeId
+        required: true
+        type: integer
+      - default: false
+        description: Force cache refresh
+        in: query
+        name: refresh
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CharacterFittingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get character ship fitting
+      tags:
+      - Fitting
+  /characters/{characterId}/skills:
+    get:
+      description: |-
+        Retrieve character skills from ESI with Redis caching
+        Graceful degradation: Returns default skills (level 0) if ESI fails
+      parameters:
+      - description: Character ID
+        example: 12345678
+        in: path
+        name: characterId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CharacterSkillsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get character skills
+      tags:
+      - Character
+  /health:
+    get:
+      description: Check API and database health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/HealthResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Health check
+      tags:
+      - Health
+  /items/search:
+    get:
+      description: Search for EVE Online items by name (fuzzy matching)
+      parameters:
+      - description: Search query (min 3 characters)
+        in: query
+        minLength: 3
+        name: q
+        required: true
+        type: string
+      - default: 20
+        description: Maximum results (default 20, max 100)
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ItemSearchResult'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Search EVE items
+      tags:
+      - Trading
+  /market/{region}/{type}:
+    get:
+      description: |-
+        Retrieve market orders for a specific item type in a region
+        Supports optional refresh from ESI (cached for 5 minutes)
+      parameters:
+      - description: Region ID
+        example: 10000002
+        in: path
+        name: region
+        required: true
+        type: integer
+      - description: Type ID
+        example: 34
+        in: path
+        name: type
+        required: true
+        type: integer
+      - default: false
+        description: Force refresh from ESI
+        in: query
+        name: refresh
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/MarketOrderResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get market orders
+      tags:
+      - Market
+  /market/staleness/{region}:
+    get:
+      description: |-
+        Check how old the cached market data is for a region
+        Status: fresh (<30min), stale (30-60min), very_stale (>60min)
+      parameters:
+      - description: Region ID
+        example: 10000002
+        in: path
+        name: region
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/MarketDataStalenessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get market data staleness
+      tags:
+      - Market
+  /sde/regions:
+    get:
+      description: Get list of all EVE Online regions from SDE
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/RegionResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: List all EVE regions
+      tags:
+      - SDE
+  /trading/routes/calculate:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Calculate optimal intra-region trading routes with profit analysis
+        Uses character skills and ship fitting for accurate cargo capacity
+        Supports volume filtering for liquidity-based selection
+      parameters:
+      - description: Route calculation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/TradingRouteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/TradingRouteResponse'
+            type: array
+        "206":
+          description: Partial results (timeout)
+          schema:
+            items:
+              $ref: '#/definitions/TradingRouteResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Calculate trading routes
+      tags:
+      - Trading
+  /types/{id}:
+    get:
+      description: Retrieve detailed information about an EVE Online item type from
+        SDE
+      parameters:
+      - description: Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/TypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get item type information
+      tags:
+      - SDE
+  /version:
+    get:
+      description: Get API version information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VersionResponse'
+      summary: API version
+      tags:
+      - Health
+securityDefinitions:
+  BearerAuth:
+    description: 'EVE SSO Bearer Token. Format: "Bearer {token}"'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
