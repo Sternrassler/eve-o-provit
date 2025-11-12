@@ -2,15 +2,15 @@ package cargo
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/testutil"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // TestGetShipCapacitiesDeterministic_Nereus_Scenario1 validates minimum skill (Issue #77 Scenario 1)
 func TestGetShipCapacitiesDeterministic_Nereus_Scenario1(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	// Nereus with Gallente Hauler I (minimum)
@@ -40,7 +40,7 @@ func TestGetShipCapacitiesDeterministic_Nereus_Scenario1(t *testing.T) {
 
 // TestGetShipCapacitiesDeterministic_Nereus_Scenario2 validates trained skill (Issue #77 Scenario 2)
 func TestGetShipCapacitiesDeterministic_Nereus_Scenario2(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	// Nereus with Gallente Hauler V (trained!)
@@ -70,7 +70,7 @@ func TestGetShipCapacitiesDeterministic_Nereus_Scenario2(t *testing.T) {
 
 // TestGetShipCapacitiesDeterministic_Nereus_Scenario3 validates full fitting (Issue #77 Scenario 3)
 func TestGetShipCapacitiesDeterministic_Nereus_Scenario3(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	// Nereus with Gallente Hauler I + 5× Module + 3× Rigs
@@ -121,7 +121,7 @@ func TestGetShipCapacitiesDeterministic_Nereus_Scenario3(t *testing.T) {
 
 // TestGetShipCapacitiesDeterministic_Nereus_Scenario4 validates error handling (Issue #77 Scenario 4)
 func TestGetShipCapacitiesDeterministic_Nereus_Scenario4(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	// Character without required skill
@@ -150,23 +150,4 @@ func almostEqual(a, b, tolerance float64) bool {
 		diff = -diff
 	}
 	return diff <= tolerance
-}
-
-// openTestDB opens the SDE SQLite database for testing
-func openTestDB(t *testing.T) *sql.DB {
-	t.Helper()
-
-	dbPath := "/home/ix/vscode/eve-sde/data/sqlite/eve-sde.db"
-
-	db, err := sql.Open("sqlite3", "file:"+dbPath+"?mode=ro")
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		db.Close()
-		t.Fatalf("Failed to ping test database: %v", err)
-	}
-
-	return db
 }

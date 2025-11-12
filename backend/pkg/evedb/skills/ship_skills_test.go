@@ -1,15 +1,15 @@
 package skills
 
 import (
-	"database/sql"
 	"testing"
 
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/testutil"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // TestGetShipCargoSkills_Nereus validates deterministic skill derivation for Nereus
 func TestGetShipCargoSkills_Nereus(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	result, err := GetShipCargoSkills(db, 650) // Nereus
@@ -74,7 +74,7 @@ func TestGetShipCargoSkills_Nereus(t *testing.T) {
 
 // TestGetBaseCapacity validates simple capacity query
 func TestGetBaseCapacity(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	capacity, err := GetBaseCapacity(db, 650) // Nereus
@@ -92,7 +92,7 @@ func TestGetBaseCapacity(t *testing.T) {
 
 // TestGetBaseCapacity_NotFound validates error handling
 func TestGetBaseCapacity_NotFound(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	_, err := GetBaseCapacity(db, 99999999)
@@ -101,24 +101,4 @@ func TestGetBaseCapacity_NotFound(t *testing.T) {
 	}
 
 	t.Logf("✅ Error handling works: %v", err)
-}
-
-// openTestDB opens the SDE SQLite database for testing
-func openTestDB(t *testing.T) *sql.DB {
-	t.Helper()
-
-	// Path to SDE database (adjust if needed)
-	dbPath := "/home/ix/vscode/eve-sde/data/sqlite/eve-sde.db"
-
-	db, err := sql.Open("sqlite3", "file:"+dbPath+"?mode=ro")
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		db.Close()
-		t.Fatalf("Failed to ping test database: %v", err)
-	}
-
-	return db
 }

@@ -2,17 +2,16 @@ package navigation
 
 import (
 	"context"
-	"database/sql"
-	"os"
 	"testing"
 
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/testutil"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // TestGetShipWarpSpeedDeterministic_Scenario1_BaseSpeed validates base warp speed without skills/modules
 func TestGetShipWarpSpeedDeterministic_Scenario1_BaseSpeed(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	ctx := context.Background()
@@ -53,7 +52,7 @@ func TestGetShipWarpSpeedDeterministic_Scenario1_BaseSpeed(t *testing.T) {
 
 // TestGetShipWarpSpeedDeterministic_Scenario2_NavigationSkills validates Navigation skill bonuses
 func TestGetShipWarpSpeedDeterministic_Scenario2_NavigationSkills(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	ctx := context.Background()
@@ -123,7 +122,7 @@ func TestGetShipWarpSpeedDeterministic_Scenario2_NavigationSkills(t *testing.T) 
 
 // TestGetShipWarpSpeedDeterministic_Scenario3_FullFitting validates skills + modules
 func TestGetShipWarpSpeedDeterministic_Scenario3_FullFitting(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	ctx := context.Background()
@@ -192,7 +191,7 @@ func TestGetShipWarpSpeedDeterministic_Scenario3_FullFitting(t *testing.T) {
 
 // TestGetShipWarpSpeedDeterministic_Scenario4_ErrorHandling validates error cases
 func TestGetShipWarpSpeedDeterministic_Scenario4_ErrorHandling(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	ctx := context.Background()
@@ -231,22 +230,4 @@ func abs(x float64) float64 {
 		return -x
 	}
 	return x
-}
-
-// openTestDB opens the test SDE database
-func openTestDB(t *testing.T) *sql.DB {
-	t.Helper()
-
-	// Use environment variable or default path
-	dbPath := os.Getenv("SDE_DB_PATH")
-	if dbPath == "" {
-		dbPath = "../../../data/sde/eve-sde.db" // Default for local testing
-	}
-
-	db, err := sql.Open("sqlite3", "file:"+dbPath+"?mode=ro")
-	if err != nil {
-		t.Fatalf("Failed to open test database at %s: %v", dbPath, err)
-	}
-
-	return db
 }

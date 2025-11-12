@@ -1,15 +1,15 @@
 package dogma
 
 import (
-	"database/sql"
 	"testing"
 
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/testutil"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // TestGetModuleEffects_ExpandedCargohold validates deterministic module effect derivation
 func TestGetModuleEffects_ExpandedCargohold(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	// Expanded Cargohold I (Type 1317)
@@ -64,7 +64,7 @@ func TestGetModuleEffects_ExpandedCargohold(t *testing.T) {
 
 // TestGetModuleEffects_MediumRig validates deterministic rig effect derivation
 func TestGetModuleEffects_MediumRig(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	// Medium Cargohold Optimization I (Type 31119)
@@ -163,7 +163,7 @@ func TestApplyModifier_Operation6(t *testing.T) {
 
 // TestCalculateCargoBonus_Combined validates full workflow
 func TestCalculateCargoBonus_Combined(t *testing.T) {
-	db := openTestDB(t)
+	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
 	baseCapacity := 2700.0
@@ -212,23 +212,4 @@ func almostEqual(a, b, tolerance float64) bool {
 		diff = -diff
 	}
 	return diff <= tolerance
-}
-
-// openTestDB opens the SDE SQLite database for testing
-func openTestDB(t *testing.T) *sql.DB {
-	t.Helper()
-
-	dbPath := "/home/ix/vscode/eve-sde/data/sqlite/eve-sde.db"
-
-	db, err := sql.Open("sqlite3", "file:"+dbPath+"?mode=ro")
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
-
-	if err := db.Ping(); err != nil {
-		db.Close()
-		t.Fatalf("Failed to ping test database: %v", err)
-	}
-
-	return db
 }

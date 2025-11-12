@@ -15,7 +15,7 @@ const (
 
 // Navigation Skills
 const (
-	TypeIDNavigation         = 3456 // Navigation skill: +5% warp speed per level
+	TypeIDNavigation         = 3449 // Navigation skill: +5% warp speed per level
 	TypeIDWarpDriveOperation = 3453
 	TypeIDEvasiveManeuvering = 3452
 	TypeIDSpaceshipCommand   = 3327
