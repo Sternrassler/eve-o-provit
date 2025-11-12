@@ -52,6 +52,7 @@ services:
       DATABASE_URL: postgres://eveprovit:${POSTGRES_PASSWORD}@postgres:5432/eveprovit?sslmode=disable
       REDIS_URL: redis://redis:6379/0
       SDE_PATH: /data/sde/eve-sde.db
+      SDE_DB_PATH: ${SDE_DB_PATH:-/data/sde/eve-sde.db}
       CORS_ORIGINS: http://localhost:9000,http://localhost:3000
       LOG_LEVEL: debug
       ENV: development
