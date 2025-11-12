@@ -44,6 +44,9 @@
 // @tag.name Fitting
 // @tag.description Ship fitting with deterministic bonus calculations
 //
+// @tag.name Calculations
+// @tag.description Deterministic ship bonus calculations (cargo, warp, inertia)
+//
 // @tag.name ESI
 // @tag.description Direct ESI proxy endpoints (UI operations)
 package main
@@ -166,6 +169,7 @@ func main() {
 	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper, cargoService)
 	characterHandler := handlers.NewCharacterHandler(skillsService)
 	fittingHandler := handlers.NewFittingHandler(fittingService)
+	calculationHandler := handlers.NewCalculationHandler(db.SDE, fittingService)
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -203,6 +207,10 @@ func main() {
 
 	// Item search endpoint (public)
 	api.Get("/items/search", tradingHandler.SearchItems)
+
+	// Calculation endpoints (public - deterministic calculations)
+	api.Post("/calculations/cargo", calculationHandler.CalculateCargo)
+	api.Post("/calculations/warp", calculationHandler.CalculateWarp)
 
 	// Protected routes (require Bearer token)
 	protected := api.Group("", evesso.AuthMiddleware)

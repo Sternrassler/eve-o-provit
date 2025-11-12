@@ -17,6 +17,98 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/api/v1/calculations/cargo": {
+            "post": {
+                "description": "Calculate effective cargo capacity including skill bonuses and module bonuses\nSupports both character-based (with ESI fetch) and manual skill input\nReturns deterministic breakdown of all bonuses applied",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Calculate effective cargo capacity",
+                "parameters": [
+                    {
+                        "description": "Cargo calculation parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CargoCalculationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/CargoCalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/calculations/warp": {
+            "post": {
+                "description": "Calculate effective warp speed, inertia modifier, and align time\nIncludes skill bonuses and module effects with stacking penalties\nReturns deterministic breakdown of all bonuses applied",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Calculations"
+                ],
+                "summary": "Calculate warp speed and align time",
+                "parameters": [
+                    {
+                        "description": "Warp calculation parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/WarpCalculationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/WarpCalculationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/characters/{characterId}/fitting/{shipTypeId}": {
             "get": {
                 "security": [
@@ -499,6 +591,68 @@
         }
     },
     "definitions": {
+        "CargoCalculationRequest": {
+            "type": "object",
+            "required": [
+                "ship_type_id"
+            ],
+            "properties": {
+                "base_capacity": {
+                    "type": "number",
+                    "example": 5000
+                },
+                "character_id": {
+                    "type": "integer",
+                    "example": 12345678
+                },
+                "module_bonuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ModuleBonusInput"
+                    }
+                },
+                "ship_type_id": {
+                    "type": "integer",
+                    "example": 650
+                },
+                "skill_levels": {
+                    "$ref": "#/definitions/SkillLevelsInput"
+                }
+            }
+        },
+        "CargoCalculationResponse": {
+            "type": "object",
+            "properties": {
+                "base_capacity_m3": {
+                    "type": "number",
+                    "example": 5000
+                },
+                "capacity_breakdown": {
+                    "type": "string",
+                    "example": "Base: 5000m³ + Skills: 25% + Modules: 4656.9m³ = 9656.9m³"
+                },
+                "effective_capacity_m3": {
+                    "type": "number",
+                    "example": 9656.9
+                },
+                "module_bonus_m3": {
+                    "type": "number",
+                    "example": 4656.9
+                },
+                "ship_type_id": {
+                    "type": "integer",
+                    "example": 650
+                },
+                "ship_type_name": {
+                    "type": "string",
+                    "example": "Nereus"
+                },
+                "skill_bonus_percent": {
+                    "type": "number",
+                    "example": 25
+                }
+            }
+        },
         "CharacterFittingResponse": {
             "type": "object",
             "properties": {
@@ -736,6 +890,19 @@
                 }
             }
         },
+        "ModuleBonusInput": {
+            "type": "object",
+            "properties": {
+                "attribute_id": {
+                    "type": "integer",
+                    "example": 38
+                },
+                "value": {
+                    "type": "number",
+                    "example": 500
+                }
+            }
+        },
         "RegionResponse": {
             "type": "object",
             "properties": {
@@ -746,6 +913,27 @@
                 "region_name": {
                     "type": "string",
                     "example": "The Forge"
+                }
+            }
+        },
+        "SkillLevelsInput": {
+            "type": "object",
+            "properties": {
+                "racial_cruiser": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "racial_destroyer": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "racial_frigate": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "spaceship_command": {
+                    "type": "integer",
+                    "example": 5
                 }
             }
         },
@@ -894,6 +1082,105 @@
                 "version": {
                     "type": "string",
                     "example": "0.1.0"
+                }
+            }
+        },
+        "WarpCalculationRequest": {
+            "type": "object",
+            "required": [
+                "ship_type_id"
+            ],
+            "properties": {
+                "base_inertia": {
+                    "type": "number",
+                    "example": 0.57
+                },
+                "base_mass": {
+                    "type": "number",
+                    "example": 12100000
+                },
+                "base_warp_speed": {
+                    "type": "number",
+                    "example": 3
+                },
+                "character_id": {
+                    "type": "integer",
+                    "example": 12345678
+                },
+                "module_bonuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ModuleBonusInput"
+                    }
+                },
+                "ship_type_id": {
+                    "type": "integer",
+                    "example": 650
+                },
+                "skill_levels": {
+                    "$ref": "#/definitions/WarpSkillLevelsInput"
+                }
+            }
+        },
+        "WarpCalculationResponse": {
+            "type": "object",
+            "properties": {
+                "align_time_seconds": {
+                    "type": "number",
+                    "example": 4.25
+                },
+                "base_inertia": {
+                    "type": "number",
+                    "example": 0.57
+                },
+                "base_warp_speed_au_s": {
+                    "type": "number",
+                    "example": 3
+                },
+                "effective_inertia": {
+                    "type": "number",
+                    "example": 0.456
+                },
+                "effective_warp_speed_au_s": {
+                    "type": "number",
+                    "example": 4.5
+                },
+                "inertia_bonus_percent": {
+                    "type": "number",
+                    "example": 20
+                },
+                "ship_type_id": {
+                    "type": "integer",
+                    "example": 650
+                },
+                "ship_type_name": {
+                    "type": "string",
+                    "example": "Nereus"
+                },
+                "warp_speed_bonus_percent": {
+                    "type": "number",
+                    "example": 50
+                },
+                "warp_speed_breakdown": {
+                    "type": "string",
+                    "example": "Base: 3.0 AU/s + Skills: 50% = 4.5 AU/s"
+                }
+            }
+        },
+        "WarpSkillLevelsInput": {
+            "type": "object",
+            "properties": {
+                "evasive_maneuvering": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "navigation": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "warp_drive_operation": {
+                    "type": "integer",
+                    "example": 5
                 }
             }
         }

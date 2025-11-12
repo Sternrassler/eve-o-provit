@@ -1,5 +1,49 @@
 basePath: /
 definitions:
+  CargoCalculationRequest:
+    properties:
+      base_capacity:
+        example: 5000
+        type: number
+      character_id:
+        example: 12345678
+        type: integer
+      module_bonuses:
+        items:
+          $ref: '#/definitions/ModuleBonusInput'
+        type: array
+      ship_type_id:
+        example: 650
+        type: integer
+      skill_levels:
+        $ref: '#/definitions/SkillLevelsInput'
+    required:
+    - ship_type_id
+    type: object
+  CargoCalculationResponse:
+    properties:
+      base_capacity_m3:
+        example: 5000
+        type: number
+      capacity_breakdown:
+        example: 'Base: 5000m³ + Skills: 25% + Modules: 4656.9m³ = 9656.9m³'
+        type: string
+      effective_capacity_m3:
+        example: 9656.9
+        type: number
+      module_bonus_m3:
+        example: 4656.9
+        type: number
+      ship_type_id:
+        example: 650
+        type: integer
+      ship_type_name:
+        example: Nereus
+        type: string
+      skill_bonus_percent:
+        example: 25
+        type: number
+    type: object
   CharacterFittingResponse:
     properties:
       applied_skills:
@@ -171,6 +215,15 @@ definitions:
         example: 100000
         type: integer
     type: object
+  ModuleBonusInput:
+    properties:
+      attribute_id:
+        example: 38
+        type: integer
+      value:
+        example: 500
+        type: number
+    type: object
   RegionResponse:
     properties:
       region_id:
@@ -179,6 +232,21 @@ definitions:
       region_name:
         example: The Forge
         type: string
+    type: object
+  SkillLevelsInput:
+    properties:
+      racial_cruiser:
+        example: 5
+        type: integer
+      racial_destroyer:
+        example: 5
+        type: integer
+      racial_frigate:
+        example: 5
+        type: integer
+      spaceship_command:
+        example: 5
+        type: integer
     type: object
   TradingRouteRequest:
     properties:
@@ -288,6 +356,77 @@ definitions:
         example: 0.1.0
         type: string
     type: object
+  WarpCalculationRequest:
+    properties:
+      base_inertia:
+        example: 0.57
+        type: number
+      base_mass:
+        example: 12100000
+        type: number
+      base_warp_speed:
+        example: 3
+        type: number
+      character_id:
+        example: 12345678
+        type: integer
+      module_bonuses:
+        items:
+          $ref: '#/definitions/ModuleBonusInput'
+        type: array
+      ship_type_id:
+        example: 650
+        type: integer
+      skill_levels:
+        $ref: '#/definitions/WarpSkillLevelsInput'
+    required:
+    - ship_type_id
+    type: object
+  WarpCalculationResponse:
+    properties:
+      align_time_seconds:
+        example: 4.25
+        type: number
+      base_inertia:
+        example: 0.57
+        type: number
+      base_warp_speed_au_s:
+        example: 3
+        type: number
+      effective_inertia:
+        example: 0.456
+        type: number
+      effective_warp_speed_au_s:
+        example: 4.5
+        type: number
+      inertia_bonus_percent:
+        example: 20
+        type: number
+      ship_type_id:
+        example: 650
+        type: integer
+      ship_type_name:
+        example: Nereus
+        type: string
+      warp_speed_bonus_percent:
+        example: 50
+        type: number
+      warp_speed_breakdown:
+        example: 'Base: 3.0 AU/s + Skills: 50% = 4.5 AU/s'
+        type: string
+    type: object
+  WarpSkillLevelsInput:
+    properties:
+      evasive_maneuvering:
+        example: 5
+        type: integer
+      navigation:
+        example: 5
+        type: integer
+      warp_drive_operation:
+        example: 5
+        type: integer
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -309,6 +448,72 @@ info:
   title: EVE-O-Provit API
   version: 0.1.0
 paths:
+  /api/v1/calculations/cargo:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Calculate effective cargo capacity including skill bonuses and module bonuses
+        Supports both character-based (with ESI fetch) and manual skill input
+        Returns deterministic breakdown of all bonuses applied
+      parameters:
+      - description: Cargo calculation parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/CargoCalculationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CargoCalculationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Calculate effective cargo capacity
+      tags:
+      - Calculations
+  /api/v1/calculations/warp:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Calculate effective warp speed, inertia modifier, and align time
+        Includes skill bonuses and module effects with stacking penalties
+        Returns deterministic breakdown of all bonuses applied
+      parameters:
+      - description: Warp calculation parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/WarpCalculationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/WarpCalculationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Calculate warp speed and align time
+      tags:
+      - Calculations
   /api/v1/characters/{characterId}/fitting/{shipTypeId}:
     get:
       description: |-

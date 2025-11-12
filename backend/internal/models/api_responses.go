@@ -165,3 +165,70 @@ type TradingRouteResponse struct {
 	ProfitPerJump float64 `json:"profit_per_jump,omitempty" example:"10000.00"`
 	Jumps         int     `json:"jumps,omitempty" example:"5"`
 } // @name TradingRouteResponse
+
+// CargoCalculationRequest represents a request to calculate effective cargo capacity
+type CargoCalculationRequest struct {
+	ShipTypeID    int     `json:"ship_type_id" example:"650" validate:"required"`
+	BaseCapacity  float64 `json:"base_capacity,omitempty" example:"5000.0"`
+	CharacterID   int     `json:"character_id,omitempty" example:"12345678"`
+	SkillLevels   *SkillLevelsInput `json:"skill_levels,omitempty"`
+	ModuleBonuses []ModuleBonusInput `json:"module_bonuses,omitempty"`
+} // @name CargoCalculationRequest
+
+// SkillLevelsInput represents skill levels for calculations
+type SkillLevelsInput struct {
+	SpaceshipCommand int `json:"spaceship_command" example:"5"`
+	RacialFrigate    int `json:"racial_frigate,omitempty" example:"5"`
+	RacialDestroyer  int `json:"racial_destroyer,omitempty" example:"5"`
+	RacialCruiser    int `json:"racial_cruiser,omitempty" example:"5"`
+} // @name SkillLevelsInput
+
+// ModuleBonusInput represents a module bonus for calculations
+type ModuleBonusInput struct {
+	AttributeID int     `json:"attribute_id" example:"38"`
+	Value       float64 `json:"value" example:"500.0"`
+} // @name ModuleBonusInput
+
+// CargoCalculationResponse represents calculated cargo capacity
+type CargoCalculationResponse struct {
+	ShipTypeID           int     `json:"ship_type_id" example:"650"`
+	ShipTypeName         string  `json:"ship_type_name" example:"Nereus"`
+	BaseCapacity         float64 `json:"base_capacity_m3" example:"5000.0"`
+	SkillBonus           float64 `json:"skill_bonus_percent" example:"25.0"`
+	ModuleBonus          float64 `json:"module_bonus_m3" example:"4656.9"`
+	EffectiveCapacity    float64 `json:"effective_capacity_m3" example:"9656.9"`
+	CapacityBreakdown    string  `json:"capacity_breakdown" example:"Base: 5000m³ + Skills: 25% + Modules: 4656.9m³ = 9656.9m³"`
+} // @name CargoCalculationResponse
+
+// WarpCalculationRequest represents a request to calculate warp speed and align time
+type WarpCalculationRequest struct {
+	ShipTypeID    int     `json:"ship_type_id" example:"650" validate:"required"`
+	BaseWarpSpeed float64 `json:"base_warp_speed,omitempty" example:"3.0"`
+	BaseInertia   float64 `json:"base_inertia,omitempty" example:"0.57"`
+	BaseMass      float64 `json:"base_mass,omitempty" example:"12100000"`
+	CharacterID   int     `json:"character_id,omitempty" example:"12345678"`
+	SkillLevels   *WarpSkillLevelsInput `json:"skill_levels,omitempty"`
+	ModuleBonuses []ModuleBonusInput `json:"module_bonuses,omitempty"`
+} // @name WarpCalculationRequest
+
+// WarpSkillLevelsInput represents warp-related skill levels
+type WarpSkillLevelsInput struct {
+	Navigation       int `json:"navigation" example:"5"`
+	WarpDriveOperation int `json:"warp_drive_operation" example:"5"`
+	Evasive_Maneuvering int `json:"evasive_maneuvering" example:"5"`
+} // @name WarpSkillLevelsInput
+
+// WarpCalculationResponse represents calculated warp speed and align time
+type WarpCalculationResponse struct {
+	ShipTypeID        int     `json:"ship_type_id" example:"650"`
+	ShipTypeName      string  `json:"ship_type_name" example:"Nereus"`
+	BaseWarpSpeed     float64 `json:"base_warp_speed_au_s" example:"3.0"`
+	EffectiveWarpSpeed float64 `json:"effective_warp_speed_au_s" example:"4.5"`
+	WarpSpeedBonus    float64 `json:"warp_speed_bonus_percent" example:"50.0"`
+	BaseInertia       float64 `json:"base_inertia" example:"0.57"`
+	EffectiveInertia  float64 `json:"effective_inertia" example:"0.456"`
+	InertiaBonus      float64 `json:"inertia_bonus_percent" example:"20.0"`
+	AlignTime         float64 `json:"align_time_seconds" example:"4.25"`
+	WarpSpeedBreakdown string `json:"warp_speed_breakdown" example:"Base: 3.0 AU/s + Skills: 50% = 4.5 AU/s"`
+} // @name WarpCalculationResponse
+
