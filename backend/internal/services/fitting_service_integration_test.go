@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"os"
 	"testing"
 
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
@@ -13,14 +14,20 @@ import (
 
 // TestFittingService_DeterministicWarpSpeedIntegration tests FittingService with deterministic warp speed (Issue #78)
 func TestFittingService_DeterministicWarpSpeedIntegration(t *testing.T) {
-	// Open real SDE database (relative from backend/internal/services/)
-	db, err := sql.Open("sqlite3", "file:../../data/sde/eve-sde.db?mode=ro")
+	// Use environment variable or default path
+	dbPath := os.Getenv("SDE_DB_PATH")
+	if dbPath == "" {
+		dbPath = "../../data/sde/eve-sde.db" // Default for local testing (from backend/internal/services/)
+	}
+
+	// Open real SDE database
+	db, err := sql.Open("sqlite3", "file:"+dbPath+"?mode=ro")
 	require.NoError(t, err, "Failed to open SDE database")
 	defer db.Close()
 
 	// Verify database connection
 	err = db.Ping()
-	require.NoError(t, err, "SDE database not accessible at ../../data/sde/eve-sde.db")
+	require.NoError(t, err, "SDE database not accessible at "+dbPath)
 
 	// Create logger
 	log := logger.New()
@@ -46,7 +53,11 @@ func TestFittingService_DeterministicWarpSpeedIntegration(t *testing.T) {
 		require.NoError(t, err, "Should be able to query SDE")
 		assert.Equal(t, "Nereus", shipName, "Should find Nereus in SDE")
 
-		t.Logf("✓ SDE database accessible at ../data/sde/eve-sde.db")
+		dbPath := os.Getenv("SDE_DB_PATH")
+		if dbPath == "" {
+			dbPath = "../../data/sde/eve-sde.db"
+		}
+		t.Logf("✓ SDE database accessible at %s", dbPath)
 		t.Logf("✓ Found ship: %s", shipName)
 	})
 
