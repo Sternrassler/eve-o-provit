@@ -76,7 +76,7 @@ func (h *CalculationHandler) CalculateCargo(c *fiber.Ctx) error {
 	baseCapacity := req.BaseCapacity
 	if baseCapacity == 0 {
 		err := h.sdeDB.QueryRowContext(c.Context(),
-			`SELECT COALESCE(json_extract(dogma_attributes, '$.38'), 0)
+			`SELECT COALESCE(capacity, 0)
 			FROM types WHERE _key = ?`,
 			req.ShipTypeID,
 		).Scan(&baseCapacity)
@@ -182,16 +182,18 @@ func (h *CalculationHandler) CalculateWarp(c *fiber.Ctx) error {
 
 	row := h.sdeDB.QueryRowContext(ctx,
 		`SELECT 
-			COALESCE(json_extract(name, '$.en'), json_extract(name, '$.de'), 'Unknown') as name,
-			COALESCE(json_extract(dogma_attributes, '$.600'), 1.0) as base_warp_speed,
-			COALESCE(json_extract(dogma_attributes, '$.70'), 1.0) as inertia_modifier,
-			COALESCE(json_extract(dogma_attributes, '$.4'), 1000000) as mass
-		FROM types WHERE _key = ?`,
+			COALESCE(json_extract(t.name, '$.en'), json_extract(t.name, '$.de'), 'Unknown') as name,
+			COALESCE(t.mass, 1000000) as mass,
+			COALESCE(json_extract(td.dogmaAttributes, '$.600'), 1.0) as base_warp_speed,
+			COALESCE(json_extract(td.dogmaAttributes, '$.70'), 1.0) as inertia_modifier
+		FROM types t
+		LEFT JOIN typeDogma td ON t._key = td._key
+		WHERE t._key = ?`,
 		req.ShipTypeID,
 	)
 
-	var dbWarpSpeed, dbInertia, dbMass float64
-	if err := row.Scan(&shipTypeName, &dbWarpSpeed, &dbInertia, &dbMass); err != nil {
+	var dbMass, dbWarpSpeed, dbInertia float64
+	if err := row.Scan(&shipTypeName, &dbMass, &dbWarpSpeed, &dbInertia); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "failed to fetch ship attributes",
 			"details": err.Error(),
