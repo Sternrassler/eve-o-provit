@@ -48,11 +48,11 @@ type ShipCapacities struct {
 
 // AppliedBonus represents a single bonus applied to cargo capacity (NEW for Issue #77)
 type AppliedBonus struct {
-	Source    string  `json:"source"`     // "Skill", "Module", "Rig"
-	Name      string  `json:"name"`       // Skill/Module name
-	Value     float64 `json:"value"`      // Bonus value (% or absolute)
-	Operation int     `json:"operation"`  // Dogma operation code
-	Count     int     `json:"count"`      // Number of items (for modules/rigs)
+	Source    string  `json:"source"`    // "Skill", "Module", "Rig"
+	Name      string  `json:"name"`      // Skill/Module name
+	Value     float64 `json:"value"`     // Bonus value (% or absolute)
+	Operation int     `json:"operation"` // Dogma operation code
+	Count     int     `json:"count"`     // Number of items (for modules/rigs)
 }
 
 // CharacterSkills represents ESI character skills response (NEW for Issue #77)
@@ -269,7 +269,7 @@ func GetShipCapacitiesDeterministic(
 	characterSkills *CharacterSkills,
 	fittedItems []FittedItem,
 ) (*ShipCapacities, error) {
-	
+
 	// Step 1-2: Get base capacity + required skills from SDE
 	shipSkills, err := skills.GetShipCargoSkills(db, shipTypeID)
 	if err != nil {
@@ -289,7 +289,7 @@ func GetShipCapacitiesDeterministic(
 		for _, reqSkill := range shipSkills.Skills {
 			// Find character's skill level
 			charLevel := getCharacterSkillLevel(characterSkills, reqSkill.SkillTypeID)
-			
+
 			// Validate minimum skill requirement
 			if charLevel < reqSkill.MinimumLevel {
 				return nil, fmt.Errorf(
