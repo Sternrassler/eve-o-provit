@@ -37,7 +37,7 @@ func NewCharacterHandler(skillsService services.SkillsServicer) *CharacterHandle
 // @Failure 401 {object} models.ErrorResponse
 // @Failure 403 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /characters/{characterId}/skills [get]
+// @Router /api/v1/characters/{characterId}/skills [get]
 func (h *CharacterHandler) GetCharacterSkills(c *fiber.Ctx) error {
 	// Get character ID from path parameter
 	characterIDParam := c.Params("characterId")

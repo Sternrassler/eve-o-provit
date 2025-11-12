@@ -43,7 +43,7 @@ func NewFittingHandler(fittingService services.FittingServicer) *FittingHandler 
 // @Failure 401 {object} models.ErrorResponse
 // @Failure 403 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /characters/{characterId}/fitting/{shipTypeId} [get]
+// @Router /api/v1/characters/{characterId}/fitting/{shipTypeId} [get]
 func (h *FittingHandler) GetCharacterFitting(c *fiber.Ctx) error {
 	// Get character ID from path parameter
 	characterIDParam := c.Params("characterId")

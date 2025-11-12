@@ -19,7 +19,7 @@
 // @license.url https://opensource.org/licenses/MIT
 //
 // @host localhost:8080
-// @BasePath /api/v1
+// @BasePath /
 //
 // @securityDefinitions.apikey BearerAuth
 // @in header

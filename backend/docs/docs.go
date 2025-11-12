@@ -23,7 +23,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/characters/{characterId}/fitting/{shipTypeId}": {
+        "/api/v1/characters/{characterId}/fitting/{shipTypeId}": {
             "get": {
                 "security": [
                     {
@@ -97,7 +97,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/characters/{characterId}/skills": {
+        "/api/v1/characters/{characterId}/skills": {
             "get": {
                 "security": [
                     {
@@ -156,7 +156,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/health": {
+        "/api/v1/health": {
             "get": {
                 "description": "Check API and database health status",
                 "produces": [
@@ -173,8 +173,8 @@ const docTemplate = `{
                             "$ref": "#/definitions/HealthResponse"
                         }
                     },
-                    "503": {
-                        "description": "Service Unavailable",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
@@ -182,7 +182,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/items/search": {
+        "/api/v1/items/search": {
             "get": {
                 "description": "Search for EVE Online items by name (fuzzy matching)",
                 "produces": [
@@ -236,7 +236,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/market/staleness/{region}": {
+        "/api/v1/market/staleness/{region}": {
             "get": {
                 "description": "Check how old the cached market data is for a region\nStatus: fresh (\u003c30min), stale (30-60min), very_stale (\u003e60min)",
                 "produces": [
@@ -284,7 +284,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/market/{region}/{type}": {
+        "/api/v1/market/{region}/{type}": {
             "get": {
                 "description": "Retrieve market orders for a specific item type in a region\nSupports optional refresh from ESI (cached for 5 minutes)",
                 "produces": [
@@ -344,7 +344,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/sde/regions": {
+        "/api/v1/sde/regions": {
             "get": {
                 "description": "Get list of all EVE Online regions from SDE",
                 "produces": [
@@ -366,6 +366,47 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/types/{id}": {
+            "get": {
+                "description": "Retrieve detailed information about an EVE Online item type from SDE",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SDE"
+                ],
+                "summary": "Get item type information",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Type ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/TypeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
@@ -435,47 +476,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/types/{id}": {
-            "get": {
-                "description": "Retrieve detailed information about an EVE Online item type from SDE",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "SDE"
-                ],
-                "summary": "Get item type information",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Type ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/TypeResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
                         }
@@ -918,7 +918,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "0.1.0",
 	Host:             "localhost:8080",
-	BasePath:         "/api/v1",
+	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "EVE-O-Provit API",
 	Description:      "REST API for EVE Online trading, manufacturing and profit optimization\n\nFeatures:\n- Intra-region trading route calculation\n- Character skills and ship fitting integration\n- Deterministic cargo/warp speed calculations\n- Market data caching with staleness tracking\n- EVE SSO authentication",

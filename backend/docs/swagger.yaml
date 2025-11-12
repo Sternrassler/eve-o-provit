@@ -1,4 +1,4 @@
-basePath: /api/v1
+basePath: /
 definitions:
   CharacterFittingResponse:
     properties:
@@ -309,7 +309,7 @@ info:
   title: EVE-O-Provit API
   version: 0.1.0
 paths:
-  /characters/{characterId}/fitting/{shipTypeId}:
+  /api/v1/characters/{characterId}/fitting/{shipTypeId}:
     get:
       description: |-
         Retrieve character's ship fitting with deterministic bonus calculations
@@ -361,7 +361,7 @@ paths:
       summary: Get character ship fitting
       tags:
       - Fitting
-  /characters/{characterId}/skills:
+  /api/v1/characters/{characterId}/skills:
     get:
       description: |-
         Retrieve character skills from ESI with Redis caching
@@ -401,7 +401,7 @@ paths:
       summary: Get character skills
       tags:
       - Character
-  /health:
+  /api/v1/health:
     get:
       description: Check API and database health status
       produces:
@@ -411,14 +411,14 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/HealthResponse'
-        "503":
-          description: Service Unavailable
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/ErrorResponse'
       summary: Health check
       tags:
       - Health
-  /items/search:
+  /api/v1/items/search:
     get:
       description: Search for EVE Online items by name (fuzzy matching)
       parameters:
@@ -455,7 +455,7 @@ paths:
       summary: Search EVE items
       tags:
       - Trading
-  /market/{region}/{type}:
+  /api/v1/market/{region}/{type}:
     get:
       description: |-
         Retrieve market orders for a specific item type in a region
@@ -498,7 +498,7 @@ paths:
       summary: Get market orders
       tags:
       - Market
-  /market/staleness/{region}:
+  /api/v1/market/staleness/{region}:
     get:
       description: |-
         Check how old the cached market data is for a region
@@ -532,7 +532,7 @@ paths:
       summary: Get market data staleness
       tags:
       - Market
-  /sde/regions:
+  /api/v1/sde/regions:
     get:
       description: Get list of all EVE Online regions from SDE
       produces:
@@ -549,6 +549,34 @@ paths:
           schema:
             $ref: '#/definitions/ErrorResponse'
       summary: List all EVE regions
+      tags:
+      - SDE
+  /api/v1/types/{id}:
+    get:
+      description: Retrieve detailed information about an EVE Online item type from
+        SDE
+      parameters:
+      - description: Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/TypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get item type information
       tags:
       - SDE
   /trading/routes/calculate:
@@ -598,34 +626,6 @@ paths:
       summary: Calculate trading routes
       tags:
       - Trading
-  /types/{id}:
-    get:
-      description: Retrieve detailed information about an EVE Online item type from
-        SDE
-      parameters:
-      - description: Type ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/TypeResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/ErrorResponse'
-      summary: Get item type information
-      tags:
-      - SDE
   /version:
     get:
       description: Get API version information

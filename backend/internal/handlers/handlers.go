@@ -81,8 +81,8 @@ func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRep
 // @Tags Health
 // @Produce json
 // @Success 200 {object} models.HealthResponse
-// @Failure 503 {object} models.ErrorResponse
-// @Router /health [get]
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/health [get]
 func (h *Handler) Health(c *fiber.Ctx) error {
 	// Check database health
 	if err := h.healthChecker.Health(c.Context()); err != nil {
@@ -127,7 +127,7 @@ func (h *Handler) Version(c *fiber.Ctx) error {
 // @Success 200 {object} models.TypeResponse
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 404 {object} models.ErrorResponse
-// @Router /types/{id} [get]
+// @Router /api/v1/types/{id} [get]
 func (h *Handler) GetType(c *fiber.Ctx) error {
 	typeIDStr := c.Params("id")
 	typeID, err := strconv.Atoi(typeIDStr)
@@ -160,7 +160,7 @@ func (h *Handler) GetType(c *fiber.Ctx) error {
 // @Success 200 {array} models.MarketOrderResponse
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /market/{region}/{type} [get]
+// @Router /api/v1/market/{region}/{type} [get]
 func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 	// Parameter validation
 	regionIDStr := c.Params("region")
@@ -219,7 +219,7 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 404 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /market/staleness/{region} [get]
+// @Router /api/v1/market/staleness/{region} [get]
 func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 	regionIDStr := c.Params("region")
 	if regionIDStr == "" {
@@ -283,7 +283,7 @@ func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 // @Produce json
 // @Success 200 {array} models.RegionResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /sde/regions [get]
+// @Router /api/v1/sde/regions [get]
 func (h *Handler) GetRegions(c *fiber.Ctx) error {
 	if h.regionQuerier == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

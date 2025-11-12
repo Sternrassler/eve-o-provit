@@ -522,7 +522,7 @@ func (h *TradingHandler) setESIAutopilotWaypoint(ctx context.Context, accessToke
 // @Success 200 {array} models.ItemSearchResult
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /items/search [get]
+// @Router /api/v1/items/search [get]
 func (h *TradingHandler) SearchItems(c *fiber.Ctx) error {
 	query := c.Query("q")
 	if len(query) < 3 {
