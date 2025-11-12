@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"math/rand"
 	"testing"
 )
@@ -66,39 +65,6 @@ func BenchmarkCargoService_KnapsackDP_10000Items(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = service.KnapsackDP(items, capacity)
-	}
-}
-
-// BenchmarkCargoService_OptimizeCargo benchmarks the complete optimization workflow
-func BenchmarkCargoService_OptimizeCargo(b *testing.B) {
-	mockSkills := &mockSkillsService{
-		skills: &TradingSkills{
-			SpaceshipCommand:   5,
-			GallenteIndustrial: 5,
-		},
-	}
-	service := NewCargoService(mockSkills, nil)
-	items := generateRandomItems(1000)
-	ctx := context.Background()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = service.OptimizeCargo(ctx, 12345, "test-token", 5000.0, items)
-	}
-}
-
-// BenchmarkCargoService_CalculateCapacity benchmarks capacity calculation
-func BenchmarkCargoService_CalculateCapacity(b *testing.B) {
-	service := NewCargoService(&mockSkillsService{}, nil)
-	skills := &TradingSkills{
-		SpaceshipCommand:   5,
-		GallenteIndustrial: 5,
-	}
-	baseCapacity := 5000.0
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = service.CalculateCargoCapacity(baseCapacity, skills)
 	}
 }
 

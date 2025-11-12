@@ -45,11 +45,9 @@ func DefaultConfig() Config {
 }
 
 // Context keys for character information (must match handler keys)
-type contextKey string
-
 const (
-	contextKeyCharacterID contextKey = "character_id"
-	contextKeyAccessToken contextKey = "access_token"
+	contextKeyCharacterID = "character_id"
+	contextKeyAccessToken = "access_token"
 )
 
 // RouteService orchestrates route calculation workflow
@@ -132,9 +130,8 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 			return nil, fmt.Errorf("failed to get ship capacities: %w", err)
 		}
 		baseCapacity = shipCap.BaseCargoHold
-		effectiveCapacity = baseCapacity // Default: no skills
 
-		// Apply character skills and fitting if available in context
+		// Apply character skills and fitting (required - no fallback)
 		effectiveCapacity, skillBonusPercent, fittingBonusM3 = rs.applyCharacterSkills(calcCtx, baseCapacity, shipTypeID)
 
 		cargoCapacity = effectiveCapacity
@@ -316,43 +313,40 @@ func (rs *RouteService) getRegionName(ctx context.Context, regionID int) (string
 
 // applyCharacterSkills extracts character context and applies skills to cargo capacity
 // Returns (effectiveCapacity, skillBonusPercent, fittingBonusM3)
-// Falls back to base capacity if skills unavailable
+// Requires character authentication in context
 func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity float64, shipTypeID int) (float64, float64, float64) {
-	effectiveCapacity := baseCapacity
-	skillBonusPercent := 0.0
-	fittingBonusM3 := 0.0
-
-	// Extract character_id if available in context metadata
+	// Extract character_id (required - no fallback)
 	characterID := ctx.Value(contextKeyCharacterID)
 	accessToken := ctx.Value(contextKeyAccessToken)
 
-	if characterID != nil && accessToken != nil {
-		charID, ok1 := characterID.(int)
-		token, ok2 := accessToken.(string)
-
-		if ok1 && ok2 && charID > 0 && token != "" {
-			// Fetch effective cargo capacity (skills + fitting)
-			if totalCapacity, err := rs.cargoService.GetEffectiveCargoCapacity(ctx, charID, shipTypeID, baseCapacity, token); err == nil {
-				// Calculate skill bonus (percentage)
-				if skills, err := rs.skillsService.GetCharacterSkills(ctx, charID, token); err == nil {
-					capacityWithSkills, skillBonus := rs.cargoService.CalculateCargoCapacity(baseCapacity, skills)
-					skillBonusPercent = skillBonus
-					
-					// Fitting bonus is the difference between total and skills-only capacity
-					fittingBonusM3 = totalCapacity - capacityWithSkills
-					effectiveCapacity = totalCapacity
-					
-					log.Printf("Applied cargo bonuses: base=%.2f, skills_bonus=%.2f%%, fitting_bonus=%.2f m³, total=%.2f",
-						baseCapacity, skillBonusPercent, fittingBonusM3, effectiveCapacity)
-				} else {
-					// Fallback: no skill breakdown, use total capacity
-					effectiveCapacity = totalCapacity
-					log.Printf("Applied total cargo capacity: base=%.2f, total=%.2f (skills unavailable)",
-						baseCapacity, effectiveCapacity)
-				}
-			}
-		}
+	if characterID == nil || accessToken == nil {
+		// This should never happen if AuthMiddleware is properly configured
+		log.Printf("ERROR: Missing character context in applyCharacterSkills")
+		return baseCapacity, 0.0, 0.0
 	}
 
-	return effectiveCapacity, skillBonusPercent, fittingBonusM3
+	charID, ok1 := characterID.(int)
+	token, ok2 := accessToken.(string)
+
+	if !ok1 || !ok2 || charID <= 0 || token == "" {
+		log.Printf("ERROR: Invalid character context types")
+		return baseCapacity, 0.0, 0.0
+	}
+
+	// Get deterministic cargo capacity with breakdown
+	// CargoService internally uses FittingService for deterministic calculation
+	totalCapacity, err := rs.cargoService.GetEffectiveCargoCapacity(ctx, charID, shipTypeID, baseCapacity, token)
+	if err != nil {
+		log.Printf("ERROR: Failed to get effective cargo capacity: %v", err)
+		return baseCapacity, 0.0, 0.0
+	}
+
+	// Note: Detailed breakdown (skills vs modules) is available via FittingService.GetShipFitting
+	// For now, we return total capacity only
+	// TODO: Add breakdown if needed for display
+
+	log.Printf("Applied cargo capacity: base=%.2f, total=%.2f m³",
+		baseCapacity, totalCapacity)
+
+	return totalCapacity, 0.0, 0.0
 }

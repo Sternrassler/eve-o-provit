@@ -59,6 +59,13 @@ type TradingSkills struct {
 	CaldariIndustrial  int // Badger, Crane, etc.
 	AmarrIndustrial    int // Bestower, Sigil, etc.
 	MinmatarIndustrial int // Wreathe, Hoarder, etc.
+
+	// Racial Hauler Skills (deterministic, from SDE attribute 182)
+	// Each grants +5% cargo capacity per level for respective race
+	GallenteHauler int // Type ID 3340 - Gallente T1 haulers (Nereus, Iteron Mark V)
+	CaldariHauler  int // Type ID 3341 - Caldari T1 haulers (Badger)
+	AmarrHauler    int // Type ID 3342 - Amarr T1 haulers (Bestower, Sigil)
+	MinmatarHauler int // Type ID 3343 - Minmatar T1 haulers (Wreathe, Hoarder)
 }
 
 // SkillsService provides character skills fetching with caching
@@ -288,6 +295,16 @@ func (s *SkillsService) extractTradingSkills(esiSkills *esiSkillsResponse) *Trad
 			skills.AmarrIndustrial = skill.ActiveSkillLevel
 		case 3349: // Minmatar Industrial
 			skills.MinmatarIndustrial = skill.ActiveSkillLevel
+
+		// Racial Hauler Skills (Issue #77 - deterministic cargo calculation)
+		case 3340: // Gallente Hauler
+			skills.GallenteHauler = skill.ActiveSkillLevel
+		case 3341: // Caldari Hauler
+			skills.CaldariHauler = skill.ActiveSkillLevel
+		case 3342: // Amarr Hauler
+			skills.AmarrHauler = skill.ActiveSkillLevel
+		case 3343: // Minmatar Hauler
+			skills.MinmatarHauler = skill.ActiveSkillLevel
 		}
 	}
 
@@ -313,5 +330,9 @@ func (s *SkillsService) getDefaultSkills() *TradingSkills {
 		CaldariIndustrial:       0,
 		AmarrIndustrial:         0,
 		MinmatarIndustrial:      0,
+		GallenteHauler:          0,
+		CaldariHauler:           0,
+		AmarrHauler:             0,
+		MinmatarHauler:          0,
 	}
 }

@@ -29,9 +29,9 @@ type MarketOrder struct {
 	VolumeTotal  int       `json:"volume_total"`
 	VolumeRemain int       `json:"volume_remain"`
 	MinVolume    *int      `json:"min_volume,omitempty"`
-	Issued       time.Time `json:"issued"`
+	Issued       time.Time `json:"issued"`        // Maps to issued_at in DB
 	Duration     int       `json:"duration"`
-	FetchedAt    time.Time `json:"fetched_at"`
+	FetchedAt    time.Time `json:"fetched_at"`    // Maps to cached_at in DB
 }
 
 // PriceHistory represents aggregated price history data
@@ -97,11 +97,12 @@ func (r *MarketRepository) upsertBatch(ctx context.Context, orders []MarketOrder
 		INSERT INTO market_orders (
 			order_id, type_id, region_id, location_id, is_buy_order,
 			price, volume_total, volume_remain, min_volume,
-			issued, duration, fetched_at
+			issued_at, duration, cached_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		ON CONFLICT (order_id, fetched_at) DO UPDATE SET
+		ON CONFLICT (order_id) DO UPDATE SET
 			price = EXCLUDED.price,
-			volume_remain = EXCLUDED.volume_remain
+			volume_remain = EXCLUDED.volume_remain,
+			cached_at = EXCLUDED.cached_at
 	`
 
 	for _, order := range orders {
@@ -150,10 +151,10 @@ func (r *MarketRepository) GetMarketOrders(ctx context.Context, regionID, typeID
 		SELECT 
 			order_id, type_id, region_id, location_id, is_buy_order,
 			price, volume_total, volume_remain, min_volume,
-			issued, duration, fetched_at
+			issued_at, duration, cached_at
 		FROM market_orders
 		WHERE region_id = $1 AND type_id = $2
-		ORDER BY price DESC, fetched_at DESC
+		ORDER BY price DESC, cached_at DESC
 	`
 
 	rows, err := r.db.Query(ctx, query, regionID, typeID)
@@ -198,7 +199,7 @@ func (r *MarketRepository) GetAllMarketOrdersForRegion(ctx context.Context, regi
 		SELECT 
 			order_id, type_id, region_id, location_id, is_buy_order,
 			price, volume_total, volume_remain, min_volume,
-			issued, duration, fetched_at
+			issued_at, duration, cached_at
 		FROM market_orders
 		WHERE region_id = $1
 		ORDER BY type_id, is_buy_order, price
@@ -244,7 +245,7 @@ func (r *MarketRepository) GetAllMarketOrdersForRegion(ctx context.Context, regi
 func (r *MarketRepository) CleanOldMarketOrders(ctx context.Context, olderThan time.Duration) (int64, error) {
 	query := `
 		DELETE FROM market_orders
-		WHERE fetched_at < $1
+		WHERE cached_at < $1
 	`
 
 	cutoff := time.Now().Add(-olderThan)

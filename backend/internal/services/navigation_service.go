@@ -52,7 +52,7 @@ func (s *NavigationService) GetEffectiveWarpSpeed(
 		return warpSpeedWithSkills, nil
 	}
 
-	fitting, err := s.fittingService.GetCharacterFitting(ctx, characterID, shipTypeID, accessToken)
+	fitting, err := s.fittingService.GetShipFitting(ctx, characterID, shipTypeID, accessToken)
 	if err != nil {
 		// Fitting data unavailable (not an error - ship might not be fitted)
 		// Return base warp speed only
@@ -87,7 +87,7 @@ func (s *NavigationService) GetEffectiveInertia(
 		return inertiaWithSkills, nil
 	}
 
-	fitting, err := s.fittingService.GetCharacterFitting(ctx, characterID, shipTypeID, accessToken)
+	fitting, err := s.fittingService.GetShipFitting(ctx, characterID, shipTypeID, accessToken)
 	if err != nil {
 		// Fitting data unavailable (not an error - ship might not be fitted)
 		// Return base inertia only

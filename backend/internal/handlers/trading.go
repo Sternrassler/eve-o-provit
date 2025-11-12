@@ -23,6 +23,7 @@ type TradingHandler struct {
 	shipService     services.ShipServicer            // For ship capacity queries
 	systemService   services.SystemServicer          // For system/region/station info
 	characterHelper *services.CharacterHelper
+	cargoService    services.CargoServicer // For effective cargo capacity calculation
 }
 
 // NewTradingHandler creates a new trading handler instance
@@ -32,6 +33,7 @@ func NewTradingHandler(
 	shipService services.ShipServicer,
 	systemService services.SystemServicer,
 	charHelper *services.CharacterHelper,
+	cargoService services.CargoServicer,
 ) *TradingHandler {
 	return &TradingHandler{
 		calculator:      calculator,
@@ -39,15 +41,14 @@ func NewTradingHandler(
 		shipService:     shipService,
 		systemService:   systemService,
 		characterHelper: charHelper,
+		cargoService:    cargoService,
 	}
 }
 
-// Context keys for character information
-type contextKey string
-
+// Context keys for character information (must match keys in services)
 const (
-	contextKeyCharacterID contextKey = "character_id"
-	contextKeyAccessToken contextKey = "access_token"
+	contextKeyCharacterID = "character_id"
+	contextKeyAccessToken = "access_token"
 )
 
 // CalculateRoutes handles POST /api/v1/trading/routes/calculate
@@ -77,14 +78,19 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	// Create context with optional character info for skill-aware calculations
 	ctx := c.UserContext()
 
-	// Check if character authentication is available (optional)
-	if characterID := c.Locals("character_id"); characterID != nil {
-		if accessToken := c.Locals("access_token"); accessToken != nil {
-			// Add character context for skill-aware cargo calculations
-			ctx = context.WithValue(ctx, contextKeyCharacterID, characterID)
-			ctx = context.WithValue(ctx, contextKeyAccessToken, accessToken)
-		}
+	// Extract required character authentication (set by AuthMiddleware)
+	characterID := c.Locals("character_id")
+	accessToken := c.Locals("access_token")
+
+	if characterID == nil || accessToken == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Authentication required for trading operations",
+		})
 	}
+
+	// Add character context for skill-aware cargo calculations
+	ctx = context.WithValue(ctx, contextKeyCharacterID, characterID)
+	ctx = context.WithValue(ctx, contextKeyAccessToken, accessToken)
 
 	// Calculate routes (with or without volume filtering)
 	var result *models.RouteCalculationResponse
@@ -272,6 +278,7 @@ func (h *TradingHandler) fetchESICharacterLocation(ctx context.Context, characte
 
 	// Enrich with SDE data
 	location := &models.CharacterLocation{
+		CharacterID:   int64(characterID),
 		SolarSystemID: esiLoc.SolarSystemID,
 		StationID:     esiLoc.StationID,
 		StructureID:   esiLoc.StructureID,
@@ -421,6 +428,8 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 			continue
 		}
 
+		// Use base cargo capacity for ship list
+		// (effective capacity with fitting is shown when ship is selected)
 		locationName, _ := h.systemService.GetStationName(ctx, asset.LocationID)
 
 		ships = append(ships, models.CharacterAssetShip{

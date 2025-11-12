@@ -44,14 +44,17 @@ type SkillsServicer interface {
 
 // FittingServicer defines the interface for ship fitting operations
 type FittingServicer interface {
-	// GetCharacterFitting fetches and caches ship fitting from ESI
+	// GetShipFitting fetches and caches ship fitting from ESI
 	// Returns empty fitting (no bonuses) if ESI fetch fails (graceful degradation)
-	GetCharacterFitting(
+	GetShipFitting(
 		ctx context.Context,
 		characterID int,
 		shipTypeID int,
 		accessToken string,
 	) (*FittingData, error)
+
+	// InvalidateFittingCache removes fitting data from Redis cache
+	InvalidateFittingCache(ctx context.Context, characterID int, shipTypeID int)
 }
 
 // FeeServicer defines the interface for trading fee calculations
@@ -84,12 +87,9 @@ type FeeServicer interface {
 
 // CargoServicer defines the interface for cargo optimization operations
 type CargoServicer interface {
-	// CalculateCargoCapacity calculates effective cargo capacity with skill bonuses
-	// Returns (effectiveCapacity, totalBonusPercent)
-	CalculateCargoCapacity(baseCapacity float64, skills *TradingSkills) (float64, float64)
-
 	// GetEffectiveCargoCapacity calculates total effective cargo capacity including skills AND fitting
-	// Returns final effective capacity (base × skills + fitting)
+	// Uses deterministic calculation from FittingService (Issue #77)
+	// Returns final effective capacity from deterministic SDE + ESI data
 	GetEffectiveCargoCapacity(
 		ctx context.Context,
 		characterID int,
@@ -101,16 +101,6 @@ type CargoServicer interface {
 	// KnapsackDP solves the knapsack problem using dynamic programming
 	// Optimizes for maximum value while respecting capacity constraint
 	KnapsackDP(items []CargoItem, capacity float64) *CargoSolution
-
-	// OptimizeCargo optimizes cargo selection with skill-aware capacity calculation
-	// Includes skill training recommendations when cargo is nearly full
-	OptimizeCargo(
-		ctx context.Context,
-		characterID int,
-		accessToken string,
-		baseCapacity float64,
-		items []CargoItem,
-	) (*CargoSolution, error)
 }
 
 // ShipServicer defines the interface for ship-related operations

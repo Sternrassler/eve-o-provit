@@ -7,12 +7,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
-	"sort"
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 	"github.com/redis/go-redis/v9"
 )
@@ -38,9 +37,20 @@ type FittedModule struct {
 
 // FittingBonuses contains aggregated bonuses from all fitted modules
 type FittingBonuses struct {
-	CargoBonus          float64 `json:"cargo_bonus"`           // m³ (ADDITIVE)
+	CargoBonus          float64 `json:"cargo_bonus_m3"`        // Total effective capacity in m³ (base + skills + modules)
 	WarpSpeedMultiplier float64 `json:"warp_speed_multiplier"` // 1.0 = no change (MULTIPLICATIVE)
 	InertiaModifier     float64 `json:"inertia_modifier"`      // 1.0 = no change (MULTIPLICATIVE)
+
+	// Deterministic Breakdown (Issue #77)
+	BaseCargo      float64 `json:"base_cargo_m3"`      // Base cargo from SDE (Attr 38)
+	SkillsBonusM3  float64 `json:"skills_bonus_m3"`    // Cargo bonus from skills (absolute m³)
+	SkillsBonusPct float64 `json:"skills_bonus_pct"`   // Skill bonus as percentage
+	ModulesBonusM3 float64 `json:"modules_bonus_m3"`   // Cargo bonus from modules (absolute m³)
+	EffectiveCargo float64 `json:"effective_cargo_m3"` // Final effective capacity
+
+	// Ship Base Attributes (for display when no modules fitted)
+	BaseWarpSpeed float64 `json:"base_warp_speed"` // Base warp speed in AU/s (e.g., 3.0)
+	BaseInertia   float64 `json:"base_inertia"`    // Base inertia modifier (e.g., 1.0)
 }
 
 // FittingData contains all fitting information for a ship
@@ -54,10 +64,11 @@ type FittingData struct {
 
 // FittingService provides ship fitting detection and bonus calculations
 type FittingService struct {
-	esiClient   *esiclient.Client
-	sdeDB       *sql.DB
-	redisClient *redis.Client
-	logger      *logger.Logger
+	esiClient     *esiclient.Client
+	sdeDB         *sql.DB
+	redisClient   *redis.Client
+	skillsService SkillsServicer
+	logger        *logger.Logger
 }
 
 // NewFittingService creates a new Fitting Service instance
@@ -65,19 +76,21 @@ func NewFittingService(
 	esiClient *esiclient.Client,
 	sdeDB *sql.DB,
 	redisClient *redis.Client,
+	skillsService SkillsServicer,
 	logger *logger.Logger,
 ) *FittingService {
 	return &FittingService{
-		esiClient:   esiClient,
-		sdeDB:       sdeDB,
-		redisClient: redisClient,
-		logger:      logger,
+		esiClient:     esiClient,
+		sdeDB:         sdeDB,
+		redisClient:   redisClient,
+		skillsService: skillsService,
+		logger:        logger,
 	}
 }
 
-// GetCharacterFitting fetches ship fitting from ESI with caching
+// GetShipFitting fetches ship fitting from ESI with caching
 // Returns empty fitting (no bonuses) if ESI fails - ensures graceful degradation
-func (s *FittingService) GetCharacterFitting(
+func (s *FittingService) GetShipFitting(
 	ctx context.Context,
 	characterID int,
 	shipTypeID int,
@@ -118,6 +131,16 @@ func (s *FittingService) GetCharacterFitting(
 
 	fitting.Cached = false
 	return fitting, nil
+}
+
+// InvalidateFittingCache removes fitting data from Redis cache
+func (s *FittingService) InvalidateFittingCache(ctx context.Context, characterID int, shipTypeID int) {
+	cacheKey := fmt.Sprintf("fitting:%d:%d", characterID, shipTypeID)
+	if err := s.redisClient.Del(ctx, cacheKey).Err(); err != nil {
+		s.logger.Warn("Failed to invalidate fitting cache", "error", err, "cacheKey", cacheKey)
+	} else {
+		s.logger.Debug("Fitting cache invalidated", "characterID", characterID, "shipTypeID", shipTypeID)
+	}
 }
 
 // fetchFittingFromESI fetches assets from ESI and filters for fitted modules
@@ -167,13 +190,208 @@ func (s *FittingService) fetchFittingFromESI(
 		}
 	}
 
-	// 4. Calculate bonuses
-	bonuses := s.calculateBonuses(fittedModules)
+	// 4. Fetch character skills
+	skills, err := s.skillsService.GetCharacterSkills(ctx, characterID, accessToken)
+	if err != nil {
+		s.logger.Warn("Failed to fetch character skills, using default", "error", err)
+		skills = nil // Will use graceful degradation in deterministic calculation
+	}
+
+	// 5. Convert to cargo.CharacterSkills format (array-based)
+	var charSkills *cargo.CharacterSkills
+	if skills != nil {
+		// Map TradingSkills to ESI CharacterSkills format
+		skillsList := []struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{}
+
+		// Add Spaceship Command if present
+		if skills.SpaceshipCommand > 0 {
+			skillsList = append(skillsList, struct {
+				SkillID           int64 `json:"skill_id"`
+				ActiveSkillLevel  int   `json:"active_skill_level"`
+				TrainedSkillLevel int   `json:"trained_skill_level"`
+			}{SkillID: 3327, ActiveSkillLevel: skills.SpaceshipCommand, TrainedSkillLevel: skills.SpaceshipCommand})
+		}
+
+		// Add Racial Industrial Skills
+		if skills.GallenteIndustrial > 0 {
+			skillsList = append(skillsList, struct {
+				SkillID           int64 `json:"skill_id"`
+				ActiveSkillLevel  int   `json:"active_skill_level"`
+				TrainedSkillLevel int   `json:"trained_skill_level"`
+			}{SkillID: 3348, ActiveSkillLevel: skills.GallenteIndustrial, TrainedSkillLevel: skills.GallenteIndustrial})
+		}
+		if skills.CaldariIndustrial > 0 {
+			skillsList = append(skillsList, struct {
+				SkillID           int64 `json:"skill_id"`
+				ActiveSkillLevel  int   `json:"active_skill_level"`
+				TrainedSkillLevel int   `json:"trained_skill_level"`
+			}{SkillID: 3346, ActiveSkillLevel: skills.CaldariIndustrial, TrainedSkillLevel: skills.CaldariIndustrial})
+		}
+		if skills.AmarrIndustrial > 0 {
+			skillsList = append(skillsList, struct {
+				SkillID           int64 `json:"skill_id"`
+				ActiveSkillLevel  int   `json:"active_skill_level"`
+				TrainedSkillLevel int   `json:"trained_skill_level"`
+			}{SkillID: 3347, ActiveSkillLevel: skills.AmarrIndustrial, TrainedSkillLevel: skills.AmarrIndustrial})
+		}
+		if skills.MinmatarIndustrial > 0 {
+			skillsList = append(skillsList, struct {
+				SkillID           int64 `json:"skill_id"`
+				ActiveSkillLevel  int   `json:"active_skill_level"`
+				TrainedSkillLevel int   `json:"trained_skill_level"`
+			}{SkillID: 3349, ActiveSkillLevel: skills.MinmatarIndustrial, TrainedSkillLevel: skills.MinmatarIndustrial})
+		}
+
+		// Add Racial Hauler Skills (Issue #77 - deterministic)
+		if skills.GallenteHauler > 0 {
+			skillsList = append(skillsList, struct {
+				SkillID           int64 `json:"skill_id"`
+				ActiveSkillLevel  int   `json:"active_skill_level"`
+				TrainedSkillLevel int   `json:"trained_skill_level"`
+			}{SkillID: 3340, ActiveSkillLevel: skills.GallenteHauler, TrainedSkillLevel: skills.GallenteHauler})
+		}
+		if skills.CaldariHauler > 0 {
+			skillsList = append(skillsList, struct {
+				SkillID           int64 `json:"skill_id"`
+				ActiveSkillLevel  int   `json:"active_skill_level"`
+				TrainedSkillLevel int   `json:"trained_skill_level"`
+			}{SkillID: 3341, ActiveSkillLevel: skills.CaldariHauler, TrainedSkillLevel: skills.CaldariHauler})
+		}
+		if skills.AmarrHauler > 0 {
+			skillsList = append(skillsList, struct {
+				SkillID           int64 `json:"skill_id"`
+				ActiveSkillLevel  int   `json:"active_skill_level"`
+				TrainedSkillLevel int   `json:"trained_skill_level"`
+			}{SkillID: 3342, ActiveSkillLevel: skills.AmarrHauler, TrainedSkillLevel: skills.AmarrHauler})
+		}
+		if skills.MinmatarHauler > 0 {
+			skillsList = append(skillsList, struct {
+				SkillID           int64 `json:"skill_id"`
+				ActiveSkillLevel  int   `json:"active_skill_level"`
+				TrainedSkillLevel int   `json:"trained_skill_level"`
+			}{SkillID: 3343, ActiveSkillLevel: skills.MinmatarHauler, TrainedSkillLevel: skills.MinmatarHauler})
+		}
+
+		charSkills = &cargo.CharacterSkills{
+			Skills: skillsList,
+		}
+	}
+
+	// 6. Convert fitted modules to cargo.FittedItem format
+	fittedItems := make([]cargo.FittedItem, 0, len(fittedModules))
+	for _, mod := range fittedModules {
+		fittedItems = append(fittedItems, cargo.FittedItem{
+			TypeID: int64(mod.TypeID),
+			Slot:   mod.Slot,
+		})
+	}
+
+	// 7. Calculate deterministic cargo capacity
+	capacities, err := cargo.GetShipCapacitiesDeterministic(
+		ctx,
+		s.sdeDB,
+		int64(shipTypeID),
+		charSkills,
+		fittedItems,
+	)
+	if err != nil {
+		s.logger.Error("Deterministic capacity calculation failed", "error", err)
+		// Fallback to basic calculation without bonuses
+		return &FittingData{
+			ShipTypeID:    shipTypeID,
+			FittedModules: fittedModules,
+			Bonuses: FittingBonuses{
+				CargoBonus:          0,
+				WarpSpeedMultiplier: 1,
+				InertiaModifier:     1,
+				BaseCargo:           0,
+				SkillsBonusM3:       0,
+				SkillsBonusPct:      0,
+				ModulesBonusM3:      0,
+				EffectiveCargo:      0,
+			},
+		}, nil
+	}
+
+	// 8. Convert to FittingBonuses format with deterministic breakdown
+	// CargoBonus = EffectiveCargoHold (total effective capacity in m³)
+	// Frontend displays this as "Cargo Bonus" but it's actually total effective capacity
+	cargoBonus := capacities.EffectiveCargoHold
+
+	// Calculate breakdown from AppliedBonuses
+	var skillsBonusM3 float64
+	var skillsBonusPct float64
+	var modulesBonusM3 float64
+
+	baseCargo := capacities.BaseCargoHold
+	for _, bonus := range capacities.AppliedBonuses {
+		switch bonus.Source {
+		case "Skill":
+			// Skills are percentage bonuses
+			skillsBonusPct += bonus.Value
+			skillsBonusM3 = baseCargo * (skillsBonusPct / 100.0)
+		case "Module", "Rig":
+			// Modules/Rigs are multiplicative - calculate absolute bonus
+			modulesBonusM3 += bonus.Value
+		}
+	}
+
+	effectiveCargo := capacities.EffectiveCargoHold
+
+	// 9. Get ship base attributes (warp speed, inertia) from SDE
+	baseWarpSpeedMultiplier, _, baseInertia, err := s.getShipBaseAttributes(ctx, int64(shipTypeID))
+	if err != nil {
+		s.logger.Warn("Failed to get ship base attributes", "error", err)
+		// Use fallback defaults
+		baseWarpSpeedMultiplier = 3.0
+		baseInertia = 1.0
+	}
+
+	// Base warp speed is 1 AU/s × multiplier from SDE (e.g., 3.0 for cruisers)
+	baseWarpSpeed := 1.0 * baseWarpSpeedMultiplier
+
+	// 10. Calculate effective Warp Speed and Agility with module bonuses
+	moduleWarpMultiplier := 1.0
+	moduleInertiaModifier := 1.0
+
+	for _, mod := range fittedModules {
+		// Attribute 20: warpSpeedMultiplier (e.g., 1.20 = +20% warp speed)
+		if warpMod, exists := mod.DogmaAttribs[20]; exists && warpMod != 0 {
+			moduleWarpMultiplier *= warpMod
+		}
+
+		// Attribute 70: inertiaModifier (e.g., 0.87 = -13% align time)
+		if inertiaMod, exists := mod.DogmaAttribs[70]; exists && inertiaMod != 0 {
+			moduleInertiaModifier *= inertiaMod
+		}
+	}
+
+	// Calculate effective values (base × skills × modules)
+	// TODO: Add skill bonuses (Navigation skill +5% per level, max +25%)
+	effectiveWarpSpeed := baseWarpSpeed * moduleWarpMultiplier
+	effectiveInertia := baseInertia * moduleInertiaModifier
 
 	return &FittingData{
 		ShipTypeID:    shipTypeID,
 		FittedModules: fittedModules,
-		Bonuses:       bonuses,
+		Bonuses: FittingBonuses{
+			CargoBonus:          cargoBonus,
+			WarpSpeedMultiplier: effectiveWarpSpeed, // Changed: Now absolute AU/s value
+			InertiaModifier:     effectiveInertia,   // Changed: Now absolute inertia value
+			// Deterministic breakdown
+			BaseCargo:      baseCargo,
+			SkillsBonusM3:  skillsBonusM3,
+			SkillsBonusPct: skillsBonusPct,
+			ModulesBonusM3: modulesBonusM3,
+			EffectiveCargo: effectiveCargo,
+			// Ship base attributes (for display)
+			BaseWarpSpeed: baseWarpSpeed,
+			BaseInertia:   baseInertia,
+		},
 	}, nil
 }
 
@@ -222,122 +440,114 @@ func (s *FittingService) fetchESIAssets(
 // fetchDogmaAttributes queries SDE for dogma attributes of a module
 // Returns: map[attributeID]value, typeName, error
 func (s *FittingService) fetchDogmaAttributes(ctx context.Context, typeID int) (map[int]float64, string, error) {
-	// Query SDE for dogma attributes
-	// Attributes: 38 (Cargo Bonus), 20 (Warp Speed), 70 (Inertia), 4 (Volume)
-	query := `
-		SELECT 
-			td.attribute_id,
-			td.value,
-			t.type_name
-		FROM type_dogma td
-		JOIN types t ON t.type_id = td.type_id
-		WHERE td.type_id = ?
-			AND td.attribute_id IN (38, 20, 70, 4)
-	`
+	// Query SDE for dogma attributes (stored as JSON in typeDogma table)
+	// Attributes we care about: 38 (Cargo Bonus), 20 (Warp Speed), 70 (Inertia), 4 (Volume)
+	query := `SELECT dogmaAttributes FROM typeDogma WHERE _key = ?`
 
-	rows, err := s.sdeDB.QueryContext(ctx, query, typeID)
+	var dogmaJSON string
+	err := s.sdeDB.QueryRowContext(ctx, query, typeID).Scan(&dogmaJSON)
 	if err != nil {
 		return nil, "", fmt.Errorf("SDE query failed: %w", err)
 	}
-	defer rows.Close()
 
+	// Parse JSON array of dogma attributes
+	var attributes []struct {
+		AttributeID int     `json:"attributeID"`
+		Value       float64 `json:"value"`
+	}
+	if err := json.Unmarshal([]byte(dogmaJSON), &attributes); err != nil {
+		return nil, "", fmt.Errorf("JSON parse failed: %w", err)
+	}
+
+	// Extract relevant attributes
+	// 38: capacity (not a bonus, but module cargo capacity)
+	// 20: warpSpeedMultiplier
+	// 70: inertiaModifier
+	// 4: volume
+	// 614: cargoCapacityBonus (%-based cargo bonus for rigs)
 	dogmaAttribs := make(map[int]float64)
-	var typeName string
+	relevantAttribs := map[int]bool{38: true, 20: true, 70: true, 4: true, 614: true}
 
-	for rows.Next() {
-		var attributeID int
-		var value float64
-		var name string
-		if err := rows.Scan(&attributeID, &value, &name); err != nil {
-			return nil, "", fmt.Errorf("row scan failed: %w", err)
+	for _, attr := range attributes {
+		if relevantAttribs[attr.AttributeID] {
+			dogmaAttribs[attr.AttributeID] = attr.Value
 		}
-		dogmaAttribs[attributeID] = value
-		typeName = name
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, "", fmt.Errorf("rows iteration failed: %w", err)
+	// Get type name from types table (name is JSON with all languages)
+	var nameJSON string
+	nameQuery := `SELECT name FROM types WHERE _key = ?`
+	if err := s.sdeDB.QueryRowContext(ctx, nameQuery, typeID).Scan(&nameJSON); err != nil {
+		return dogmaAttribs, fmt.Sprintf("Unknown (Type %d)", typeID), nil
 	}
 
-	// If no type name found, fallback query
+	// Parse name JSON and extract English name
+	var names map[string]string
+	if err := json.Unmarshal([]byte(nameJSON), &names); err != nil {
+		return dogmaAttribs, fmt.Sprintf("Unknown (Type %d)", typeID), nil
+	}
+
+	// Prefer English, fallback to first available
+	typeName := names["en"]
 	if typeName == "" {
-		nameQuery := `SELECT type_name FROM types WHERE type_id = ?`
-		if err := s.sdeDB.QueryRowContext(ctx, nameQuery, typeID).Scan(&typeName); err != nil {
-			typeName = fmt.Sprintf("Unknown (Type %d)", typeID)
+		for _, name := range names {
+			typeName = name
+			break
 		}
+	}
+	if typeName == "" {
+		typeName = fmt.Sprintf("Unknown (Type %d)", typeID)
 	}
 
 	return dogmaAttribs, typeName, nil
 }
 
-// calculateBonuses aggregates bonuses from all fitted modules
-// Applies EVE Online stacking penalties: S(u) = e^(-(u/2.67)^2)
-// where u is 0-based position after sorting by bonus strength (descending)
-//
-// NOTE: Cargo capacity bonuses (Attribute 38) are ABSOLUTE values (+m³)
-// and are NOT stacking-penalized per EVE University Wiki.
-// Only PERCENTAGE bonuses (warp, inertia) are stacking-penalized.
-func (s *FittingService) calculateBonuses(modules []FittedModule) FittingBonuses {
-	// Group modules by attribute ID
-	cargoMods := []float64{}
-	warpMods := []float64{}
-	inertiaMods := []float64{}
+// getShipBaseAttributes retrieves base warp speed, mass, and inertia from SDE
+// Returns: warpSpeed (AU/s), mass (kg), inertiaModifier, error
+func (s *FittingService) getShipBaseAttributes(ctx context.Context, shipTypeID int64) (float64, float64, float64, error) {
+	// Query typeDogma for ship base attributes
+	// Attribute 600: warpSpeedMultiplier (base warp speed, e.g., 1.0 for most ships)
+	// Attribute 4: mass (kg)
+	// Attribute 70: inertiaModifier (base inertia)
+	query := `SELECT dogmaAttributes FROM typeDogma WHERE _key = ?`
 
-	for _, mod := range modules {
-		// Cargo bonus (Attribute 38) - ABSOLUTE bonus in m³
-		if cargoBonus, ok := mod.DogmaAttribs[38]; ok {
-			cargoMods = append(cargoMods, cargoBonus)
+	var dogmaJSON string
+	err := s.sdeDB.QueryRowContext(ctx, query, shipTypeID).Scan(&dogmaJSON)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("SDE query failed: %w", err)
+	}
+
+	// Parse JSON array
+	var attributes []struct {
+		AttributeID int     `json:"attributeID"`
+		Value       float64 `json:"value"`
+	}
+	if err := json.Unmarshal([]byte(dogmaJSON), &attributes); err != nil {
+		return 0, 0, 0, fmt.Errorf("JSON parse failed: %w", err)
+	}
+
+	// Extract attributes
+	var warpSpeed, mass, inertia float64
+	for _, attr := range attributes {
+		switch attr.AttributeID {
+		case 600: // warpSpeedMultiplier (base)
+			warpSpeed = attr.Value
+		case 4: // mass
+			mass = attr.Value
+		case 70: // inertiaModifier
+			inertia = attr.Value
 		}
-		// Warp speed multiplier (Attribute 20) - PERCENTAGE bonus
-		if warpBonus, ok := mod.DogmaAttribs[20]; ok {
-			warpMods = append(warpMods, warpBonus)
-		}
-		// Inertia modifier (Attribute 70) - PERCENTAGE bonus
-		if inertiaBonus, ok := mod.DogmaAttribs[70]; ok {
-			inertiaMods = append(inertiaMods, inertiaBonus)
-		}
 	}
 
-	// Cargo: Absolute bonuses are NOT stacking-penalized (EVE Wiki)
-	// Simply sum all cargo bonuses
-	cargoTotal := 0.0
-	for _, bonus := range cargoMods {
-		cargoTotal += bonus
+	// Defaults if not found
+	if warpSpeed == 0 {
+		warpSpeed = 3.0 // Default cruiser/hauler warp speed (1 AU/s base × 3 multiplier)
+	}
+	if inertia == 0 {
+		inertia = 1.0
 	}
 
-	// Apply stacking penalties and aggregate
-	bonuses := FittingBonuses{
-		CargoBonus:          cargoTotal, // NO stacking penalty (absolute bonus)
-		WarpSpeedMultiplier: 1 + applyStackingPenalty(warpMods),
-		InertiaModifier:     1 + applyStackingPenalty(inertiaMods),
-	}
-
-	return bonuses
-}
-
-// applyStackingPenalty applies EVE Online stacking penalty formula
-// Formula: S(u) = e^(-(u/2.67)^2) where u = position (0-based)
-// 1st module: 100% effectiveness (S(0) = 1.0)
-// 2nd module: ~86.9% effectiveness (S(1) ≈ 0.869)
-// 3rd module: ~57.1% effectiveness (S(2) ≈ 0.571)
-// 4th module: ~28.3% effectiveness (S(3) ≈ 0.283)
-func applyStackingPenalty(bonuses []float64) float64 {
-	if len(bonuses) == 0 {
-		return 0.0
-	}
-
-	// Sort bonuses descending (strongest first)
-	sort.Sort(sort.Reverse(sort.Float64Slice(bonuses)))
-
-	result := 0.0
-	for i, bonus := range bonuses {
-		// EVE Online formula: S(u) = e^(-(u/2.67)^2)
-		u := float64(i)
-		penalty := math.Exp(-math.Pow(u/2.67, 2))
-		result += bonus * penalty
-	}
-
-	return result
+	return warpSpeed, mass, inertia, nil
 }
 
 // getDefaultFitting returns empty fitting with no bonuses (graceful degradation)
@@ -349,6 +559,11 @@ func (s *FittingService) getDefaultFitting(shipTypeID int) *FittingData {
 			CargoBonus:          0.0,
 			WarpSpeedMultiplier: 1.0,
 			InertiaModifier:     1.0,
+			BaseCargo:           0.0,
+			SkillsBonusM3:       0.0,
+			SkillsBonusPct:      0.0,
+			ModulesBonusM3:      0.0,
+			EffectiveCargo:      0.0,
 		},
 	}
 }

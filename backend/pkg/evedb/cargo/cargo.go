@@ -3,8 +3,12 @@
 package cargo
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/dogma"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/skills"
 )
 
 // SkillModifiers contains optional skill levels for capacity calculations
@@ -31,14 +35,39 @@ type ItemVolume struct {
 
 // ShipCapacities contains all cargo holds of a ship
 type ShipCapacities struct {
-	ShipTypeID             int64   `json:"ship_type_id"`
-	ShipName               string  `json:"ship_name"`
-	BaseCargoHold          float64 `json:"base_cargo_hold"`
-	EffectiveCargoHold     float64 `json:"effective_cargo_hold"`
-	BaseTotalCapacity      float64 `json:"base_total_capacity"`
-	EffectiveTotalCapacity float64 `json:"effective_total_capacity"`
-	SkillBonus             float64 `json:"skill_bonus"`
-	SkillsApplied          bool    `json:"skills_applied"`
+	ShipTypeID             int64          `json:"ship_type_id"`
+	ShipName               string         `json:"ship_name"`
+	BaseCargoHold          float64        `json:"base_cargo_hold"`
+	EffectiveCargoHold     float64        `json:"effective_cargo_hold"`
+	BaseTotalCapacity      float64        `json:"base_total_capacity"`
+	EffectiveTotalCapacity float64        `json:"effective_total_capacity"`
+	SkillBonus             float64        `json:"skill_bonus"`
+	SkillsApplied          bool           `json:"skills_applied"`
+	AppliedBonuses         []AppliedBonus `json:"applied_bonuses,omitempty"` // NEW: Deterministic bonuses
+}
+
+// AppliedBonus represents a single bonus applied to cargo capacity (NEW for Issue #77)
+type AppliedBonus struct {
+	Source    string  `json:"source"`     // "Skill", "Module", "Rig"
+	Name      string  `json:"name"`       // Skill/Module name
+	Value     float64 `json:"value"`      // Bonus value (% or absolute)
+	Operation int     `json:"operation"`  // Dogma operation code
+	Count     int     `json:"count"`      // Number of items (for modules/rigs)
+}
+
+// CharacterSkills represents ESI character skills response (NEW for Issue #77)
+type CharacterSkills struct {
+	Skills []struct {
+		SkillID           int64 `json:"skill_id"`
+		ActiveSkillLevel  int   `json:"active_skill_level"`
+		TrainedSkillLevel int   `json:"trained_skill_level"`
+	} `json:"skills"`
+}
+
+// FittedItem represents a fitted module or rig from ESI assets (NEW for Issue #77)
+type FittedItem struct {
+	TypeID int64  `json:"type_id"`
+	Slot   string `json:"slot"`
 }
 
 // CargoFitResult describes how many items fit in a ship
@@ -228,4 +257,144 @@ func ApplySkillModifiers(baseCapacity float64, skills *SkillModifiers) float64 {
 	}
 
 	return effective
+}
+
+// GetShipCapacitiesDeterministic calculates cargo capacity deterministically from SDE + ESI data
+// Implements the 7-step workflow from Issue #77
+// This is the NEW deterministic implementation - old GetShipCapacities remains for compatibility
+func GetShipCapacitiesDeterministic(
+	ctx context.Context,
+	db *sql.DB,
+	shipTypeID int64,
+	characterSkills *CharacterSkills,
+	fittedItems []FittedItem,
+) (*ShipCapacities, error) {
+	
+	// Step 1-2: Get base capacity + required skills from SDE
+	shipSkills, err := skills.GetShipCargoSkills(db, shipTypeID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ship skills: %w", err)
+	}
+
+	result := &ShipCapacities{
+		ShipTypeID:         shipSkills.ShipTypeID,
+		ShipName:           shipSkills.ShipName,
+		BaseCargoHold:      shipSkills.BaseCapacity,
+		EffectiveCargoHold: shipSkills.BaseCapacity,
+		AppliedBonuses:     make([]AppliedBonus, 0),
+	}
+
+	// Step 3: Apply character skill bonuses
+	if characterSkills != nil {
+		for _, reqSkill := range shipSkills.Skills {
+			// Find character's skill level
+			charLevel := getCharacterSkillLevel(characterSkills, reqSkill.SkillTypeID)
+			
+			// Validate minimum skill requirement
+			if charLevel < reqSkill.MinimumLevel {
+				return nil, fmt.Errorf(
+					"character lacks required skill level: skill %d requires level %d, has %d",
+					reqSkill.SkillTypeID,
+					reqSkill.MinimumLevel,
+					charLevel,
+				)
+			}
+
+			// Apply skill bonus (if any and if character has the skill)
+			if charLevel > 0 && reqSkill.BonusPerLevel > 0 {
+				skillBonus := reqSkill.BonusPerLevel * float64(charLevel)
+				result.EffectiveCargoHold *= (1.0 + (skillBonus / 100.0))
+
+				result.AppliedBonuses = append(result.AppliedBonuses, AppliedBonus{
+					Source:    "Skill",
+					Name:      fmt.Sprintf("Skill %d", reqSkill.SkillTypeID),
+					Value:     skillBonus,
+					Operation: 6, // PostPercent (skill bonuses)
+					Count:     charLevel,
+				})
+			}
+		}
+	}
+
+	// Step 4-6: Apply module/rig bonuses
+	if len(fittedItems) > 0 {
+		// Group items by TypeID
+		itemGroups := groupItemsByType(fittedItems)
+
+		for typeID, items := range itemGroups {
+			// Get dogma effects for this module/rig type
+			moduleEffect, err := dogma.GetModuleEffects(db, typeID)
+			if err != nil {
+				// Skip modules without dogma effects
+				continue
+			}
+
+			// Find cargo modifiers
+			cargoMods := dogma.FindCargoModifiers(moduleEffect)
+			if len(cargoMods) == 0 {
+				continue
+			}
+
+			count := len(items)
+
+			// Apply each modifier
+			for _, mod := range cargoMods {
+				modValue, exists := moduleEffect.Attributes[mod.ModifyingAttributeID]
+				if !exists {
+					continue
+				}
+
+				// Apply modifier
+				result.EffectiveCargoHold = dogma.ApplyModifier(
+					result.EffectiveCargoHold,
+					mod,
+					modValue,
+					count,
+				)
+
+				// Determine source type (Module vs Rig)
+				source := "Module"
+				if items[0].Slot[:3] == "Rig" {
+					source = "Rig"
+				}
+
+				result.AppliedBonuses = append(result.AppliedBonuses, AppliedBonus{
+					Source:    source,
+					Name:      moduleEffect.TypeName,
+					Value:     modValue,
+					Operation: mod.Operation,
+					Count:     count,
+				})
+			}
+		}
+	}
+
+	// Set legacy fields for compatibility
+	result.BaseTotalCapacity = result.BaseCargoHold
+	result.EffectiveTotalCapacity = result.EffectiveCargoHold
+	result.SkillsApplied = characterSkills != nil
+	if result.BaseTotalCapacity > 0 {
+		result.SkillBonus = ((result.EffectiveTotalCapacity / result.BaseTotalCapacity) - 1.0) * 100.0
+	}
+
+	return result, nil
+}
+
+// getCharacterSkillLevel retrieves character's skill level from ESI data
+func getCharacterSkillLevel(charSkills *CharacterSkills, skillTypeID int64) int {
+	for _, skill := range charSkills.Skills {
+		if skill.SkillID == skillTypeID {
+			return skill.TrainedSkillLevel
+		}
+	}
+	return 0
+}
+
+// groupItemsByType groups fitted items by TypeID
+func groupItemsByType(items []FittedItem) map[int64][]FittedItem {
+	groups := make(map[int64][]FittedItem)
+	for _, item := range items {
+		groups[item.TypeID] = append(groups[item.TypeID], item)
+	}
+	return groups
 }

@@ -82,7 +82,7 @@ func main() {
 	skillsService := services.NewSkillsService(esiClient.GetRawClient(), redisClient, appLogger)
 
 	// Fitting Service (Phase 3 - Issue #76 - Ship Fitting Integration)
-	fittingService := services.NewFittingService(esiClient.GetRawClient(), db.SDE, redisClient, appLogger)
+	fittingService := services.NewFittingService(esiClient.GetRawClient(), db.SDE, redisClient, skillsService, appLogger)
 
 	// Cargo Service (Phase 0 - Issue #56 - Cargo Skills Integration + Phase 3 Fitting)
 	cargoService := services.NewCargoService(skillsService, fittingService)
@@ -112,7 +112,7 @@ func main() {
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
-	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper)
+	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper, cargoService)
 	characterHandler := handlers.NewCharacterHandler(skillsService)
 	fittingHandler := handlers.NewFittingHandler(fittingService)
 
@@ -144,8 +144,8 @@ func main() {
 	api.Get("/market/staleness/:region", h.GetMarketDataStaleness)
 	api.Get("/market/:region/:type", h.GetMarketOrders)
 
-	// Public trading routes (unauthenticated)
-	api.Post("/trading/routes/calculate", tradingHandler.CalculateRoutes)
+	// Trading routes (authentication required)
+	api.Post("/trading/routes/calculate", evesso.AuthMiddleware, tradingHandler.CalculateRoutes)
 
 	// Item search endpoint (public)
 	api.Get("/items/search", tradingHandler.SearchItems)
@@ -156,8 +156,12 @@ func main() {
 	// Character info endpoint
 	protected.Get("/character", handleCharacterInfo)
 
+	// Character location & ship endpoints (used by frontend for auto-selection)
+	protected.Get("/character/location", tradingHandler.GetCharacterLocation)
+	protected.Get("/character/ship", tradingHandler.GetCharacterShip)
+	protected.Get("/character/ships", tradingHandler.GetCharacterShips)
+
 	// Character context endpoints
-	// Character skills endpoint (Issue #54)
 	// Character skills endpoint (Issue #54)
 	protected.Get("/characters/:characterId/skills", characterHandler.GetCharacterSkills)
 

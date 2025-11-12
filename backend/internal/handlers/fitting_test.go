@@ -18,11 +18,14 @@ type mockFittingService struct {
 	err     error
 }
 
-func (m *mockFittingService) GetCharacterFitting(ctx context.Context, characterID int, shipTypeID int, accessToken string) (*services.FittingData, error) {
+func (m *mockFittingService) GetShipFitting(ctx context.Context, characterID int, shipTypeID int, accessToken string) (*services.FittingData, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.fitting, nil
+}
+func (m *mockFittingService) InvalidateFittingCache(ctx context.Context, characterID int, shipTypeID int) {
+	// No-op for mock
 }
 
 // TestGetCharacterFitting_Success tests successful fitting retrieval

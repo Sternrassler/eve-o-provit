@@ -188,14 +188,14 @@ func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 	query := `
 		SELECT 
 			COUNT(*) as total_orders,
-			MAX(fetched_at) as latest_fetch,
-			EXTRACT(EPOCH FROM (NOW() - MAX(fetched_at)))/60 as age_minutes
+			MAX(cached_at) as latest_fetch,
+			EXTRACT(EPOCH FROM (NOW() - MAX(cached_at)))/60 as age_minutes
 		FROM market_orders
 		WHERE region_id = $1
 	`
 	var totalOrders int
-	var latestFetch time.Time
-	var ageMinutes float64
+	var latestFetch *time.Time // Nullable for empty regions
+	var ageMinutes *float64     // Nullable for empty regions
 
 	err = h.postgresQuery.QueryRow(c.Context(), query, regionID).Scan(&totalOrders, &latestFetch, &ageMinutes)
 	if err != nil {
@@ -204,12 +204,24 @@ func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(fiber.Map{
+	response := fiber.Map{
 		"region_id":    regionID,
 		"total_orders": totalOrders,
-		"latest_fetch": latestFetch.Format(time.RFC3339),
-		"age_minutes":  ageMinutes,
-	})
+	}
+
+	if latestFetch != nil {
+		response["latest_fetch"] = latestFetch.Format(time.RFC3339)
+	} else {
+		response["latest_fetch"] = nil
+	}
+
+	if ageMinutes != nil {
+		response["age_minutes"] = *ageMinutes
+	} else {
+		response["age_minutes"] = nil
+	}
+
+	return c.JSON(response)
 }
 
 // GetRegions handles SDE regions list requests

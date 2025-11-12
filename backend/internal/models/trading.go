@@ -112,6 +112,7 @@ type ItemPair struct {
 
 // CharacterLocation represents character location information
 type CharacterLocation struct {
+	CharacterID     int64   `json:"character_id"`
 	SolarSystemID   int64   `json:"solar_system_id"`
 	SolarSystemName string  `json:"solar_system_name"`
 	RegionID        int64   `json:"region_id"`

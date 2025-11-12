@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // mockSkillsService is a mock implementation of SkillsServicer for testing
@@ -32,92 +31,15 @@ type mockFittingService struct {
 	err     error
 }
 
-func (m *mockFittingService) GetCharacterFitting(ctx context.Context, characterID int, shipTypeID int, accessToken string) (*FittingData, error) {
+func (m *mockFittingService) GetShipFitting(ctx context.Context, characterID int, shipTypeID int, accessToken string) (*FittingData, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 	return m.fitting, nil
 }
 
-// TestCargoService_CalculateCapacity tests cargo capacity calculation with various skill levels
-func TestCargoService_CalculateCapacity(t *testing.T) {
-	service := NewCargoService(&mockSkillsService{}, nil)
-	baseCapacity := 1000.0
-
-	tests := []struct {
-		name             string
-		skills           *TradingSkills
-		expectedCapacity float64
-		expectedBonusPct float64
-	}{
-		{
-			name: "No skills",
-			skills: &TradingSkills{
-				SpaceshipCommand:   0,
-				GallenteIndustrial: 0,
-			},
-			expectedCapacity: 1000.0,
-			expectedBonusPct: 0.0,
-		},
-		{
-			name: "Spaceship Command V only",
-			skills: &TradingSkills{
-				SpaceshipCommand:   5,
-				GallenteIndustrial: 0,
-			},
-			expectedCapacity: 1250.0, // 1000 * 1.25
-			expectedBonusPct: 25.0,
-		},
-		{
-			name: "Gallente Industrial V only",
-			skills: &TradingSkills{
-				SpaceshipCommand:   0,
-				GallenteIndustrial: 5,
-			},
-			expectedCapacity: 1250.0, // 1000 * 1.25
-			expectedBonusPct: 25.0,
-		},
-		{
-			name: "Spaceship Command V + Gallente Industrial V",
-			skills: &TradingSkills{
-				SpaceshipCommand:   5,
-				GallenteIndustrial: 5,
-			},
-			expectedCapacity: 1562.5, // 1000 * 1.25 * 1.25
-			expectedBonusPct: 56.25,  // (1.25 * 1.25 - 1) * 100
-		},
-		{
-			name: "Spaceship Command III + Caldari Industrial IV",
-			skills: &TradingSkills{
-				SpaceshipCommand:  3,
-				CaldariIndustrial: 4,
-			},
-			expectedCapacity: 1380.0, // 1000 * 1.15 * 1.20
-			expectedBonusPct: 38.0,   // (1.15 * 1.20 - 1) * 100
-		},
-		{
-			name: "Multiple racial skills - uses highest",
-			skills: &TradingSkills{
-				SpaceshipCommand:   5,
-				GallenteIndustrial: 3,
-				CaldariIndustrial:  5, // Highest
-				AmarrIndustrial:    2,
-				MinmatarIndustrial: 4,
-			},
-			expectedCapacity: 1562.5, // Uses Caldari V (highest)
-			expectedBonusPct: 56.25,  // (1.25 * 1.25 - 1) * 100
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			capacity, bonusPct := service.CalculateCargoCapacity(baseCapacity, tt.skills)
-			assert.InDelta(t, tt.expectedCapacity, capacity, 0.1,
-				"Expected capacity %.2f, got %.2f", tt.expectedCapacity, capacity)
-			assert.InDelta(t, tt.expectedBonusPct, bonusPct, 0.1,
-				"Expected bonus %.2f%%, got %.2f%%", tt.expectedBonusPct, bonusPct)
-		})
-	}
+func (m *mockFittingService) InvalidateFittingCache(ctx context.Context, characterID int, shipTypeID int) {
+	// No-op for mock
 }
 
 // TestCargoService_KnapsackDP tests the knapsack optimization algorithm
@@ -218,113 +140,6 @@ func TestCargoService_KnapsackDP(t *testing.T) {
 	})
 }
 
-// TestCargoService_OptimizeCargo tests the complete optimization workflow
-func TestCargoService_OptimizeCargo(t *testing.T) {
-	t.Run("With skills - full workflow", func(t *testing.T) {
-		mockSkills := &mockSkillsService{
-			skills: &TradingSkills{
-				SpaceshipCommand:   5,
-				GallenteIndustrial: 5,
-			},
-		}
-		service := NewCargoService(mockSkills, nil)
-
-		items := []CargoItem{
-			{TypeID: 1, Volume: 10, Value: 100, Quantity: 20},
-		}
-
-		solution, err := service.OptimizeCargo(
-			context.Background(),
-			12345,
-			"test-token",
-			1000.0, // Base capacity
-			items,
-		)
-
-		require.NoError(t, err)
-		assert.Equal(t, 1000.0, solution.BaseCapacity)
-		assert.Equal(t, 1562.5, solution.EffectiveCapacity, "Should apply skill bonuses")
-		assert.Equal(t, 56.25, solution.CapacityBonusPercent)
-		assert.Greater(t, solution.TotalValue, 0.0)
-	})
-
-	t.Run("Without skills - fallback to defaults", func(t *testing.T) {
-		mockSkills := &mockSkillsService{
-			skills: &TradingSkills{}, // No skills
-		}
-		service := NewCargoService(mockSkills, nil)
-
-		items := []CargoItem{
-			{TypeID: 1, Volume: 10, Value: 100, Quantity: 20},
-		}
-
-		solution, err := service.OptimizeCargo(
-			context.Background(),
-			12345,
-			"test-token",
-			1000.0,
-			items,
-		)
-
-		require.NoError(t, err)
-		assert.Equal(t, 1000.0, solution.BaseCapacity)
-		assert.Equal(t, 1000.0, solution.EffectiveCapacity, "No skill bonus")
-		assert.Equal(t, 0.0, solution.CapacityBonusPercent)
-	})
-
-	t.Run("Nearly full cargo - generates recommendations", func(t *testing.T) {
-		mockSkills := &mockSkillsService{
-			skills: &TradingSkills{
-				SpaceshipCommand:   0,
-				GallenteIndustrial: 0,
-			},
-		}
-		service := NewCargoService(mockSkills, nil)
-
-		// Items that will fill >95% of capacity
-		items := []CargoItem{
-			{TypeID: 1, Volume: 10, Value: 100, Quantity: 100},
-		}
-
-		solution, err := service.OptimizeCargo(
-			context.Background(),
-			12345,
-			"test-token",
-			100.0, // Small capacity to ensure >95% usage
-			items,
-		)
-
-		require.NoError(t, err)
-		assert.Greater(t, solution.UsedCapacity, 95.0)
-		assert.NotEmpty(t, solution.Recommendations, "Should provide skill training recommendations")
-		assert.Contains(t, solution.Recommendations, "Spaceship Command")
-		assert.Contains(t, solution.Recommendations, "Industrial")
-	})
-
-	t.Run("Skills service error - graceful degradation", func(t *testing.T) {
-		mockSkills := &mockSkillsService{
-			err: assert.AnError, // Simulate error
-		}
-		service := NewCargoService(mockSkills, nil)
-
-		items := []CargoItem{
-			{TypeID: 1, Volume: 10, Value: 100, Quantity: 10},
-		}
-
-		solution, err := service.OptimizeCargo(
-			context.Background(),
-			12345,
-			"test-token",
-			1000.0,
-			items,
-		)
-
-		require.NoError(t, err, "Should not fail if skills unavailable")
-		// Should use base capacity without bonuses
-		assert.Equal(t, 1000.0, solution.EffectiveCapacity)
-	})
-}
-
 // TestCargoService_EdgeCases tests various edge cases
 func TestCargoService_EdgeCases(t *testing.T) {
 	service := NewCargoService(&mockSkillsService{}, nil)
@@ -376,59 +191,7 @@ func TestCargoService_EdgeCases(t *testing.T) {
 	})
 }
 
-// TestCargoService_CapacityCalculation_SkillCombinations tests various skill combinations
-func TestCargoService_CapacityCalculation_SkillCombinations(t *testing.T) {
-	service := NewCargoService(&mockSkillsService{}, nil)
-	baseCapacity := 5000.0 // Typical hauler capacity
-
-	tests := []struct {
-		name             string
-		skills           *TradingSkills
-		expectedCapacity float64
-	}{
-		{
-			name: "Beginner - Level 1 skills",
-			skills: &TradingSkills{
-				SpaceshipCommand:   1,
-				GallenteIndustrial: 1,
-			},
-			expectedCapacity: 5512.5, // 5000 * 1.05 * 1.05
-		},
-		{
-			name: "Intermediate - Level 3 skills",
-			skills: &TradingSkills{
-				SpaceshipCommand:   3,
-				GallenteIndustrial: 3,
-			},
-			expectedCapacity: 6612.5, // 5000 * 1.15 * 1.15
-		},
-		{
-			name: "Advanced - Level 4 skills",
-			skills: &TradingSkills{
-				SpaceshipCommand:  4,
-				CaldariIndustrial: 4,
-			},
-			expectedCapacity: 7200.0, // 5000 * 1.20 * 1.20
-		},
-		{
-			name: "Expert - Max skills",
-			skills: &TradingSkills{
-				SpaceshipCommand: 5,
-				AmarrIndustrial:  5,
-			},
-			expectedCapacity: 7812.5, // 5000 * 1.25 * 1.25
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			capacity, _ := service.CalculateCargoCapacity(baseCapacity, tt.skills)
-			assert.InDelta(t, tt.expectedCapacity, capacity, 0.1)
-		})
-	}
-}
-
-// TestGetEffectiveCargoCapacity_NoFitting tests capacity with skills only (no fitting)
+// TestGetEffectiveCargoCapacity_NoFitting tests capacity when fitting unavailable (graceful degradation)
 func TestGetEffectiveCargoCapacity_NoFitting(t *testing.T) {
 	mockSkills := &mockSkillsService{
 		skills: &TradingSkills{
@@ -450,14 +213,14 @@ func TestGetEffectiveCargoCapacity_NoFitting(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	// Base 500 × 1.25 × 1.25 = 781.25 m³
-	expected := 781.25
+	// Graceful degradation: Returns base capacity when fitting unavailable
+	expected := 500.0
 	if capacity != expected {
 		t.Errorf("Expected %.2f m³, got %.2f m³", expected, capacity)
 	}
 }
 
-// TestGetEffectiveCargoCapacity_WithFitting tests capacity with skills + fitting bonuses
+// TestGetEffectiveCargoCapacity_WithFitting tests capacity with deterministic fitting
 func TestGetEffectiveCargoCapacity_WithFitting(t *testing.T) {
 	mockSkills := &mockSkillsService{
 		skills: &TradingSkills{
@@ -469,7 +232,7 @@ func TestGetEffectiveCargoCapacity_WithFitting(t *testing.T) {
 	mockFitting := &mockFittingService{
 		fitting: &FittingData{
 			Bonuses: FittingBonuses{
-				CargoBonus: 5000.0, // 2x Expanded Cargohold II
+				EffectiveCargo: 5781.25, // Deterministic: base + skills + modules
 			},
 		},
 	}
@@ -483,14 +246,14 @@ func TestGetEffectiveCargoCapacity_WithFitting(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	// (500 × 1.25 × 1.25) + 5000 = 781.25 + 5000 = 5781.25 m³
+	// FittingService returns deterministic EffectiveCargo
 	expected := 5781.25
 	if capacity != expected {
 		t.Errorf("Expected %.2f m³, got %.2f m³", expected, capacity)
 	}
 }
 
-// TestGetEffectiveCargoCapacity_NoSkillsWithFitting tests worst case skills with fitting
+// TestGetEffectiveCargoCapacity_NoSkillsWithFitting tests fitting with deterministic calculation
 func TestGetEffectiveCargoCapacity_NoSkillsWithFitting(t *testing.T) {
 	mockSkills := &mockSkillsService{
 		err: errors.New("skills unavailable"),
@@ -499,7 +262,7 @@ func TestGetEffectiveCargoCapacity_NoSkillsWithFitting(t *testing.T) {
 	mockFitting := &mockFittingService{
 		fitting: &FittingData{
 			Bonuses: FittingBonuses{
-				CargoBonus: 2500.0, // 1x Expanded Cargohold II
+				EffectiveCargo: 3000.0, // Deterministic: base 500 + fitting 2500
 			},
 		},
 	}
@@ -513,14 +276,14 @@ func TestGetEffectiveCargoCapacity_NoSkillsWithFitting(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	// Base 500 (no skills) + 2500 (fitting) = 3000 m³
+	// FittingService calculates deterministic capacity (handles skills internally)
 	expected := 3000.0
 	if capacity != expected {
 		t.Errorf("Expected %.2f m³, got %.2f m³", expected, capacity)
 	}
 }
 
-// TestGetEffectiveCargoCapacity_NilFittingService tests graceful degradation
+// TestGetEffectiveCargoCapacity_NilFittingService tests graceful degradation without FittingService
 func TestGetEffectiveCargoCapacity_NilFittingService(t *testing.T) {
 	mockSkills := &mockSkillsService{
 		skills: &TradingSkills{
@@ -539,8 +302,34 @@ func TestGetEffectiveCargoCapacity_NilFittingService(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	// Base 1000 × 1.15 × 1.20 = 1380 m³ (skills only)
-	expected := 1380.0
+	// Graceful degradation: Returns base capacity when FittingService is nil
+	expected := 1000.0
+	if capacity != expected {
+		t.Errorf("Expected %.2f m³, got %.2f m³", expected, capacity)
+	}
+}
+
+// TestGetEffectiveCargoCapacity_NoSkillsNoFitting tests worst case: both skills AND fitting unavailable
+func TestGetEffectiveCargoCapacity_NoSkillsNoFitting(t *testing.T) {
+	mockSkills := &mockSkillsService{
+		err: errors.New("skills unavailable"),
+	}
+
+	mockFitting := &mockFittingService{
+		err: errors.New("fitting unavailable"),
+	}
+
+	service := NewCargoService(mockSkills, mockFitting)
+
+	ctx := context.Background()
+	capacity, err := service.GetEffectiveCargoCapacity(ctx, 12345, 20183, 500.0, "token")
+
+	if err != nil {
+		t.Fatalf("Expected no error (graceful degradation), got %v", err)
+	}
+
+	// Worst case: base capacity only (no skills, no fitting)
+	expected := 500.0
 	if capacity != expected {
 		t.Errorf("Expected %.2f m³, got %.2f m³", expected, capacity)
 	}

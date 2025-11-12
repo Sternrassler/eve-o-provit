@@ -61,8 +61,14 @@ func (h *FittingHandler) GetCharacterFitting(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if cache refresh is requested via query parameter
+	refresh := c.Query("refresh") == "true"
+	if refresh {
+		h.fittingService.InvalidateFittingCache(c.Context(), characterID, shipTypeID)
+	}
+
 	// Fetch fitting from ESI (with caching)
-	fitting, err := h.fittingService.GetCharacterFitting(c.Context(), characterID, shipTypeID, accessToken)
+	fitting, err := h.fittingService.GetShipFitting(c.Context(), characterID, shipTypeID, accessToken)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to fetch character fitting",
