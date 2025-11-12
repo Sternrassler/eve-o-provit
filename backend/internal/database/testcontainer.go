@@ -191,12 +191,12 @@ func (tc *TestPostgresContainer) SeedTestData(t *testing.T) {
 		INSERT INTO market_orders (
 			order_id, type_id, region_id, location_id, is_buy_order,
 			price, volume_total, volume_remain, min_volume,
-			issued, duration, fetched_at
+			issued_at, duration, cached_at
 		) VALUES
 			(123456789, 34, 10000002, 60003760, false, 5.50, 1000, 500, 1, NOW() - INTERVAL '1 day', 90, NOW()),
 			(987654321, 34, 10000002, 60003760, true, 5.25, 5000, 5000, 10, NOW() - INTERVAL '2 days', 90, NOW()),
 			(111222333, 35, 10000002, 60003760, false, 10.00, 2000, 1500, 5, NOW() - INTERVAL '3 hours', 30, NOW())
-		ON CONFLICT (order_id, fetched_at) DO NOTHING;
+		ON CONFLICT (order_id, cached_at) DO NOTHING;
 	`
 
 	_, err := tc.Pool.Exec(ctx, seedSQL)
