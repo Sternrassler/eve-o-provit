@@ -52,9 +52,15 @@ func TestGetMarketDataStaleness_Success_Unit(t *testing.T) {
 			return &MockRow{
 				ScanFunc: func(dest ...interface{}) error {
 					// Simulate query result: 1500 orders, fetched 5 minutes ago
-					*dest[0].(*int) = 1500                                   // total_orders
-					*dest[1].(*time.Time) = time.Now().Add(-5 * time.Minute) // latest_fetch
-					*dest[2].(*float64) = 5.0                                // age_minutes
+					*dest[0].(*int) = 1500 // total_orders
+					
+					// latest_fetch is *time.Time (nullable), so dest[1] is **time.Time
+					fetchTime := time.Now().Add(-5 * time.Minute)
+					*dest[1].(**time.Time) = &fetchTime
+					
+					// age_minutes is *float64 (nullable), so dest[2] is **float64
+					ageMin := 5.0
+					*dest[2].(**float64) = &ageMin
 					return nil
 				},
 			}
@@ -210,8 +216,10 @@ func TestGetMarketDataStaleness_NegativeRegion_Unit(t *testing.T) {
 				ScanFunc: func(dest ...interface{}) error {
 					// Simulate no results for invalid region
 					*dest[0].(*int) = 0
-					*dest[1].(*time.Time) = time.Time{}
-					*dest[2].(*float64) = 0.0
+					zeroTime := time.Time{}
+					*dest[1].(**time.Time) = &zeroTime
+					zeroAge := 0.0
+					*dest[2].(**float64) = &zeroAge
 					return nil
 				},
 			}
@@ -241,8 +249,10 @@ func TestGetMarketDataStaleness_LargeRegionID_Unit(t *testing.T) {
 			return &MockRow{
 				ScanFunc: func(dest ...interface{}) error {
 					*dest[0].(*int) = 0
-					*dest[1].(*time.Time) = time.Now()
-					*dest[2].(*float64) = 0.0
+					nowTime := time.Now()
+					*dest[1].(**time.Time) = &nowTime
+					zeroAge := 0.0
+					*dest[2].(**float64) = &zeroAge
 					return nil
 				},
 			}
@@ -273,8 +283,10 @@ func TestGetMarketDataStaleness_VeryOldData_Unit(t *testing.T) {
 				ScanFunc: func(dest ...interface{}) error {
 					// Simulate data from 7 days ago
 					*dest[0].(*int) = 500
-					*dest[1].(*time.Time) = time.Now().Add(-7 * 24 * time.Hour)
-					*dest[2].(*float64) = 10080.0 // 7 days in minutes
+					oldTime := time.Now().Add(-7 * 24 * time.Hour)
+					*dest[1].(**time.Time) = &oldTime
+					oldAge := 10080.0 // 7 days in minutes
+					*dest[2].(**float64) = &oldAge
 					return nil
 				},
 			}
