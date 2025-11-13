@@ -51,9 +51,9 @@ type FittingBonuses struct {
 	EffectiveCargo float64 `json:"effective_cargo_m3"` // Final effective capacity
 
 	// Ship Base Attributes (for display when no modules fitted)
-	BaseWarpSpeed   float64 `json:"base_warp_speed"`     // Base warp speed in AU/s (e.g., 3.0)
-	BaseInertia     float64 `json:"base_inertia"`        // Base inertia modifier (e.g., 1.0)
-	WarpSpeedAUS    float64 `json:"warp_speed_au_s"`     // Final warp speed in AU/s (with skills + modules)
+	BaseWarpSpeed float64 `json:"base_warp_speed"` // Base warp speed in AU/s (e.g., 3.0)
+	BaseInertia   float64 `json:"base_inertia"`    // Base inertia modifier (e.g., 1.0)
+	WarpSpeedAUS  float64 `json:"warp_speed_au_s"` // Final warp speed in AU/s (with skills + modules)
 }
 
 // FittingData contains all fitting information for a ship
