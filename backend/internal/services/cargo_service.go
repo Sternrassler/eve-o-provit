@@ -42,6 +42,8 @@ func NewCargoService(skillsService SkillsServicer, fittingService FittingService
 }
 
 // GetEffectiveCargoCapacity calculates total effective cargo capacity including skills AND fitting
+// Deprecated: This is a thin wrapper around FittingService.GetShipFitting().
+// TODO: Refactor callers to use FittingService directly and access fitting.Bonuses.EffectiveCargo
 // Uses deterministic calculation from FittingService (Issue #77)
 // FittingService.CargoBonus contains TOTAL capacity (base + skills + modules)
 // Graceful degradation: If fitting unavailable, uses baseCapacity only

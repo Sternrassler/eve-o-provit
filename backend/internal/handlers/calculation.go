@@ -1,4 +1,10 @@
 // Package handlers - Calculation endpoints for deterministic ship bonuses
+// NOTE: These handlers implement manual calculation logic for UI testing (without ESI).
+// TODO: Keep formulas in sync with pkg/evedb deterministic functions:
+//   - cargo.GetShipCapacitiesDeterministic (cargo capacity)
+//   - navigation.GetShipWarpSpeedDeterministic (warp speed)
+//   - navigation.GetShipInertiaDeterministic (inertia + align time)
+// Production code should use FittingService which wraps these deterministic functions.
 package handlers
 
 import (

@@ -161,10 +161,6 @@ func main() {
 	// System Service (Phase 0 - Issue #57 - Remove Raw DB Access)
 	systemService := services.NewSystemService(sdeRepo)
 
-	// Navigation Service (Phase 3 - Issue #76 - Ship Fitting Integration)
-	// TODO: Use in route calculation (Phase 4)
-	_ = services.NewNavigationService(sdeRepo, fittingService)
-
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
 	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper, cargoService)
