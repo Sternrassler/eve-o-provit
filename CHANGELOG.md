@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-11-13
+
+### Added
+
+- **Deterministic Calculation Engine** - Complete ship fitting calculations
+  - `pkg/evedb/cargo`: Deterministic cargo capacity with skills + module stacking penalties
+  - `pkg/evedb/navigation`: Deterministic warp speed + inertia/align time calculations
+  - Stacking penalty formula for passive modules (exponential diminishing returns)
+  - FittingService integration with all three deterministic functions
+  - API endpoints: `/api/v1/calculations/cargo`, `/api/v1/calculations/warp`, `/api/v1/calculations/align`
+  - Complete test coverage with SDE database integration tests
+
+### Changed
+
+- **Service Layer Refactoring** - Eliminated ~530 lines of redundant wrapper code
+  - Phase 1: Removed NavigationService wrappers (GetEffectiveWarpSpeed, GetEffectiveInertia)
+  - Phase 2: Consolidated travel time calculations (unified CalculateTravelTime with useExactFormula parameter)
+  - Phase 3: Removed all deprecated wrappers (no backward compatibility)
+  - CargoService simplified to single responsibility (Knapsack DP only)
+  - RouteService refactored to use FittingService directly
+  - NavigationService reduced to system/location resolution only
+- **Architecture Simplification** - Frontend-first deterministic values
+  - Frontend calculates deterministic values once (warp_speed, align_time, cargo_capacity)
+  - Backend reuses these values for route calculation (eliminates redundant calculations)
+  - FittingService now returns complete fitting data including navigation values
+- **Documentation Consolidation** - 67% reduction in documentation size
+  - README simplified for new visitors (68% reduction: 350 → 110 lines)
+  - docs/ folder streamlined (64% reduction: 1,100 → 400 lines)
+  - 6 implementation summaries archived (~1,500 lines)
+  - ASCII-Art diagrams converted to Mermaid (3 diagrams)
+  - ARCHITECTURE.md updated with Service Layer Patterns section
+
+### Fixed
+
+- Market orders schema corrections (issued_at/cached_at nullable time.Time)
+- ON CONFLICT clause for market_orders table (order_id, cached_at)
+- SDE database path configuration via SDE_DB_PATH environment variable
+- Docker health check path corrected to /api/v1/health
+- OpenAPI BasePath and route paths for Swagger UI
+- ESLint errors (unescaped entities, unused variables)
+- Test suite improvements: Skip SDE-dependent tests when database unavailable (CI compatibility)
+
+### Technical
+
+- OpenAPI/Swagger documentation for all 17 API endpoints
+- Centralized test database utilities in testutil package
+- Service Layer Patterns documented in ARCHITECTURE.md
+- All deterministic core functions preserved in pkg/evedb (guaranteed single source of truth)
+
 ## [0.4.0] - 2025-11-08
 
 ### Removed

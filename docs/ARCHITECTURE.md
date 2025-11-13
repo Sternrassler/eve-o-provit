@@ -88,6 +88,15 @@ graph TB
 - Cache: go-redis/v9
 - ESI Client: eve-esi-client v0.3.0
 
+**Service Layer Patterns:**
+
+- **FittingService**: Single source of truth for all deterministic calculations (cargo, warp speed, align time)
+- **CargoService**: Knapsack DP optimization only
+- **RouteService**: Direct FittingService integration for cargo calculations
+- **NavigationService**: System/location resolution only
+
+*Rationale: Each service has single responsibility. All deterministic calculations centralized in FittingService which wraps pkg/evedb functions.*
+
 **Package-Struktur:**
 
 ```txt
@@ -99,10 +108,10 @@ backend/
 │   │   └── trading.go         # Character Ships, Location
 │   ├── services/              # Business Logic Layer
 │   │   ├── route_calculator.go  # Trading Route Logic
-│   │   ├── cargo_service.go   # Cargo Capacity Calculations (Skills + Fitting)
-│   │   ├── navigation_service.go # Warp Time & Align Time Calculations
+│   │   ├── cargo_service.go   # Knapsack DP Optimization
+│   │   ├── navigation_service.go # System/Location Resolution
 │   │   ├── skills_service.go  # ESI Skills Integration (ADR-014)
-│   │   ├── fitting_service.go # Ship Fitting Detection (ADR-015) [Planned]
+│   │   ├── fitting_service.go # Deterministic Calculations Wrapper
 │   │   └── cache.go          # Market Data Cache (TODO)
 │   ├── database/              # Repository Layer
 │   │   ├── db.go              # DB Connection Pool
@@ -115,8 +124,8 @@ backend/
     │   └── client.go          # GetRawClient() für BatchFetcher
     ├── evesso/                # OAuth2 Authentication
     └── evedb/                 # SDE Library (migriert von eve-sde)
-        ├── cargo/             # Hauling Calculations
-        └── navigation/        # Pathfinding & Travel Time
+        ├── cargo/             # Deterministic Cargo Calculations
+        └── navigation/        # Deterministic Navigation + Pathfinding
 ```
 
 **Schlüssel-Handler:**
