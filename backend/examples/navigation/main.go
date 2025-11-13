@@ -84,13 +84,14 @@ func main() {
 		AvoidLowSec: *avoidLowSec,
 	}
 
+	// Calculate travel time using new unified API
 	var result *navigation.RouteResult
 	if *exact {
 		fmt.Println("\nCalculating travel time (exact CCP formula)...")
-		result, err = navigation.CalculateTravelTimeExact(db, *fromSystem, *toSystem, params)
+		result, err = navigation.CalculateTravelTime(db, *fromSystem, *toSystem, params, true)
 	} else {
 		fmt.Println("\nCalculating travel time (simplified formula)...")
-		result, err = navigation.CalculateTravelTime(db, *fromSystem, *toSystem, params)
+		result, err = navigation.CalculateTravelTime(db, *fromSystem, *toSystem, params, false)
 	}
 
 	if err != nil {

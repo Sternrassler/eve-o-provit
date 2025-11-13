@@ -63,9 +63,9 @@ func BenchmarkCalculateTravelTime(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := CalculateTravelTime(db, 1, 2, nil)
+		_, err := CalculateTravelTime(db, 1, 2, nil, false)
 		if err != nil {
-			b.Fatalf("Failed to calculate travel time: %v", err)
+			b.Fatal(err)
 		}
 	}
 }

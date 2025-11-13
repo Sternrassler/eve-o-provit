@@ -145,8 +145,8 @@ func TestIntegrationCalculateTravelTime(t *testing.T) {
 		t.Fatalf("Failed to initialize views: %v", err)
 	}
 
-	// Test with default parameters
-	result, err := CalculateTravelTime(db, 1, 2, nil)
+	// Test with default parameters (simplified formula)
+	result, err := CalculateTravelTime(db, 1, 2, nil, false)
 	if err != nil {
 		t.Fatalf("Failed to calculate travel time: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestIntegrationCalculateTravelTime(t *testing.T) {
 		AlignTime: ptrFloat64(2.5),
 	}
 
-	result2, err := CalculateTravelTime(db, 1, 2, interceptorParams)
+	result2, err := CalculateTravelTime(db, 1, 2, interceptorParams, false)
 	if err != nil {
 		t.Fatalf("Failed to calculate travel time with custom params: %v", err)
 	}

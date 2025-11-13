@@ -259,7 +259,8 @@ func reconstructPath(prev map[int64]int64, start, goal int64) []int64 {
 }
 
 // CalculateTravelTime calculates total travel time for a route with optional ship parameters
-func CalculateTravelTime(db *sql.DB, fromSystemID, toSystemID int64, params *NavigationParams) (*RouteResult, error) {
+// Set useExactFormula=true to use the exact 3-phase CCP warp formula, false for simplified linear approximation
+func CalculateTravelTime(db *sql.DB, fromSystemID, toSystemID int64, params *NavigationParams, useExactFormula bool) (*RouteResult, error) {
 	// Get effective parameters
 	warpSpeed, alignTime, avgWarpDist, source := getEffectiveParams(params)
 
@@ -275,8 +276,16 @@ func CalculateTravelTime(db *sql.DB, fromSystemID, toSystemID int64, params *Nav
 		return nil, err
 	}
 
-	// Calculate time per jump
-	warpTime := CalculateSimplifiedWarpTime(avgWarpDist, warpSpeed)
+	// Calculate time per jump using selected formula
+	var warpTime float64
+	var formulaUsed string
+	if useExactFormula {
+		warpTime = CalculateWarpTime(avgWarpDist, warpSpeed)
+		formulaUsed = "exact_3phase"
+	} else {
+		warpTime = CalculateSimplifiedWarpTime(avgWarpDist, warpSpeed)
+		formulaUsed = "simplified_linear"
+	}
 	timePerJump := alignTime + warpTime + DefaultGateJumpDelay
 
 	// Calculate total time
@@ -292,6 +301,7 @@ func CalculateTravelTime(db *sql.DB, fromSystemID, toSystemID int64, params *Nav
 			"warp_speed": warpSpeed,
 			"align_time": alignTime,
 			"source":     source,
+			"formula":    formulaUsed,
 		},
 	}
 
@@ -299,42 +309,15 @@ func CalculateTravelTime(db *sql.DB, fromSystemID, toSystemID int64, params *Nav
 }
 
 // CalculateTravelTimeExact calculates travel time using exact CCP warp formula
+// Deprecated: Use CalculateTravelTime(db, from, to, params, true) instead
+// This function remains for backward compatibility and will be removed in a future version
 func CalculateTravelTimeExact(db *sql.DB, fromSystemID, toSystemID int64, params *NavigationParams) (*RouteResult, error) {
-	// Get effective parameters
-	warpSpeed, alignTime, avgWarpDist, source := getEffectiveParams(params)
+	return CalculateTravelTime(db, fromSystemID, toSystemID, params, true)
+}
 
-	// Determine if we should avoid low-sec
-	avoidLowSec := false
-	if params != nil {
-		avoidLowSec = params.AvoidLowSec
-	}
-
-	// Find the shortest path
-	path, err := ShortestPath(db, fromSystemID, toSystemID, avoidLowSec)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calculate time per jump using exact formula
-	warpTime := CalculateWarpTime(avgWarpDist, warpSpeed)
-	timePerJump := alignTime + warpTime + DefaultGateJumpDelay
-
-	// Calculate total time
-	totalSeconds := float64(path.Jumps) * timePerJump
-
-	result := &RouteResult{
-		TotalSeconds:      totalSeconds,
-		TotalMinutes:      totalSeconds / 60.0,
-		Jumps:             path.Jumps,
-		AvgSecondsPerJump: timePerJump,
-		Route:             path.Route,
-		ParametersUsed: map[string]interface{}{
-			"warp_speed": warpSpeed,
-			"align_time": alignTime,
-			"source":     source,
-			"formula":    "exact_3phase",
-		},
-	}
-
-	return result, nil
+// CalculateTravelTimeSimplified calculates travel time using simplified linear warp formula
+// Deprecated: Use CalculateTravelTime(db, from, to, params, false) instead
+// This function remains for backward compatibility and will be removed in a future version
+func CalculateTravelTimeSimplified(db *sql.DB, fromSystemID, toSystemID int64, params *NavigationParams) (*RouteResult, error) {
+	return CalculateTravelTime(db, fromSystemID, toSystemID, params, false)
 }

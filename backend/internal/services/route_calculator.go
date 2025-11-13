@@ -96,7 +96,8 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 	}
 
 	// Calculate travel time with navigation parameters (uses defaults if navParams is nil)
-	travelResult, err := navigation.CalculateTravelTime(ro.sdeDB, item.BuySystemID, item.SellSystemID, navParams)
+	// Use simplified formula (false) for performance - exact formula not needed for profit calculation
+	travelResult, err := navigation.CalculateTravelTime(ro.sdeDB, item.BuySystemID, item.SellSystemID, navParams, false)
 	if err != nil {
 		return route, fmt.Errorf("failed to calculate route: %w", err)
 	}
