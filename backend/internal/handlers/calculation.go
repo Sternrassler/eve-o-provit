@@ -8,6 +8,7 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -230,9 +231,8 @@ func (h *CalculationHandler) CalculateWarp(c *fiber.Ctx) error {
 	effectiveWarpSpeed := baseWarpSpeed * (1.0 + warpSpeedBonusPercent/100.0)
 	effectiveInertia := baseInertia * (1.0 - inertiaBonusPercent/100.0)
 
-	// Calculate align time: alignTime = ln(2) * inertiaModifier * mass / 500000
-	// Simplified: alignTime ≈ inertiaModifier * mass / 500000 * 0.693
-	alignTime := effectiveInertia * baseMass / 500000.0
+	// Calculate align time using canonical EVE formula (from navigation package)
+	alignTime := navigation.CalculateAlignTime(effectiveInertia, baseMass)
 
 	// Build breakdown string
 	warpBreakdown := fmt.Sprintf("Base: %.2f AU/s", baseWarpSpeed)

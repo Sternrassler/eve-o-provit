@@ -131,7 +131,7 @@ func GetShipInertiaDeterministic(
 	}
 
 	// Calculate final align time using the formula: ln(2) × inertia × mass / 500000
-	result.AlignTime = calculateAlignTimeFromInertia(result.EffectiveInertia, result.ShipMass)
+	result.AlignTime = CalculateAlignTime(result.EffectiveInertia, result.ShipMass)
 
 	return result, nil
 }
@@ -201,10 +201,11 @@ func getBaseInertiaAndMass(db *sql.DB, shipTypeID int64) (float64, float64, stri
 	return inertia, mass, shipName, nil
 }
 
-// calculateAlignTimeFromInertia calculates align time using EVE's formula
+// CalculateAlignTime calculates align time using EVE's formula
 // Formula: align_time = ln(2) × inertia_modifier × mass / 500000
 // Source: EVE University Wiki
-func calculateAlignTimeFromInertia(inertia float64, mass float64) float64 {
+// This is the canonical implementation - all other code should use this function
+func CalculateAlignTime(inertia float64, mass float64) float64 {
 	return math.Log(2) * inertia * mass / 500000.0
 }
 

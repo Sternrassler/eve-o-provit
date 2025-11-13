@@ -261,7 +261,7 @@ func TestCalculateAlignTimeFormula(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := calculateAlignTimeFromInertia(tc.inertia, tc.mass)
+			result := CalculateAlignTime(tc.inertia, tc.mass)
 			tolerance := 0.5 // 500ms tolerance for approximation
 			if math.Abs(result-tc.expectedAlign) > tolerance {
 				t.Errorf("%s: Expected %.1fs, got %.1fs", tc.name, tc.expectedAlign, result)

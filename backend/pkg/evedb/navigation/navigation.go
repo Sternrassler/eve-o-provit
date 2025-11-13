@@ -51,12 +51,6 @@ type edge struct {
 	toSystemID int64
 }
 
-// CalculateAlignTime calculates exact align time from ship parameters
-// Formula: align_time = 1.386 * inertia_modifier * mass / 500000
-func CalculateAlignTime(mass, inertiaModifier float64) float64 {
-	return 1.386 * inertiaModifier * mass / 500000.0
-}
-
 // CalculateWarpTime calculates warp time using CCP's 3-phase formula
 // Reference: https://wiki.eveuniversity.org/Warp_time_calculation
 func CalculateWarpTime(distanceAU, warpSpeedAU float64) float64 {
@@ -105,7 +99,8 @@ func getEffectiveParams(params *NavigationParams) (warpSpeed, alignTime, avgWarp
 		alignTime = *params.AlignTime
 		source = "provided"
 	} else if params.ShipMass != nil && params.InertiaModifier != nil {
-		alignTime = CalculateAlignTime(*params.ShipMass, *params.InertiaModifier)
+		// Use canonical align time calculation
+		alignTime = CalculateAlignTime(*params.InertiaModifier, *params.ShipMass)
 		source = "calculated"
 	}
 

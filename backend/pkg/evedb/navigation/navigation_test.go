@@ -5,45 +5,6 @@ import (
 	"testing"
 )
 
-func TestCalculateAlignTime(t *testing.T) {
-	tests := []struct {
-		name            string
-		mass            float64
-		inertiaModifier float64
-		want            float64
-	}{
-		{
-			name:            "Interceptor",
-			mass:            1200000,
-			inertiaModifier: 0.3,
-			want:            1.0,
-		},
-		{
-			name:            "Cruiser",
-			mass:            12000000,
-			inertiaModifier: 0.4,
-			want:            13.3,
-		},
-		{
-			name:            "Battleship",
-			mass:            100000000,
-			inertiaModifier: 0.15,
-			want:            41.6,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := CalculateAlignTime(tt.mass, tt.inertiaModifier)
-			// Allow 10% tolerance for approximation
-			tolerance := tt.want * 0.1
-			if math.Abs(got-tt.want) > tolerance {
-				t.Errorf("CalculateAlignTime() = %v, want approximately %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestCalculateWarpTime(t *testing.T) {
 	tests := []struct {
 		name        string
