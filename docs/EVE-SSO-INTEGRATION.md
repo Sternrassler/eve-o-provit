@@ -4,8 +4,8 @@ OAuth2 Authentication mit EVE Online Single Sign-On (SSO).
 
 ## Architektur
 
-**Flow:** Frontend PKCE (ADR-004) → Backend JWT Sessions  
-**Token Storage:** HttpOnly Cookies (24h TTL)  
+**Flow:** Frontend-only PKCE (ADR-004) - Kein Backend involviert!  
+**Token Storage:** Browser localStorage (PKCE code_verifier)  
 **Scopes:** `esi-location.*`, `esi-skills.*`, `esi-assets.*`, `esi-ui.write_waypoint.*`
 
 ## Setup
@@ -14,24 +14,18 @@ OAuth2 Authentication mit EVE Online Single Sign-On (SSO).
 
 1. [EVE Developer Portal](https://developers.eveonline.com/) → Create Application
 2. **Client ID:** `0828b4bcd20242aeb9b8be10f5451094`
-3. **Callback URL:** `http://localhost:9001/api/v1/auth/callback` (Backend Port!)
-4. **Scopes:** Siehe [Required Scopes](#required-scopes)
+3. **Callback URL:** `http://localhost:9000/callback` (Frontend Port!)
+4. **Connection Type:** Authentication & API Access
+5. **Scopes:** Siehe [Required Scopes](#required-scopes)
 
-### 2. Backend Environment
+**Wichtig:** Kein Client Secret benötigt (PKCE nutzt code_verifier statt Secret)
 
-```bash
-# backend/.env
-EVE_CLIENT_ID=0828b4bcd20242aeb9b8be10f5451094
-EVE_CLIENT_SECRET=<your-secret>  # Von EVE Developer Portal
-EVE_CALLBACK_URL=http://localhost:9001/api/v1/auth/callback
-JWT_SECRET=<generate-random-secret>  # openssl rand -base64 32
-```
-
-### 3. Frontend Environment
+### 2. Frontend Environment
 
 ```bash
 # frontend/.env.local
-NEXT_PUBLIC_API_URL=http://localhost:9001
+NEXT_PUBLIC_EVE_CLIENT_ID=0828b4bcd20242aeb9b8be10f5451094
+NEXT_PUBLIC_EVE_CALLBACK_URL=http://localhost:9000/callback
 ```
 
 ## Authentication Flow
@@ -39,44 +33,48 @@ NEXT_PUBLIC_API_URL=http://localhost:9001
 ```mermaid
 sequenceDiagram
     actor User
-    participant FE as Frontend
-    participant BE as Backend
-    participant EVE as EVE SSO
-    participant ESI as ESI /verify
+    participant FE as Frontend<br/>(auth-context.tsx)
+    participant Local as localStorage<br/>(PKCE tokens)
+    participant EVE as EVE SSO<br/>(login.eveonline.com)
+    participant ESI as ESI API<br/>(esi.evetech.net)
     
     User->>FE: Click "Login with EVE"
-    FE->>BE: GET /api/v1/auth/login
-    BE->>BE: Generate state parameter
-    BE->>EVE: Redirect (state for CSRF)
+    FE->>FE: Generate PKCE code_verifier
+    FE->>FE: Generate code_challenge
+    FE->>Local: Store code_verifier
+    FE->>EVE: Redirect (code_challenge, state)
     User->>EVE: Authorize application
-    EVE->>BE: GET /callback?code=...&state=...
-    BE->>BE: Validate state
-    BE->>EVE: Exchange code for token
-    EVE-->>BE: Access token
-    BE->>ESI: /verify (Character Info)
-    ESI-->>BE: Character data
-    BE->>BE: Create JWT session (24h)
-    BE->>BE: Set HttpOnly cookie
-    BE->>FE: Redirect to /
-    FE->>BE: GET /api/v1/auth/verify
-    BE-->>FE: Session valid
+    EVE->>FE: Redirect /callback?code=...&state=...
+    FE->>FE: Validate state
+    FE->>Local: Retrieve code_verifier
+    FE->>EVE: POST /token (code, code_verifier)
+    EVE-->>FE: access_token + refresh_token
+    FE->>ESI: /verify (with access_token)
+    ESI-->>FE: Character data
+    FE->>Local: Store tokens + character
+    FE->>FE: setIsAuthenticated(true)
 ```
+
+**PKCE-Flow (Frontend-only):**
+1. Frontend generiert `code_verifier` (random)
+2. Frontend berechnet `code_challenge` = SHA256(code_verifier)
+3. EVE SSO erhält `code_challenge` (nicht verifier!)
+4. Nach User-Authorize: Frontend tauscht `code` + `code_verifier` gegen Token
+5. Kein Backend Secret benötigt - PKCE verhindert Code Interception
 
 ## API Endpoints
 
-### Public
+### Frontend Routes
 
-- `GET /api/v1/auth/login` - Initiate EVE SSO
-- `GET /api/v1/auth/callback` - OAuth callback handler
+- `/callback` - OAuth2 Callback Handler (Next.js Page)
 
-### Protected (requires JWT cookie)
+### Backend Endpoints (nur Token-Validierung)
 
-- `GET /api/v1/auth/verify` - Verify session
-- `POST /api/v1/auth/logout` - Destroy session
-- `GET /api/v1/character` - Character info
-- `GET /api/v1/character/location` - Current location
-- `GET /api/v1/character/ship` - Active ship
-- `GET /api/v1/character/ships` - Owned ships
+**Protected Endpoints** nutzen `evesso.AuthMiddleware`:
+- Extrahiert `Authorization: Bearer <token>` Header
+- Validiert Token via ESI `/verify`
+- Keine Session-Verwaltung im Backend
+- Stateless Authentication
 
 ## Required Scopes
 
@@ -91,38 +89,35 @@ esi-ui.write_waypoint.v1            # Autopilot waypoints
 
 ## Security
 
-- ✅ CSRF Protection (state parameter, 5min cookie)
-- ✅ HttpOnly Cookies (XSS Prevention)
-- ✅ JWT Signature Validation
-- ✅ Secure flag in Production (HTTPS)
-- ✅ Token Refresh (automatisch bei < 5min Restlaufzeit)
+- ✅ PKCE (Proof Key for Code Exchange) - Verhindert Code Interception
+- ✅ State Parameter (CSRF Protection)
+- ✅ Tokens in localStorage (Frontend-only)
+- ✅ Auto-Refresh (bei < 5min Restlaufzeit)
+- ✅ Stateless Backend (keine Sessions)
 
 ## Testing
 
 ```bash
-# Login Flow
-curl -I http://localhost:9001/api/v1/auth/login
-# → 302 Redirect to login.eveonline.com
+# Prüfe Frontend Auth Context
+# Browser Console (http://localhost:9000)
+localStorage.getItem('eve_access_token')
+localStorage.getItem('eve_character')
 
-# Verify Session (mit Cookie)
-curl -b cookies.txt http://localhost:9001/api/v1/auth/verify
-# → {"authenticated": true, "character": {...}}
-
-# Character Location (mit Cookie)
-curl -b cookies.txt http://localhost:9001/api/v1/character/location
-# → {"solar_system_id": 30000142, ...}
+# Backend API Call mit Token
+curl -H "Authorization: Bearer <token>" \
+  http://localhost:9001/api/v1/character/location
 ```
 
 ## Troubleshooting
 
-**"Invalid state parameter"**  
-→ State cookie expired (5min). Neustart des Login-Flows.
+**"State mismatch"**  
+→ State cookie/localStorage nicht synchron. Browser-Cache leeren.
 
-**"Unauthorized" bei /character/*"**  
-→ JWT Token expired (24h). Re-Login erforderlich.
+**"Unauthorized" bei Backend-Calls**  
+→ Access Token expired. Frontend refresh automatisch (<5min).
 
 **Callback URL Mismatch**  
-→ Prüfe EVE Developer Portal Callback URL (muss exakt matchen).
+→ EVE Developer Portal: Callback muss **Frontend** URL sein (Port 9000, nicht 9001)!
 
 ## Weiterführende Docs
 
