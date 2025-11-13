@@ -29,6 +29,7 @@ make fe-test-e2e-ui      # Interactive UI Mode
 **Setup:**
 
 1. Environment setzen:
+
    ```bash
    # .env (Root)
    EVE_TEST_CHARACTER=YourCharacterName
@@ -37,11 +38,13 @@ make fe-test-e2e-ui      # Interactive UI Mode
    ```
 
 2. Services starten:
+
    ```bash
    make docker-up
    ```
 
 3. Tests ausführen:
+
    ```bash
    make test-e2e
    ```

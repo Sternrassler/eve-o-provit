@@ -36,20 +36,30 @@ NEXT_PUBLIC_API_URL=http://localhost:9001
 
 ## Authentication Flow
 
-```
-1. User clicks "Login with EVE"
-2. Frontend → GET /api/v1/auth/login
-3. Backend → Redirect to EVE SSO (state parameter für CSRF)
-4. User authorizes on EVE
-5. EVE → GET /api/v1/auth/callback?code=...&state=...
-6. Backend:
-   - Validate state
-   - Exchange code for access token
-   - Call /verify → Character Info
-   - Create JWT session (24h)
-   - Set HttpOnly cookie
-7. Frontend → Redirect to /
-8. Session verify via /api/v1/auth/verify
+```mermaid
+sequenceDiagram
+    actor User
+    participant FE as Frontend
+    participant BE as Backend
+    participant EVE as EVE SSO
+    participant ESI as ESI /verify
+    
+    User->>FE: Click "Login with EVE"
+    FE->>BE: GET /api/v1/auth/login
+    BE->>BE: Generate state parameter
+    BE->>EVE: Redirect (state for CSRF)
+    User->>EVE: Authorize application
+    EVE->>BE: GET /callback?code=...&state=...
+    BE->>BE: Validate state
+    BE->>EVE: Exchange code for token
+    EVE-->>BE: Access token
+    BE->>ESI: /verify (Character Info)
+    ESI-->>BE: Character data
+    BE->>BE: Create JWT session (24h)
+    BE->>BE: Set HttpOnly cookie
+    BE->>FE: Redirect to /
+    FE->>BE: GET /api/v1/auth/verify
+    BE-->>FE: Session valid
 ```
 
 ## API Endpoints

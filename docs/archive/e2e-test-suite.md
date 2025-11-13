@@ -54,7 +54,7 @@ Die E2E Test Suite testet alle wichtigen Frontend-Features und Backend-Integrati
 
 ## Datei-Struktur
 
-```txt
+```
 frontend/tests/
 ├── e2e/
 │   ├── home.spec.ts          # 9 tests  - Landing Page Tests

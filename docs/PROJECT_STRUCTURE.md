@@ -1,6 +1,6 @@
 # Projekt-Struktur
 
-```txt
+```
 eve-o-provit/
 ├── backend/                    # Go Backend API
 │   ├── cmd/

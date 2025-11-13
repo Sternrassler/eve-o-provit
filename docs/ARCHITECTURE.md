@@ -15,51 +15,31 @@ EVE-O-Provit ist eine Full-Stack Web-Anwendung für Trading- und Manufacturing-O
 
 ## System-Architektur
 
-```txt
-┌────────────────────────────────────────────────────────┐
-│                        Frontend (Next.js 14)           │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Intra-Region │  │ Inventory    │  │ Character    │  │
-│  │ Trading      │  │ Sell         │  │ Management   │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
-│         │                   │                  │       │
-│         └───────────────────┴──────────────────┘       │
-│                             │                          │
-│                    ┌────────▼────────┐                 │
-│                    │  API Client     │                 │
-│                    │  (Auth Context) │                 │
-│                    └────────┬────────┘                 │
-└─────────────────────────────┼──────────────────────────┘
-                              │ HTTP/REST
-                    ┌─────────▼──────────┐
-                    │  Backend API       │
-                    │  (Fiber Router)    │
-                    └─────────┬──────────┘
-                              │
-        ┌─────────────────────┼─────────────────────┐
-        │                     │                     │
-   ┌────▼─────┐      ┌────────▼────────┐   ┌───────▼──────┐
-   │ Handlers │      │ Services        │   │ ESI Client   │
-   │          │◄─────┤ - Route Calc    │   │ (eve-esi-    │
-   │          │      │ - Cache         │   │  client)     │
-   └────┬─────┘      └────────┬────────┘   └───────┬──────┘
-        │                     │                     │
-        │            ┌────────▼────────┐            │
-        │            │ Database Layer  │            │
-        │            │ (Repositories)  │            │
-        │            └────────┬────────┘            │
-        │                     │                     │
-   ┌────▼─────────────────────▼─────┐      ┌───────▼──────┐
-   │  PostgreSQL (pgx/v5)           │      │ EVE ESI API  │
-   │  - market_orders               │      │ (CCP)        │
-   │  - user sessions               │      └──────────────┘
-   └────────────────────────────────┘
-                │
-   ┌────────────▼────────────┐       ┌──────────────┐
-   │  SQLite SDE (read-only) │       │ Redis Cache  │
-   │  - invTypes             │       │ - ESI data   │
-   │  - mapRegions/Systems   │       │ - Rate limits│
-   └─────────────────────────┘       └──────────────┘
+```mermaid
+graph TB
+    subgraph Frontend["Frontend (Next.js 14)"]
+        IntraRegion[Intra-Region Trading]
+        InventorySell[Inventory Sell]
+        CharMgmt[Character Management]
+        IntraRegion --> APIClient[API Client<br/>Auth Context]
+        InventorySell --> APIClient
+        CharMgmt --> APIClient
+    end
+    
+    APIClient -->|HTTP/REST| BackendAPI[Backend API<br/>Fiber Router]
+    
+    BackendAPI --> Handlers[Handlers]
+    BackendAPI --> Services[Services<br/>Route Calc, Cache]
+    BackendAPI --> ESIClient[ESI Client<br/>eve-esi-client]
+    
+    Handlers --> DBLayer[Database Layer<br/>Repositories]
+    Services --> DBLayer
+    
+    DBLayer --> PostgreSQL[(PostgreSQL pgx/v5<br/>market_orders<br/>user sessions)]
+    PostgreSQL --> SQLite[(SQLite SDE read-only<br/>invTypes<br/>mapRegions/Systems)]
+    
+    Services -.-> Redis[(Redis Cache<br/>ESI data<br/>Rate limits)]
+    ESIClient -->|API Calls| ESIAPI[EVE ESI API<br/>CCP]
 ```
 
 ## Komponenten-Details
@@ -254,47 +234,32 @@ Verwendet vorgefertigte Views aus eve-sde Projekt:
 
 ## Daten-Fluss: Market Data Refresh
 
-```txt
-User Click "Refresh"
-    │
-    ▼
-Frontend: RegionRefreshButton
-    │
-    ├─► GET /api/v1/market/{region}/34?refresh=true
-    │
-    ▼
-Backend: handlers.GetMarketOrders()
-    │
-    ├─► Check refresh=true flag
-    │
-    ▼
-BatchFetcher.FetchAllPages()
-    │
-    ├─► Fetch Page 1 → Parse X-Pages: 387
-    ├─► Start 10 Workers
-    ├─► Each Worker: Fetch 32-44 pages
-    ├─► Duration: ~8.7 seconds
-    │
-    ▼
-Parse & Enrich
-    │
-    ├─► Unmarshal JSON per page
-    ├─► Add regionID + timestamp
-    │
-    ▼
-MarketRepository.UpsertMarketOrders()
-    │
-    ├─► UPSERT (ON CONFLICT UPDATE)
-    ├─► Duration: ~35 seconds
-    │
-    ▼
-Response: 200 OK
-    │
-    ▼
-Frontend: Toast "✅ Updated in 45s"
-    │
-    ▼
-RegionStalenessIndicator: Auto-refresh (< 1 min) 🟢
+```mermaid
+sequenceDiagram
+    actor User
+    participant Frontend as Frontend<br/>RegionRefreshButton
+    participant Backend as Backend<br/>handlers.GetMarketOrders()
+    participant Fetcher as BatchFetcher<br/>FetchAllPages()
+    participant Parser as Parse & Enrich
+    participant DB as MarketRepository<br/>UpsertMarketOrders()
+    participant UI as Frontend UI
+    
+    User->>Frontend: Click "Refresh"
+    Frontend->>Backend: GET /api/v1/market/{region}/34?refresh=true
+    Backend->>Backend: Check refresh=true flag
+    Backend->>Fetcher: Start fetch
+    Fetcher->>Fetcher: Fetch Page 1 → X-Pages: 387
+    Fetcher->>Fetcher: Start 10 Workers
+    Note over Fetcher: Each Worker: 32-44 pages<br/>Duration: ~8.7s
+    Fetcher->>Parser: Raw JSON pages
+    Parser->>Parser: Unmarshal JSON per page
+    Parser->>Parser: Add regionID + timestamp
+    Parser->>DB: Batch UPSERT
+    Note over DB: ON CONFLICT UPDATE<br/>Duration: ~35s
+    DB-->>Backend: Success
+    Backend-->>Frontend: 200 OK
+    Frontend->>UI: Toast "✅ Updated in 45s"
+    UI->>UI: RegionStalenessIndicator 🟢
 ```
 
 ## Deployment
