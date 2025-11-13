@@ -70,7 +70,7 @@ const (
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 401 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse
-// @Router /trading/routes/calculate [post]
+// @Router /api/v1/trading/routes/calculate [post]
 func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	var req models.RouteCalculationRequest
 
@@ -137,6 +137,16 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 }
 
 // GetCharacterLocation handles GET /api/v1/character/location
+//
+// @Summary Get character location
+// @Description Get character's current location (solar system)
+// @Tags Character
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Location data with solar_system_id, station_id, structure_id"
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/character/location [get]
 func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
 	characterID := c.Locals("character_id").(int)
 	accessToken := c.Locals("access_token").(string)
@@ -159,6 +169,16 @@ func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
 }
 
 // GetCharacterShip handles GET /api/v1/character/ship
+//
+// @Summary Get current ship
+// @Description Get character's current active ship
+// @Tags Character
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Ship data with ship_item_id, ship_name, ship_type_id, ship_type_name"
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/character/ship [get]
 func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
 	characterID := c.Locals("character_id").(int)
 	accessToken := c.Locals("access_token").(string)
@@ -181,6 +201,16 @@ func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
 }
 
 // GetCharacterShips handles GET /api/v1/character/ships
+//
+// @Summary Get character ships
+// @Description Get list of all character's ships in current hangar
+// @Tags Character
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {array} map[string]interface{} "Array of ships with ship_item_id, ship_name, ship_type_id, ship_type_name"
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/character/ships [get]
 func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
 	characterID := c.Locals("character_id").(int)
 	accessToken := c.Locals("access_token").(string)
@@ -204,6 +234,21 @@ func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
 
 // SetAutopilotWaypoint handles POST /api/v1/esi/ui/autopilot/waypoint
 // Sets a waypoint in the EVE client's autopilot via ESI UI API
+//
+// @Summary Set autopilot waypoint
+// @Description Set autopilot waypoint in EVE client via ESI UI API
+// @Description Requires scope: esi-ui.write_waypoint.v1
+// @Tags ESI UI
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body object{destination_id=int64,clear_other_waypoints=bool,add_to_beginning=bool} true "Waypoint request"
+// @Success 204 "Waypoint set successfully"
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/esi/ui/autopilot/waypoint [post]
 func (h *TradingHandler) SetAutopilotWaypoint(c *fiber.Ctx) error {
 	// Extract auth context
 	accessToken := c.Locals("access_token").(string)

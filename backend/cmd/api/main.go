@@ -61,6 +61,7 @@ import (
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/handlers"
+	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evesso"
@@ -248,7 +249,16 @@ func main() {
 	log.Fatal(app.Listen(":" + port))
 }
 
-// Placeholder handlers
+// handleCharacterInfo handles GET /api/v1/character
+//
+// @Summary Get character info
+// @Description Get authenticated character information
+// @Tags Character
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Character info with character_id, character_name, scopes, portrait_url"
+// @Failure 401 {object} models.ErrorResponse
+// @Router /api/v1/character [get]
 func handleCharacterInfo(c *fiber.Ctx) error {
 	characterID := c.Locals("character_id").(int)
 	characterName := c.Locals("character_name").(string)

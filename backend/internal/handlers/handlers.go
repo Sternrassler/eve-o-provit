@@ -109,7 +109,7 @@ func (h *Handler) Health(c *fiber.Ctx) error {
 // @Tags Health
 // @Produce json
 // @Success 200 {object} models.VersionResponse
-// @Router /version [get]
+// @Router /api/v1/version [get]
 func (h *Handler) Version(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"version": "0.1.0",

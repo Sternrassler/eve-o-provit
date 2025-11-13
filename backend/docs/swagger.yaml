@@ -514,6 +514,101 @@ paths:
       summary: Calculate warp speed and align time
       tags:
       - Calculations
+  /api/v1/character:
+    get:
+      description: Get authenticated character information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Character info with character_id, character_name, scopes, portrait_url
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get character info
+      tags:
+      - Character
+  /api/v1/character/location:
+    get:
+      description: Get character's current location (solar system)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Location data with solar_system_id, station_id, structure_id
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get character location
+      tags:
+      - Character
+  /api/v1/character/ship:
+    get:
+      description: Get character's current active ship
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ship data with ship_item_id, ship_name, ship_type_id, ship_type_name
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current ship
+      tags:
+      - Character
+  /api/v1/character/ships:
+    get:
+      description: Get list of all character's ships in current hangar
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Array of ships with ship_item_id, ship_name, ship_type_id,
+            ship_type_name
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get character ships
+      tags:
+      - Character
   /api/v1/characters/{characterId}/fitting/{shipTypeId}:
     get:
       description: |-
@@ -606,6 +701,54 @@ paths:
       summary: Get character skills
       tags:
       - Character
+  /api/v1/esi/ui/autopilot/waypoint:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Set autopilot waypoint in EVE client via ESI UI API
+        Requires scope: esi-ui.write_waypoint.v1
+      parameters:
+      - description: Waypoint request
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            add_to_beginning:
+              type: boolean
+            clear_other_waypoints:
+              type: boolean
+            destination_id:
+              format: int64
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Waypoint set successfully
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set autopilot waypoint
+      tags:
+      - ESI UI
   /api/v1/health:
     get:
       description: Check API and database health status
@@ -756,35 +899,7 @@ paths:
       summary: List all EVE regions
       tags:
       - SDE
-  /api/v1/types/{id}:
-    get:
-      description: Retrieve detailed information about an EVE Online item type from
-        SDE
-      parameters:
-      - description: Type ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/TypeResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/ErrorResponse'
-      summary: Get item type information
-      tags:
-      - SDE
-  /trading/routes/calculate:
+  /api/v1/trading/routes/calculate:
     post:
       consumes:
       - application/json
@@ -831,7 +946,35 @@ paths:
       summary: Calculate trading routes
       tags:
       - Trading
-  /version:
+  /api/v1/types/{id}:
+    get:
+      description: Retrieve detailed information about an EVE Online item type from
+        SDE
+      parameters:
+      - description: Type ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/TypeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Get item type information
+      tags:
+      - SDE
+  /api/v1/version:
     get:
       description: Get API version information
       produces:
