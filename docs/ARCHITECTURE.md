@@ -36,11 +36,16 @@ graph TB
     Services --> DBLayer
     
     DBLayer --> PostgreSQL[(PostgreSQL pgx/v5<br/>market_orders<br/>user sessions)]
-    PostgreSQL --> SQLite[(SQLite SDE read-only<br/>invTypes<br/>mapRegions/Systems)]
+    DBLayer --> SQLite[(SQLite SDE read-only<br/>invTypes<br/>mapRegions/Systems)]
     
     Services -.-> Redis[(Redis Cache<br/>ESI data<br/>Rate limits)]
     ESIClient -->|API Calls| ESIAPI[EVE ESI API<br/>CCP]
 ```
+
+**Dual-Database Architektur:**
+- **PostgreSQL:** Dynamische Daten (Market Orders, User Sessions, Character Data)
+- **SQLite:** Statische SDE Daten (Items, Ships, Regions, Systems) - Read-Only
+- **Beide unabhängig:** Backend nutzt beide parallel via Repository Layer
 
 ## Komponenten-Details
 
