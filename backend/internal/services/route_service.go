@@ -105,7 +105,8 @@ var _ RouteCalculatorServicer = (*RouteService)(nil)
 // Calculate computes profitable trading routes for a region with timeout support
 // If cargoCapacity is provided in the request, it's used directly
 // Otherwise, ship capacity is fetched from SDE and skills are applied if available in context
-func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
+// warpSpeed and alignTime are optional deterministic values from frontend (nil = use defaults)
+func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
 	startTime := time.Now()
 	defer func() {
 		duration := time.Since(startTime).Seconds()
@@ -173,7 +174,7 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	routeCtx, routeCancel := context.WithTimeout(calcCtx, rs.config.RouteCalculationTimeout)
 	defer routeCancel()
 
-	routes, err := rs.workerPool.ProcessItemsWithCapacityInfo(routeCtx, profitableItems, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3)
+	routes, err := rs.workerPool.ProcessItemsWithCapacityInfo(routeCtx, profitableItems, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3, warpSpeed, alignTime)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		return nil, fmt.Errorf("failed to calculate routes: %w", err)
 	}
@@ -230,8 +231,17 @@ func (rs *RouteService) CalculateWithFilters(ctx context.Context, req *models.Ro
 		log.Printf("Route calculation with volume filters completed in %.2fs", duration)
 	}()
 
+	// Extract deterministic navigation parameters from request
+	var warpSpeed, alignTime *float64
+	if req.WarpSpeed > 0 {
+		warpSpeed = &req.WarpSpeed
+	}
+	if req.AlignTime > 0 {
+		alignTime = &req.AlignTime
+	}
+
 	// Call base Calculate method to get routes
-	response, err := rs.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity)
+	response, err := rs.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity, warpSpeed, alignTime)
 	if err != nil {
 		return nil, err
 	}

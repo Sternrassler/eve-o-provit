@@ -77,6 +77,8 @@ type RouteCalculationRequest struct {
 	RegionID             int     `json:"region_id"`
 	ShipTypeID           int     `json:"ship_type_id"`
 	CargoCapacity        float64 `json:"cargo_capacity,omitempty"`
+	WarpSpeed            float64 `json:"warp_speed,omitempty"`             // Deterministic warp speed in AU/s (from fitting)
+	AlignTime            float64 `json:"align_time,omitempty"`             // Deterministic align time in seconds (from fitting)
 	MinDailyVolume       float64 `json:"min_daily_volume,omitempty"`       // Minimum daily volume filter (items/day)
 	MaxLiquidationDays   float64 `json:"max_liquidation_days,omitempty"`   // Maximum liquidation time (days)
 	IncludeVolumeMetrics bool    `json:"include_volume_metrics,omitempty"` // Whether to include volume metrics

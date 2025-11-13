@@ -109,6 +109,15 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	ctx = context.WithValue(ctx, contextKeyCharacterID, characterID)
 	ctx = context.WithValue(ctx, contextKeyAccessToken, accessToken)
 
+	// Extract deterministic navigation parameters from request
+	var warpSpeed, alignTime *float64
+	if req.WarpSpeed > 0 {
+		warpSpeed = &req.WarpSpeed
+	}
+	if req.AlignTime > 0 {
+		alignTime = &req.AlignTime
+	}
+
 	// Calculate routes (with or without volume filtering)
 	var result *models.RouteCalculationResponse
 	var err error
@@ -117,7 +126,7 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	if req.IncludeVolumeMetrics || req.MinDailyVolume > 0 || req.MaxLiquidationDays > 0 {
 		result, err = h.calculator.CalculateWithFilters(ctx, &req)
 	} else {
-		result, err = h.calculator.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity)
+		result, err = h.calculator.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity, warpSpeed, alignTime)
 	}
 
 	if err != nil {

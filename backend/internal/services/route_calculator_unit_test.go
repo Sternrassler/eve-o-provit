@@ -8,7 +8,7 @@ import (
 
 // TestNewRouteCalculator tests RouteCalculator initialization
 func TestNewRouteCalculator(t *testing.T) {
-	t.Run("with nil dependencies", func(t *testing.T) {
+	t.Run("Creates new RouteCalculator with provided dependencies", func(t *testing.T) {
 		optimizer := NewRouteCalculator(nil, nil, nil)
 
 		assert.NotNil(t, optimizer, "RouteCalculator should be initialized even with nil dependencies")

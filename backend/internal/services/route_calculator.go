@@ -32,11 +32,12 @@ func NewRouteCalculator(sdeRepo *database.SDERepository, sdeDB *sql.DB, feeServi
 // cargoCapacity is the effective capacity (with skills already applied)
 // baseCapacity and skillBonus are optional - if 0, they'll match cargoCapacity
 func (ro *RouteCalculator) CalculateRoute(ctx context.Context, item models.ItemPair, cargoCapacity float64) (models.TradingRoute, error) {
-	return ro.CalculateRouteWithCapacityInfo(ctx, item, cargoCapacity, cargoCapacity, 0, 0)
+	return ro.CalculateRouteWithCapacityInfo(ctx, item, cargoCapacity, cargoCapacity, 0, 0, nil, nil)
 }
 
-// CalculateRouteWithCapacityInfo calculates a route with detailed capacity information
-func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, item models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3 float64) (models.TradingRoute, error) {
+// CalculateRouteWithCapacityInfo calculates a route with detailed capacity and navigation information
+// warpSpeed and alignTime are optional pointers - if nil, navigation package uses defaults
+func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, item models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3 float64, warpSpeed, alignTime *float64) (models.TradingRoute, error) {
 	var route models.TradingRoute
 
 	// Use effective capacity for calculations
@@ -85,72 +86,38 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 	totalProfit := profitPerUnit * float64(totalQuantity)
 	profitPerTour := totalProfit / float64(numberOfTours)
 
-	// Calculate travel time
-	travelResult, err := navigation.ShortestPath(ro.sdeDB, item.BuySystemID, item.SellSystemID, false)
+	// Build navigation parameters from provided deterministic values
+	var navParams *navigation.NavigationParams
+	if warpSpeed != nil || alignTime != nil {
+		navParams = &navigation.NavigationParams{
+			WarpSpeed: warpSpeed,
+			AlignTime: alignTime,
+		}
+	}
+
+	// Calculate travel time with navigation parameters (uses defaults if navParams is nil)
+	travelResult, err := navigation.CalculateTravelTime(ro.sdeDB, item.BuySystemID, item.SellSystemID, navParams)
 	if err != nil {
 		return route, fmt.Errorf("failed to calculate route: %w", err)
 	}
 
-	// Get ship type for navigation calculations (use default ship type ID 0 for generic hauler)
-	// TODO: In future, get actual ship type from request or character data
-	ship := models.GetShipType(0) // Default hauler
-
-	// Calculate jump time with navigation skills
-	// Inline implementation (previously in RoutePlanner)
-	calculateJumpTime := func(jumps int, baseWarpSpeed, baseAlignTime float64, navigationLevel, evasiveLevel int) float64 {
-		if jumps == 0 {
-			return 0
-		}
-
-		// Apply Navigation skill bonus (+5% warp speed per level)
-		warpSpeed := baseWarpSpeed * (1.0 + 0.05*float64(navigationLevel))
-
-		// Apply Evasive Maneuvering skill bonus (-5% align time per level)
-		alignTime := baseAlignTime * (1.0 - 0.05*float64(evasiveLevel))
-
-		// Average distance per jump (AU) - simplified model
-		const avgDistanceAU = 9.0 // Average distance between gates
-
-		// Calculate time per jump
-		warpTime := avgDistanceAU / warpSpeed
-		dockingTime := 10.0 // Time for undocking/docking/gate activation
-
-		timePerJump := alignTime + warpTime + dockingTime
-
-		return float64(jumps) * timePerJump
-	}
-
-	// Calculate base travel time (without skills)
-	baseOneWaySeconds := calculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, 0, 0)
-
-	// Calculate skilled travel time (with default skills for now)
-	// TODO: Pass actual character skills when available from auth context
-	navigationLevel := 0
-	evasiveLevel := 0
-	skilledOneWaySeconds := calculateJumpTime(travelResult.Jumps, ship.BaseWarpSpeed, ship.BaseAlignTime, navigationLevel, evasiveLevel)
+	// Extract travel times
+	oneWaySeconds := travelResult.TotalSeconds
+	roundTripSeconds := oneWaySeconds * 2
 
 	// Station Trading: Use minimum time for order cycling (5 minutes base time)
-	// This prevents division by zero and provides realistic ISK/h for station trading
 	if item.BuySystemID == item.SellSystemID || travelResult.Jumps == 0 {
-		baseOneWaySeconds = 300.0    // 5 minutes for station trading order updates
-		skilledOneWaySeconds = 300.0 // Same for station trading (no travel)
+		oneWaySeconds = 300.0    // 5 minutes for station trading
+		roundTripSeconds = 600.0 // Same for roundtrip
 	}
-
-	// Use skilled time for main calculations
-	oneWaySeconds := skilledOneWaySeconds
-	roundTripSeconds := oneWaySeconds * 2
-	baseRoundTripSeconds := baseOneWaySeconds * 2
 
 	// Multi-tour time calculation
 	// (numberOfTours - 1) full roundtrips + 1 one-way trip
 	var totalTimeSeconds float64
-	var baseTotalTimeSeconds float64
 	if numberOfTours > 1 {
 		totalTimeSeconds = float64(numberOfTours-1)*roundTripSeconds + oneWaySeconds
-		baseTotalTimeSeconds = float64(numberOfTours-1)*baseRoundTripSeconds + baseOneWaySeconds
 	} else {
 		totalTimeSeconds = roundTripSeconds
-		baseTotalTimeSeconds = baseRoundTripSeconds
 	}
 	totalTimeMinutes := totalTimeSeconds / 60.0
 
@@ -211,7 +178,6 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 
 	// Calculate ISK per hour using NET profit (after fees)
 	var iskPerHour float64
-	var baseISKPerHour float64
 	if totalTimeSeconds > 0 {
 		// Calculate theoretical ISK/h (assuming infinite supply)
 		theoreticalISKPerHour := (netProfit / totalTimeSeconds) * 3600
@@ -228,16 +194,6 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 			// Can do multiple trip sets - use theoretical ISK/h
 			iskPerHour = theoreticalISKPerHour
 		}
-	}
-	if baseTotalTimeSeconds > 0 {
-		// Use gross profit for base ISK/h (before skills but before fees too)
-		baseISKPerHour = (netProfit / baseTotalTimeSeconds) * 3600
-	}
-
-	// Calculate time improvement percentage
-	var timeImprovement float64
-	if baseTotalTimeSeconds > 0 && baseTotalTimeSeconds != totalTimeSeconds {
-		timeImprovement = ((baseTotalTimeSeconds - totalTimeSeconds) / baseTotalTimeSeconds) * 100
 	}
 
 	// Calculate investment (total cost to buy)
@@ -287,11 +243,11 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 		NumberOfTours:    numberOfTours,
 		ProfitPerTour:    profitPerTour,
 		TotalTimeMinutes: totalTimeMinutes,
-		// Navigation skills fields
-		BaseTravelTimeSeconds:    baseOneWaySeconds,
-		SkilledTravelTimeSeconds: skilledOneWaySeconds,
-		BaseISKPerHour:           baseISKPerHour,
-		TimeImprovementPercent:   timeImprovement,
+		// Navigation skills fields (deprecated - keeping for backward compatibility)
+		BaseTravelTimeSeconds:    oneWaySeconds, // Now same as TravelTimeSeconds
+		SkilledTravelTimeSeconds: oneWaySeconds, // Now same as TravelTimeSeconds
+		BaseISKPerHour:           iskPerHour,    // Now same as ISKPerHour
+		TimeImprovementPercent:   0,             // No longer calculated (deterministic values from frontend)
 		// Trading fees fields (Issue #39)
 		BuyBrokerFee:       buyBrokerFee,
 		SellBrokerFee:      sellBrokerFee,
