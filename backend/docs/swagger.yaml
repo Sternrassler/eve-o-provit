@@ -248,81 +248,6 @@ definitions:
         example: 5
         type: integer
     type: object
-  TradingRouteRequest:
-    properties:
-      cargo_capacity:
-        example: 9656.9
-        type: number
-      character_id:
-        example: 12345678
-        type: integer
-      max_investment:
-        example: 1000000000
-        type: number
-      max_jumps:
-        example: 5
-        type: integer
-      region_id:
-        example: 10000002
-        type: integer
-      ship_type_id:
-        example: 650
-        type: integer
-      type_ids:
-        example:
-        - 34
-        - 35
-        - 36
-        items:
-          type: integer
-        minItems: 1
-        type: array
-    required:
-    - region_id
-    - type_ids
-    type: object
-  TradingRouteResponse:
-    properties:
-      buy_location:
-        example: Jita IV - Moon 4 - Caldari Navy Assembly Plant
-        type: string
-      buy_price:
-        example: 5.5
-        type: number
-      investment:
-        example: 550000
-        type: number
-      jumps:
-        example: 5
-        type: integer
-      profit:
-        example: 50000
-        type: number
-      profit_per_jump:
-        example: 10000
-        type: number
-      quantity:
-        example: 100000
-        type: integer
-      revenue:
-        example: 600000
-        type: number
-      roi_percent:
-        example: 9.09
-        type: number
-      sell_location:
-        example: Amarr VIII (Oris) - Emperor Family Academy
-        type: string
-      sell_price:
-        example: 6
-        type: number
-      type_id:
-        example: 34
-        type: integer
-      type_name:
-        example: Tritanium
-        type: string
-    type: object
   TypeResponse:
     properties:
       category_id:
@@ -425,6 +350,211 @@ definitions:
         type: integer
       warp_drive_operation:
         example: 5
+        type: integer
+    type: object
+  models.RouteCalculationRequest:
+    properties:
+      align_time:
+        description: 'Optional: Deterministic align time in seconds (from fitting
+          calculation)'
+        example: 4.8
+        type: number
+      cargo_capacity:
+        description: 'Optional: Override cargo capacity (m³)'
+        example: 62500
+        type: number
+      include_volume_metrics:
+        description: 'Optional: Whether to include volume metrics'
+        example: false
+        type: boolean
+      max_liquidation_days:
+        description: 'Optional: Maximum liquidation time (days)'
+        example: 7
+        type: number
+      min_daily_volume:
+        description: 'Optional: Minimum daily volume filter (items/day)'
+        example: 100
+        type: number
+      region_id:
+        description: Region ID (e.g., The Forge)
+        example: 10000002
+        type: integer
+      ship_type_id:
+        description: Ship type ID (e.g., Bestower)
+        example: 649
+        type: integer
+      warp_speed:
+        description: 'Optional: Deterministic warp speed in AU/s (from fitting calculation)'
+        example: 4.2
+        type: number
+    type: object
+  models.RouteCalculationResponse:
+    properties:
+      calculation_time_ms:
+        type: integer
+      cargo_capacity:
+        type: number
+      region_id:
+        type: integer
+      region_name:
+        type: string
+      routes:
+        items:
+          $ref: '#/definitions/models.TradingRoute'
+        type: array
+      ship_name:
+        type: string
+      ship_type_id:
+        type: integer
+      warning:
+        type: string
+    type: object
+  models.TradingRoute:
+    properties:
+      base_cargo_capacity:
+        description: Base capacity without skills
+        type: number
+      base_isk_per_hour:
+        description: ISK/h without navigation skills
+        type: number
+      base_travel_time_seconds:
+        description: Navigation Skills fields
+        type: number
+      broker_fees:
+        description: Combined broker fees (buy + sell)
+        type: number
+      buy_broker_fee:
+        description: 'Trading Fees fields (Issue #39)'
+        type: number
+      buy_price:
+        type: number
+      buy_security_status:
+        type: number
+      buy_station_id:
+        type: integer
+      buy_station_name:
+        type: string
+      buy_system_id:
+        type: integer
+      buy_system_name:
+        type: string
+      cargo_capacity:
+        description: Total effective capacity (with skills + fitting)
+        type: number
+      cargo_used:
+        description: Cargo fields
+        type: number
+      cargo_utilization:
+        description: Percentage 0-100
+        type: number
+      daily_profit:
+        description: Profit per day (net_profit / liquidation_days)
+        type: number
+      estimated_relist_fee:
+        description: Estimated relist fee (sell broker fee)
+        type: number
+      fitting_bonus_m3:
+        description: Fitting modules bonus (absolute m³)
+        type: number
+      gross_margin_percent:
+        description: Gross profit margin %
+        type: number
+      gross_profit:
+        description: Profit before fees
+        type: number
+      isk_per_hour:
+        type: number
+      item_name:
+        type: string
+      item_type_id:
+        type: integer
+      item_volume:
+        type: number
+      jumps:
+        type: integer
+      liquidation_days:
+        description: Estimated days to sell inventory
+        type: number
+      min_route_security_status:
+        description: Minimum security of all systems on route
+        type: number
+      net_profit:
+        description: Total profit minus all fees
+        type: number
+      net_profit_percent:
+        description: Net profit margin %
+        type: number
+      number_of_tours:
+        description: Multi-tour fields
+        type: integer
+      profit_per_tour:
+        type: number
+      profit_per_unit:
+        type: number
+      quantity:
+        type: integer
+      round_trip_seconds:
+        type: number
+      sales_tax:
+        description: Sales tax on sell orders
+        type: number
+      sell_broker_fee:
+        description: Broker fee for sell order placement
+        type: number
+      sell_price:
+        type: number
+      sell_security_status:
+        type: number
+      sell_station_id:
+        type: integer
+      sell_station_name:
+        type: string
+      sell_system_id:
+        type: integer
+      sell_system_name:
+        type: string
+      skill_bonus_percent:
+        description: Total skill bonus %
+        type: number
+      skilled_travel_time_seconds:
+        description: Travel time with navigation skills applied
+        type: number
+      spread_percent:
+        type: number
+      time_improvement_percent:
+        description: Percentage improvement from skills
+        type: number
+      total_fees:
+        description: Sum of all trading fees
+        type: number
+      total_profit:
+        type: number
+      total_time_minutes:
+        type: number
+      travel_time_seconds:
+        type: number
+      volume_metrics:
+        allOf:
+        - $ref: '#/definitions/models.VolumeMetrics'
+        description: 'Volume & Liquidity fields (Issue #53)'
+    type: object
+  models.VolumeMetrics:
+    properties:
+      daily_isk_turnover:
+        description: Average daily ISK traded (volume × avg_price)
+        type: number
+      daily_volume_avg:
+        description: 30-day average daily volume
+        type: number
+      data_days:
+        description: Number of days of historical data available
+        type: integer
+      liquidity_score:
+        description: 0-100 score based on volume stability
+        type: integer
+      region_id:
+        type: integer
+      type_id:
         type: integer
     type: object
 host: localhost:8080
@@ -906,6 +1036,7 @@ paths:
       description: |-
         Calculate optimal intra-region trading routes with profit analysis
         Uses character skills and ship fitting for accurate cargo capacity
+        Supports deterministic navigation parameters (warp_speed, align_time) from frontend fitting calculation
         Supports volume filtering for liquidity-based selection
       parameters:
       - description: Route calculation request
@@ -913,22 +1044,18 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/TradingRouteRequest'
+          $ref: '#/definitions/models.RouteCalculationRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Successfully calculated routes
           schema:
-            items:
-              $ref: '#/definitions/TradingRouteResponse'
-            type: array
+            $ref: '#/definitions/models.RouteCalculationResponse'
         "206":
           description: Partial results (timeout)
           schema:
-            items:
-              $ref: '#/definitions/TradingRouteResponse'
-            type: array
+            $ref: '#/definitions/models.RouteCalculationResponse'
         "400":
           description: Bad Request
           schema:

@@ -59,14 +59,15 @@ const (
 // @Summary Calculate trading routes
 // @Description Calculate optimal intra-region trading routes with profit analysis
 // @Description Uses character skills and ship fitting for accurate cargo capacity
+// @Description Supports deterministic navigation parameters (warp_speed, align_time) from frontend fitting calculation
 // @Description Supports volume filtering for liquidity-based selection
 // @Tags Trading
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param request body models.TradingRouteRequest true "Route calculation request"
-// @Success 200 {array} models.TradingRouteResponse
-// @Success 206 {array} models.TradingRouteResponse "Partial results (timeout)"
+// @Param request body models.RouteCalculationRequest true "Route calculation request"
+// @Success 200 {object} models.RouteCalculationResponse "Successfully calculated routes"
+// @Success 206 {object} models.RouteCalculationResponse "Partial results (timeout)"
 // @Failure 400 {object} models.ErrorResponse
 // @Failure 401 {object} models.ErrorResponse
 // @Failure 500 {object} models.ErrorResponse

@@ -693,7 +693,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Calculate optimal intra-region trading routes with profit analysis\nUses character skills and ship fitting for accurate cargo capacity\nSupports volume filtering for liquidity-based selection",
+                "description": "Calculate optimal intra-region trading routes with profit analysis\nUses character skills and ship fitting for accurate cargo capacity\nSupports deterministic navigation parameters (warp_speed, align_time) from frontend fitting calculation\nSupports volume filtering for liquidity-based selection",
                 "consumes": [
                     "application/json"
                 ],
@@ -711,27 +711,21 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/TradingRouteRequest"
+                            "$ref": "#/definitions/models.RouteCalculationRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Successfully calculated routes",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/TradingRouteResponse"
-                            }
+                            "$ref": "#/definitions/models.RouteCalculationResponse"
                         }
                     },
                     "206": {
                         "description": "Partial results (timeout)",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/TradingRouteResponse"
-                            }
+                            "$ref": "#/definitions/models.RouteCalculationResponse"
                         }
                     },
                     "400": {
@@ -1164,108 +1158,6 @@ const docTemplate = `{
                 }
             }
         },
-        "TradingRouteRequest": {
-            "type": "object",
-            "required": [
-                "region_id",
-                "type_ids"
-            ],
-            "properties": {
-                "cargo_capacity": {
-                    "type": "number",
-                    "example": 9656.9
-                },
-                "character_id": {
-                    "type": "integer",
-                    "example": 12345678
-                },
-                "max_investment": {
-                    "type": "number",
-                    "example": 1000000000
-                },
-                "max_jumps": {
-                    "type": "integer",
-                    "example": 5
-                },
-                "region_id": {
-                    "type": "integer",
-                    "example": 10000002
-                },
-                "ship_type_id": {
-                    "type": "integer",
-                    "example": 650
-                },
-                "type_ids": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "integer"
-                    },
-                    "example": [
-                        34,
-                        35,
-                        36
-                    ]
-                }
-            }
-        },
-        "TradingRouteResponse": {
-            "type": "object",
-            "properties": {
-                "buy_location": {
-                    "type": "string",
-                    "example": "Jita IV - Moon 4 - Caldari Navy Assembly Plant"
-                },
-                "buy_price": {
-                    "type": "number",
-                    "example": 5.5
-                },
-                "investment": {
-                    "type": "number",
-                    "example": 550000
-                },
-                "jumps": {
-                    "type": "integer",
-                    "example": 5
-                },
-                "profit": {
-                    "type": "number",
-                    "example": 50000
-                },
-                "profit_per_jump": {
-                    "type": "number",
-                    "example": 10000
-                },
-                "quantity": {
-                    "type": "integer",
-                    "example": 100000
-                },
-                "revenue": {
-                    "type": "number",
-                    "example": 600000
-                },
-                "roi_percent": {
-                    "type": "number",
-                    "example": 9.09
-                },
-                "sell_location": {
-                    "type": "string",
-                    "example": "Amarr VIII (Oris) - Emperor Family Academy"
-                },
-                "sell_price": {
-                    "type": "number",
-                    "example": 6
-                },
-                "type_id": {
-                    "type": "integer",
-                    "example": 34
-                },
-                "type_name": {
-                    "type": "string",
-                    "example": "Tritanium"
-                }
-            }
-        },
         "TypeResponse": {
             "type": "object",
             "properties": {
@@ -1408,6 +1300,294 @@ const docTemplate = `{
                 "warp_drive_operation": {
                     "type": "integer",
                     "example": 5
+                }
+            }
+        },
+        "models.RouteCalculationRequest": {
+            "type": "object",
+            "properties": {
+                "align_time": {
+                    "description": "Optional: Deterministic align time in seconds (from fitting calculation)",
+                    "type": "number",
+                    "example": 4.8
+                },
+                "cargo_capacity": {
+                    "description": "Optional: Override cargo capacity (m³)",
+                    "type": "number",
+                    "example": 62500
+                },
+                "include_volume_metrics": {
+                    "description": "Optional: Whether to include volume metrics",
+                    "type": "boolean",
+                    "example": false
+                },
+                "max_liquidation_days": {
+                    "description": "Optional: Maximum liquidation time (days)",
+                    "type": "number",
+                    "example": 7
+                },
+                "min_daily_volume": {
+                    "description": "Optional: Minimum daily volume filter (items/day)",
+                    "type": "number",
+                    "example": 100
+                },
+                "region_id": {
+                    "description": "Region ID (e.g., The Forge)",
+                    "type": "integer",
+                    "example": 10000002
+                },
+                "ship_type_id": {
+                    "description": "Ship type ID (e.g., Bestower)",
+                    "type": "integer",
+                    "example": 649
+                },
+                "warp_speed": {
+                    "description": "Optional: Deterministic warp speed in AU/s (from fitting calculation)",
+                    "type": "number",
+                    "example": 4.2
+                }
+            }
+        },
+        "models.RouteCalculationResponse": {
+            "type": "object",
+            "properties": {
+                "calculation_time_ms": {
+                    "type": "integer"
+                },
+                "cargo_capacity": {
+                    "type": "number"
+                },
+                "region_id": {
+                    "type": "integer"
+                },
+                "region_name": {
+                    "type": "string"
+                },
+                "routes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.TradingRoute"
+                    }
+                },
+                "ship_name": {
+                    "type": "string"
+                },
+                "ship_type_id": {
+                    "type": "integer"
+                },
+                "warning": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.TradingRoute": {
+            "type": "object",
+            "properties": {
+                "base_cargo_capacity": {
+                    "description": "Base capacity without skills",
+                    "type": "number"
+                },
+                "base_isk_per_hour": {
+                    "description": "ISK/h without navigation skills",
+                    "type": "number"
+                },
+                "base_travel_time_seconds": {
+                    "description": "Navigation Skills fields",
+                    "type": "number"
+                },
+                "broker_fees": {
+                    "description": "Combined broker fees (buy + sell)",
+                    "type": "number"
+                },
+                "buy_broker_fee": {
+                    "description": "Trading Fees fields (Issue #39)",
+                    "type": "number"
+                },
+                "buy_price": {
+                    "type": "number"
+                },
+                "buy_security_status": {
+                    "type": "number"
+                },
+                "buy_station_id": {
+                    "type": "integer"
+                },
+                "buy_station_name": {
+                    "type": "string"
+                },
+                "buy_system_id": {
+                    "type": "integer"
+                },
+                "buy_system_name": {
+                    "type": "string"
+                },
+                "cargo_capacity": {
+                    "description": "Total effective capacity (with skills + fitting)",
+                    "type": "number"
+                },
+                "cargo_used": {
+                    "description": "Cargo fields",
+                    "type": "number"
+                },
+                "cargo_utilization": {
+                    "description": "Percentage 0-100",
+                    "type": "number"
+                },
+                "daily_profit": {
+                    "description": "Profit per day (net_profit / liquidation_days)",
+                    "type": "number"
+                },
+                "estimated_relist_fee": {
+                    "description": "Estimated relist fee (sell broker fee)",
+                    "type": "number"
+                },
+                "fitting_bonus_m3": {
+                    "description": "Fitting modules bonus (absolute m³)",
+                    "type": "number"
+                },
+                "gross_margin_percent": {
+                    "description": "Gross profit margin %",
+                    "type": "number"
+                },
+                "gross_profit": {
+                    "description": "Profit before fees",
+                    "type": "number"
+                },
+                "isk_per_hour": {
+                    "type": "number"
+                },
+                "item_name": {
+                    "type": "string"
+                },
+                "item_type_id": {
+                    "type": "integer"
+                },
+                "item_volume": {
+                    "type": "number"
+                },
+                "jumps": {
+                    "type": "integer"
+                },
+                "liquidation_days": {
+                    "description": "Estimated days to sell inventory",
+                    "type": "number"
+                },
+                "min_route_security_status": {
+                    "description": "Minimum security of all systems on route",
+                    "type": "number"
+                },
+                "net_profit": {
+                    "description": "Total profit minus all fees",
+                    "type": "number"
+                },
+                "net_profit_percent": {
+                    "description": "Net profit margin %",
+                    "type": "number"
+                },
+                "number_of_tours": {
+                    "description": "Multi-tour fields",
+                    "type": "integer"
+                },
+                "profit_per_tour": {
+                    "type": "number"
+                },
+                "profit_per_unit": {
+                    "type": "number"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "round_trip_seconds": {
+                    "type": "number"
+                },
+                "sales_tax": {
+                    "description": "Sales tax on sell orders",
+                    "type": "number"
+                },
+                "sell_broker_fee": {
+                    "description": "Broker fee for sell order placement",
+                    "type": "number"
+                },
+                "sell_price": {
+                    "type": "number"
+                },
+                "sell_security_status": {
+                    "type": "number"
+                },
+                "sell_station_id": {
+                    "type": "integer"
+                },
+                "sell_station_name": {
+                    "type": "string"
+                },
+                "sell_system_id": {
+                    "type": "integer"
+                },
+                "sell_system_name": {
+                    "type": "string"
+                },
+                "skill_bonus_percent": {
+                    "description": "Total skill bonus %",
+                    "type": "number"
+                },
+                "skilled_travel_time_seconds": {
+                    "description": "Travel time with navigation skills applied",
+                    "type": "number"
+                },
+                "spread_percent": {
+                    "type": "number"
+                },
+                "time_improvement_percent": {
+                    "description": "Percentage improvement from skills",
+                    "type": "number"
+                },
+                "total_fees": {
+                    "description": "Sum of all trading fees",
+                    "type": "number"
+                },
+                "total_profit": {
+                    "type": "number"
+                },
+                "total_time_minutes": {
+                    "type": "number"
+                },
+                "travel_time_seconds": {
+                    "type": "number"
+                },
+                "volume_metrics": {
+                    "description": "Volume \u0026 Liquidity fields (Issue #53)",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.VolumeMetrics"
+                        }
+                    ]
+                }
+            }
+        },
+        "models.VolumeMetrics": {
+            "type": "object",
+            "properties": {
+                "daily_isk_turnover": {
+                    "description": "Average daily ISK traded (volume × avg_price)",
+                    "type": "number"
+                },
+                "daily_volume_avg": {
+                    "description": "30-day average daily volume",
+                    "type": "number"
+                },
+                "data_days": {
+                    "description": "Number of days of historical data available",
+                    "type": "integer"
+                },
+                "liquidity_score": {
+                    "description": "0-100 score based on volume stability",
+                    "type": "integer"
+                },
+                "region_id": {
+                    "type": "integer"
+                },
+                "type_id": {
+                    "type": "integer"
                 }
             }
         }

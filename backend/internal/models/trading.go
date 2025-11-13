@@ -74,14 +74,14 @@ type TradingRoute struct {
 
 // RouteCalculationRequest represents the request to calculate trading routes
 type RouteCalculationRequest struct {
-	RegionID             int     `json:"region_id"`
-	ShipTypeID           int     `json:"ship_type_id"`
-	CargoCapacity        float64 `json:"cargo_capacity,omitempty"`
-	WarpSpeed            float64 `json:"warp_speed,omitempty"`             // Deterministic warp speed in AU/s (from fitting)
-	AlignTime            float64 `json:"align_time,omitempty"`             // Deterministic align time in seconds (from fitting)
-	MinDailyVolume       float64 `json:"min_daily_volume,omitempty"`       // Minimum daily volume filter (items/day)
-	MaxLiquidationDays   float64 `json:"max_liquidation_days,omitempty"`   // Maximum liquidation time (days)
-	IncludeVolumeMetrics bool    `json:"include_volume_metrics,omitempty"` // Whether to include volume metrics
+	RegionID             int     `json:"region_id" example:"10000002"`                              // Region ID (e.g., The Forge)
+	ShipTypeID           int     `json:"ship_type_id" example:"649"`                                // Ship type ID (e.g., Bestower)
+	CargoCapacity        float64 `json:"cargo_capacity,omitempty" example:"62500"`                  // Optional: Override cargo capacity (m³)
+	WarpSpeed            float64 `json:"warp_speed,omitempty" example:"4.2"`                        // Optional: Deterministic warp speed in AU/s (from fitting calculation)
+	AlignTime            float64 `json:"align_time,omitempty" example:"4.8"`                        // Optional: Deterministic align time in seconds (from fitting calculation)
+	MinDailyVolume       float64 `json:"min_daily_volume,omitempty" example:"100"`                  // Optional: Minimum daily volume filter (items/day)
+	MaxLiquidationDays   float64 `json:"max_liquidation_days,omitempty" example:"7"`                // Optional: Maximum liquidation time (days)
+	IncludeVolumeMetrics bool    `json:"include_volume_metrics,omitempty" example:"false"`          // Optional: Whether to include volume metrics
 }
 
 // RouteCalculationResponse represents the response with calculated routes
