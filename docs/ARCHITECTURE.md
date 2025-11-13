@@ -18,11 +18,13 @@ EVE-O-Provit ist eine Full-Stack Web-Anwendung für Trading- und Manufacturing-O
 ```mermaid
 graph TB
     subgraph Frontend["Frontend (Next.js 14)"]
-        IntraRegion[Intra-Region Trading]
-        InventorySell[Inventory Sell]
-        CharMgmt[Character Management]
-        IntraRegion --> APIClient[API Client<br/>Auth Context]
-        InventorySell --> APIClient
+        Trading[Trading Routes<br/>/trading]
+        ROI[ROI Calculator<br/>/roi-calculator]
+        MultiHub[Multi-Hub Analysis<br/>/multi-hub]
+        CharMgmt[Character<br/>/character]
+        Trading --> APIClient[API Client<br/>Auth Context]
+        ROI --> APIClient
+        MultiHub --> APIClient
         CharMgmt --> APIClient
     end
     
