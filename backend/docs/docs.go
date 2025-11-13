@@ -877,6 +877,11 @@ const docTemplate = `{
         "CharacterFittingResponse": {
             "type": "object",
             "properties": {
+                "align_time_seconds": {
+                    "description": "Deterministic align time (with skills + modules)",
+                    "type": "number",
+                    "example": 4.82
+                },
                 "applied_skills": {
                     "type": "array",
                     "items": {

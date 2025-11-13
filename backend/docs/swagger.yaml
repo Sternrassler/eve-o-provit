@@ -46,6 +46,10 @@ definitions:
     type: object
   CharacterFittingResponse:
     properties:
+      align_time_seconds:
+        description: Deterministic align time (with skills + modules)
+        example: 4.82
+        type: number
       applied_skills:
         example:
         - Gallente Hauler V

@@ -94,15 +94,23 @@ func (h *FittingHandler) GetCharacterFitting(c *fiber.Ctx) error {
 		})
 	}
 
-	// Return fitting data
+	// Return fitting data with deterministic values for route calculation
 	return c.JSON(fiber.Map{
-		"character_id":   characterID,
-		"ship_type_id":   shipTypeID,
-		"fitted_modules": fitting.FittedModules,
+		"character_id":        characterID,
+		"ship_type_id":        shipTypeID,
+		"effective_cargo_m3":  fitting.Bonuses.EffectiveCargo, // Final cargo capacity (for route calc)
+		"warp_speed_au_s":     fitting.Bonuses.WarpSpeedAUS,   // Final warp speed (for route calc)
+		"align_time_seconds":  fitting.Bonuses.AlignTime,      // Final align time (for route calc)
+		"base_cargo_hold_m3":  fitting.Bonuses.BaseCargo,
+		"base_warp_speed_au_s": fitting.Bonuses.BaseWarpSpeed,
+		"fitted_modules":      fitting.FittedModules,
 		"bonuses": fiber.Map{
 			"cargo_bonus_m3":        fitting.Bonuses.CargoBonus,
 			"warp_speed_multiplier": fitting.Bonuses.WarpSpeedMultiplier,
 			"inertia_modifier":      fitting.Bonuses.InertiaModifier,
+			"skills_bonus_m3":       fitting.Bonuses.SkillsBonusM3,
+			"skills_bonus_pct":      fitting.Bonuses.SkillsBonusPct,
+			"modules_bonus_m3":      fitting.Bonuses.ModulesBonusM3,
 		},
 		"cached": fitting.Cached,
 	})

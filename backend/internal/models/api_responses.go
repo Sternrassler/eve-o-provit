@@ -125,6 +125,7 @@ type CharacterFittingResponse struct {
 	BaseFuelBay     float64   `json:"base_fuel_bay_m3,omitempty" example:"0.0"`
 	WarpSpeed       float64   `json:"warp_speed_au_s" example:"6.87"`
 	BaseWarpSpeed   float64   `json:"base_warp_speed_au_s" example:"3.0"`
+	AlignTime       float64   `json:"align_time_seconds" example:"4.82"`           // Deterministic align time (with skills + modules)
 	InertiaModifier float64   `json:"inertia_modifier,omitempty" example:"1.0"`
 	AppliedSkills   []string  `json:"applied_skills,omitempty" example:"Gallente Hauler V,Navigation V"`
 	FittedModules   int       `json:"fitted_modules,omitempty" example:"5"`
