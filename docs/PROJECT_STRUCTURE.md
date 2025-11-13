@@ -31,8 +31,11 @@ eve-o-provit/
 ├── frontend/                   # Next.js 14 Frontend
 │   ├── src/
 │   │   ├── app/              # App Router Pages
-│   │   │   ├── intra-region/         # Intra-Region Trading
-│   │   │   ├── inventory-sell/       # Inventory Sell Optimizer
+│   │   │   ├── trading/              # Trading Route Analysis
+│   │   │   ├── roi-calculator/       # ROI Calculator
+│   │   │   ├── multi-hub/            # Multi-Hub Comparison
+│   │   │   ├── trends/               # Market Trends (WIP)
+│   │   │   ├── watchlist/            # Price Watchlist (WIP)
 │   │   │   ├── character/            # Character Management
 │   │   │   └── callback/             # OAuth Callback Handler
 │   │   ├── components/
@@ -98,22 +101,23 @@ eve-o-provit/
 **Key Features:**
 
 - Parallel Market Data Fetching (10 workers, ~8.7s für 387 Seiten)
-- Intra-Region Trading Route Calculator
-- Inventory Sell Optimizer
+- Trading Route Calculator (authenticated endpoint)
 - Market Data Staleness Tracking
 - Character Location & Ship Integration
+- EVE SDE Access (SQLite via pkg/evedb)
 
 ### Frontend (`/frontend`)
 
 - **Next.js 14** (App Router, Server Components)
 - **TypeScript** + **shadcn/ui** (Radix UI + Tailwind)
-- **Auth:** EVE SSO Integration (OAuth2, JWT Sessions)
+- **Auth:** EVE SSO Frontend-only PKCE (OAuth2, no backend sessions)
 - **State:** React Context API
 - **Components:**
   - Region Selection mit Refresh & Staleness Indicator
   - Trading Route Visualization
   - Item Autocomplete Search
-  - Inventory Sell Calculator
+  - ROI Calculator
+  - Multi-Hub Analysis
   - Character Integration
 
 ### Data (`/data`)

@@ -124,16 +124,23 @@ backend/
 | Endpoint | Methode | Funktion |
 |----------|---------|----------|
 | `/health` | GET | Health Check (DB Status) |
-| `/api/v1/market/:region/:type` | GET | Market Orders (mit `?refresh=true`) |
-| `/api/v1/market/staleness/:region` | GET | Datenalter-Info |
-| `/api/v1/trading/routes/calculate` | POST | Trading Routes berechnen |
-| `/api/v1/trading/inventory-sell` | POST | Best Sell Locations |
-| `/api/v1/auth/login` | GET | EVE SSO Login |
-| `/api/v1/character/location` | GET | Character Location |
-| `/api/v1/character/ships` | GET | Character Ships (ESI Assets) |
-| `/api/v1/characters/:id/skills` | GET | Character Skills (ESI Skills) |
-| `/api/v1/characters/:id/ships/:shipId/fitting` | GET | Ship Fitting [Planned] |
-| `/api/v1/characters/:id/ships/:shipId/cargo-capacity` | GET | Effective Cargo [Planned] |
+| `/health` | GET | Health Check (DB Status) |
+| `/version` | GET | API Version Info |
+| `/types/:id` | GET | SDE Type Lookup |
+| `/sde/regions` | GET | List All Regions |
+| `/market/:region/:type` | GET | Market Orders (mit `?refresh=true`) |
+| `/market/staleness/:region` | GET | Datenalter-Info |
+| `/items/search` | GET | Item Search (Autocomplete) |
+| `/calculations/cargo` | POST | Cargo Capacity Calculation |
+| `/calculations/warp` | POST | Warp Time Calculation |
+| `/trading/routes/calculate` | POST | Trading Routes (Auth) |
+| `/character` | GET | Character Info (Auth) |
+| `/character/location` | GET | Character Location (Auth) |
+| `/character/ship` | GET | Active Ship (Auth) |
+| `/character/ships` | GET | Owned Ships (Auth) |
+| `/characters/:id/skills` | GET | Character Skills (Auth) |
+| `/characters/:id/fitting/:shipTypeId` | GET | Ship Fitting (Auth) |
+| `/esi/ui/autopilot/waypoint` | POST | Set Waypoint (Auth) |
 
 ### Market Data Fetching (BatchFetcher Pattern)
 
