@@ -88,17 +88,6 @@ type FeeServicer interface {
 
 // CargoServicer defines the interface for cargo optimization operations
 type CargoServicer interface {
-	// GetEffectiveCargoCapacity calculates total effective cargo capacity including skills AND fitting
-	// Uses deterministic calculation from FittingService (Issue #77)
-	// Returns final effective capacity from deterministic SDE + ESI data
-	GetEffectiveCargoCapacity(
-		ctx context.Context,
-		characterID int,
-		shipTypeID int,
-		baseCapacity float64,
-		accessToken string,
-	) (float64, error)
-
 	// KnapsackDP solves the knapsack problem using dynamic programming
 	// Optimizes for maximum value while respecting capacity constraint
 	KnapsackDP(items []CargoItem, capacity float64) *CargoSolution

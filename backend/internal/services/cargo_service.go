@@ -2,7 +2,6 @@
 package services
 
 import (
-	"context"
 	"math"
 	"sort"
 )
@@ -39,39 +38,6 @@ func NewCargoService(skillsService SkillsServicer, fittingService FittingService
 		skillsService:  skillsService,
 		fittingService: fittingService,
 	}
-}
-
-// GetEffectiveCargoCapacity calculates total effective cargo capacity including skills AND fitting
-// Deprecated: This is a thin wrapper around FittingService.GetShipFitting().
-// TODO: Refactor callers to use FittingService directly and access fitting.Bonuses.EffectiveCargo
-// Uses deterministic calculation from FittingService (Issue #77)
-// FittingService.CargoBonus contains TOTAL capacity (base + skills + modules)
-// Graceful degradation: If fitting unavailable, uses baseCapacity only
-func (s *CargoService) GetEffectiveCargoCapacity(
-	ctx context.Context,
-	characterID int,
-	shipTypeID int,
-	baseCapacity float64,
-	accessToken string,
-) (float64, error) {
-	// Get fitting with deterministic calculation (includes skills + modules)
-	if s.fittingService == nil {
-		// No fitting service available, return base capacity only
-		return baseCapacity, nil
-	}
-
-	fitting, err := s.fittingService.GetShipFitting(ctx, characterID, shipTypeID, accessToken)
-	if err != nil {
-		// Fitting data unavailable (graceful degradation)
-		// Return base capacity only
-		return baseCapacity, nil
-	}
-
-	// CargoBonus already contains TOTAL effective capacity (base + skills + modules)
-	// from deterministic calculation (GetShipCapacitiesDeterministic)
-	totalCapacity := fitting.Bonuses.EffectiveCargo
-
-	return totalCapacity, nil
 }
 
 // KnapsackDP solves the knapsack problem using dynamic programming

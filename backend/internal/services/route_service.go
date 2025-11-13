@@ -59,11 +59,12 @@ type RouteService struct {
 	routeOptimizer *RouteCalculator
 	workerPool     *RouteWorkerPool
 	redisClient    *redis.Client
-	cargoService   CargoServicer  // For skill-aware cargo calculations
-	skillsService  SkillsServicer // For fetching character skills
-	feeService     FeeServicer    // For fee calculations
-	volumeService  VolumeServicer // For volume metrics and liquidity analysis
-	config         Config         // Timeouts and configuration
+	cargoService   CargoServicer   // For knapsack optimization only
+	fittingService FittingServicer // For deterministic cargo/warp/align calculations
+	skillsService  SkillsServicer  // For fetching character skills
+	feeService     FeeServicer     // For fee calculations
+	volumeService  VolumeServicer  // For volume metrics and liquidity analysis
+	config         Config          // Timeouts and configuration
 }
 
 // NewRouteService creates a new route service instance
@@ -74,19 +75,21 @@ func NewRouteService(
 	marketRepo *database.MarketRepository,
 	redisClient *redis.Client,
 	cargoService CargoServicer,
+	fittingService FittingServicer,
 	skillsService SkillsServicer,
 	feeService FeeServicer,
 	config Config,
 ) *RouteService {
 	rs := &RouteService{
-		esiClient:     esiClient,
-		sdeRepo:       sdeRepo,
-		sdeDB:         sdeDB,
-		redisClient:   redisClient,
-		cargoService:  cargoService,
-		skillsService: skillsService,
-		feeService:    feeService,
-		config:        config,
+		esiClient:      esiClient,
+		sdeRepo:        sdeRepo,
+		sdeDB:          sdeDB,
+		redisClient:    redisClient,
+		cargoService:   cargoService,
+		fittingService: fittingService,
+		skillsService:  skillsService,
+		feeService:     feeService,
+		config:         config,
 	}
 
 	rs.routeFinder = NewRouteFinder(esiClient, marketRepo, sdeRepo, sdeDB, redisClient)
@@ -343,17 +346,14 @@ func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity f
 		return baseCapacity, 0.0, 0.0
 	}
 
-	// Get deterministic cargo capacity with breakdown
-	// CargoService internally uses FittingService for deterministic calculation
-	totalCapacity, err := rs.cargoService.GetEffectiveCargoCapacity(ctx, charID, shipTypeID, baseCapacity, token)
+	// Get deterministic cargo capacity directly from FittingService
+	fitting, err := rs.fittingService.GetShipFitting(ctx, charID, shipTypeID, token)
 	if err != nil {
-		log.Printf("ERROR: Failed to get effective cargo capacity: %v", err)
+		log.Printf("ERROR: Failed to get ship fitting: %v", err)
 		return baseCapacity, 0.0, 0.0
 	}
 
-	// Note: Detailed breakdown (skills vs modules) is available via FittingService.GetShipFitting
-	// For now, we return total capacity only
-	// TODO: Add breakdown if needed for display
+	totalCapacity := fitting.Bonuses.EffectiveCargo
 
 	log.Printf("Applied cargo capacity: base=%.2f, total=%.2f m³",
 		baseCapacity, totalCapacity)

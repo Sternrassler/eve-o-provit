@@ -4,6 +4,7 @@
 //   - cargo.GetShipCapacitiesDeterministic (cargo capacity)
 //   - navigation.GetShipWarpSpeedDeterministic (warp speed)
 //   - navigation.GetShipInertiaDeterministic (inertia + align time)
+//
 // Production code should use FittingService which wraps these deterministic functions.
 package handlers
 

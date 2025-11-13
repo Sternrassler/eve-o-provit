@@ -152,8 +152,8 @@ func main() {
 		RouteCalculationTimeout: time.Duration(getEnvInt("ROUTE_ROUTE_CALC_TIMEOUT", 90)) * time.Second,
 	}
 
-	// Route Service with cargo + fee integration
-	routeService := services.NewRouteService(esiClient, db.SDE, sdeRepo, marketRepo, redisClient, cargoService, skillsService, feeService, routeConfig)
+	// Route Service with cargo + fitting + fee integration
+	routeService := services.NewRouteService(esiClient, db.SDE, sdeRepo, marketRepo, redisClient, cargoService, fittingService, skillsService, feeService, routeConfig)
 
 	// Ship Service (Phase 0 - Issue #57 - Remove Raw DB Access)
 	shipService := services.NewShipService(db.SDE)

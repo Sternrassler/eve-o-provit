@@ -307,17 +307,3 @@ func CalculateTravelTime(db *sql.DB, fromSystemID, toSystemID int64, params *Nav
 
 	return result, nil
 }
-
-// CalculateTravelTimeExact calculates travel time using exact CCP warp formula
-// Deprecated: Use CalculateTravelTime(db, from, to, params, true) instead
-// This function remains for backward compatibility and will be removed in a future version
-func CalculateTravelTimeExact(db *sql.DB, fromSystemID, toSystemID int64, params *NavigationParams) (*RouteResult, error) {
-	return CalculateTravelTime(db, fromSystemID, toSystemID, params, true)
-}
-
-// CalculateTravelTimeSimplified calculates travel time using simplified linear warp formula
-// Deprecated: Use CalculateTravelTime(db, from, to, params, false) instead
-// This function remains for backward compatibility and will be removed in a future version
-func CalculateTravelTimeSimplified(db *sql.DB, fromSystemID, toSystemID int64, params *NavigationParams) (*RouteResult, error) {
-	return CalculateTravelTime(db, fromSystemID, toSystemID, params, false)
-}
