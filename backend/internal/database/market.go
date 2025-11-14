@@ -29,9 +29,9 @@ type MarketOrder struct {
 	VolumeTotal  int       `json:"volume_total"`
 	VolumeRemain int       `json:"volume_remain"`
 	MinVolume    *int      `json:"min_volume,omitempty"`
-	Issued       time.Time `json:"issued"` // Maps to issued_at in DB
+	Issued       time.Time `json:"issued"` // Timestamp when order was issued in EVE
 	Duration     int       `json:"duration"`
-	FetchedAt    time.Time `json:"fetched_at"` // Maps to cached_at in DB
+	FetchedAt    time.Time `json:"fetched_at"` // Timestamp when data was fetched from ESI
 }
 
 // PriceHistory represents aggregated price history data
@@ -97,12 +97,12 @@ func (r *MarketRepository) upsertBatch(ctx context.Context, orders []MarketOrder
 		INSERT INTO market_orders (
 			order_id, type_id, region_id, location_id, is_buy_order,
 			price, volume_total, volume_remain, min_volume,
-			issued_at, duration, cached_at
+			issued, duration, fetched_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		ON CONFLICT (order_id, cached_at) DO UPDATE SET
+		ON CONFLICT (order_id, fetched_at) DO UPDATE SET
 			price = EXCLUDED.price,
 			volume_remain = EXCLUDED.volume_remain,
-			cached_at = EXCLUDED.cached_at
+			fetched_at = EXCLUDED.fetched_at
 	`
 
 	for _, order := range orders {
