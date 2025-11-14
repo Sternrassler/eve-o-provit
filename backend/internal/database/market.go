@@ -97,12 +97,12 @@ func (r *MarketRepository) upsertBatch(ctx context.Context, orders []MarketOrder
 		INSERT INTO market_orders (
 			order_id, type_id, region_id, location_id, is_buy_order,
 			price, volume_total, volume_remain, min_volume,
-			issued, duration, fetched_at
+			issued_at, duration, cached_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		ON CONFLICT (order_id, fetched_at) DO UPDATE SET
+		ON CONFLICT (order_id) DO UPDATE SET
 			price = EXCLUDED.price,
 			volume_remain = EXCLUDED.volume_remain,
-			fetched_at = EXCLUDED.fetched_at
+			cached_at = EXCLUDED.cached_at
 	`
 
 	for _, order := range orders {
