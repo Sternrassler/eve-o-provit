@@ -66,6 +66,7 @@ type TradingRoute struct {
 	BaseCargoCapacity float64 `json:"base_cargo_capacity"` // Base capacity without skills
 	SkillBonusPercent float64 `json:"skill_bonus_percent"` // Total skill bonus %
 	FittingBonusM3    float64 `json:"fitting_bonus_m3"`    // Fitting modules bonus (absolute m³)
+	TotalInvestment   float64 `json:"total_investment"`    // Total ISK needed to purchase cargo (buy_price × quantity)
 	// Volume & Liquidity fields (Issue #53)
 	VolumeMetrics   *VolumeMetrics `json:"volume_metrics,omitempty"`   // Market volume and liquidity data
 	LiquidationDays float64        `json:"liquidation_days,omitempty"` // Estimated days to sell inventory
