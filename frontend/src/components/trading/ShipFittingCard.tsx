@@ -225,12 +225,6 @@ function BonusCard({
   unit: string;
   positive: boolean;
 }) {
-  // Display bonus as percentage for cargo/warp/agility
-  const displayBonus = Math.abs(value).toLocaleString("de-DE", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
-  });
-
   // Display effective value with appropriate precision based on unit
   const decimals = unit === "s" ? 2 : unit === "AU/s" ? 2 : 1;
   const displayEffective = effectiveValue.toLocaleString("de-DE", {
@@ -238,7 +232,6 @@ function BonusCard({
     maximumFractionDigits: decimals,
   });
 
-  const sign = value > 0 ? "+" : value < 0 ? "-" : "";
   const colorClass = positive
     ? "text-green-600 dark:text-green-400"
     : value < 0
@@ -251,9 +244,6 @@ function BonusCard({
       <div className={`text-2xl font-semibold ${colorClass}`}>
         {displayEffective}
         <span className="text-base ml-1">{unit}</span>
-      </div>
-      <div className="text-xs text-muted-foreground mt-1">
-        {sign}{displayBonus}%
       </div>
     </div>
   );
