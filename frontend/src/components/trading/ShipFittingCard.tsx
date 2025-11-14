@@ -127,23 +127,26 @@ export function ShipFittingCard({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Bonuses Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3">
           <BonusCard
             label="Cargo Bonus"
             value={fitting.bonuses.cargo_bonus_m3}
+            effectiveValue={fitting.effective_cargo_m3}
             unit="m³"
             positive={fitting.bonuses.cargo_bonus_m3 > 0}
           />
           <BonusCard
             label="Warp Speed"
             value={(fitting.bonuses.warp_speed_multiplier - 1) * 100}
-            unit="%"
+            effectiveValue={fitting.warp_speed_au_s}
+            unit="AU/s"
             positive={fitting.bonuses.warp_speed_multiplier > 1}
           />
           <BonusCard
             label="Agility"
             value={(1 - fitting.bonuses.inertia_modifier) * 100}
-            unit="%"
+            effectiveValue={fitting.align_time_seconds}
+            unit="s"
             positive={fitting.bonuses.inertia_modifier < 1}
           />
         </div>
@@ -207,22 +210,32 @@ function groupModulesBySlot(modules: FittedModule[]): Record<string, FittedModul
 }
 
 /**
- * BonusCard displays a single bonus metric
+ * BonusCard displays a single bonus metric with effective value
  */
 function BonusCard({
   label,
   value,
+  effectiveValue,
   unit,
   positive,
 }: {
   label: string;
   value: number;
+  effectiveValue: number;
   unit: string;
   positive: boolean;
 }) {
-  const displayValue = Math.abs(value).toLocaleString("de-DE", {
+  // Display bonus as percentage for cargo/warp/agility
+  const displayBonus = Math.abs(value).toLocaleString("de-DE", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,
+  });
+
+  // Display effective value with appropriate precision based on unit
+  const decimals = unit === "s" ? 2 : unit === "AU/s" ? 2 : 1;
+  const displayEffective = effectiveValue.toLocaleString("de-DE", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   });
 
   const sign = value > 0 ? "+" : value < 0 ? "-" : "";
@@ -235,9 +248,12 @@ function BonusCard({
   return (
     <div className="rounded-lg border p-3">
       <div className="text-xs text-muted-foreground mb-1">{label}</div>
-      <div className={`text-lg font-semibold ${colorClass}`}>
-        {sign}
-        {displayValue} {unit}
+      <div className={`text-2xl font-semibold ${colorClass}`}>
+        {displayEffective}
+        <span className="text-base ml-1">{unit}</span>
+      </div>
+      <div className="text-xs text-muted-foreground mt-1">
+        {sign}{displayBonus}%
       </div>
     </div>
   );

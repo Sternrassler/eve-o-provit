@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { ShipFittingCard } from "./ShipFittingCard";
+import { ShipFittingCard } from "@/components/trading/ShipFittingCard";
 import * as apiClient from "@/lib/api-client";
 import { CharacterFittingResponse } from "@/types/character";
 
@@ -9,6 +9,11 @@ vi.mock("@/lib/api-client");
 const mockFittingResponse: CharacterFittingResponse = {
   character_id: 123456,
   ship_type_id: 648,
+  effective_cargo_m3: 9656.9,
+  warp_speed_au_s: 4.464,
+  align_time_seconds: 6.72,
+  base_cargo_hold_m3: 4656.9,
+  base_warp_speed_au_s: 3.0,
   fitted_modules: [
     {
       type_id: 1234,
@@ -32,6 +37,9 @@ const mockFittingResponse: CharacterFittingResponse = {
 };
 
 describe("ShipFittingCard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   it("should render loading state initially", () => {
     vi.mocked(apiClient.fetchCharacterFitting).mockImplementation(
       () => new Promise(() => {}) // Never resolves
@@ -105,15 +113,18 @@ describe("ShipFittingCard", () => {
       expect(screen.getByText("Expanded Cargohold II")).toBeInTheDocument();
       expect(screen.getByText("Hyperspatial Velocity Optimizer I")).toBeInTheDocument();
 
-      // Check bonuses
+      // Check bonuses with deterministic values
       expect(screen.getByText("Cargo Bonus")).toBeInTheDocument();
-      expect(screen.getByText("+5.000 m³")).toBeInTheDocument();
+      expect(screen.getByText("9.656,9")).toBeInTheDocument(); // effective_cargo_m3
+      expect(screen.getByText("m³")).toBeInTheDocument();
 
       expect(screen.getByText("Warp Speed")).toBeInTheDocument();
-      expect(screen.getByText("+48,8 %")).toBeInTheDocument();
+      expect(screen.getByText("4,46")).toBeInTheDocument(); // warp_speed_au_s
+      expect(screen.getByText("AU/s")).toBeInTheDocument();
 
       expect(screen.getByText("Agility")).toBeInTheDocument();
-      expect(screen.getByText("+15 %")).toBeInTheDocument();
+      expect(screen.getByText("6,72")).toBeInTheDocument(); // align_time_seconds
+      expect(screen.getByText("s")).toBeInTheDocument();
     });
   });
 

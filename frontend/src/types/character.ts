@@ -78,6 +78,11 @@ export interface FittingBonuses {
 export interface CharacterFittingResponse {
   character_id: number;
   ship_type_id: number;
+  effective_cargo_m3: number;     // Final effective cargo capacity (deterministic)
+  warp_speed_au_s: number;        // Final warp speed in AU/s (deterministic)
+  align_time_seconds: number;     // Final align time in seconds (deterministic)
+  base_cargo_hold_m3: number;     // Base cargo capacity without bonuses
+  base_warp_speed_au_s: number;   // Base warp speed without bonuses
   fitted_modules: FittedModule[];
   bonuses: FittingBonuses;
   cached: boolean;
