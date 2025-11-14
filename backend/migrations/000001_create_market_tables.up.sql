@@ -6,24 +6,26 @@ CREATE TABLE IF NOT EXISTS market_orders (
     order_id BIGINT PRIMARY KEY,
     type_id INTEGER NOT NULL,
     region_id INTEGER NOT NULL,
+    system_id INTEGER,
     location_id BIGINT NOT NULL,
     is_buy_order BOOLEAN NOT NULL,
-    price DECIMAL(19,2) NOT NULL,
-    volume_total INTEGER NOT NULL,
+    price DECIMAL(20,2) NOT NULL,
     volume_remain INTEGER NOT NULL,
-    min_volume INTEGER,
-    issued TIMESTAMPTZ NOT NULL,
+    volume_total INTEGER NOT NULL,
+    min_volume INTEGER DEFAULT 1,
     duration INTEGER NOT NULL,
-    fetched_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(order_id, fetched_at)
+    issued_at TIMESTAMPTZ NOT NULL,
+    range VARCHAR(50),
+    cached_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_market_orders_type_region ON market_orders(type_id, region_id);
-CREATE INDEX idx_market_orders_fetched ON market_orders(fetched_at);
-CREATE INDEX idx_market_orders_location ON market_orders(location_id);
+CREATE INDEX IF NOT EXISTS idx_market_orders_type_region ON market_orders(type_id, region_id);
+CREATE INDEX IF NOT EXISTS idx_market_orders_cached ON market_orders(cached_at);
+CREATE INDEX IF NOT EXISTS idx_market_orders_is_buy ON market_orders(is_buy_order);
 
 COMMENT ON TABLE market_orders IS 'Market orders fetched from ESI API';
-COMMENT ON COLUMN market_orders.fetched_at IS 'Timestamp when order was fetched from ESI';
+COMMENT ON COLUMN market_orders.cached_at IS 'Timestamp when order was cached from ESI';
+COMMENT ON COLUMN market_orders.issued_at IS 'Timestamp when order was issued in EVE Online';
 
 -- Price History (aggregiert)
 CREATE TABLE IF NOT EXISTS price_history (

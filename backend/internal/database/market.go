@@ -29,9 +29,9 @@ type MarketOrder struct {
 	VolumeTotal  int       `json:"volume_total"`
 	VolumeRemain int       `json:"volume_remain"`
 	MinVolume    *int      `json:"min_volume,omitempty"`
-	Issued       time.Time `json:"issued"` // Timestamp when order was issued in EVE
+	Issued       time.Time `json:"issued"` // Maps to issued_at in DB
 	Duration     int       `json:"duration"`
-	FetchedAt    time.Time `json:"fetched_at"` // Timestamp when data was fetched from ESI
+	FetchedAt    time.Time `json:"fetched_at"` // Maps to cached_at in DB
 }
 
 // PriceHistory represents aggregated price history data
