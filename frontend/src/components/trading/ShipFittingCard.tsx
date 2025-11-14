@@ -129,7 +129,7 @@ export function ShipFittingCard({
         {/* Bonuses Summary */}
         <div className="grid grid-cols-1 gap-3">
           <BonusCard
-            label="Cargo Bonus"
+            label="Cargo"
             effectiveValue={fitting.effective_cargo_m3}
             baseValue={fitting.base_cargo_hold_m3}
             unit="m³"
