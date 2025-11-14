@@ -82,10 +82,16 @@ export default function TradingPage() {
     setApiError(null);
 
     try {
+      const authHeader = getAuthHeader();
+      if (!authHeader) {
+        throw new Error("Not authenticated");
+      }
+
       const response = await fetch(`${API_BASE_URL}/api/v1/trading/routes/calculate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": authHeader,
         },
         body: JSON.stringify({
           region_id: parseInt(selectedRegion),
