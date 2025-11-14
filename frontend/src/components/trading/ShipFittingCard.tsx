@@ -130,24 +130,24 @@ export function ShipFittingCard({
         <div className="grid grid-cols-1 gap-3">
           <BonusCard
             label="Cargo Bonus"
-            value={fitting.bonuses.cargo_bonus_m3}
             effectiveValue={fitting.effective_cargo_m3}
+            baseValue={fitting.base_cargo_hold_m3}
             unit="m³"
-            positive={fitting.bonuses.cargo_bonus_m3 > 0}
+            higherIsBetter={true}
           />
           <BonusCard
             label="Warp Speed"
-            value={(fitting.bonuses.warp_speed_multiplier - 1) * 100}
             effectiveValue={fitting.warp_speed_au_s}
+            baseValue={fitting.base_warp_speed_au_s}
             unit="AU/s"
-            positive={fitting.bonuses.warp_speed_multiplier > 1}
+            higherIsBetter={true}
           />
           <BonusCard
             label="Agility"
-            value={(1 - fitting.bonuses.inertia_modifier) * 100}
             effectiveValue={fitting.align_time_seconds}
+            baseValue={undefined}
             unit="s"
-            positive={fitting.bonuses.inertia_modifier < 1}
+            higherIsBetter={false}
           />
         </div>
 
@@ -214,16 +214,16 @@ function groupModulesBySlot(modules: FittedModule[]): Record<string, FittedModul
  */
 function BonusCard({
   label,
-  value,
   effectiveValue,
+  baseValue,
   unit,
-  positive,
+  higherIsBetter,
 }: {
   label: string;
-  value: number;
   effectiveValue: number;
+  baseValue?: number;
   unit: string;
-  positive: boolean;
+  higherIsBetter: boolean;
 }) {
   // Display effective value with appropriate precision based on unit
   const decimals = unit === "s" ? 2 : unit === "AU/s" ? 2 : 1;
@@ -232,11 +232,22 @@ function BonusCard({
     maximumFractionDigits: decimals,
   });
 
-  const colorClass = positive
-    ? "text-green-600 dark:text-green-400"
-    : value < 0
-    ? "text-red-600 dark:text-red-400"
-    : "text-muted-foreground";
+  // Determine color based on comparison with base value
+  let colorClass = "text-foreground";
+  if (baseValue !== undefined && baseValue > 0) {
+    const isImproved = higherIsBetter 
+      ? effectiveValue > baseValue 
+      : effectiveValue < baseValue;
+    const isWorse = higherIsBetter
+      ? effectiveValue < baseValue
+      : effectiveValue > baseValue;
+    
+    if (isImproved) {
+      colorClass = "text-green-600 dark:text-green-400";
+    } else if (isWorse) {
+      colorClass = "text-red-600 dark:text-red-400";
+    }
+  }
 
   return (
     <div className="rounded-lg border p-3">
