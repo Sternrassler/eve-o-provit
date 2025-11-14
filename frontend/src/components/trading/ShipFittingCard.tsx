@@ -45,6 +45,12 @@ export function ShipFittingCard({
 
       try {
         const data = await fetchCharacterFitting(authHeader, characterId, shipTypeId);
+        console.log("[ShipFittingCard] Fetched fitting data:", data);
+        console.log("[ShipFittingCard] Effective values:", {
+          cargo: data.effective_cargo_m3,
+          warp: data.warp_speed_au_s,
+          align: data.align_time_seconds
+        });
         setFitting(data);
       } catch (err) {
         console.error("Failed to fetch fitting:", err);
