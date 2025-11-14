@@ -478,16 +478,11 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
                 ⚠️ Niedrige Cargo-Auslastung ({route.cargo_utilization.toFixed(0)}%)
               </p>
             )}
-            {route.cargo_utilization !== undefined && route.cargo_utilization >= 95 && (
-              <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                ✅ Optimale Cargo-Auslastung ({route.cargo_utilization.toFixed(0)}%)
-              </p>
-            )}
             
             {/* Purchase Investment for full/max cargo */}
             {route.total_investment !== undefined && (
               <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 pt-2 border-t border-gray-700/50">
-                <span>Einkaufspreis:</span>
+                <span>Einkaufspreis je Ladung:</span>
                 <span className="font-medium">{formatISK(route.total_investment)}</span>
               </div>
             )}
