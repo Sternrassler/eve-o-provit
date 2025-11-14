@@ -267,7 +267,7 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 		BaseCargoCapacity: baseCapacity,
 		SkillBonusPercent: skillBonusPercent,
 		FittingBonusM3:    fittingBonusM3,
-		TotalInvestment:   pair.BuyPrice * float64(quantity),
+		TotalInvestment:   item.BuyPrice * float64(totalQuantity),
 	}
 
 	return route, nil
