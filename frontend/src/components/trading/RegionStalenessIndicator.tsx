@@ -34,7 +34,7 @@ export function RegionStalenessIndicator({
 
       try {
         const response = await fetch(
-          `${API_BASE_URL}/api/v1/market/staleness/${regionId}`
+          `${API_BASE_URL}/market/staleness/${regionId}`
         );
 
         if (!response.ok) {

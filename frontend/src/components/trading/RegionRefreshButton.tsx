@@ -39,7 +39,7 @@ export function RegionRefreshButton({
       // Trigger refresh for the entire region (using a dummy typeID)
       // The backend will fetch all market orders for the region
       const response = await fetch(
-        `${API_BASE_URL}/api/v1/market/${regionId}/34?refresh=true`,
+        `${API_BASE_URL}/market/${regionId}/34?refresh=true`,
         {
           method: "GET",
         }
