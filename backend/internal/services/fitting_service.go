@@ -302,56 +302,56 @@ func (s *FittingService) fetchFittingFromESI(
 		fittedItems,
 	)
 	if err != nil {
-		s.logger.Error("Deterministic capacity calculation failed", "error", err)
-		// Fallback to basic calculation without bonuses
-		return &FittingData{
-			ShipTypeID:    shipTypeID,
-			FittedModules: fittedModules,
-			Bonuses: FittingBonuses{
-				CargoBonus:          0,
-				WarpSpeedMultiplier: 1,
-				InertiaModifier:     1,
-				BaseCargo:           0,
-				SkillsBonusM3:       0,
-				SkillsBonusPct:      0,
-				ModulesBonusM3:      0,
-				EffectiveCargo:      0,
-			},
-		}, nil
+		s.logger.Warn("Deterministic capacity calculation failed, using fallback", "error", err)
+		// Continue with fallback - try to get at least base values from SDE
 	}
 
-	// 8. Convert to FittingBonuses format with deterministic breakdown
-	// CargoBonus = EffectiveCargoHold (total effective capacity in m³)
-	// Frontend displays this as "Cargo Bonus" but it's actually total effective capacity
-	cargoBonus := capacities.EffectiveCargoHold
-
-	// Calculate breakdown from AppliedBonuses
-	var skillsBonusM3 float64
-	var skillsBonusPct float64
-	var modulesBonusM3 float64
-
-	baseCargo := capacities.BaseCargoHold
-	for _, bonus := range capacities.AppliedBonuses {
-		switch bonus.Source {
-		case "Skill":
-			// Skills are percentage bonuses
-			skillsBonusPct += bonus.Value
-			skillsBonusM3 = baseCargo * (skillsBonusPct / 100.0)
-		case "Module", "Rig":
-			// Modules/Rigs are multiplicative - calculate absolute bonus
-			modulesBonusM3 += bonus.Value
-		}
-	}
-
-	effectiveCargo := capacities.EffectiveCargoHold
-
-	// 9. Get ship base attributes (warp speed, inertia) from SDE
+	// 8. Get ship base attributes (warp speed, inertia, cargo) from SDE
 	baseWarpSpeedMultiplier, _, baseInertia, err := s.getShipBaseAttributes(ctx, int64(shipTypeID))
 	if err != nil {
 		s.logger.Warn("Failed to get ship base attributes", "error", err)
 		// Use fallback defaults
 		baseWarpSpeedMultiplier = 3.0
 		baseInertia = 1.0
+	}
+
+	// Determine cargo values (either from deterministic calculation or fallback)
+	var baseCargo, effectiveCargo, cargoBonus float64
+	var skillsBonusM3, skillsBonusPct, modulesBonusM3 float64
+
+	if capacities != nil {
+		// Deterministic calculation succeeded
+		cargoBonus = capacities.EffectiveCargoHold
+		baseCargo = capacities.BaseCargoHold
+		effectiveCargo = capacities.EffectiveCargoHold
+
+		// Calculate breakdown from AppliedBonuses
+		for _, bonus := range capacities.AppliedBonuses {
+			switch bonus.Source {
+			case "Skill":
+				// Skills are percentage bonuses
+				skillsBonusPct += bonus.Value
+				skillsBonusM3 = baseCargo * (skillsBonusPct / 100.0)
+			case "Module", "Rig":
+				// Modules/Rigs are multiplicative - calculate absolute bonus
+				modulesBonusM3 += bonus.Value
+			}
+		}
+	} else {
+		// Fallback: Try to get base cargo from SDE
+		var baseCapacity float64
+		err = s.sdeDB.QueryRowContext(ctx, `
+			SELECT COALESCE(value, 0)
+			FROM dgmTypeAttributes
+			WHERE typeID = ? AND attributeID = 38
+		`, int64(shipTypeID)).Scan(&baseCapacity)
+		if err != nil {
+			s.logger.Warn("Failed to get base cargo capacity from SDE", "error", err)
+			baseCapacity = 0
+		}
+		baseCargo = baseCapacity
+		effectiveCargo = baseCapacity
+		cargoBonus = baseCapacity
 	}
 
 	// Base warp speed is 1 AU/s × multiplier from SDE (e.g., 3.0 for cruisers)
