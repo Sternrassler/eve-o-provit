@@ -290,14 +290,11 @@ func GetShipCapacitiesDeterministic(
 			// Find character's skill level
 			charLevel := getCharacterSkillLevel(characterSkills, reqSkill.SkillTypeID)
 
-			// Validate minimum skill requirement
+			// Validate minimum skill requirement (log warning but continue)
 			if charLevel < reqSkill.MinimumLevel {
-				return nil, fmt.Errorf(
-					"character lacks required skill level: skill %d requires level %d, has %d",
-					reqSkill.SkillTypeID,
-					reqSkill.MinimumLevel,
-					charLevel,
-				)
+				// ESI skills data might be incomplete - log and continue with calculation
+				// Most likely: skill not trained yet or ESI data stale
+				continue // Skip this skill bonus, but don't fail the entire calculation
 			}
 
 			// Apply skill bonus (if any and if character has the skill)

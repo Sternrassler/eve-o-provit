@@ -338,12 +338,12 @@ func (s *FittingService) fetchFittingFromESI(
 			}
 		}
 	} else {
-		// Fallback: Try to get base cargo from SDE
+		// Fallback: Try to get base cargo from SDE view
 		var baseCapacity float64
 		err = s.sdeDB.QueryRowContext(ctx, `
-			SELECT COALESCE(value, 0)
-			FROM dgmTypeAttributes
-			WHERE typeID = ? AND attributeID = 38
+			SELECT COALESCE(base_cargo_capacity, 0)
+			FROM v_ship_cargo_capacities
+			WHERE ship_type_id = ?
 		`, int64(shipTypeID)).Scan(&baseCapacity)
 		if err != nil {
 			s.logger.Warn("Failed to get base cargo capacity from SDE", "error", err)
