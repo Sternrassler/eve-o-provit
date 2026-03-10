@@ -10,6 +10,14 @@ RUN npm ci
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# NEXT_PUBLIC_* vars must be available at build time (baked into JS bundle)
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_EVE_CLIENT_ID
+ARG NEXT_PUBLIC_EVE_CALLBACK_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_EVE_CLIENT_ID=$NEXT_PUBLIC_EVE_CLIENT_ID
+ENV NEXT_PUBLIC_EVE_CALLBACK_URL=$NEXT_PUBLIC_EVE_CALLBACK_URL
+
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
