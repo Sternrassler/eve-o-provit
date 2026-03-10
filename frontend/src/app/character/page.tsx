@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CharacterLocation, CharacterShip } from "@/types/character";
 import { SkillsDisplay } from "@/components/trading/SkillsDisplay";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
+
 interface CharacterDetails {
   character_id: number;
   character_name: string;
@@ -17,7 +19,7 @@ interface CharacterDetails {
 }
 
 export default function CharacterPage() {
-  const { character, isAuthenticated, isLoading, getAuthHeader } = useAuth();
+  const { character, isAuthenticated, isLoading } = useAuth();
   const [details, setDetails] = useState<CharacterDetails | null>(null);
   const [location, setLocation] = useState<CharacterLocation | null>(null);
   const [ship, setShip] = useState<CharacterShip | null>(null);
@@ -31,16 +33,8 @@ export default function CharacterPage() {
     setError(null);
 
     try {
-      const authHeader = getAuthHeader();
-      if (!authHeader) {
-        setError("No authentication token available");
-        return;
-      }
-
-      const response = await fetch("http://localhost:9001/api/v1/character", {
-        headers: {
-          Authorization: authHeader,
-        },
+      const response = await fetch(`${API_BASE_URL}/api/v1/character`, {
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -55,23 +49,14 @@ export default function CharacterPage() {
     } finally {
       setLoading(false);
     }
-  }, [getAuthHeader]);
+  }, []);
 
   const fetchCharacterLocation = useCallback(async () => {
     setLocationError(null);
 
     try {
-      const authHeader = getAuthHeader();
-      if (!authHeader) {
-        setLocationError("No authentication token available");
-        return;
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
-      const response = await fetch(`${apiUrl}/api/v1/character/location`, {
-        headers: {
-          Authorization: authHeader,
-        },
+      const response = await fetch(`${API_BASE_URL}/api/v1/character/location`, {
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -84,23 +69,14 @@ export default function CharacterPage() {
       console.error("Failed to fetch character location:", err);
       setLocationError("Keine Daten verfügbar");
     }
-  }, [getAuthHeader]);
+  }, []);
 
   const fetchCharacterShip = useCallback(async () => {
     setShipError(null);
 
     try {
-      const authHeader = getAuthHeader();
-      if (!authHeader) {
-        setShipError("No authentication token available");
-        return;
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
-      const response = await fetch(`${apiUrl}/api/v1/character/ship`, {
-        headers: {
-          Authorization: authHeader,
-        },
+      const response = await fetch(`${API_BASE_URL}/api/v1/character/ship`, {
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -113,7 +89,7 @@ export default function CharacterPage() {
       console.error("Failed to fetch character ship:", err);
       setShipError("Keine Daten verfügbar");
     }
-  }, [getAuthHeader]);
+  }, []);
 
   useEffect(() => {
     if (isAuthenticated && character) {
@@ -178,7 +154,7 @@ export default function CharacterPage() {
                   <p className="text-sm text-muted-foreground">Character ID</p>
                   <p className="font-mono">{character.character_id}</p>
                 </div>
-                
+
                 {/* Clone Standort */}
                 <div>
                   <p className="text-sm text-muted-foreground">Clone Standort</p>

@@ -10,7 +10,6 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 interface ShipRefreshButtonProps {
   characterId: number | null;
   shipTypeId: string;
-  authHeader: string | null;
   onRefreshComplete?: () => void;
   disabled?: boolean;
 }
@@ -18,7 +17,6 @@ interface ShipRefreshButtonProps {
 export function ShipRefreshButton({
   characterId,
   shipTypeId,
-  authHeader,
   onRefreshComplete,
   disabled,
 }: ShipRefreshButtonProps) {
@@ -26,7 +24,7 @@ export function ShipRefreshButton({
   const { toast } = useToast();
 
   const handleRefresh = async () => {
-    if (!characterId || !shipTypeId || !authHeader || isRefreshing) return;
+    if (!characterId || !shipTypeId || isRefreshing) return;
 
     setIsRefreshing(true);
     const startTime = Date.now();
@@ -42,9 +40,7 @@ export function ShipRefreshButton({
         `${API_BASE_URL}/api/v1/characters/${characterId}/fitting/${shipTypeId}?refresh=true`,
         {
           method: "GET",
-          headers: {
-            Authorization: authHeader,
-          },
+          credentials: "include",
         }
       );
 
@@ -75,7 +71,7 @@ export function ShipRefreshButton({
   return (
     <Button
       onClick={handleRefresh}
-      disabled={disabled || isRefreshing || !characterId || !shipTypeId || !authHeader}
+      disabled={disabled || isRefreshing || !characterId || !shipTypeId}
       size="icon"
       variant="outline"
       className="shrink-0"

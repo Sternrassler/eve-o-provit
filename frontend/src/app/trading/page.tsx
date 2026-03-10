@@ -27,7 +27,7 @@ const defaultFilters: TradingFiltersType = {
 };
 
 function TradingPageContent() {
-  const { isAuthenticated, getAuthHeader } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [selectedRegion, setSelectedRegion] = useState<string>(DEFAULT_REGION);
   const [selectedShip, setSelectedShip] = useState<string>("648");
   const [characterId, setCharacterId] = useState<number | null>(null);
@@ -45,14 +45,11 @@ function TradingPageContent() {
     const loadCharacterData = async () => {
       if (!isAuthenticated) return;
 
-      const authHeader = getAuthHeader();
-      if (!authHeader) return;
-
       setCharacterDataLoading(true);
-      
+
       try {
         // Fetch character location to get region
-        const location = await fetchCharacterLocation(authHeader);
+        const location = await fetchCharacterLocation();
         if (location.region_id) {
           setSelectedRegion(location.region_id.toString());
         }
@@ -62,7 +59,7 @@ function TradingPageContent() {
         }
 
         // Fetch current ship
-        const ship = await fetchCharacterShip(authHeader);
+        const ship = await fetchCharacterShip();
         if (ship.ship_type_id) {
           setSelectedShip(ship.ship_type_id.toString());
         }
@@ -75,7 +72,7 @@ function TradingPageContent() {
     };
 
     loadCharacterData();
-  }, [isAuthenticated, getAuthHeader]);
+  }, [isAuthenticated]);
 
   const handleCalculate = async () => {
     setIsCalculating(true);
@@ -83,17 +80,12 @@ function TradingPageContent() {
     setApiError(null);
 
     try {
-      const authHeader = getAuthHeader();
-      if (!authHeader) {
-        throw new Error("Not authenticated");
-      }
-
       const response = await fetch(`${API_BASE_URL}/api/v1/trading/routes/calculate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": authHeader,
         },
+        credentials: "include",
         body: JSON.stringify({
           region_id: parseInt(selectedRegion),
           ship_type_id: parseInt(selectedShip),
@@ -187,7 +179,6 @@ function TradingPageContent() {
               onChange={setSelectedShip}
               disabled={isCalculating || characterDataLoading}
               authenticated={isAuthenticated}
-              authHeader={getAuthHeader()}
             />
             <Button
               className="w-full"
@@ -204,7 +195,6 @@ function TradingPageContent() {
             <ShipFittingCard
               characterId={characterId}
               shipTypeId={parseInt(selectedShip)}
-              authHeader={getAuthHeader()}
             />
           )}
 

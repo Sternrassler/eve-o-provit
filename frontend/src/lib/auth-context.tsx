@@ -1,12 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { 
-  buildAuthorizationUrl, 
-  TokenStorage, 
-  verifyToken,
-  refreshAccessToken 
-} from "./eve-sso";
+import { buildAuthorizationUrl } from "./eve-sso";
 
 interface CharacterInfo {
   character_id: number;
@@ -20,16 +15,14 @@ interface AuthContextType {
   isAuthenticated: boolean;
   character: CharacterInfo | null;
   isLoading: boolean;
-  accessToken: string | null;
   login: () => Promise<void>;
   logout: () => void;
-  getAuthHeader: () => string | null;
   refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const EVE_CLIENT_ID = process.env.NEXT_PUBLIC_EVE_CLIENT_ID || "0828b4bcd20242aeb9b8be10f5451094";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 const EVE_CALLBACK_URL = process.env.NEXT_PUBLIC_EVE_CALLBACK_URL || "http://localhost:9000/callback";
 const EVE_SCOPES: string[] = [
   "esi-location.read_location.v1",
@@ -44,129 +37,100 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [character, setCharacter] = useState<CharacterInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
 
-  const logout = useCallback(() => {
-    TokenStorage.clear();
+  const logout = useCallback(async () => {
+    await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
     setIsAuthenticated(false);
     setCharacter(null);
-    setAccessToken(null);
   }, []);
 
   const checkSession = useCallback(async () => {
     try {
-      const token = TokenStorage.getAccessToken();
-      
-      if (!token || TokenStorage.isExpired()) {
-        // No valid token
+      const response = await fetch(`${API_BASE_URL}/auth/session`, {
+        credentials: "include",
+      });
+      const data = await response.json();
+
+      if (!data.authenticated || !data.character) {
         setIsAuthenticated(false);
         setCharacter(null);
-        setAccessToken(null);
-        TokenStorage.clear();
         setIsLoading(false);
         return;
       }
 
-      // Verify token with EVE ESI
-      const charInfo = await verifyToken(token);
-      
-      // Convert to our format
-      const character: CharacterInfo = {
-        character_id: charInfo.CharacterID,
-        character_name: charInfo.CharacterName,
-        scopes: charInfo.Scopes ? charInfo.Scopes.split(" ") : [],
-        owner_hash: charInfo.CharacterOwnerHash,
-        portrait_url: `https://images.evetech.net/characters/${charInfo.CharacterID}/portrait?size=64`,
-      };
-
-      setCharacter(character);
-      setAccessToken(token);
+      setCharacter({
+        character_id: data.character.character_id,
+        character_name: data.character.character_name,
+        scopes: data.character.scopes,
+        owner_hash: data.character.owner_hash ?? "",
+        portrait_url: data.character.portrait_url,
+      });
       setIsAuthenticated(true);
-
-      // Save character info
-      TokenStorage.saveCharacterInfo(charInfo);
+      setIsLoading(false);
     } catch (error) {
-      console.error("[AuthContext] Session verification failed:", error);
-      
-      // Don't clear tokens on verification errors - might be temporary network issue
-      // Only clear UI state
+      console.error("[AuthContext] Session check failed:", error);
       setIsAuthenticated(false);
       setCharacter(null);
-      setAccessToken(null);
-      
-      // Only clear tokens if it's an auth error (401/403), not network errors
-      if (error instanceof Error && error.message.includes("401")) {
-        TokenStorage.clear();
-      }
-    } finally {
       setIsLoading(false);
     }
   }, []);
 
   // Check for existing session on mount
   useEffect(() => {
-    checkSession();
-    
+    const init = async () => {
+      await checkSession();
+    };
+    void init();
+
     // Listen for custom event from callback page
     const handleLoginSuccess = () => {
-      // Small delay to ensure localStorage is fully written
-      setTimeout(() => {
-        checkSession();
-      }, 100);
+      void checkSession();
     };
-    
+
     window.addEventListener("eve-login-success", handleLoginSuccess);
-    
+
     return () => {
       window.removeEventListener("eve-login-success", handleLoginSuccess);
     };
   }, [checkSession]);
 
-  // Token refresh function (wrapped in useCallback to prevent re-creation)
+  // Background token refresh — check every 60 seconds
   const performTokenRefresh = useCallback(async () => {
     try {
-      const refreshToken = TokenStorage.getRefreshToken();
-      
-      if (!refreshToken) {
-        console.warn("[AuthContext] No refresh token available");
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
         logout();
-        return;
       }
-
-      const newToken = await refreshAccessToken(refreshToken, EVE_CLIENT_ID);
-      
-      // Save new token
-      TokenStorage.save(newToken);
-      setAccessToken(newToken.access_token);
     } catch (error) {
       console.error("[AuthContext] Token refresh failed:", error);
-      // On refresh failure, logout user
       logout();
     }
   }, [logout]);
 
-  // Background token refresh - check every 60 seconds
   useEffect(() => {
     if (!isAuthenticated) return;
 
     const refreshInterval = setInterval(async () => {
-      try {
-        // Check if token needs refresh (3 minutes before expiry)
-        if (TokenStorage.shouldRefresh()) {
-          await performTokenRefresh();
-        }
-      } catch (error) {
-        console.error("[AuthContext] Background refresh check failed:", error);
-      }
-    }, 60 * 1000); // Check every 60 seconds
+      await performTokenRefresh();
+    }, 60 * 1000);
 
     return () => clearInterval(refreshInterval);
   }, [isAuthenticated, performTokenRefresh]);
 
   const login = async () => {
+    const clientId = process.env.NEXT_PUBLIC_EVE_CLIENT_ID;
+    if (!clientId) {
+      throw new Error("NEXT_PUBLIC_EVE_CLIENT_ID is not set");
+    }
     try {
       const authUrl = await buildAuthorizationUrl(
-        EVE_CLIENT_ID,
+        clientId,
         EVE_CALLBACK_URL,
         EVE_SCOPES
       );
@@ -180,21 +144,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await checkSession();
   }, [checkSession]);
 
-  const getAuthHeader = useCallback((): string | null => {
-    if (!accessToken) return null;
-    return `Bearer ${accessToken}`;
-  }, [accessToken]);
-
   return (
     <AuthContext.Provider
       value={{
         isAuthenticated,
         character,
         isLoading,
-        accessToken,
         login,
         logout,
-        getAuthHeader,
         refreshSession,
       }}
     >

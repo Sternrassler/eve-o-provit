@@ -19,7 +19,7 @@ interface TradingRouteCardProps {
 }
 
 export function TradingRouteCard({ route }: TradingRouteCardProps) {
-  const { getAuthHeader, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [isSettingRoute, setIsSettingRoute] = useState(false);
 
@@ -126,11 +126,6 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
     setIsSettingRoute(true);
 
     try {
-      const authHeader = getAuthHeader();
-      if (!authHeader) {
-        throw new Error("No auth token");
-      }
-
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 
       // Set buy station waypoint (clear existing, add to beginning)
@@ -138,8 +133,8 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: authHeader,
         },
+        credentials: "include",
         body: JSON.stringify({
           destination_id: route.buy_station_id,
           clear_other_waypoints: true,
@@ -162,8 +157,8 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: authHeader,
         },
+        credentials: "include",
         body: JSON.stringify({
           destination_id: route.sell_station_id,
           clear_other_waypoints: false,

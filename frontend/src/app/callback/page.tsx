@@ -2,12 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import {
-  exchangeCodeForToken,
-  validateState,
-  TokenStorage,
-  verifyToken,
-} from "@/lib/eve-sso";
+import { validateState } from "@/lib/eve-sso";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 
 function CallbackContent() {
   const searchParams = useSearchParams();
@@ -42,22 +39,22 @@ function CallbackContent() {
 
         setMessage("Exchanging authorization code for token...");
 
-        // Exchange code for token
-        const clientId = process.env.NEXT_PUBLIC_EVE_CLIENT_ID || "0828b4bcd20242aeb9b8be10f5451094";
+        // Send code + state to backend — backend handles token exchange and sets HttpOnly cookies
+        const response = await fetch(`${API_BASE_URL}/auth/callback`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ code, state }),
+        });
 
-        const token = await exchangeCodeForToken(code, clientId);
+        if (!response.ok) {
+          throw new Error(`Auth callback failed: ${response.status}`);
+        }
 
-        setMessage("Verifying character information...");
-
-        // Verify token and get character info
-        const charInfo = await verifyToken(token.access_token);
-
-        // Save token and character info
-        TokenStorage.save(token);
-        TokenStorage.saveCharacterInfo(charInfo);
+        const charInfo = await response.json();
 
         setStatus("success");
-        setMessage(`Successfully logged in as ${charInfo.CharacterName}! Redirecting...`);
+        setMessage(`Successfully logged in as ${charInfo.character_name}! Redirecting...`);
 
         // Dispatch custom event to notify AuthContext
         window.dispatchEvent(new Event("eve-login-success"));

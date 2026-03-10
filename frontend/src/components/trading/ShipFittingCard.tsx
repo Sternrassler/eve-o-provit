@@ -12,7 +12,6 @@ import { InfoIcon } from "lucide-react";
 interface ShipFittingCardProps {
   characterId: number;
   shipTypeId: number;
-  authHeader: string | null;
   className?: string;
 }
 
@@ -26,7 +25,6 @@ interface ShipFittingCardProps {
 export function ShipFittingCard({
   characterId,
   shipTypeId,
-  authHeader,
   className,
 }: ShipFittingCardProps) {
   const [fitting, setFitting] = useState<CharacterFittingResponse | null>(null);
@@ -35,7 +33,7 @@ export function ShipFittingCard({
 
   useEffect(() => {
     const loadFitting = async () => {
-      if (!authHeader || !characterId || !shipTypeId) {
+      if (!characterId || !shipTypeId) {
         setFitting(null);
         return;
       }
@@ -44,7 +42,7 @@ export function ShipFittingCard({
       setError(null);
 
       try {
-        const data = await fetchCharacterFitting(authHeader, characterId, shipTypeId);
+        const data = await fetchCharacterFitting(characterId, shipTypeId);
         setFitting(data);
       } catch (err) {
         console.error("Failed to fetch fitting:", err);
@@ -56,7 +54,7 @@ export function ShipFittingCard({
     };
 
     loadFitting();
-  }, [characterId, shipTypeId, authHeader]);
+  }, [characterId, shipTypeId]);
 
   if (loading) {
     return (
@@ -205,7 +203,7 @@ function groupModulesBySlot(modules: FittedModule[]): Record<string, FittedModul
 
   // Remove empty groups
   return Object.fromEntries(
-    Object.entries(groups).filter(([_slot, mods]) => mods.length > 0)
+    Object.entries(groups).filter(([, mods]) => mods.length > 0)
   );
 }
 

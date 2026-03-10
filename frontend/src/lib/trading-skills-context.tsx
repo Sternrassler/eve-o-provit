@@ -34,13 +34,13 @@ const getDefaultSkills = (): TradingSkills => ({
 });
 
 export function TradingSkillsProvider({ children }: { children: React.ReactNode }) {
-  const { character, accessToken, isAuthenticated } = useAuth();
+  const { character, isAuthenticated } = useAuth();
   const [skills, setSkills] = useState<TradingSkills | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchSkills = useCallback(async () => {
-    if (!character?.character_id || !accessToken) {
+    if (!character?.character_id) {
       setSkills(getDefaultSkills());
       setLoading(false);
       return;
@@ -53,10 +53,7 @@ export function TradingSkillsProvider({ children }: { children: React.ReactNode 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001"}/api/v1/characters/${character.character_id}/skills`,
         {
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
+          credentials: "include",
         }
       );
 
@@ -76,7 +73,7 @@ export function TradingSkillsProvider({ children }: { children: React.ReactNode 
     } finally {
       setLoading(false);
     }
-  }, [character?.character_id, accessToken]);
+  }, [character?.character_id]);
 
   // Auto-fetch on login
   useEffect(() => {

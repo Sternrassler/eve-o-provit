@@ -17,7 +17,6 @@ interface ShipSelectProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   authenticated?: boolean;
-  authHeader?: string | null;
 }
 
 export function ShipSelect({
@@ -25,21 +24,20 @@ export function ShipSelect({
   onChange,
   disabled,
   authenticated = false,
-  authHeader = null,
 }: ShipSelectProps) {
   const [ships, setShips] = useState<Ship[]>(fallbackShips);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const loadShips = async () => {
-      if (!authenticated || !authHeader) {
+      if (!authenticated) {
         setShips(fallbackShips);
         return;
       }
 
       setLoading(true);
       try {
-        const characterShips = await fetchCharacterShips(authHeader);
+        const characterShips = await fetchCharacterShips();
         if (characterShips && characterShips.length > 0) {
           setShips(characterShips);
         } else {
@@ -55,7 +53,7 @@ export function ShipSelect({
     };
 
     loadShips();
-  }, [authenticated, authHeader]);
+  }, [authenticated]);
 
   return (
     <div className="space-y-2">
@@ -67,10 +65,10 @@ export function ShipSelect({
         <SelectContent>
           {ships.map((ship) => {
             // Format cargo capacity: show in m³ if < 1000, otherwise in k m³
-            const cargoDisplay = ship.cargo_capacity >= 1000 
+            const cargoDisplay = ship.cargo_capacity >= 1000
               ? `${(ship.cargo_capacity / 1000).toFixed(1)}k m³`
               : `${Math.round(ship.cargo_capacity)} m³`;
-            
+
             return (
               <SelectItem key={ship.type_id} value={ship.type_id.toString()}>
                 {ship.name} ({cargoDisplay})
