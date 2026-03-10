@@ -33,11 +33,11 @@ frontend/out/
 frontend/node_modules/
 
 # Data
-data/sde/*.sqlite
-data/sde/*.db
-data/sde/*.db-shm
-data/sde/*.db-wal
-data/sde/*.db.gz
+**/data/sde/*.sqlite
+**/data/sde/*.db
+**/data/sde/*.db-shm
+**/data/sde/*.db-wal
+**/data/sde/*.db.gz
 
 # Docker
 .dockerignore
