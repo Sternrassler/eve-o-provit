@@ -29,5 +29,26 @@ if ! make secrets-check >/dev/null 2>&1; then
     exit 1
 fi
 
+# 4b. Go vet + golangci-lint (Backend)
+STAGED_GO=$(git diff --cached --name-only --diff-filter=ACM | grep '^backend/' || true)
+if [ -n "$STAGED_GO" ]; then
+    echo "[pre-commit] Running go vet (backend)..."
+    (cd backend && go vet ./...) || { echo "[pre-commit] ❌ go vet fehlgeschlagen"; exit 1; }
+
+    if command -v golangci-lint &>/dev/null; then
+        echo "[pre-commit] Running golangci-lint (backend)..."
+        (cd backend && golangci-lint run --new-from-rev=HEAD~1 --timeout=3m) || { echo "[pre-commit] ❌ golangci-lint fehlgeschlagen"; exit 1; }
+    else
+        echo "[pre-commit] ⚠️  golangci-lint nicht gefunden, übersprungen"
+    fi
+fi
+
+# 4c. ESLint (Frontend)
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep '^frontend/' | grep -E '\.(ts|tsx|js|jsx)$' || true)
+if [ -n "$STAGED_TS" ]; then
+    echo "[pre-commit] Running ESLint (frontend)..."
+    (cd frontend && npm run lint -- --max-warnings=0) || { echo "[pre-commit] ❌ ESLint fehlgeschlagen"; exit 1; }
+fi
+
 echo "[pre-commit] ✅ Pre-Commit Checks erfolgreich"
 exit 0
