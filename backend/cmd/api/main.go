@@ -78,11 +78,10 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// EVE SSO Config
+	// EVE SSO Config (public client — PKCE flow, no client_secret needed)
 	eveClientID := getEnv("EVE_CLIENT_ID", "")
-	eveClientSecret := getEnv("EVE_CLIENT_SECRET", "")
-	if eveClientID == "" || eveClientSecret == "" {
-		log.Fatal("EVE_CLIENT_ID and EVE_CLIENT_SECRET environment variables are required")
+	if eveClientID == "" {
+		log.Fatal("EVE_CLIENT_ID environment variable is required")
 	}
 
 	// Initialize Redis
@@ -174,7 +173,7 @@ func main() {
 
 	// Initialize AuthHandler
 	eveCallbackURL := getEnv("EVE_CALLBACK_URL", "http://localhost:9000/callback")
-	authHandler := evesso.NewAuthHandler(eveClientID, eveClientSecret, eveCallbackURL)
+	authHandler := evesso.NewAuthHandler(eveClientID, eveCallbackURL)
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)

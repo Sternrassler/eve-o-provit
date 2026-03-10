@@ -57,7 +57,6 @@ services:
       LOG_LEVEL: debug
       ENV: development
       EVE_CLIENT_ID: ${EVE_CLIENT_ID}
-      EVE_CLIENT_SECRET: ${EVE_CLIENT_SECRET}
       EVE_CALLBACK_URL: ${EVE_CALLBACK_URL}
       COOKIE_SECURE: "false"
     volumes:

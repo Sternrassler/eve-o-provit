@@ -39,12 +39,21 @@ function CallbackContent() {
 
         setMessage("Exchanging authorization code for token...");
 
-        // Send code + state to backend — backend handles token exchange and sets HttpOnly cookies
+        // Read PKCE code_verifier stored before redirect to EVE SSO
+        const codeVerifier = sessionStorage.getItem("eve_code_verifier");
+        if (!codeVerifier) {
+          setStatus("error");
+          setMessage("Missing PKCE code verifier — please try logging in again");
+          return;
+        }
+        sessionStorage.removeItem("eve_code_verifier");
+
+        // Send code + code_verifier to backend — backend exchanges tokens without client_secret
         const response = await fetch(`${API_BASE_URL}/auth/callback`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ code, state }),
+          body: JSON.stringify({ code, state, code_verifier: codeVerifier }),
         });
 
         if (!response.ok) {

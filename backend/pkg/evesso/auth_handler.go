@@ -8,25 +8,24 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// AuthHandler handles EVE SSO authentication routes
+// AuthHandler handles EVE SSO authentication routes (public client / PKCE flow)
 type AuthHandler struct {
-	clientID     string
-	clientSecret string
-	redirectURI  string
+	clientID    string
+	redirectURI string
 }
 
 // NewAuthHandler creates a new AuthHandler with the given EVE SSO credentials
-func NewAuthHandler(clientID, clientSecret, redirectURI string) *AuthHandler {
+func NewAuthHandler(clientID, redirectURI string) *AuthHandler {
 	return &AuthHandler{
-		clientID:     clientID,
-		clientSecret: clientSecret,
-		redirectURI:  redirectURI,
+		clientID:    clientID,
+		redirectURI: redirectURI,
 	}
 }
 
 type callbackRequest struct {
-	Code  string `json:"code"`
-	State string `json:"state"`
+	Code         string `json:"code"`
+	State        string `json:"state"`
+	CodeVerifier string `json:"code_verifier"`
 }
 
 type characterResponse struct {
@@ -53,7 +52,11 @@ func (h *AuthHandler) HandleCallback(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code"})
 	}
 
-	tokenResp, err := ExchangeCode(c.Context(), req.Code, h.redirectURI, h.clientID, h.clientSecret)
+	if req.CodeVerifier == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code_verifier"})
+	}
+
+	tokenResp, err := ExchangeCode(c.Context(), req.Code, h.redirectURI, h.clientID, req.CodeVerifier)
 	if err != nil {
 		log.Printf("ERROR [auth/callback] ExchangeCode failed: %v", err)
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to exchange code"})
@@ -126,7 +129,7 @@ func (h *AuthHandler) HandleRefresh(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing refresh token"})
 	}
 
-	tokenResp, err := RefreshToken(c.Context(), refreshToken, h.clientID, h.clientSecret)
+	tokenResp, err := RefreshToken(c.Context(), refreshToken, h.clientID)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to refresh token"})
 	}

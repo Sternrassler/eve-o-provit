@@ -22,15 +22,17 @@ type TokenResponse struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-// ExchangeCode exchanges an Authorization Code for tokens (Web App Flow with Basic Auth)
+// ExchangeCode exchanges an Authorization Code for tokens (PKCE / public client flow).
 // POST https://login.eveonline.com/v2/oauth/token
-// Authorization: Basic base64(clientID:clientSecret)
-// Body: grant_type=authorization_code&code=...&redirect_uri=...
-func ExchangeCode(ctx context.Context, code, redirectURI, clientID, clientSecret string) (*TokenResponse, error) {
+// Body: grant_type=authorization_code&code=...&redirect_uri=...&client_id=...&code_verifier=...
+// No Authorization header — public clients authenticate via code_verifier.
+func ExchangeCode(ctx context.Context, code, redirectURI, clientID, codeVerifier string) (*TokenResponse, error) {
 	body := url.Values{}
 	body.Set("grant_type", "authorization_code")
 	body.Set("code", code)
 	body.Set("redirect_uri", redirectURI)
+	body.Set("client_id", clientID)
+	body.Set("code_verifier", codeVerifier)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", tokenURL, strings.NewReader(body.Encode()))
 	if err != nil {
@@ -38,9 +40,7 @@ func ExchangeCode(ctx context.Context, code, redirectURI, clientID, clientSecret
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Host", "login.eveonline.com")
 	req.Header.Set("User-Agent", "eve-o-provit/0.1.0 (https://github.com/Sternrassler/eve-o-provit)")
-	req.SetBasicAuth(clientID, clientSecret)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -62,12 +62,13 @@ func ExchangeCode(ctx context.Context, code, redirectURI, clientID, clientSecret
 	return &tokenResp, nil
 }
 
-// RefreshToken renews tokens via a Refresh Token
-// Body: grant_type=refresh_token&refresh_token=...
-func RefreshToken(ctx context.Context, refreshToken, clientID, clientSecret string) (*TokenResponse, error) {
+// RefreshToken renews tokens via a Refresh Token (public client — no client_secret).
+// Body: grant_type=refresh_token&refresh_token=...&client_id=...
+func RefreshToken(ctx context.Context, refreshToken, clientID string) (*TokenResponse, error) {
 	body := url.Values{}
 	body.Set("grant_type", "refresh_token")
 	body.Set("refresh_token", refreshToken)
+	body.Set("client_id", clientID)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", tokenURL, strings.NewReader(body.Encode()))
 	if err != nil {
@@ -75,9 +76,7 @@ func RefreshToken(ctx context.Context, refreshToken, clientID, clientSecret stri
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Host", "login.eveonline.com")
 	req.Header.Set("User-Agent", "eve-o-provit/0.1.0 (https://github.com/Sternrassler/eve-o-provit)")
-	req.SetBasicAuth(clientID, clientSecret)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
