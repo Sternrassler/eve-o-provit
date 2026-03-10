@@ -95,8 +95,12 @@ func main() {
 	}
 
 	// Initialize Database
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		log.Fatal("DATABASE_URL environment variable is required")
+	}
 	dbConfig := database.Config{
-		PostgresURL: getEnv("DATABASE_URL", "postgresql://eveprovit:dev@localhost:5432/eveprovit?sslmode=disable"),
+		PostgresURL: databaseURL,
 		SDEPath:     getEnv("SDE_PATH", "data/sde/eve-sde.db"),
 	}
 
