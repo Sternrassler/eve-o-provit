@@ -187,10 +187,20 @@ func main() {
 		AppName: "EVE-O-Provit API v0.1.0",
 	})
 
+	// CORS — AllowCredentials:true requires explicit origins (never wildcard).
+	// Setting CORS_ORIGINS=* with credentials enabled is a security misconfiguration:
+	// cookies/auth headers would be sent cross-origin to any site. Fail fast at startup.
+	corsOrigins := getEnv("CORS_ORIGINS", "http://localhost:9000")
+	for _, origin := range strings.Split(corsOrigins, ",") {
+		if strings.TrimSpace(origin) == "*" {
+			log.Fatal("CORS_ORIGINS must not contain '*' when AllowCredentials is true — set explicit origins")
+		}
+	}
+
 	// Middleware
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     getEnv("CORS_ORIGINS", "http://localhost:9000"),
+		AllowOrigins:     corsOrigins,
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, Cookie",
 		AllowMethods:     "GET, POST, OPTIONS",
 		AllowCredentials: true,
