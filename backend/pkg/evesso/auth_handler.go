@@ -1,6 +1,7 @@
 package evesso
 
 import (
+	"log"
 	"os"
 	"strings"
 
@@ -11,13 +12,15 @@ import (
 type AuthHandler struct {
 	clientID     string
 	clientSecret string
+	redirectURI  string
 }
 
 // NewAuthHandler creates a new AuthHandler with the given EVE SSO credentials
-func NewAuthHandler(clientID, clientSecret string) *AuthHandler {
+func NewAuthHandler(clientID, clientSecret, redirectURI string) *AuthHandler {
 	return &AuthHandler{
 		clientID:     clientID,
 		clientSecret: clientSecret,
+		redirectURI:  redirectURI,
 	}
 }
 
@@ -50,8 +53,9 @@ func (h *AuthHandler) HandleCallback(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code"})
 	}
 
-	tokenResp, err := ExchangeCode(c.Context(), req.Code, h.clientID, h.clientSecret)
+	tokenResp, err := ExchangeCode(c.Context(), req.Code, h.redirectURI, h.clientID, h.clientSecret)
 	if err != nil {
+		log.Printf("ERROR [auth/callback] ExchangeCode failed: %v", err)
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to exchange code"})
 	}
 

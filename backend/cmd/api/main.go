@@ -173,7 +173,8 @@ func main() {
 	systemService := services.NewSystemService(sdeRepo)
 
 	// Initialize AuthHandler
-	authHandler := evesso.NewAuthHandler(eveClientID, eveClientSecret)
+	eveCallbackURL := getEnv("EVE_CALLBACK_URL", "http://localhost:9000/callback")
+	authHandler := evesso.NewAuthHandler(eveClientID, eveClientSecret, eveCallbackURL)
 
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)

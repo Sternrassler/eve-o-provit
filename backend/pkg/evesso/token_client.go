@@ -25,11 +25,12 @@ type TokenResponse struct {
 // ExchangeCode exchanges an Authorization Code for tokens (Web App Flow with Basic Auth)
 // POST https://login.eveonline.com/v2/oauth/token
 // Authorization: Basic base64(clientID:clientSecret)
-// Body: grant_type=authorization_code&code=...
-func ExchangeCode(ctx context.Context, code, clientID, clientSecret string) (*TokenResponse, error) {
+// Body: grant_type=authorization_code&code=...&redirect_uri=...
+func ExchangeCode(ctx context.Context, code, redirectURI, clientID, clientSecret string) (*TokenResponse, error) {
 	body := url.Values{}
 	body.Set("grant_type", "authorization_code")
 	body.Set("code", code)
+	body.Set("redirect_uri", redirectURI)
 
 	req, err := http.NewRequestWithContext(ctx, "POST", tokenURL, strings.NewReader(body.Encode()))
 	if err != nil {
