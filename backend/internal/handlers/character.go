@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"log"
 	"strconv"
 
 	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
@@ -70,9 +71,9 @@ func (h *CharacterHandler) GetCharacterSkills(c *fiber.Ctx) error {
 	if err != nil {
 		// SkillsService already handles graceful degradation
 		// This error should only occur on critical failures
+		log.Printf("ERROR: GetCharacterSkills failed for characterID=%d: %v", characterID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch character skills",
-			"details": err.Error(),
+			"error": "Failed to fetch character skills",
 		})
 	}
 

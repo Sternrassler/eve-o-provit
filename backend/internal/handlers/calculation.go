@@ -11,6 +11,7 @@ package handlers
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
@@ -54,8 +55,7 @@ func (h *CalculationHandler) CalculateCargo(c *fiber.Ctx) error {
 	var req models.CargoCalculationRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "invalid request body",
-			"details": err.Error(),
+			"error": "invalid request body",
 		})
 	}
 
@@ -69,14 +69,14 @@ func (h *CalculationHandler) CalculateCargo(c *fiber.Ctx) error {
 	// Get ship type name from SDE
 	var shipTypeName string
 	err := h.sdeDB.QueryRowContext(c.Context(),
-		`SELECT COALESCE(json_extract(name, '$.en'), json_extract(name, '$.de'), 'Unknown') 
+		`SELECT COALESCE(json_extract(name, '$.en'), json_extract(name, '$.de'), 'Unknown')
 		FROM types WHERE _key = ?`,
 		req.ShipTypeID,
 	).Scan(&shipTypeName)
 	if err != nil {
+		log.Printf("ERROR: CalculateCargo failed to fetch ship type for shipTypeID=%d: %v", req.ShipTypeID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "failed to fetch ship type",
-			"details": err.Error(),
+			"error": "failed to fetch ship type",
 		})
 	}
 
@@ -89,9 +89,9 @@ func (h *CalculationHandler) CalculateCargo(c *fiber.Ctx) error {
 			req.ShipTypeID,
 		).Scan(&baseCapacity)
 		if err != nil {
+			log.Printf("ERROR: CalculateCargo failed to fetch base capacity for shipTypeID=%d: %v", req.ShipTypeID, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   "failed to fetch base capacity",
-				"details": err.Error(),
+				"error": "failed to fetch base capacity",
 			})
 		}
 	}
@@ -169,8 +169,7 @@ func (h *CalculationHandler) CalculateWarp(c *fiber.Ctx) error {
 	var req models.WarpCalculationRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "invalid request body",
-			"details": err.Error(),
+			"error": "invalid request body",
 		})
 	}
 
@@ -202,9 +201,9 @@ func (h *CalculationHandler) CalculateWarp(c *fiber.Ctx) error {
 
 	var dbMass, dbWarpSpeed, dbInertia float64
 	if err := row.Scan(&shipTypeName, &dbMass, &dbWarpSpeed, &dbInertia); err != nil {
+		log.Printf("ERROR: CalculateWarp failed to fetch ship attributes for shipTypeID=%d: %v", req.ShipTypeID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "failed to fetch ship attributes",
-			"details": err.Error(),
+			"error": "failed to fetch ship attributes",
 		})
 	}
 

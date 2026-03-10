@@ -2,6 +2,7 @@
 package handlers
 
 import (
+	"log"
 	"strconv"
 
 	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
@@ -88,9 +89,9 @@ func (h *FittingHandler) GetCharacterFitting(c *fiber.Ctx) error {
 	// Fetch fitting from ESI (with caching)
 	fitting, err := h.fittingService.GetShipFitting(c.Context(), characterID, shipTypeID, accessToken)
 	if err != nil {
+		log.Printf("ERROR: GetCharacterFitting failed for characterID=%d shipTypeID=%d: %v", characterID, shipTypeID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch character fitting",
-			"details": err.Error(),
+			"error": "Failed to fetch character fitting",
 		})
 	}
 

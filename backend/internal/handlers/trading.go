@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -131,9 +132,9 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	}
 
 	if err != nil {
+		log.Printf("ERROR: CalculateRoutes failed for regionID=%d: %v path=%s", req.RegionID, err, c.Path())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to calculate routes",
-			"details": err.Error(),
+			"error": "Failed to calculate routes",
 		})
 	}
 
@@ -169,9 +170,9 @@ func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
 				"error": "Not authenticated",
 			})
 		}
+		log.Printf("ERROR: GetCharacterLocation failed for characterID=%d: %v", characterID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch character location",
-			"details": err.Error(),
+			"error": "Failed to fetch character location",
 		})
 	}
 
@@ -201,9 +202,9 @@ func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
 				"error": "Not authenticated",
 			})
 		}
+		log.Printf("ERROR: GetCharacterShip failed for characterID=%d: %v", characterID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch character ship",
-			"details": err.Error(),
+			"error": "Failed to fetch character ship",
 		})
 	}
 
@@ -233,9 +234,9 @@ func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
 				"error": "Not authenticated",
 			})
 		}
+		log.Printf("ERROR: GetCharacterShips failed for characterID=%d: %v", characterID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch character ships",
-			"details": err.Error(),
+			"error": "Failed to fetch character ships",
 		})
 	}
 
@@ -296,9 +297,9 @@ func (h *TradingHandler) SetAutopilotWaypoint(c *fiber.Ctx) error {
 				"error": "EVE client not running or destination not found",
 			})
 		default:
+			log.Printf("ERROR: SetAutopilotWaypoint failed for destinationID=%d: %v", req.DestinationID, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   "Failed to set waypoint",
-				"details": err.Error(),
+				"error": "Failed to set waypoint",
 			})
 		}
 	}
@@ -599,9 +600,9 @@ func (h *TradingHandler) SearchItems(c *fiber.Ctx) error {
 	// Search items via SDE repository
 	items, err := h.sdeQuerier.SearchItems(c.Context(), query, limit)
 	if err != nil {
+		log.Printf("ERROR: SearchItems failed for query=%q: %v", query, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "failed to search items",
-			"details": err.Error(),
+			"error": "failed to search items",
 		})
 	}
 

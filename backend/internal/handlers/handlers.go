@@ -86,9 +86,10 @@ func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRep
 func (h *Handler) Health(c *fiber.Ctx) error {
 	// Check database health
 	if err := h.healthChecker.Health(c.Context()); err != nil {
+		log.Printf("ERROR: Health check failed: %v", err)
 		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
 			"status": "unhealthy",
-			"error":  err.Error(),
+			"error":  "database unavailable",
 		})
 	}
 
@@ -139,8 +140,9 @@ func (h *Handler) GetType(c *fiber.Ctx) error {
 
 	typeInfo, err := h.sdeQuerier.GetTypeInfo(c.Context(), typeID)
 	if err != nil {
+		log.Printf("ERROR: GetType failed for typeID=%d: %v", typeID, err)
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": err.Error(),
+			"error": "type not found",
 		})
 	}
 
@@ -186,9 +188,9 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 		// Delegate to MarketService for fetching and storing
 		count, err := h.marketService.FetchAndStoreMarketOrders(c.Context(), regionID)
 		if err != nil {
+			log.Printf("ERROR: FetchAndStoreMarketOrders failed for regionID=%d: %v", regionID, err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error":   "Failed to fetch and store market data",
-				"details": err.Error(),
+				"error": "Failed to fetch and store market data",
 			})
 		}
 		// Log success
@@ -198,9 +200,9 @@ func (h *Handler) GetMarketOrders(c *fiber.Ctx) error {
 	// Get orders from database via MarketService
 	orders, err := h.marketService.GetMarketOrders(c.Context(), regionID, typeID)
 	if err != nil {
+		log.Printf("ERROR: GetMarketOrders failed for regionID=%d typeID=%d: %v", regionID, typeID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to get market orders",
-			"details": err.Error(),
+			"error": "Failed to get market orders",
 		})
 	}
 
@@ -231,8 +233,7 @@ func (h *Handler) GetMarketDataStaleness(c *fiber.Ctx) error {
 	regionID, err := strconv.Atoi(regionIDStr)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":   "invalid region ID",
-			"details": err.Error(),
+			"error": "invalid region ID",
 		})
 	}
 
@@ -295,8 +296,7 @@ func (h *Handler) GetRegions(c *fiber.Ctx) error {
 	if err != nil {
 		log.Printf("ERROR: Failed to fetch regions: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error":   "Failed to fetch regions",
-			"details": err.Error(),
+			"error": "Failed to fetch regions",
 		})
 	}
 
