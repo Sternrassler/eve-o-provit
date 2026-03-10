@@ -32,7 +32,7 @@ services:
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -59,7 +59,7 @@ services:
       EVE_CLIENT_ID: ${EVE_CLIENT_ID}
       EVE_CLIENT_SECRET: ${EVE_CLIENT_SECRET}
       EVE_CALLBACK_URL: ${EVE_CALLBACK_URL}
-      JWT_SECRET: ${JWT_SECRET}
+      COOKIE_SECURE: "false"
     volumes:
       - ../backend/data/sde:/data/sde:ro
     depends_on:
