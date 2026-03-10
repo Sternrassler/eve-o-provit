@@ -22,8 +22,8 @@ func TestVerifyToken_EmptyToken(t *testing.T) {
 	assert.Contains(t, err.Error(), "access token is empty")
 }
 
-// TestAuthMiddleware_MissingHeader tests missing Authorization header (SECURITY)
-func TestAuthMiddleware_MissingHeader(t *testing.T) {
+// TestAuthMiddleware_MissingCookie tests missing eve_access_token cookie (SECURITY)
+func TestAuthMiddleware_MissingCookie(t *testing.T) {
 	app := fiber.New()
 
 	app.Use("/protected", AuthMiddleware)
@@ -39,50 +39,7 @@ func TestAuthMiddleware_MissingHeader(t *testing.T) {
 
 	var response map[string]interface{}
 	json.NewDecoder(resp.Body).Decode(&response)
-	assert.Equal(t, "Missing Authorization header", response["error"])
-}
-
-// TestAuthMiddleware_InvalidHeaderFormat tests invalid header format (SECURITY)
-func TestAuthMiddleware_InvalidHeaderFormat(t *testing.T) {
-	app := fiber.New()
-
-	app.Use("/protected", AuthMiddleware)
-	app.Get("/protected", func(c *fiber.Ctx) error {
-		return c.SendString("Success")
-	})
-
-	tests := []struct {
-		name        string
-		authHeader  string
-		expectError string
-	}{
-		{
-			name:        "missing Bearer prefix",
-			authHeader:  "InvalidToken123",
-			expectError: "Invalid Authorization header format",
-		},
-		{
-			name:        "wrong prefix",
-			authHeader:  "Basic dGVzdDp0ZXN0",
-			expectError: "Invalid Authorization header format",
-		},
-		{
-			name:        "empty token",
-			authHeader:  "Bearer ",
-			expectError: "Invalid or expired token",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/protected", nil)
-			req.Header.Set("Authorization", tt.authHeader)
-
-			resp, err := app.Test(req)
-			require.NoError(t, err)
-			assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
-		})
-	}
+	assert.Equal(t, "Missing authentication cookie", response["error"])
 }
 
 // TestGetPortraitURL tests character portrait URL generation

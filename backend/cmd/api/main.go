@@ -78,6 +78,13 @@ import (
 func main() {
 	ctx := context.Background()
 
+	// EVE SSO Config
+	eveClientID := getEnv("EVE_CLIENT_ID", "")
+	eveClientSecret := getEnv("EVE_CLIENT_SECRET", "")
+	if eveClientID == "" || eveClientSecret == "" {
+		log.Fatal("EVE_CLIENT_ID and EVE_CLIENT_SECRET environment variables are required")
+	}
+
 	// Initialize Redis
 	redisURL := getEnv("REDIS_URL", "redis://localhost:6379/0")
 	redisOpts, err := redis.ParseURL(redisURL)
@@ -165,6 +172,9 @@ func main() {
 	// System Service (Phase 0 - Issue #57 - Remove Raw DB Access)
 	systemService := services.NewSystemService(sdeRepo)
 
+	// Initialize AuthHandler
+	authHandler := evesso.NewAuthHandler(eveClientID, eveClientSecret)
+
 	// Initialize handlers
 	h := handlers.New(db, sdeRepo, marketRepo, esiClient)
 	tradingHandler := handlers.NewTradingHandler(routeService, sdeRepo, shipService, systemService, characterHelper, cargoService)
@@ -181,12 +191,20 @@ func main() {
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     getEnv("CORS_ORIGINS", "http://localhost:9000"),
-		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, Cookie",
+		AllowMethods:     "GET, POST, OPTIONS",
 		AllowCredentials: true,
 	}))
 
 	// Swagger UI (public, no auth)
 	app.Get("/swagger/*", fiberSwagger.WrapHandler)
+
+	// Auth Routes (no auth middleware)
+	auth := app.Group("/auth")
+	auth.Post("/callback", authHandler.HandleCallback)
+	auth.Get("/session", authHandler.HandleSession)
+	auth.Post("/refresh", authHandler.HandleRefresh)
+	auth.Post("/logout", authHandler.HandleLogout)
 
 	// API Routes
 	api := app.Group("/api/v1")
