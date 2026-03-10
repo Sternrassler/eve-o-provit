@@ -17,13 +17,13 @@ import (
 
 // MockRouteCalculator implements services.RouteCalculatorServicer for testing
 type MockRouteCalculator struct {
-	CalculateFunc            func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error)
+	CalculateFunc            func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error)
 	CalculateWithFiltersFunc func(ctx context.Context, req *models.RouteCalculationRequest) (*models.RouteCalculationResponse, error)
 }
 
-func (m *MockRouteCalculator) Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
+func (m *MockRouteCalculator) Calculate(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
 	if m.CalculateFunc != nil {
-		return m.CalculateFunc(ctx, regionID, shipTypeID, cargoCapacity)
+		return m.CalculateFunc(ctx, regionID, shipTypeID, cargoCapacity, warpSpeed, alignTime)
 	}
 	panic("CalculateFunc not set")
 }
@@ -33,7 +33,7 @@ func (m *MockRouteCalculator) CalculateWithFilters(ctx context.Context, req *mod
 		return m.CalculateWithFiltersFunc(ctx, req)
 	}
 	// Default implementation: call Calculate with basic params
-	return m.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity)
+	return m.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity, nil, nil)
 }
 
 // TestCalculateRoutes_Success_Unit tests successful route calculation
@@ -42,7 +42,7 @@ func TestCalculateRoutes_Success_Unit(t *testing.T) {
 
 	// Mock RouteCalculator
 	mockCalc := &MockRouteCalculator{
-		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
+		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
 			// Verify parameters
 			assert.Equal(t, 10000002, regionID)
 			assert.Equal(t, 648, shipTypeID)
@@ -106,7 +106,7 @@ func TestCalculateRoutes_WithCargoCapacity_Unit(t *testing.T) {
 	app := fiber.New()
 
 	mockCalc := &MockRouteCalculator{
-		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
+		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
 			// Verify custom cargo capacity is passed
 			assert.Equal(t, 20000.0, cargoCapacity)
 
@@ -248,7 +248,7 @@ func TestCalculateRoutes_CalculatorError_Unit(t *testing.T) {
 	app := fiber.New()
 
 	mockCalc := &MockRouteCalculator{
-		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
+		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
 			return nil, errors.New("failed to fetch market orders")
 		},
 	}
@@ -281,7 +281,7 @@ func TestCalculateRoutes_PartialResults_Unit(t *testing.T) {
 	app := fiber.New()
 
 	mockCalc := &MockRouteCalculator{
-		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
+		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
 			return &models.RouteCalculationResponse{
 				RegionID:          10000002,
 				RegionName:        "The Forge",
@@ -329,7 +329,7 @@ func TestCalculateRoutes_EmptyRoutes_Unit(t *testing.T) {
 	app := fiber.New()
 
 	mockCalc := &MockRouteCalculator{
-		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64) (*models.RouteCalculationResponse, error) {
+		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
 			return &models.RouteCalculationResponse{
 				RegionID:          10000002,
 				RegionName:        "The Forge",

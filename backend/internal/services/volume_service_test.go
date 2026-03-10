@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -34,12 +35,12 @@ type MockESIClient struct {
 	mock.Mock
 }
 
-func (m *MockESIClient) FetchMarketHistory(ctx context.Context, regionID, typeID int) ([]database.PriceHistory, error) {
+func (m *MockESIClient) FetchMarketHistory(ctx context.Context, regionID, typeID int) ([]esi.PriceHistoryEntry, error) {
 	args := m.Called(ctx, regionID, typeID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]database.PriceHistory), args.Error(1)
+	return args.Get(0).([]esi.PriceHistoryEntry), args.Error(1)
 }
 
 func TestCalculateLiquidationTime(t *testing.T) {
@@ -170,15 +171,16 @@ func TestFetchAndStoreMarketHistory(t *testing.T) {
 	typeID := 34
 	regionID := 10000002
 
-	// Mock ESI response
+	// Mock ESI response (esi.PriceHistoryEntry — no TypeID/RegionID, service adds those)
 	volume := int64(1000)
 	avgPrice := 5.0
-	esiHistory := []database.PriceHistory{
-		{TypeID: typeID, RegionID: regionID, Date: time.Now(), Volume: &volume, Average: &avgPrice},
+	esiHistory := []esi.PriceHistoryEntry{
+		{Date: time.Now(), Volume: &volume, Average: &avgPrice},
 	}
 
 	mockESI.On("FetchMarketHistory", ctx, regionID, typeID).Return(esiHistory, nil)
-	mockRepo.On("UpsertPriceHistory", ctx, esiHistory).Return(nil)
+	// Service converts entries to database.PriceHistory before storing
+	mockRepo.On("UpsertPriceHistory", ctx, mock.Anything).Return(nil)
 
 	err := vs.FetchAndStoreMarketHistory(ctx, typeID, regionID)
 
@@ -197,7 +199,7 @@ func TestFetchAndStoreMarketHistory_CacheHit(t *testing.T) {
 	regionID := 10000002
 
 	// Mock: ESI returns empty (cache hit)
-	mockESI.On("FetchMarketHistory", ctx, regionID, typeID).Return([]database.PriceHistory{}, nil)
+	mockESI.On("FetchMarketHistory", ctx, regionID, typeID).Return([]esi.PriceHistoryEntry{}, nil)
 	// UpsertPriceHistory should NOT be called
 
 	err := vs.FetchAndStoreMarketHistory(ctx, typeID, regionID)

@@ -8,6 +8,7 @@ import (
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 )
 
 // Constants for volume and liquidity calculations
@@ -38,9 +39,10 @@ type VolumeService struct {
 	esiClient  ESIMarketHistoryFetcher
 }
 
-// ESIMarketHistoryFetcher interface for fetching market history from ESI
+// ESIMarketHistoryFetcher interface for fetching market history from ESI.
+// Returns esi.PriceHistoryEntry values — the service layer converts to database.PriceHistory.
 type ESIMarketHistoryFetcher interface {
-	FetchMarketHistory(ctx context.Context, regionID, typeID int) ([]database.PriceHistory, error)
+	FetchMarketHistory(ctx context.Context, regionID, typeID int) ([]esi.PriceHistoryEntry, error)
 }
 
 // MarketRepositoryInterface extends database operations needed for volume analysis
@@ -59,13 +61,28 @@ func NewVolumeService(marketRepo MarketRepositoryInterface, esiClient ESIMarketH
 
 // FetchAndStoreMarketHistory fetches market history from ESI and stores it in the database
 func (vs *VolumeService) FetchAndStoreMarketHistory(ctx context.Context, typeID, regionID int) error {
-	history, err := vs.esiClient.FetchMarketHistory(ctx, regionID, typeID)
+	entries, err := vs.esiClient.FetchMarketHistory(ctx, regionID, typeID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch market history: %w", err)
 	}
 
-	if len(history) == 0 {
+	if len(entries) == 0 {
 		return nil // No new data (cache hit)
+	}
+
+	// Convert esi.PriceHistoryEntry → database.PriceHistory (service-layer responsibility)
+	history := make([]database.PriceHistory, len(entries))
+	for i, e := range entries {
+		history[i] = database.PriceHistory{
+			TypeID:     typeID,
+			RegionID:   regionID,
+			Date:       e.Date,
+			Highest:    e.Highest,
+			Lowest:     e.Lowest,
+			Average:    e.Average,
+			Volume:     e.Volume,
+			OrderCount: e.OrderCount,
+		}
 	}
 
 	if err := vs.marketRepo.UpsertPriceHistory(ctx, history); err != nil {

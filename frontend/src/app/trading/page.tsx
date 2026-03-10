@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RegionSelect } from "@/components/trading/RegionSelect";
@@ -15,6 +16,7 @@ import { Loader2 } from "lucide-react";
 
 const MAX_DISPLAYED_ROUTES = 50;
 const DEFAULT_REGION = "10000002"; // The Forge
+const DEFAULT_SHIP = "648";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 
 const defaultFilters: TradingFiltersType = {
@@ -26,110 +28,77 @@ const defaultFilters: TradingFiltersType = {
   allowNullSec: false,
 };
 
+async function calculateRoutes(regionId: number, shipTypeId: number): Promise<TradingRoute[]> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/trading/routes/calculate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ region_id: regionId, ship_type_id: shipTypeId }),
+  });
+
+  if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+  const data = await response.json();
+  return data.routes || [];
+}
+
 function TradingPageContent() {
   const { isAuthenticated } = useAuth();
   const [selectedRegion, setSelectedRegion] = useState<string>(DEFAULT_REGION);
-  const [selectedShip, setSelectedShip] = useState<string>("648");
-  const [characterId, setCharacterId] = useState<number | null>(null);
+  const [selectedShip, setSelectedShip] = useState<string>(DEFAULT_SHIP);
   const [filters, setFilters] = useState<TradingFiltersType>(defaultFilters);
-  const [isCalculating, setIsCalculating] = useState(false);
-  const [hasCalculated, setHasCalculated] = useState(false);
   const [displayedRoutes, setDisplayedRoutes] = useState(10);
-  const [apiRoutes, setApiRoutes] = useState<TradingRoute[]>([]);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [characterDataLoading, setCharacterDataLoading] = useState(false);
   const [isRefreshingMarketData, setIsRefreshingMarketData] = useState(false);
 
-  // Load character data when authenticated
+  // Load character location + ship when authenticated
+  const { data: characterData, isPending: characterDataLoading } = useQuery({
+    queryKey: ["characterData", isAuthenticated],
+    queryFn: async () => {
+      const [location, ship] = await Promise.all([
+        fetchCharacterLocation(),
+        fetchCharacterShip(),
+      ]);
+      return { location, ship };
+    },
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Apply character data to selections
   useEffect(() => {
-    const loadCharacterData = async () => {
-      if (!isAuthenticated) return;
-
-      setCharacterDataLoading(true);
-
-      try {
-        // Fetch character location to get region
-        const location = await fetchCharacterLocation();
-        if (location.region_id) {
-          setSelectedRegion(location.region_id.toString());
-        }
-        // Store character ID for fitting display
-        if (location.character_id) {
-          setCharacterId(location.character_id);
-        }
-
-        // Fetch current ship
-        const ship = await fetchCharacterShip();
-        if (ship.ship_type_id) {
-          setSelectedShip(ship.ship_type_id.toString());
-        }
-      } catch (error) {
-        console.error("Failed to load character data:", error);
-        // Keep default values on error
-      } finally {
-        setCharacterDataLoading(false);
-      }
-    };
-
-    loadCharacterData();
-  }, [isAuthenticated]);
-
-  const handleCalculate = async () => {
-    setIsCalculating(true);
-    setHasCalculated(false);
-    setApiError(null);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/trading/routes/calculate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          region_id: parseInt(selectedRegion),
-          ship_type_id: parseInt(selectedShip),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setApiRoutes(data.routes || []);
-      setHasCalculated(true);
-    } catch (error) {
-      console.error("Failed to calculate routes:", error);
-      setApiError(error instanceof Error ? error.message : "Unknown error");
-      setApiRoutes([]);
-    } finally {
-      setIsCalculating(false);
-      setDisplayedRoutes(10);
+    if (!characterData) return;
+    if (characterData.location.region_id) {
+      setSelectedRegion(characterData.location.region_id.toString());
     }
-  };
+    if (characterData.ship.ship_type_id) {
+      setSelectedShip(characterData.ship.ship_type_id.toString());
+    }
+  }, [characterData]);
+
+  const characterId = characterData?.location.character_id ?? null;
+
+  // Route calculation mutation (triggered by button click)
+  const routeMutation = useMutation({
+    mutationFn: () =>
+      calculateRoutes(parseInt(selectedRegion), parseInt(selectedShip)),
+    onSuccess: () => setDisplayedRoutes(10),
+  });
 
   const filteredRoutes = useMemo(() => {
-    if (!hasCalculated) return [];
+    if (!routeMutation.isSuccess || !routeMutation.data) return [];
 
-    return apiRoutes.filter((route) => {
+    return routeMutation.data.filter((route) => {
       const travelTimeMinutes = route.travel_time_seconds / 60;
       const totalProfit = route.total_profit ?? route.profit ?? 0;
-      
-      // Filter out routes with negative net profit (loss)
       const netProfit = route.net_profit ?? totalProfit;
+
       if (netProfit < 0) return false;
-      
-      // Check basic filters
       if (route.spread_percent < filters.minSpread) return false;
       if (totalProfit < filters.minProfit) return false;
       if (travelTimeMinutes > filters.maxTravelTime) return false;
 
-      // Check security zone filters
-      // Use min_route_security_status if available (considers entire route)
-      // Otherwise fall back to min of buy/sell (backward compatibility)
-      const minSecStatus = route.min_route_security_status ?? 
-                           Math.min(route.buy_security_status ?? 1.0, route.sell_security_status ?? 1.0);
+      const minSecStatus =
+        route.min_route_security_status ??
+        Math.min(route.buy_security_status ?? 1.0, route.sell_security_status ?? 1.0);
 
       const isHighSec = minSecStatus >= 0.5;
       const isLowSec = minSecStatus > 0.0 && minSecStatus < 0.5;
@@ -141,20 +110,28 @@ function TradingPageContent() {
 
       return true;
     });
-  }, [hasCalculated, apiRoutes, filters]);
+  }, [routeMutation.isSuccess, routeMutation.data, filters]);
 
   const visibleRoutes = filteredRoutes.slice(0, displayedRoutes);
-  const hasMoreRoutes = displayedRoutes < filteredRoutes.length && displayedRoutes < MAX_DISPLAYED_ROUTES;
+  const hasMoreRoutes =
+    displayedRoutes < filteredRoutes.length &&
+    displayedRoutes < MAX_DISPLAYED_ROUTES;
 
-  const handleShowMore = () => {
-    setDisplayedRoutes((prev) => Math.min(prev + 10, MAX_DISPLAYED_ROUTES));
-  };
+  const isCalculateDisabled =
+    !selectedRegion ||
+    !selectedShip ||
+    routeMutation.isPending ||
+    characterDataLoading ||
+    isRefreshingMarketData;
 
-  const isCalculateDisabled = !selectedRegion || !selectedShip || isCalculating || characterDataLoading || isRefreshingMarketData;
+  const apiError = routeMutation.isError
+    ? routeMutation.error instanceof Error
+      ? routeMutation.error.message
+      : "Unbekannter Fehler"
+    : undefined;
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold">Trading</h1>
         <p className="text-muted-foreground">
@@ -162,35 +139,38 @@ function TradingPageContent() {
         </p>
       </div>
 
-      {/* Control Panel */}
       <div className="mb-8 grid gap-6 lg:grid-cols-[300px_1fr]">
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Region & Ship Selection */}
           <div className="space-y-4 rounded-lg border p-4">
             <RegionSelect
               value={selectedRegion}
               onChange={setSelectedRegion}
-              disabled={isCalculating || characterDataLoading}
+              disabled={routeMutation.isPending || characterDataLoading}
               onRefreshStateChange={setIsRefreshingMarketData}
             />
             <ShipSelect
               value={selectedShip}
               onChange={setSelectedShip}
-              disabled={isCalculating || characterDataLoading}
+              disabled={routeMutation.isPending || characterDataLoading}
               authenticated={isAuthenticated}
             />
             <Button
               className="w-full"
-              onClick={handleCalculate}
+              onClick={() => routeMutation.mutate()}
               disabled={isCalculateDisabled}
             >
-              {(isCalculating || characterDataLoading) && <Loader2 className="mr-2 size-4 animate-spin" />}
-              {characterDataLoading ? "Lade Character-Daten..." : isCalculating ? "Berechne..." : "Berechnen"}
+              {(routeMutation.isPending || characterDataLoading) && (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              )}
+              {characterDataLoading
+                ? "Lade Character-Daten..."
+                : routeMutation.isPending
+                ? "Berechne..."
+                : "Berechnen"}
             </Button>
           </div>
 
-          {/* Ship Fitting Display */}
           {isAuthenticated && characterId && selectedShip && (
             <ShipFittingCard
               characterId={characterId}
@@ -198,13 +178,12 @@ function TradingPageContent() {
             />
           )}
 
-          {/* Filters */}
           <TradingFilters filters={filters} onChange={setFilters} />
         </div>
 
-        {/* Results Section */}
+        {/* Results */}
         <div className="space-y-6">
-          {hasCalculated && (
+          {routeMutation.isSuccess && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
                 {filteredRoutes.length} Routen gefunden
@@ -216,15 +195,23 @@ function TradingPageContent() {
 
           <TradingRouteList
             routes={visibleRoutes}
-            loading={isCalculating}
-            error={apiError || undefined}
-            onRetry={handleCalculate}
+            loading={routeMutation.isPending}
+            error={apiError}
+            onRetry={() => routeMutation.mutate()}
           />
 
-          {hasCalculated && hasMoreRoutes && (
+          {routeMutation.isSuccess && hasMoreRoutes && (
             <div className="flex justify-center">
-              <Button variant="outline" onClick={handleShowMore}>
-                Mehr anzeigen (noch {Math.min(filteredRoutes.length - displayedRoutes, 10)})
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setDisplayedRoutes((prev) =>
+                    Math.min(prev + 10, MAX_DISPLAYED_ROUTES)
+                  )
+                }
+              >
+                Mehr anzeigen (noch{" "}
+                {Math.min(filteredRoutes.length - displayedRoutes, 10)})
               </Button>
             </div>
           )}

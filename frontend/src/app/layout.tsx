@@ -6,6 +6,7 @@ import { AuthProvider } from "@/lib/auth-context";
 import { TradingSkillsProvider } from "@/lib/trading-skills-context";
 import { Toaster } from "@/components/ui/toaster";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ReactQueryProvider } from "@/lib/query-client";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ReactQueryProvider>
         <AuthProvider>
           <TradingSkillsProvider>
             <Navigation />
@@ -41,6 +43,7 @@ export default function RootLayout({
             <Toaster />
           </TradingSkillsProvider>
         </AuthProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   );

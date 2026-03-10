@@ -1,4 +1,7 @@
 // types/trading.ts
+
+export type LoadingState = "idle" | "loading" | "success" | "error";
+
 export interface TradingRoute {
   rank?: number; // Optional for API responses
   item_type_id: number;

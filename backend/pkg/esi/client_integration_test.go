@@ -31,7 +31,7 @@ func TestNewClient(t *testing.T) {
 		MaxRetries:     3,
 	}
 
-	client, err := NewClient(redisClient, cfg, nil)
+	client, err := NewClient(redisClient, cfg)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 	assert.NotNil(t, client.esi)
@@ -55,7 +55,7 @@ func TestGetRawClient(t *testing.T) {
 		MaxRetries:     3,
 	}
 
-	client, err := NewClient(redisClient, cfg, nil)
+	client, err := NewClient(redisClient, cfg)
 	require.NoError(t, err)
 	defer client.Close()
 
@@ -80,7 +80,7 @@ func TestClose(t *testing.T) {
 		MaxRetries:     3,
 	}
 
-	client, err := NewClient(redisClient, cfg, nil)
+	client, err := NewClient(redisClient, cfg)
 	require.NoError(t, err)
 
 	err = client.Close()
@@ -149,7 +149,7 @@ func TestFetchMarketOrdersPage(t *testing.T) {
 		MaxRetries:     3,
 	}
 
-	client, err := NewClient(redisClient, cfg, nil)
+	client, err := NewClient(redisClient, cfg)
 	require.NoError(t, err)
 	defer client.Close()
 
@@ -237,10 +237,9 @@ func TestClient_NilRepository(t *testing.T) {
 	}
 
 	// Should work even without repository (for read-only operations)
-	client, err := NewClient(redisClient, cfg, nil)
+	client, err := NewClient(redisClient, cfg)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
-	assert.Nil(t, client.repo)
 	defer client.Close()
 }
 
@@ -357,7 +356,7 @@ func TestNewClient_InvalidRedis(t *testing.T) {
 	}
 
 	// Client creation should succeed (connection is lazy)
-	client, err := NewClient(redisClient, cfg, nil)
+	client, err := NewClient(redisClient, cfg)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 	defer client.Close()
@@ -380,7 +379,7 @@ func TestConfig_CustomValues(t *testing.T) {
 	})
 	defer redisClient.Close()
 
-	client, err := NewClient(redisClient, cfg, nil)
+	client, err := NewClient(redisClient, cfg)
 	require.NoError(t, err)
 	assert.NotNil(t, client)
 	defer client.Close()

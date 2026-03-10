@@ -81,7 +81,7 @@ func TestGetMarketOrders_Integration(t *testing.T) {
 		RateLimit:      20,
 		ErrorThreshold: 10,
 		MaxRetries:     3,
-	}, marketRepo)
+	})
 	require.NoError(t, err)
 
 	// Create handler with ESI client (db=nil, sdeRepo=nil, marketRepo, esiClient)
@@ -134,7 +134,7 @@ func TestGetMarketOrders_Integration_InvalidParams(t *testing.T) {
 		RateLimit:      20,
 		ErrorThreshold: 10,
 		MaxRetries:     3,
-	}, marketRepo)
+	})
 	require.NoError(t, err)
 
 	handler := New(nil, nil, marketRepo, esiClient)
@@ -195,7 +195,7 @@ func TestGetMarketOrders_Integration_EmptyResult(t *testing.T) {
 		RateLimit:      20,
 		ErrorThreshold: 10,
 		MaxRetries:     3,
-	}, marketRepo)
+	})
 	require.NoError(t, err)
 
 	handler := New(nil, nil, marketRepo, esiClient)

@@ -1,7 +1,22 @@
 // Package esi - Interface definitions for ESI client
 package esi
 
-import "context"
+import (
+	"context"
+	"time"
+)
+
+// PriceHistoryEntry holds a single day's market history data from ESI.
+// This type lives in pkg/esi to decouple the ESI client from the database layer.
+// The service layer maps this to database.PriceHistory.
+type PriceHistoryEntry struct {
+	Date       time.Time
+	Highest    *float64
+	Lowest     *float64
+	Average    *float64
+	Volume     *int64
+	OrderCount *int
+}
 
 // AutopilotWaypointSetter defines the interface for setting autopilot waypoints via ESI
 type AutopilotWaypointSetter interface {
