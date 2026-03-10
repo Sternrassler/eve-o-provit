@@ -256,9 +256,18 @@ func main() {
 // @Failure 401 {object} models.ErrorResponse
 // @Router /api/v1/character [get]
 func handleCharacterInfo(c *fiber.Ctx) error {
-	characterID := c.Locals("character_id").(int)
-	characterName := c.Locals("character_name").(string)
-	scopes := c.Locals("scopes").(string)
+	characterID, ok := c.Locals("character_id").(int)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+	characterName, ok := c.Locals("character_name").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
+	scopes, ok := c.Locals("scopes").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
 
 	return c.JSON(fiber.Map{
 		"character_id":   characterID,
@@ -269,7 +278,10 @@ func handleCharacterInfo(c *fiber.Ctx) error {
 }
 
 func handleProfitMargins(c *fiber.Ctx) error {
-	characterName := c.Locals("character_name").(string)
+	characterName, ok := c.Locals("character_name").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
 
 	return c.JSON(fiber.Map{
 		"message":    "Profit margins endpoint - TODO",
@@ -279,7 +291,10 @@ func handleProfitMargins(c *fiber.Ctx) error {
 }
 
 func handleBlueprints(c *fiber.Ctx) error {
-	characterName := c.Locals("character_name").(string)
+	characterName, ok := c.Locals("character_name").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
+	}
 
 	return c.JSON(fiber.Map{
 		"message":    "Blueprints endpoint - TODO",

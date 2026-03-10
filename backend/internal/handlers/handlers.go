@@ -3,7 +3,7 @@ package handlers
 
 import (
 	"context"
-	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -293,7 +293,7 @@ func (h *Handler) GetRegions(c *fiber.Ctx) error {
 
 	regions, err := h.regionQuerier.GetAllRegions(c.Context())
 	if err != nil {
-		fmt.Printf("ERROR: Failed to fetch regions: %v\n", err)
+		log.Printf("ERROR: Failed to fetch regions: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Failed to fetch regions",
 			"details": err.Error(),
