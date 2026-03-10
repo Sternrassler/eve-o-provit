@@ -38,6 +38,8 @@ func ExchangeCode(ctx context.Context, code, redirectURI, clientID, clientSecret
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Host", "login.eveonline.com")
+	req.Header.Set("User-Agent", "eve-o-provit/0.1.0 (https://github.com/Sternrassler/eve-o-provit)")
 	req.SetBasicAuth(clientID, clientSecret)
 
 	client := &http.Client{}
@@ -73,6 +75,8 @@ func RefreshToken(ctx context.Context, refreshToken, clientID, clientSecret stri
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Host", "login.eveonline.com")
+	req.Header.Set("User-Agent", "eve-o-provit/0.1.0 (https://github.com/Sternrassler/eve-o-provit)")
 	req.SetBasicAuth(clientID, clientSecret)
 
 	client := &http.Client{}
