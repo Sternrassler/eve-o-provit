@@ -5,6 +5,7 @@ import { Navigation } from "@/components/navigation";
 import { AuthProvider } from "@/lib/auth-context";
 import { TradingSkillsProvider } from "@/lib/trading-skills-context";
 import { Toaster } from "@/components/ui/toaster";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +35,9 @@ export default function RootLayout({
         <AuthProvider>
           <TradingSkillsProvider>
             <Navigation />
-            <main className="min-h-[calc(100vh-4rem)]">{children}</main>
+            <main className="min-h-[calc(100vh-4rem)]">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </main>
             <Toaster />
           </TradingSkillsProvider>
         </AuthProvider>

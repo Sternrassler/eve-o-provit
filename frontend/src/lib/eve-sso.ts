@@ -195,27 +195,16 @@ export function validateState(receivedState: string): boolean {
  */
 export const TokenStorage = {
   save(token: EVETokenResponse): void {
-    console.log("[TokenStorage] Saving token to localStorage...");
-    console.log("[TokenStorage] Access token length:", token.access_token?.length);
-    console.log("[TokenStorage] Has refresh token:", !!token.refresh_token);
-    console.log("[TokenStorage] Expires in:", token.expires_in, "seconds");
-    
     localStorage.setItem("eve_access_token", token.access_token);
     if (token.refresh_token) {
       localStorage.setItem("eve_refresh_token", token.refresh_token);
     }
     const expiresAt = Date.now() + token.expires_in * 1000;
     localStorage.setItem("eve_token_expires_at", expiresAt.toString());
-    
-    console.log("[TokenStorage] Token saved. Verifying...");
-    console.log("[TokenStorage] Stored access token:", localStorage.getItem("eve_access_token")?.substring(0, 20) + "...");
-    console.log("[TokenStorage] Stored refresh token:", localStorage.getItem("eve_refresh_token") ? "exists" : "missing");
   },
 
   getAccessToken(): string | null {
-    const token = localStorage.getItem("eve_access_token");
-    console.log("[TokenStorage] Getting access token:", token ? "found" : "not found");
-    return token;
+    return localStorage.getItem("eve_access_token");
   },
 
   getRefreshToken(): string | null {
@@ -224,18 +213,12 @@ export const TokenStorage = {
 
   isExpired(): boolean {
     const expiresAt = localStorage.getItem("eve_token_expires_at");
-    console.log("[TokenStorage] Checking expiry, expires_at:", expiresAt);
     if (!expiresAt) {
-      console.log("[TokenStorage] No expiry timestamp found, considering expired");
       return true;
     }
     const now = Date.now();
     const expiryTime = parseInt(expiresAt, 10);
-    const isExpired = now >= expiryTime;
-    console.log("[TokenStorage] Now:", new Date(now).toISOString());
-    console.log("[TokenStorage] Expires:", new Date(expiryTime).toISOString());
-    console.log("[TokenStorage] Is expired:", isExpired);
-    return isExpired;
+    return now >= expiryTime;
   },
 
   getTimeUntilExpiry(): number {
@@ -251,12 +234,10 @@ export const TokenStorage = {
   },
 
   clear(): void {
-    console.log("[TokenStorage] Clearing all tokens from localStorage");
     localStorage.removeItem("eve_access_token");
     localStorage.removeItem("eve_refresh_token");
     localStorage.removeItem("eve_token_expires_at");
     localStorage.removeItem("eve_character_info");
-    console.log("[TokenStorage] Tokens cleared");
   },
 
   saveCharacterInfo(info: EVECharacterInfo): void {

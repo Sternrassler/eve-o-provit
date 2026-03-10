@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RegionSelect } from "@/components/trading/RegionSelect";
 import { ShipSelect } from "@/components/trading/ShipSelect";
 import { ShipFittingCard } from "@/components/trading/ShipFittingCard";
@@ -25,7 +26,7 @@ const defaultFilters: TradingFiltersType = {
   allowNullSec: false,
 };
 
-export default function TradingPage() {
+function TradingPageContent() {
   const { isAuthenticated, getAuthHeader } = useAuth();
   const [selectedRegion, setSelectedRegion] = useState<string>(DEFAULT_REGION);
   const [selectedShip, setSelectedShip] = useState<string>("648");
@@ -240,5 +241,13 @@ export default function TradingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TradingPage() {
+  return (
+    <ErrorBoundary>
+      <TradingPageContent />
+    </ErrorBoundary>
   );
 }

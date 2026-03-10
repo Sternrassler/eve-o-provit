@@ -41,7 +41,6 @@ export function TradingSkillsProvider({ children }: { children: React.ReactNode 
 
   const fetchSkills = useCallback(async () => {
     if (!character?.character_id || !accessToken) {
-      console.log("[TradingSkillsContext] No character or token, using default skills");
       setSkills(getDefaultSkills());
       setLoading(false);
       return;
@@ -51,8 +50,6 @@ export function TradingSkillsProvider({ children }: { children: React.ReactNode 
     setError(null);
 
     try {
-      console.log("[TradingSkillsContext] Fetching skills for character:", character.character_id);
-      
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001"}/api/v1/characters/${character.character_id}/skills`,
         {
@@ -68,8 +65,6 @@ export function TradingSkillsProvider({ children }: { children: React.ReactNode 
       }
 
       const data = await response.json();
-      console.log("[TradingSkillsContext] Skills fetched:", data);
-      
       setSkills(data.skills);
       setError(null);
     } catch (err) {
@@ -86,17 +81,14 @@ export function TradingSkillsProvider({ children }: { children: React.ReactNode 
   // Auto-fetch on login
   useEffect(() => {
     if (isAuthenticated && character) {
-      console.log("[TradingSkillsContext] Character authenticated, fetching skills");
       fetchSkills();
     } else {
-      console.log("[TradingSkillsContext] Not authenticated, using default skills");
       setSkills(getDefaultSkills());
       setLoading(false);
     }
   }, [isAuthenticated, character, fetchSkills]);
 
   const refreshSkills = useCallback(async () => {
-    console.log("[TradingSkillsContext] Manual refresh requested");
     await fetchSkills();
   }, [fetchSkills]);
 

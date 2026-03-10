@@ -57,11 +57,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const token = TokenStorage.getAccessToken();
       
-      console.log("[AuthContext] Checking session, token:", token ? "exists" : "none");
-      
       if (!token || TokenStorage.isExpired()) {
         // No valid token
-        console.log("[AuthContext] No valid token, clearing session");
         setIsAuthenticated(false);
         setCharacter(null);
         setAccessToken(null);
@@ -70,12 +67,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log("[AuthContext] Verifying token with EVE ESI...");
-      
       // Verify token with EVE ESI
       const charInfo = await verifyToken(token);
-      
-      console.log("[AuthContext] Token verified, character:", charInfo.CharacterName);
       
       // Convert to our format
       const character: CharacterInfo = {
@@ -89,9 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCharacter(character);
       setAccessToken(token);
       setIsAuthenticated(true);
-      
-      console.log("[AuthContext] Session set, authenticated:", true);
-      
+
       // Save character info
       TokenStorage.saveCharacterInfo(charInfo);
     } catch (error) {
@@ -105,7 +96,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Only clear tokens if it's an auth error (401/403), not network errors
       if (error instanceof Error && error.message.includes("401")) {
-        console.log("[AuthContext] Token invalid (401), clearing storage");
         TokenStorage.clear();
       }
     } finally {
@@ -119,7 +109,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Listen for custom event from callback page
     const handleLoginSuccess = () => {
-      console.log("[AuthContext] Login success event received, checking session...");
       // Small delay to ensure localStorage is fully written
       setTimeout(() => {
         checkSession();
@@ -144,15 +133,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log("[AuthContext] Refreshing access token...");
-      
       const newToken = await refreshAccessToken(refreshToken, EVE_CLIENT_ID);
       
       // Save new token
       TokenStorage.save(newToken);
       setAccessToken(newToken.access_token);
-      
-      console.log("[AuthContext] Token refreshed successfully");
     } catch (error) {
       console.error("[AuthContext] Token refresh failed:", error);
       // On refresh failure, logout user
@@ -168,7 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         // Check if token needs refresh (3 minutes before expiry)
         if (TokenStorage.shouldRefresh()) {
-          console.log("[AuthContext] Token expiring soon, refreshing...");
           await performTokenRefresh();
         }
       } catch (error) {
