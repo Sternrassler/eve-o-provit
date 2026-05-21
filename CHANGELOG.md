@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- GitHub-Workflows (`codeql-analysis`, `integration-tests`, `lint-test`, `load-tests`, `pr-quality-gates`, `test-migrations`, `workflow-run-cleanup`)
+- Issue-Templates (`bug_issue`, `feature_issue`) und Template-Config
+- `CODEOWNERS`
+- `copilot-instructions.md` und `copilot-instructions-old.md`
+
 ## [0.5.0] - 2025-11-13
 
 ### Added
