@@ -280,7 +280,10 @@ func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
 // @Router /api/v1/esi/ui/autopilot/waypoint [post]
 func (h *TradingHandler) SetAutopilotWaypoint(c *fiber.Ctx) error {
 	// Extract auth context
-	accessToken := c.Locals("access_token").(string)
+	accessToken, ok := c.Locals("access_token").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
 
 	// Parse request body
 	var req struct {
