@@ -10,6 +10,7 @@ import (
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/services/esiconfig"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 	"github.com/redis/go-redis/v9"
 )
@@ -47,8 +48,7 @@ type TradingSkills struct {
 	CorpStanding            float64 // Corp standing (-10.0 to +10.0, affects broker fees: -0.02% per 1.0)
 
 	// Cargo Skills
-	SpaceshipCommand  int // +5% cargo capacity per level (max +25%)
-	CargoOptimization int // Ship-specific cargo bonus (+5% per level, max +25%)
+	SpaceshipCommand int // +5% cargo capacity per level (max +25%)
 
 	// Navigation Skills
 	Navigation         int // Warp speed increase (+5% per level, max +25%)
@@ -144,7 +144,7 @@ func (s *SkillsService) fetchSkillsFromESI(ctx context.Context, characterID int,
 	endpoint := fmt.Sprintf("/v4/characters/%d/skills/", characterID)
 
 	// Create HTTP request with context
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://esi.evetech.net"+endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", esiconfig.BaseURL+endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -185,7 +185,7 @@ func (s *SkillsService) fetchStandingsFromESI(ctx context.Context, characterID i
 	endpoint := fmt.Sprintf("/v2/characters/%d/standings/", characterID)
 
 	// Create HTTP request with context
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://esi.evetech.net"+endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", esiconfig.BaseURL+endpoint, nil)
 	if err != nil {
 		s.logger.Warn("Failed to create standings request", "error", err)
 		return 0.0, 0.0
@@ -323,7 +323,6 @@ func (s *SkillsService) getDefaultSkills() *TradingSkills {
 		FactionStanding:         0.0,
 		CorpStanding:            0.0,
 		SpaceshipCommand:        0,
-		CargoOptimization:       0,
 		Navigation:              0,
 		EvasiveManeuvering:      0,
 		GallenteIndustrial:      0,

@@ -1,6 +1,7 @@
 package dogma
 
 import (
+	"math"
 	"testing"
 
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/testutil"
@@ -200,6 +201,22 @@ func TestCalculateCargoBonus_Combined(t *testing.T) {
 	t.Logf("   + 5× Expanded Cargohold I: %.2f m³", 6047.18)
 	t.Logf("   + 3× Medium Cargohold Optimization I: %.2f m³", finalCapacity)
 	t.Logf("   Final: %.2f m³", finalCapacity)
+}
+
+// TestApplyModifier_Op4_CargoMultiplier verifiziert, dass op4 den SDE-Multiplikator korrekt anwendet.
+// Expanded Cargohold II: Attr 149 = 1.275 (raw multiplier, per SDE-Verifikation).
+// 1 Modul auf 1000 m³ Basis → 1275 m³.
+func TestApplyModifier_Op4_CargoMultiplier(t *testing.T) {
+	mod := ModifierInfo{Operation: 4}
+	got := ApplyModifier(1000.0, mod, 1.275, 1)
+	if math.Abs(got-1275.0) > 0.01 {
+		t.Errorf("ApplyModifier op4 = %.2f, want 1275.00", got)
+	}
+	// 2 Module (kein Stacking-Penalty bei Cargo, stackable=1): 1000 * 1.275² = 1625.625
+	got2 := ApplyModifier(1000.0, mod, 1.275, 2)
+	if math.Abs(got2-1625.625) > 0.01 {
+		t.Errorf("ApplyModifier op4 count=2 = %.4f, want 1625.6250", got2)
+	}
 }
 
 // Helper: almostEqual checks float equality with tolerance

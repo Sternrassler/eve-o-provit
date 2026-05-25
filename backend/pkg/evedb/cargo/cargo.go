@@ -351,7 +351,7 @@ func GetShipCapacitiesDeterministic(
 
 				// Determine source type (Module vs Rig)
 				source := "Module"
-				if items[0].Slot[:3] == "Rig" {
+				if len(items[0].Slot) >= 3 && items[0].Slot[:3] == "Rig" {
 					source = "Rig"
 				}
 
@@ -381,7 +381,7 @@ func GetShipCapacitiesDeterministic(
 func getCharacterSkillLevel(charSkills *CharacterSkills, skillTypeID int64) int {
 	for _, skill := range charSkills.Skills {
 		if skill.SkillID == skillTypeID {
-			return skill.TrainedSkillLevel
+			return skill.ActiveSkillLevel
 		}
 	}
 	return 0

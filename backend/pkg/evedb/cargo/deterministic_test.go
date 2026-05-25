@@ -20,7 +20,7 @@ func TestGetShipCapacitiesDeterministic_Nereus_Scenario1(t *testing.T) {
 			ActiveSkillLevel  int   `json:"active_skill_level"`
 			TrainedSkillLevel int   `json:"trained_skill_level"`
 		}{
-			{SkillID: 3340, TrainedSkillLevel: 1}, // Gallente Hauler I
+			{SkillID: 3340, ActiveSkillLevel: 1, TrainedSkillLevel: 1}, // Gallente Hauler I
 		},
 	}
 
@@ -50,7 +50,7 @@ func TestGetShipCapacitiesDeterministic_Nereus_Scenario2(t *testing.T) {
 			ActiveSkillLevel  int   `json:"active_skill_level"`
 			TrainedSkillLevel int   `json:"trained_skill_level"`
 		}{
-			{SkillID: 3340, TrainedSkillLevel: 5}, // Gallente Hauler V
+			{SkillID: 3340, ActiveSkillLevel: 5, TrainedSkillLevel: 5}, // Gallente Hauler V
 		},
 	}
 
@@ -80,7 +80,7 @@ func TestGetShipCapacitiesDeterministic_Nereus_Scenario3(t *testing.T) {
 			ActiveSkillLevel  int   `json:"active_skill_level"`
 			TrainedSkillLevel int   `json:"trained_skill_level"`
 		}{
-			{SkillID: 3340, TrainedSkillLevel: 1}, // Gallente Hauler I
+			{SkillID: 3340, ActiveSkillLevel: 1, TrainedSkillLevel: 1}, // Gallente Hauler I
 		},
 	}
 

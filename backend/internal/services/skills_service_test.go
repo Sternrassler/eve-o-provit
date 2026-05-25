@@ -390,7 +390,6 @@ func TestSkillsService_GetDefaultSkills(t *testing.T) {
 	assert.Equal(t, 0.0, result.FactionStanding)
 	assert.Equal(t, 0.0, result.CorpStanding)
 	assert.Equal(t, 0, result.SpaceshipCommand)
-	assert.Equal(t, 0, result.CargoOptimization)
 	assert.Equal(t, 0, result.Navigation)
 	assert.Equal(t, 0, result.EvasiveManeuvering)
 	assert.Equal(t, 0, result.GallenteIndustrial)

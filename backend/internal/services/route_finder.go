@@ -224,7 +224,9 @@ func (rf *RouteFinder) fetchMarketOrders(ctx context.Context, regionID int) ([]d
 		go func() {
 			cacheCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			_ = rf.marketCache.Set(cacheCtx, regionID, allOrders)
+			if err := rf.marketCache.Set(cacheCtx, regionID, allOrders); err != nil {
+				log.Printf("Warning: failed to update market cache for region %d: %v", regionID, err)
+			}
 		}()
 	}
 
