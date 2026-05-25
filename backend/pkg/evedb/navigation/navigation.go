@@ -216,8 +216,9 @@ func loadGraph(db *sql.DB, avoidLowSec bool) (map[int64][]edge, error) {
 		query = `
 			SELECT DISTINCT g.from_system_id, g.to_system_id
 			FROM v_stargate_graph g
-			LEFT JOIN mapSolarSystems sys ON g.to_system_id = sys._key
-			WHERE sys.securityStatus >= 0.45 OR sys.securityStatus IS NULL
+			JOIN mapSolarSystems sf ON g.from_system_id = sf._key
+			JOIN mapSolarSystems st ON g.to_system_id = st._key
+			WHERE sf.securityStatus >= 0.45 AND st.securityStatus >= 0.45
 		`
 	} else {
 		query = `
