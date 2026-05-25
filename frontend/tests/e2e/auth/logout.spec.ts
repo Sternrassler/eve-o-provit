@@ -1,7 +1,5 @@
 import { test, expect, request as playwrightRequest } from '@playwright/test';
-import { AUTH_ENDPOINTS } from '../helpers/constants';
-
-const STORAGE_STATE = 'playwright/.auth/user.json';
+import { AUTH_ENDPOINTS, STORAGE_STATE } from '../helpers/constants';
 
 test.describe('Logout', () => {
   // Isolated context seeded from the captured state so logging out here does not

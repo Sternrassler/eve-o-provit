@@ -12,7 +12,9 @@ export default defineConfig({
   testDir: './tests/e2e',
   timeout: 60 * 1000,
   fullyParallel: false,
-  retries: 0,
+  // One retry absorbs transient hiccups from the live backend / market data
+  // (refresh + recalc) without masking real, reproducible failures.
+  retries: 1,
   use: {
     baseURL: 'http://localhost:9000',
     screenshot: 'only-on-failure',

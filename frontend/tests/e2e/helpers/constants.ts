@@ -1,5 +1,8 @@
 /** Shared E2E constants. */
 
+/** Captured real session reused by the `auth` project (gitignored). */
+export const STORAGE_STATE = 'playwright/.auth/user.json';
+
 /** Backend base URL (matches NEXT_PUBLIC_API_URL default in lib/api-client.ts). */
 export const API_BASE_URL = 'http://localhost:9001';
 
