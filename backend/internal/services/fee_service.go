@@ -7,13 +7,14 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 )
 
-// Fees contains all calculated trading fees for a transaction
+// Fees contains all calculated trading fees for a transaction.
+// Trading-Modell A (Sofort-Arbitrage): nur SalesTax ist > 0; Broker/Relist sind stets 0.
 type Fees struct {
 	SalesTax           float64 // Sales tax on sell orders (base 5%, reduced by Accounting)
-	BrokerFeeBuy       float64 // Broker fee for buy order placement (base 3%)
-	BrokerFeeSell      float64 // Broker fee for sell order placement (base 3%)
-	EstimatedRelistFee float64 // Estimated relist fees (based on market volatility)
-	TotalFees          float64 // Sum of all fees
+	BrokerFeeBuy       float64 // Modell A: 0 (keine Order-Platzierung)
+	BrokerFeeSell      float64 // Modell A: 0 (keine Order-Platzierung)
+	EstimatedRelistFee float64 // Modell A: 0 (kein Relisting)
+	TotalFees          float64 // Sum of all fees (== SalesTax unter Modell A)
 }
 
 // FeeService provides trading fee calculations with skill integration
@@ -33,9 +34,9 @@ func NewFeeService(
 	}
 }
 
-// CalculateFees calculates all trading fees for a transaction
-// Integrates with SkillsService to get character skills for accurate fee calculation
-// Falls back to worst-case fees (no skills) if skills cannot be fetched
+// CalculateFees calculates all trading fees for a transaction.
+// Trading-Modell A (Sofort-Arbitrage): Kauf/Verkauf gegen bestehende Orders.
+// Es fallen KEINE Broker-Fees an (keine Order-Platzierung), nur Sales-Tax beim Verkauf.
 func (s *FeeService) CalculateFees(
 	ctx context.Context,
 	characterID int,
@@ -43,62 +44,27 @@ func (s *FeeService) CalculateFees(
 	buyValue float64,
 	sellValue float64,
 ) (*Fees, error) {
-	// 1. Get character skills (with graceful degradation)
-	skills, err := s.skillsService.GetCharacterSkills(ctx, characterID, accessToken)
-	if err != nil {
-		s.logger.Warn("Failed to fetch skills - using worst-case fees",
-			"error", err,
-			"characterID", characterID)
-		// Fallback: worst-case fees (all skills = 0)
-		skills = &TradingSkills{
-			Accounting:              0,
-			BrokerRelations:         0,
-			AdvancedBrokerRelations: 0,
-			FactionStanding:         0.0,
-			CorpStanding:            0.0,
+	// Trading-Modell A (Sofort-Arbitrage): Kauf/Verkauf gegen bestehende Orders.
+	// Es fallen KEINE Broker-Fees an (keine Order-Platzierung), nur Sales-Tax beim Verkauf.
+	accounting := 0 // worst-case, falls Skills nicht ladbar
+	if s.skillsService != nil {
+		skills, err := s.skillsService.GetCharacterSkills(ctx, characterID, accessToken)
+		if err != nil {
+			s.logger.Warn("Failed to fetch skills - using worst-case sales tax",
+				"error", err, "characterID", characterID)
+		} else {
+			accounting = skills.Accounting
 		}
 	}
 
-	// 2. Calculate individual fees
-	salesTax := s.CalculateSalesTax(skills.Accounting, sellValue)
-	brokerFeeBuy := s.CalculateBrokerFee(
-		skills.BrokerRelations,
-		skills.AdvancedBrokerRelations,
-		skills.FactionStanding,
-		skills.CorpStanding,
-		buyValue,
-	)
-	brokerFeeSell := s.CalculateBrokerFee(
-		skills.BrokerRelations,
-		skills.AdvancedBrokerRelations,
-		skills.FactionStanding,
-		skills.CorpStanding,
-		sellValue,
-	)
-
-	// 3. Estimate relist fees (assume 3 relists per day at 50% of broker fee)
-	// This is a conservative estimate for market volatility
-	estimatedRelistFee := brokerFeeSell * 0.5 * 3
-
-	// 4. Total all fees
-	totalFees := salesTax + brokerFeeBuy + brokerFeeSell + estimatedRelistFee
-
-	s.logger.Debug("Calculated trading fees",
-		"characterID", characterID,
-		"salesTax", salesTax,
-		"brokerFeeBuy", brokerFeeBuy,
-		"brokerFeeSell", brokerFeeSell,
-		"totalFees", totalFees,
-		"accounting", skills.Accounting,
-		"brokerRelations", skills.BrokerRelations,
-	)
+	salesTax := s.CalculateSalesTax(accounting, sellValue)
 
 	return &Fees{
 		SalesTax:           salesTax,
-		BrokerFeeBuy:       brokerFeeBuy,
-		BrokerFeeSell:      brokerFeeSell,
-		EstimatedRelistFee: estimatedRelistFee,
-		TotalFees:          totalFees,
+		BrokerFeeBuy:       0, // Modell A: keine Broker-Fee
+		BrokerFeeSell:      0, // Modell A: keine Broker-Fee
+		EstimatedRelistFee: 0, // Modell A: kein Relisting
+		TotalFees:          salesTax,
 	}, nil
 }
 
