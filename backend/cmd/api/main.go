@@ -149,14 +149,14 @@ func setupApp(c *AppContainer) *fiber.App {
 	api.Get("/market/staleness/:region", c.Handlers.GetMarketDataStaleness)
 	api.Get("/market/:region/:type", c.Handlers.GetMarketOrders)
 
-	api.Post("/trading/routes/calculate", routeCalcLimiter, evesso.AuthMiddleware, c.TradingHandler.CalculateRoutes)
+	api.Post("/trading/routes/calculate", routeCalcLimiter, evesso.NewAuthMiddleware(c.TokenValidator), c.TradingHandler.CalculateRoutes)
 	api.Get("/items/search", c.TradingHandler.SearchItems)
 
 	api.Post("/calculations/cargo", c.CalculationHandler.CalculateCargo)
 	api.Post("/calculations/warp", c.CalculationHandler.CalculateWarp)
 
 	// Protected routes
-	protected := api.Group("", evesso.AuthMiddleware)
+	protected := api.Group("", evesso.NewAuthMiddleware(c.TokenValidator))
 
 	protected.Get("/character", handleCharacterInfo)
 	protected.Get("/character/location", c.TradingHandler.GetCharacterLocation)

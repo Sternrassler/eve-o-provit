@@ -12,13 +12,15 @@ import (
 type AuthHandler struct {
 	clientID    string
 	redirectURI string
+	validator   *TokenValidator
 }
 
 // NewAuthHandler creates a new AuthHandler with the given EVE SSO credentials
-func NewAuthHandler(clientID, redirectURI string) *AuthHandler {
+func NewAuthHandler(clientID, redirectURI string, validator *TokenValidator) *AuthHandler {
 	return &AuthHandler{
 		clientID:    clientID,
 		redirectURI: redirectURI,
+		validator:   validator,
 	}
 }
 
@@ -62,7 +64,7 @@ func (h *AuthHandler) HandleCallback(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to exchange code"})
 	}
 
-	charInfo, err := VerifyToken(c.Context(), tokenResp.AccessToken)
+	charInfo, err := h.validator.Validate(c.Context(), tokenResp.AccessToken)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to verify token"})
 	}
@@ -104,7 +106,7 @@ func (h *AuthHandler) HandleSession(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"authenticated": false})
 	}
 
-	charInfo, err := VerifyToken(c.Context(), accessToken)
+	charInfo, err := h.validator.Validate(c.Context(), accessToken)
 	if err != nil {
 		return c.JSON(fiber.Map{"authenticated": false})
 	}

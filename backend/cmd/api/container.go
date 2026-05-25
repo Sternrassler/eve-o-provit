@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -23,6 +24,9 @@ type AppContainer struct {
 	ESIClient *esi.Client
 	AppLogger *applogger.Logger
 
+	// Auth
+	TokenValidator *evesso.TokenValidator
+
 	// Handlers
 	AuthHandler        *evesso.AuthHandler
 	Handlers           *handlers.Handler
@@ -35,11 +39,17 @@ type AppContainer struct {
 // NewContainer initializes all application dependencies and returns a ready-to-use AppContainer.
 func NewContainer(ctx context.Context) (*AppContainer, error) {
 	c := &AppContainer{}
+	var err error
 
 	// EVE SSO Config (public client — PKCE flow, no client_secret needed)
 	eveClientID := getEnv("EVE_CLIENT_ID", "")
 	if eveClientID == "" {
 		log.Fatal("EVE_CLIENT_ID environment variable is required")
+	}
+
+	c.TokenValidator, err = evesso.NewTokenValidator(ctx, eveClientID)
+	if err != nil {
+		return nil, fmt.Errorf("init token validator: %w", err)
 	}
 
 	// Redis
@@ -112,7 +122,7 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 
 	// Auth handler
 	eveCallbackURL := getEnv("EVE_CALLBACK_URL", "http://localhost:9000/callback")
-	c.AuthHandler = evesso.NewAuthHandler(eveClientID, eveCallbackURL)
+	c.AuthHandler = evesso.NewAuthHandler(eveClientID, eveCallbackURL, c.TokenValidator)
 
 	// Request handlers
 	c.Handlers = handlers.New(c.DB, c.SDERepo, c.MarketRepo, c.ESIClient)
