@@ -17,7 +17,7 @@ function mockFetchSession(authenticated: boolean) {
         portrait_url: "https://images.evetech.net/characters/90000001/portrait?size=128",
       }
     : null;
-  return vi.fn(async (url: string) => {
+  return vi.fn(async (url: string, _init?: RequestInit) => {
     if (url.includes("/auth/session")) {
       return { ok: true, json: async () => ({ authenticated, character }) } as Response;
     }
