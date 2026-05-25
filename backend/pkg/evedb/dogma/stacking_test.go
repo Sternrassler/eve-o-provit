@@ -95,6 +95,18 @@ func TestApplyModifierWithStacking_NonStackableAttribute(t *testing.T) {
 	t.Logf("✓ Non-stackable attribute bypasses stacking penalties: %.2f", resultStacking)
 }
 
+// TestCalculateStackingPenalty_EVEReferenceValues lockt die offiziellen EVE-Werte fest.
+func TestCalculateStackingPenalty_EVEReferenceValues(t *testing.T) {
+	// 0-indexiert: n=0 → 1. Modul (100%), n=1 → 2. Modul (86.9%), ...
+	want := []float64{1.0, 0.8691, 0.5706, 0.2832, 0.1060, 0.0300}
+	for n, w := range want {
+		got := calculateStackingPenalty(n)
+		if math.Abs(got-w) > 0.001 {
+			t.Errorf("calculateStackingPenalty(%d) = %.4f, want ~%.4f", n, got, w)
+		}
+	}
+}
+
 // TestApplyModifierWithStacking_SingleModule validates single module behavior
 func TestApplyModifierWithStacking_SingleModule(t *testing.T) {
 	baseValue := 100.0
