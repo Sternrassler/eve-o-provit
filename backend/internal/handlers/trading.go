@@ -159,8 +159,14 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 // @Failure 500 {object} models.ErrorResponse
 // @Router /api/v1/character/location [get]
 func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
-	characterID := c.Locals("character_id").(int)
-	accessToken := c.Locals("access_token").(string)
+	characterID, ok := c.Locals("character_id").(int)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
+	accessToken, ok := c.Locals("access_token").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
 
 	// Call ESI
 	location, err := h.fetchESICharacterLocation(c.Context(), characterID, accessToken)
@@ -191,8 +197,14 @@ func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
 // @Failure 500 {object} models.ErrorResponse
 // @Router /api/v1/character/ship [get]
 func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
-	characterID := c.Locals("character_id").(int)
-	accessToken := c.Locals("access_token").(string)
+	characterID, ok := c.Locals("character_id").(int)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
+	accessToken, ok := c.Locals("access_token").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
 
 	// Call ESI
 	ship, err := h.fetchESICharacterShip(c.Context(), characterID, accessToken)
@@ -223,8 +235,14 @@ func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
 // @Failure 500 {object} models.ErrorResponse
 // @Router /api/v1/character/ships [get]
 func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
-	characterID := c.Locals("character_id").(int)
-	accessToken := c.Locals("access_token").(string)
+	characterID, ok := c.Locals("character_id").(int)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
+	accessToken, ok := c.Locals("access_token").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
 
 	// Call ESI
 	ships, err := h.fetchESICharacterShips(c.Context(), characterID, accessToken)
