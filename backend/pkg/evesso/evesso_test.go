@@ -84,11 +84,8 @@ func TestCharacterInfo_Unmarshal(t *testing.T) {
 		jsonData := `{
 			"CharacterID": 12345,
 			"CharacterName": "Test Character",
-			"ExpiresOn": "2025-12-31T23:59:59",
 			"Scopes": "publicData esi-markets.read",
-			"TokenType": "Character",
-			"CharacterOwnerHash": "abc123",
-			"IntellectualProperty": "EVE"
+			"CharacterOwnerHash": "abc123"
 		}`
 
 		var charInfo CharacterInfo
@@ -97,11 +94,8 @@ func TestCharacterInfo_Unmarshal(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 12345, charInfo.CharacterID)
 		assert.Equal(t, "Test Character", charInfo.CharacterName)
-		assert.Equal(t, "2025-12-31T23:59:59", charInfo.ExpiresOn)
 		assert.Equal(t, "publicData esi-markets.read", charInfo.Scopes)
-		assert.Equal(t, "Character", charInfo.TokenType)
 		assert.Equal(t, "abc123", charInfo.CharacterOwnerHash)
-		assert.Equal(t, "EVE", charInfo.IntellectualProperty)
 	})
 
 	t.Run("invalid JSON", func(t *testing.T) {

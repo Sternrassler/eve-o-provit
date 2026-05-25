@@ -13,17 +13,6 @@ const (
 	VerifyURL = "https://esi.evetech.net/verify/"
 )
 
-// CharacterInfo represents verified character information from ESI
-type CharacterInfo struct {
-	CharacterID          int    `json:"CharacterID"`
-	CharacterName        string `json:"CharacterName"`
-	ExpiresOn            string `json:"ExpiresOn"`
-	Scopes               string `json:"Scopes"`
-	TokenType            string `json:"TokenType"`
-	CharacterOwnerHash   string `json:"CharacterOwnerHash"`
-	IntellectualProperty string `json:"IntellectualProperty"`
-}
-
 // VerifyToken verifies the access token with EVE ESI and returns character information
 func VerifyToken(ctx context.Context, accessToken string) (*CharacterInfo, error) {
 	if accessToken == "" {
@@ -55,9 +44,4 @@ func VerifyToken(ctx context.Context, accessToken string) (*CharacterInfo, error
 	}
 
 	return &charInfo, nil
-}
-
-// GetPortraitURL returns the character portrait URL
-func GetPortraitURL(characterID int, size int) string {
-	return fmt.Sprintf("https://images.evetech.net/characters/%d/portrait?size=%d", characterID, size)
 }
