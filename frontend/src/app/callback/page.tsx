@@ -30,8 +30,12 @@ function CallbackContent() {
           return;
         }
 
-        // Validate state to prevent CSRF
-        if (!validateState(state)) {
+        // Validate state to prevent CSRF. Das state-Token ist single-use:
+        // nach der Validierung (egal ob gültig) aus sessionStorage entfernen,
+        // damit kein Replay-Fenster offen bleibt.
+        const stateValid = validateState(state);
+        sessionStorage.removeItem("eve_oauth_state");
+        if (!stateValid) {
           setStatus("error");
           setMessage("Invalid state parameter - possible CSRF attack");
           return;
