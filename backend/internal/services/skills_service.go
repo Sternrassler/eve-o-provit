@@ -48,8 +48,7 @@ type TradingSkills struct {
 	CorpStanding            float64 // Corp standing (-10.0 to +10.0, affects broker fees: -0.02% per 1.0)
 
 	// Cargo Skills
-	SpaceshipCommand  int // +5% cargo capacity per level (max +25%)
-	CargoOptimization int // Ship-specific cargo bonus (+5% per level, max +25%)
+	SpaceshipCommand int // +5% cargo capacity per level (max +25%)
 
 	// Navigation Skills
 	Navigation         int // Warp speed increase (+5% per level, max +25%)
@@ -324,7 +323,6 @@ func (s *SkillsService) getDefaultSkills() *TradingSkills {
 		FactionStanding:         0.0,
 		CorpStanding:            0.0,
 		SpaceshipCommand:        0,
-		CargoOptimization:       0,
 		Navigation:              0,
 		EvasiveManeuvering:      0,
 		GallenteIndustrial:      0,
