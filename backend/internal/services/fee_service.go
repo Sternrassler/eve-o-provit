@@ -103,7 +103,7 @@ func (s *FeeService) CalculateFees(
 }
 
 // CalculateSalesTax calculates sales tax based on Accounting skill
-// EVE Formula: Base 5% → Reduced by 10% per Accounting level → Min 3.375% (Accounting V)
+// EVE Formula: Base 5% → Reduced by 10% per Accounting level → 2.5% at Accounting V
 // Minimum fee: 100 ISK
 func (s *FeeService) CalculateSalesTax(accountingLevel int, orderValue float64) float64 {
 	// Base tax rate: 5%
@@ -115,7 +115,7 @@ func (s *FeeService) CalculateSalesTax(accountingLevel int, orderValue float64) 
 	// Level 2: 4.00%
 	// Level 3: 3.50%
 	// Level 4: 3.25%
-	// Level 5: 3.375% (actual formula: 0.05 * (1 - 0.1*5) = 0.025, but EVE caps at 3.375%)
+	// Level 5: 2.5% (0.05 * (1 - 0.1*5) = 0.025)
 	skillReduction := 0.10 * float64(accountingLevel)
 	if skillReduction > 0.50 {
 		skillReduction = 0.50
