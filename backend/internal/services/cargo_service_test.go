@@ -44,3 +44,21 @@ func TestKnapsackDP_BacktrackBillionsISK(t *testing.T) {
 		t.Errorf("TotalValue = %.0f, want 8e9 (3×2Mrd + 2×1Mrd)", sol.TotalValue)
 	}
 }
+
+func TestKnapsackDP_RoundsVolumeNotTruncate_F7(t *testing.T) {
+	// v=0.999: int(0.999*100)=99 (truncate) erlaubt 5 Stück (5×0.999=4.995 > 4.99 → Overflow!),
+	// int(math.Round(0.999*100))=100 begrenzt korrekt auf 4 (4×0.999=3.996 ≤ 4.99).
+	svc := &CargoService{}
+	items := []CargoItem{{TypeID: 1, Volume: 0.999, Value: 100, Quantity: 10}}
+	sol := svc.KnapsackDP(items, 4.99)
+	if len(sol.Items) == 0 {
+		t.Fatal("no items selected")
+	}
+	qty := sol.Items[0].Quantity
+	if qty != 4 {
+		t.Errorf("Quantity = %d, want 4; Truncation würde 5 ergeben (Volumen-Overflow)", qty)
+	}
+	if sol.TotalVolume > 4.99+1e-9 {
+		t.Errorf("TotalVolume %.4f überschreitet Kapazität 4.99 (Rundungsbug)", sol.TotalVolume)
+	}
+}
