@@ -2,6 +2,7 @@ package navigation
 
 import (
 	"context"
+	"math"
 	"testing"
 
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
@@ -222,6 +223,25 @@ func TestGetShipWarpSpeedDeterministic_Scenario4_ErrorHandling(t *testing.T) {
 	}
 
 	t.Log("✓ Scenario 4: Error Handling validated")
+}
+
+// TestCalculateWarpTime_ReferenceValue prüft die exakte 3-Phasen-Formel gegen einen Referenzwert.
+// EVE-University-Modell (https://wiki.eveuniversity.org/Warp_time_calculation):
+// 15 AU bei 3 AU/s: k=3, j=min(k/3,2)=1
+//   Phase 1 Beschleunigung: tAccel = 25.7312/k ≈ 8.58 s  (immer 1 AU Beschleunigungsstrecke)
+//   Phase 3 Abbremsen:       tDecel = ln(v_max/v_exit)/j = ln(3·AU/100)/1 ≈ 22.22 s
+//                            dDecel = (v_max - v_exit)/j ≈ k·AU/j = 3 AU  (v_exit=100 m/s << v_max)
+//   Phase 2 Cruise:          dCruise = 15 AU - 1 AU - 3 AU = 11 AU → tCruise = 11/3 ≈ 3.67 s
+//   GESAMT ≈ 34.47 s
+// Toleranz ±5 %, da Warp-Modelle geringfügige Varianten kennen.
+func TestCalculateWarpTime_ReferenceValue(t *testing.T) {
+	got := CalculateWarpTime(15.0, 3.0)
+	// Referenzwert aus der 3-Phasen-Formel (s.o.) hergeleitet.
+	want := 34.47
+	tol := want * 0.05
+	if math.Abs(got-want) > tol {
+		t.Errorf("CalculateWarpTime(15, 3) = %.2f s, want ~%.2f s (±5%%)", got, want)
+	}
 }
 
 // Helper function: absolute value

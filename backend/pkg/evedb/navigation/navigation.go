@@ -113,6 +113,9 @@ type PathResult struct {
 
 // Default navigation parameters
 const (
+	// DefaultWarpSpeed is a conservative fallback used only when no ship data is provided.
+	// In the profit path, route_calculator always passes deterministic frontend values,
+	// so this constant is NOT used for actual profit calculations.
 	DefaultWarpSpeed       = 3.0  // AU/s (Cruiser average)
 	DefaultAlignTime       = 6.0  // seconds (medium ships)
 	DefaultGateJumpDelay   = 10.0 // seconds (gate jump animation + loading)
@@ -125,8 +128,14 @@ type edge struct {
 	toSystemID int64
 }
 
-// CalculateWarpTime calculates warp time using CCP's 3-phase formula
+// CalculateWarpTime calculates warp time using CCP's 3-phase formula.
 // Reference: https://wiki.eveuniversity.org/Warp_time_calculation
+//
+// NOTE (F4/F21): This function is NOT used in the current profit path.
+// CalculateTravelTime is always called with useExactFormula=false by route_calculator,
+// which means CalculateSimplifiedWarpTime (distance/speed × 1.4) is used for profit ranking.
+// CalculateWarpTime exists for future precision improvement and direct callers outside
+// the profit pipeline.
 func CalculateWarpTime(distanceAU, warpSpeedAU float64) float64 {
 	const AU = 149597870700.0 // meters in 1 AU
 
