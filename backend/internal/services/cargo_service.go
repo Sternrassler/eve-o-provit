@@ -54,15 +54,13 @@ func (s *CargoService) KnapsackDP(items []CargoItem, capacity float64) *CargoSol
 		}
 	}
 
-	// For very large item sets, use optimized approach
-	if len(items) > 1000 {
+	// Greedy-Pfad bei sehr vielen Items ODER sehr großer Kapazität.
+	// maxDPCapacityUnits begrenzt die DP-Tabellengröße (sonst OOM bei Freightern).
+	const maxDPCapacityUnits = 5_000_000 // 50.000 m³ bei 0.01-Granularität
+	capacityInt := int(math.Round(capacity * 100))
+	if len(items) > 1000 || capacityInt > maxDPCapacityUnits {
 		return s.knapsackOptimized(items, capacity)
 	}
-
-	// Standard DP for smaller item sets
-	// Volume granularity: 0.01 m³ (1 cm³)
-	// This allows precise volume calculations while keeping table size manageable
-	capacityInt := int(capacity * 100)
 	n := len(items)
 
 	// DP table: dp[i][w] = max value using first i items with capacity w
@@ -74,7 +72,7 @@ func (s *CargoService) KnapsackDP(items []CargoItem, capacity float64) *CargoSol
 	// Fill DP table
 	for i := 1; i <= n; i++ {
 		item := items[i-1]
-		volumeInt := int(item.Volume * 100)
+		volumeInt := int(math.Round(item.Volume * 100))
 
 		// Skip items with invalid volume - copy previous row
 		if volumeInt <= 0 {
@@ -114,7 +112,7 @@ func (s *CargoService) KnapsackDP(items []CargoItem, capacity float64) *CargoSol
 		// Check if item i-1 was taken
 		if dp[i][w] != dp[i-1][w] {
 			item := items[i-1]
-			volumeInt := int(item.Volume * 100)
+			volumeInt := int(math.Round(item.Volume * 100))
 
 			// Find quantity taken
 			for qty := 1; qty <= item.Quantity; qty++ {
@@ -124,8 +122,8 @@ func (s *CargoService) KnapsackDP(items []CargoItem, capacity float64) *CargoSol
 				}
 
 				expectedValue := dp[i-1][w-totalVol] + (item.Value * float64(qty))
-				// Use small epsilon for floating point comparison
-				if math.Abs(dp[i][w]-expectedValue) < 0.01 {
+				// Relative Toleranz (robust bei Werten in Milliarden ISK)
+				if math.Abs(dp[i][w]-expectedValue) <= 1e-9*math.Max(math.Abs(dp[i][w]), math.Abs(expectedValue)) {
 					// This quantity was taken
 					solution.Items = append(solution.Items, CargoItem{
 						TypeID:   item.TypeID,
