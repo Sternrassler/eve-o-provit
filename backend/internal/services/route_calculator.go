@@ -6,11 +6,25 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"math"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
 )
+
+// toursFromVolume berechnet die Anzahl Touren, die nötig sind, um das verfügbare
+// Volumen zu transportieren (aufgerundet, min. 1).
+func toursFromVolume(availableVolumeM3, cargoCapacity float64) int {
+	if cargoCapacity <= 0 {
+		return 1
+	}
+	tours := int(math.Ceil(availableVolumeM3 / cargoCapacity))
+	if tours < 1 {
+		return 1
+	}
+	return tours
+}
 
 // RouteCalculator handles route calculation and optimization
 type RouteCalculator struct {
@@ -58,11 +72,8 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 	var totalQuantity int
 
 	if item.AvailableQuantity > 0 && item.AvailableVolumeM3 > 0 {
-		// Calculate max tours based on available volume
-		maxToursFromVolume := int((item.AvailableVolumeM3 / cargoCapacity) + 0.5) // Round up
-		if maxToursFromVolume < 1 {
-			maxToursFromVolume = 1
-		}
+		// Calculate max tours based on available volume (aufgerundet)
+		maxToursFromVolume := toursFromVolume(item.AvailableVolumeM3, cargoCapacity)
 
 		// Limit to max 10 tours (practical limit)
 		numberOfTours = maxToursFromVolume
@@ -106,18 +117,24 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 	oneWaySeconds := travelResult.TotalSeconds
 	roundTripSeconds := oneWaySeconds * 2
 
-	// Station Trading: Use minimum time for order cycling (5 minutes base time)
-	if item.BuySystemID == item.SellSystemID || travelResult.Jumps == 0 {
-		oneWaySeconds = 300.0    // 5 minutes for station trading
-		roundTripSeconds = 600.0 // Same for roundtrip
+	// Station Trading (Kauf und Verkauf im selben System): keine Reisezeit, kein Multi-Tour.
+	// Wir setzen einen festen Order-Zyklus-Aufwand von 5 Minuten als Zeitbasis.
+	isStationTrading := item.BuySystemID == item.SellSystemID || travelResult.Jumps == 0
+	if isStationTrading {
+		oneWaySeconds = 300.0    // 5 Minuten Order-Zyklus
+		roundTripSeconds = 300.0 // kein Round-Trip beim Stationshandel
 	}
 
 	// Multi-tour time calculation
 	// (numberOfTours - 1) full roundtrips + 1 one-way trip
 	var totalTimeSeconds float64
-	if numberOfTours > 1 {
+	switch {
+	case isStationTrading:
+		// Stationshandel: feste Zykluszeit, unabhängig von Touren
+		totalTimeSeconds = oneWaySeconds
+	case numberOfTours > 1:
 		totalTimeSeconds = float64(numberOfTours-1)*roundTripSeconds + oneWaySeconds
-	} else {
+	default:
 		totalTimeSeconds = roundTripSeconds
 	}
 	totalTimeMinutes := totalTimeSeconds / 60.0

@@ -89,3 +89,23 @@ func TestModelAFeeArithmetic(t *testing.T) {
 		})
 	}
 }
+
+// TestToursFromVolume prüft Aufrundung (Ceil), nicht round-to-nearest.
+func TestToursFromVolume(t *testing.T) {
+	cases := []struct {
+		availableVol float64
+		capacity     float64
+		want         int
+	}{
+		{availableVol: 1200, capacity: 1000, want: 2}, // 1.2 → 2 (Ceil)
+		{availableVol: 1000, capacity: 1000, want: 1}, // 1.0 → 1
+		{availableVol: 1600, capacity: 1000, want: 2}, // 1.6 → 2
+		{availableVol: 100, capacity: 1000, want: 1},  // <1 → min 1
+	}
+	for _, c := range cases {
+		got := toursFromVolume(c.availableVol, c.capacity)
+		if got != c.want {
+			t.Errorf("toursFromVolume(%.0f, %.0f) = %d, want %d", c.availableVol, c.capacity, got, c.want)
+		}
+	}
+}
