@@ -11,6 +11,7 @@ import (
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/services/esiconfig"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
@@ -422,7 +423,7 @@ func (s *FittingService) fetchESIAssets(
 	endpoint := fmt.Sprintf("/latest/characters/%d/assets/", characterID)
 
 	// Create HTTP request with context
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://esi.evetech.net"+endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", esiconfig.BaseURL+endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}

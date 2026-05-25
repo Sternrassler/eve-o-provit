@@ -10,6 +10,7 @@ import (
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/services/esiconfig"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 	"github.com/redis/go-redis/v9"
 )
@@ -144,7 +145,7 @@ func (s *SkillsService) fetchSkillsFromESI(ctx context.Context, characterID int,
 	endpoint := fmt.Sprintf("/v4/characters/%d/skills/", characterID)
 
 	// Create HTTP request with context
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://esi.evetech.net"+endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", esiconfig.BaseURL+endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -185,7 +186,7 @@ func (s *SkillsService) fetchStandingsFromESI(ctx context.Context, characterID i
 	endpoint := fmt.Sprintf("/v2/characters/%d/standings/", characterID)
 
 	// Create HTTP request with context
-	req, err := http.NewRequestWithContext(ctx, "GET", "https://esi.evetech.net"+endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", esiconfig.BaseURL+endpoint, nil)
 	if err != nil {
 		s.logger.Warn("Failed to create standings request", "error", err)
 		return 0.0, 0.0
