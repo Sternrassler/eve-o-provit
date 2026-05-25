@@ -24,9 +24,14 @@ func NewAuthHandler(clientID, redirectURI string, validator *TokenValidator) *Au
 	}
 }
 
+// callbackRequest is the body the SPA POSTs to /auth/callback.
+// State is received but intentionally NOT validated server-side: per EVE's redirect-based
+// PKCE flow the callback recipient (the SPA) generates and validates `state` for CSRF.
+// Server-side protection for this public client is PKCE (code_verifier ↔ code_challenge,
+// validated by EVE during token exchange). See pkg/evesso/README.md.
 type callbackRequest struct {
 	Code         string `json:"code"`
-	State        string `json:"state"`
+	State        string `json:"state"` // frontend-validated (CSRF); not checked here by design
 	CodeVerifier string `json:"code_verifier"`
 }
 

@@ -71,6 +71,21 @@ Run tests with:
 go test -v ./pkg/evesso/...
 ```
 
+## CSRF / State-Handling
+
+EVE SSO nutzt einen **redirect-basierten PKCE-Flow**: die SSO redirected an die Callback-URL
+(in dieser App die SPA) mit `code` und `state`. Gemäß OAuth/EVE-Doku validiert die Partei, die
+`state` erzeugt, es auch beim Callback — hier also das **Frontend** (sessionStorage).
+
+Der Backend-`/auth/callback`-Endpunkt empfängt `state` im Body, validiert es aber **bewusst nicht**
+serverseitig: Das Backend ist nicht das Redirect-Ziel und hat das `state` nicht erzeugt.
+
+**Serverseitiger Schutz für diesen Public Client ist PKCE:** `code_verifier` ↔ `code_challenge`
+(S256) wird von EVE beim Token-Exchange geprüft — das Backend leitet den `code_verifier` korrekt
+weiter. Damit ist Code-Injection/-Interception abgedeckt; CSRF auf dem Redirect deckt das Frontend ab.
+
+Referenz: https://docs.esi.evetech.net/docs/sso/native_sso_flow.html
+
 ## References
 
 - [EVE SSO Documentation](https://docs.esi.evetech.net/docs/sso/)
