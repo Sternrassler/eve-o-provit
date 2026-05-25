@@ -45,13 +45,7 @@ describe("ShipFittingCard", () => {
       () => new Promise(() => {}) // Never resolves
     );
 
-    render(
-      <ShipFittingCard
-        characterId={123456}
-        shipTypeId={648}
-        authHeader="Bearer token"
-      />
-    );
+    render(<ShipFittingCard characterId={123456} shipTypeId={648} />);
 
     expect(screen.getByText("Schiff-Fitting")).toBeInTheDocument();
     expect(screen.getByText("Lade Fitting-Daten...")).toBeInTheDocument();
@@ -62,13 +56,7 @@ describe("ShipFittingCard", () => {
       new Error("Failed to fetch")
     );
 
-    render(
-      <ShipFittingCard
-        characterId={123456}
-        shipTypeId={648}
-        authHeader="Bearer token"
-      />
-    );
+    render(<ShipFittingCard characterId={123456} shipTypeId={648} />);
 
     await waitFor(() => {
       expect(screen.getByText("Fehler beim Laden")).toBeInTheDocument();
@@ -82,13 +70,7 @@ describe("ShipFittingCard", () => {
       fitted_modules: [],
     });
 
-    render(
-      <ShipFittingCard
-        characterId={123456}
-        shipTypeId={648}
-        authHeader="Bearer token"
-      />
-    );
+    render(<ShipFittingCard characterId={123456} shipTypeId={648} />);
 
     await waitFor(() => {
       expect(screen.getByText("Keine Module gefittet")).toBeInTheDocument();
@@ -100,13 +82,7 @@ describe("ShipFittingCard", () => {
       mockFittingResponse
     );
 
-    render(
-      <ShipFittingCard
-        characterId={123456}
-        shipTypeId={648}
-        authHeader="Bearer token"
-      />
-    );
+    render(<ShipFittingCard characterId={123456} shipTypeId={648} />);
 
     await waitFor(() => {
       // Check module display
@@ -114,7 +90,7 @@ describe("ShipFittingCard", () => {
       expect(screen.getByText("Hyperspatial Velocity Optimizer I")).toBeInTheDocument();
 
       // Check bonuses with deterministic values
-      expect(screen.getByText("Cargo Bonus")).toBeInTheDocument();
+      expect(screen.getByText("Cargo")).toBeInTheDocument();
       expect(screen.getByText("9.656,9")).toBeInTheDocument(); // effective_cargo_m3
       expect(screen.getByText("m³")).toBeInTheDocument();
 
@@ -128,17 +104,4 @@ describe("ShipFittingCard", () => {
     });
   });
 
-  it("should not fetch when authHeader is null", () => {
-    const fetchSpy = vi.mocked(apiClient.fetchCharacterFitting);
-
-    render(
-      <ShipFittingCard
-        characterId={123456}
-        shipTypeId={648}
-        authHeader={null}
-      />
-    );
-
-    expect(fetchSpy).not.toHaveBeenCalled();
-  });
 });

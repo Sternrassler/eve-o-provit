@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -43,8 +43,9 @@ async function calculateRoutes(regionId: number, shipTypeId: number): Promise<Tr
 
 function TradingPageContent() {
   const { isAuthenticated } = useAuth();
-  const [selectedRegion, setSelectedRegion] = useState<string>(DEFAULT_REGION);
-  const [selectedShip, setSelectedShip] = useState<string>(DEFAULT_SHIP);
+  // null = keine manuelle Auswahl; effektiver Wert wird unten aus Character-Daten abgeleitet
+  const [regionOverride, setRegionOverride] = useState<string | null>(null);
+  const [shipOverride, setShipOverride] = useState<string | null>(null);
   const [filters, setFilters] = useState<TradingFiltersType>(defaultFilters);
   const [displayedRoutes, setDisplayedRoutes] = useState(10);
   const [isRefreshingMarketData, setIsRefreshingMarketData] = useState(false);
@@ -63,16 +64,12 @@ function TradingPageContent() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Apply character data to selections
-  useEffect(() => {
-    if (!characterData) return;
-    if (characterData.location.region_id) {
-      setSelectedRegion(characterData.location.region_id.toString());
-    }
-    if (characterData.ship.ship_type_id) {
-      setSelectedShip(characterData.ship.ship_type_id.toString());
-    }
-  }, [characterData]);
+  // Effektive Auswahl: manuelle Override > Character-Daten > Default. Rein abgeleitet,
+  // kein Effect/Ref — die User-Auswahl (Override) bleibt sticky.
+  const selectedRegion =
+    regionOverride ?? characterData?.location.region_id?.toString() ?? DEFAULT_REGION;
+  const selectedShip =
+    shipOverride ?? characterData?.ship.ship_type_id?.toString() ?? DEFAULT_SHIP;
 
   const characterId = characterData?.location.character_id ?? null;
 
@@ -145,13 +142,13 @@ function TradingPageContent() {
           <div className="space-y-4 rounded-lg border p-4">
             <RegionSelect
               value={selectedRegion}
-              onChange={setSelectedRegion}
+              onChange={setRegionOverride}
               disabled={routeMutation.isPending || characterDataLoading}
               onRefreshStateChange={setIsRefreshingMarketData}
             />
             <ShipSelect
               value={selectedShip}
-              onChange={setSelectedShip}
+              onChange={setShipOverride}
               disabled={routeMutation.isPending || characterDataLoading}
               authenticated={isAuthenticated}
             />

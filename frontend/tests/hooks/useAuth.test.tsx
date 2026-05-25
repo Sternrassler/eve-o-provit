@@ -1,154 +1,114 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { AuthProvider, useAuth } from '@/lib/auth-context';
-import * as eveSso from '@/lib/eve-sso';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 
-// Mock eve-sso module
-vi.mock('@/lib/eve-sso', () => ({
-  buildAuthorizationUrl: vi.fn(),
-  TokenStorage: {
-    saveTokens: vi.fn(),
-    getAccessToken: vi.fn(),
-    getRefreshToken: vi.fn(),
-    clearTokens: vi.fn(),
-    isExpired: vi.fn(() => false),
-    clear: vi.fn(), // Alias for clearTokens
-  },
-  verifyToken: vi.fn(),
-  refreshAccessToken: vi.fn(),
+vi.mock("@/lib/eve-sso", () => ({
+  buildAuthorizationUrl: vi.fn(async () => "https://login.eveonline.com/authorize?mock=1"),
 }));
+import { buildAuthorizationUrl } from "@/lib/eve-sso";
 
-// Mock window.location
-delete (window as unknown as { location: unknown }).location;
-window.location = { href: '' } as unknown as Location;
+function mockFetchSession(authenticated: boolean) {
+  const character = authenticated
+    ? {
+        character_id: 90000001,
+        character_name: "Test Pilot",
+        scopes: ["esi-location.read_location.v1"],
+        owner_hash: "ownerhash",
+        portrait_url: "https://images.evetech.net/characters/90000001/portrait?size=128",
+      }
+    : null;
+  return vi.fn(async (url: string, _init?: RequestInit) => {
+    if (url.includes("/auth/session")) {
+      return { ok: true, json: async () => ({ authenticated, character }) } as Response;
+    }
+    if (url.includes("/auth/logout")) {
+      return { ok: true, json: async () => ({}) } as Response;
+    }
+    return { ok: true, json: async () => ({}) } as Response;
+  });
+}
 
-describe('useAuth Hook', () => {
+describe("useAuth Hook (cookie session)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.clear();
+    process.env.NEXT_PUBLIC_EVE_CLIENT_ID = "test-client";
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it('should return auth context when used within AuthProvider', () => {
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: AuthProvider,
-    });
-
+  it("returns the auth context within AuthProvider", async () => {
+    vi.stubGlobal("fetch", mockFetchSession(false));
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
     expect(result.current).toBeDefined();
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.character).toBeNull();
-    expect(result.current.accessToken).toBeNull();
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
   });
 
-  it('should throw error when used outside AuthProvider', () => {
-    // Suppress console.error for this test
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    expect(() => {
-      renderHook(() => useAuth());
-    }).toThrow('useAuth must be used within an AuthProvider');
-
-    consoleError.mockRestore();
-  });
-
-  it('should initialize with loading state', () => {
-    // Skip: Timing-dependent test - loading state changes too fast in test environment
-    // Real behavior: isLoading starts true, becomes false after checkSession
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: AuthProvider,
-    });
-
-    // In test environment, checkSession resolves immediately
-    expect([true, false]).toContain(result.current.isLoading);
-  });
-
-  it('should call checkSession on mount', async () => {
-    const getAccessTokenMock = vi.mocked(eveSso.TokenStorage.getAccessToken);
-    getAccessTokenMock.mockReturnValue(null);
-
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: AuthProvider,
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(getAccessTokenMock).toHaveBeenCalled();
-  });
-
-  it('should build authorization URL on login', async () => {
-    const buildAuthUrlMock = vi.mocked(eveSso.buildAuthorizationUrl);
-    buildAuthUrlMock.mockReturnValue('https://login.eveonline.com/oauth/authorize?...');
-
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: AuthProvider,
-    });
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    await result.current.login();
-
-    expect(buildAuthUrlMock).toHaveBeenCalledWith(
-      expect.stringContaining('0828b4bcd20242aeb9b8be10f5451094'),
-      expect.stringContaining('http://localhost:9000/callback'),
-      expect.arrayContaining(['esi-location.read_location.v1'])
+  it("throws when used outside an AuthProvider", () => {
+    expect(() => renderHook(() => useAuth())).toThrow(
+      "useAuth must be used within an AuthProvider"
     );
   });
 
-  it.skip('should clear session on logout', async () => {
-    // Skip: logout() calls TokenStorage.clear(), but mock uses clearTokens
-    // Covered by E2E tests
-    const clearTokensMock = vi.mocked(eveSso.TokenStorage.clearTokens);
-
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: AuthProvider,
-    });
-
+  it("checks the session on mount via GET /auth/session with credentials", async () => {
+    const fetchMock = mockFetchSession(false);
+    vi.stubGlobal("fetch", fetchMock);
+    renderHook(() => useAuth(), { wrapper: AuthProvider });
     await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
+      expect(fetchMock).toHaveBeenCalled();
     });
-
-    act(() => {
-      result.current.logout();
-    });
-
-    expect(clearTokensMock).toHaveBeenCalled();
-    expect(result.current.character).toBeNull();
+    const call = fetchMock.mock.calls.find((c) => String(c[0]).includes("/auth/session"));
+    expect(call, "expected a /auth/session fetch").toBeTruthy();
+    expect(call![1]).toMatchObject({ credentials: "include" });
   });
-  it.skip('should return auth header when authenticated', async () => {
-    // Skip: Complex async state management test - requires full integration test
-    // Covered by E2E tests
-    const getAccessTokenMock = vi.mocked(eveSso.TokenStorage.getAccessToken);
-    getAccessTokenMock.mockReturnValue('test-access-token');
 
-    const verifyTokenMock = vi.mocked(eveSso.verifyToken);
-    verifyTokenMock.mockResolvedValue({
-      CharacterID: 123456,
-      CharacterName: 'Test Character',
-      Scopes: 'esi-location.read_location.v1',
-      CharacterOwnerHash: 'test-hash',
-    });
-
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: AuthProvider,
-    });
-
+  it("populates character and isAuthenticated for an authenticated session", async () => {
+    vi.stubGlobal("fetch", mockFetchSession(true));
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
     await waitFor(() => {
       expect(result.current.isAuthenticated).toBe(true);
     });
-
-    const authHeader = result.current.getAuthHeader();
-    expect(authHeader).toBe('Bearer test-access-token');
+    expect(result.current.character?.character_id).toBe(90000001);
+    expect(result.current.character?.character_name).toBe("Test Pilot");
   });
 
-  it('should return null auth header when not authenticated', () => {
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: AuthProvider,
-    });
+  it("logout calls POST /auth/logout and clears the character", async () => {
+    const fetchMock = mockFetchSession(true);
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
 
-    const authHeader = result.current.getAuthHeader();
-    expect(authHeader).toBeNull();
+    await result.current.logout();
+
+    const logoutCall = fetchMock.mock.calls.find((c) => String(c[0]).includes("/auth/logout"));
+    expect(logoutCall, "expected a /auth/logout fetch").toBeTruthy();
+    expect(logoutCall![1]).toMatchObject({ method: "POST", credentials: "include" });
+    await waitFor(() => {
+      expect(result.current.isAuthenticated).toBe(false);
+      expect(result.current.character).toBeNull();
+    });
+  });
+
+  it("login builds the authorization URL and redirects", async () => {
+    vi.stubGlobal("fetch", mockFetchSession(false));
+    const original = window.location;
+    delete (window as unknown as { location?: unknown }).location;
+    (window as unknown as { location: { href: string } }).location = { href: "" };
+
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await result.current.login();
+
+    expect(buildAuthorizationUrl).toHaveBeenCalledWith(
+      "test-client",
+      expect.any(String),
+      expect.arrayContaining(["esi-location.read_location.v1"])
+    );
+    expect(window.location.href).toContain("login.eveonline.com");
+
+    (window as unknown as { location: Location }).location = original;
   });
 });
