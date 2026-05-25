@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const (
@@ -42,7 +43,7 @@ func ExchangeCode(ctx context.Context, code, redirectURI, clientID, codeVerifier
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "eve-o-provit/0.1.0 (https://github.com/Sternrassler/eve-o-provit)")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to exchange code: %w", err)
@@ -78,7 +79,7 @@ func RefreshToken(ctx context.Context, refreshToken, clientID string) (*TokenRes
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "eve-o-provit/0.1.0 (https://github.com/Sternrassler/eve-o-provit)")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to refresh token: %w", err)

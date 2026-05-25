@@ -12,19 +12,26 @@ import (
 type AuthHandler struct {
 	clientID    string
 	redirectURI string
+	validator   *TokenValidator
 }
 
 // NewAuthHandler creates a new AuthHandler with the given EVE SSO credentials
-func NewAuthHandler(clientID, redirectURI string) *AuthHandler {
+func NewAuthHandler(clientID, redirectURI string, validator *TokenValidator) *AuthHandler {
 	return &AuthHandler{
 		clientID:    clientID,
 		redirectURI: redirectURI,
+		validator:   validator,
 	}
 }
 
+// callbackRequest is the body the SPA POSTs to /auth/callback.
+// State is received but intentionally NOT validated server-side: per EVE's redirect-based
+// PKCE flow the callback recipient (the SPA) generates and validates `state` for CSRF.
+// Server-side protection for this public client is PKCE (code_verifier ↔ code_challenge,
+// validated by EVE during token exchange). See pkg/evesso/README.md.
 type callbackRequest struct {
 	Code         string `json:"code"`
-	State        string `json:"state"`
+	State        string `json:"state"` // frontend-validated (CSRF); not checked here by design
 	CodeVerifier string `json:"code_verifier"`
 }
 
@@ -35,8 +42,10 @@ type characterResponse struct {
 	PortraitURL   string   `json:"portrait_url"`
 }
 
+// cookieSecure defaults to true (fail-closed). Set COOKIE_SECURE=false ONLY for local
+// HTTP development. In production, omitting the variable keeps cookies Secure.
 func cookieSecure() bool {
-	return os.Getenv("COOKIE_SECURE") == "true"
+	return os.Getenv("COOKIE_SECURE") != "false"
 }
 
 // HandleCallback handles POST /auth/callback
@@ -62,7 +71,7 @@ func (h *AuthHandler) HandleCallback(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to exchange code"})
 	}
 
-	charInfo, err := VerifyToken(c.Context(), tokenResp.AccessToken)
+	charInfo, err := h.validator.Validate(c.Context(), tokenResp.AccessToken)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to verify token"})
 	}
@@ -104,7 +113,7 @@ func (h *AuthHandler) HandleSession(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{"authenticated": false})
 	}
 
-	charInfo, err := VerifyToken(c.Context(), accessToken)
+	charInfo, err := h.validator.Validate(c.Context(), accessToken)
 	if err != nil {
 		return c.JSON(fiber.Map{"authenticated": false})
 	}

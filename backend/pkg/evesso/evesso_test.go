@@ -1,45 +1,30 @@
 package evesso
 
 import (
-	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/lestrrat-go/jwx/v2/jwk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestVerifyToken_EmptyToken tests empty token handling (SECURITY)
-func TestVerifyToken_EmptyToken(t *testing.T) {
-	ctx := context.Background()
-
-	charInfo, err := VerifyToken(ctx, "")
-
-	assert.Error(t, err)
-	assert.Nil(t, charInfo)
-	assert.Contains(t, err.Error(), "access token is empty")
-}
-
 // TestAuthMiddleware_MissingCookie tests missing eve_access_token cookie (SECURITY)
 func TestAuthMiddleware_MissingCookie(t *testing.T) {
+	v := NewTokenValidatorWithKeySet("test-client", jwk.NewSet())
 	app := fiber.New()
-
-	app.Use("/protected", AuthMiddleware)
-	app.Get("/protected", func(c *fiber.Ctx) error {
-		return c.SendString("Success")
-	})
-
+	app.Use("/protected", NewAuthMiddleware(v))
+	app.Get("/protected", func(c *fiber.Ctx) error { return c.SendString("ok") })
 	req := httptest.NewRequest("GET", "/protected", nil)
 	resp, err := app.Test(req)
-
-	require.NoError(t, err)
-	assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
-
-	var response map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&response)
-	assert.Equal(t, "Missing authentication cookie", response["error"])
+	if err != nil {
+		t.Fatalf("app.Test: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusUnauthorized {
+		t.Errorf("status = %d, want 401", resp.StatusCode)
+	}
 }
 
 // TestGetPortraitURL tests character portrait URL generation
@@ -84,11 +69,8 @@ func TestCharacterInfo_Unmarshal(t *testing.T) {
 		jsonData := `{
 			"CharacterID": 12345,
 			"CharacterName": "Test Character",
-			"ExpiresOn": "2025-12-31T23:59:59",
 			"Scopes": "publicData esi-markets.read",
-			"TokenType": "Character",
-			"CharacterOwnerHash": "abc123",
-			"IntellectualProperty": "EVE"
+			"CharacterOwnerHash": "abc123"
 		}`
 
 		var charInfo CharacterInfo
@@ -97,11 +79,8 @@ func TestCharacterInfo_Unmarshal(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 12345, charInfo.CharacterID)
 		assert.Equal(t, "Test Character", charInfo.CharacterName)
-		assert.Equal(t, "2025-12-31T23:59:59", charInfo.ExpiresOn)
 		assert.Equal(t, "publicData esi-markets.read", charInfo.Scopes)
-		assert.Equal(t, "Character", charInfo.TokenType)
 		assert.Equal(t, "abc123", charInfo.CharacterOwnerHash)
-		assert.Equal(t, "EVE", charInfo.IntellectualProperty)
 	})
 
 	t.Run("invalid JSON", func(t *testing.T) {
@@ -112,29 +91,4 @@ func TestCharacterInfo_Unmarshal(t *testing.T) {
 
 		assert.Error(t, err)
 	})
-}
-
-// TestTokenSecurity_NoLeakage tests that tokens aren't leaked in error messages (SECURITY)
-func TestTokenSecurity_NoLeakage(t *testing.T) {
-	ctx := context.Background()
-	token := "super-secret-token-12345"
-
-	_, err := VerifyToken(ctx, token)
-
-	// Error should not contain the token
-	if err != nil {
-		assert.NotContains(t, err.Error(), token, "Token leaked in error message")
-	}
-}
-
-// TestContextCancellation tests context cancellation during verify
-func TestContextCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel() // Cancel immediately
-
-	charInfo, err := VerifyToken(ctx, "test-token")
-
-	assert.Error(t, err)
-	assert.Nil(t, charInfo)
-	// Error should be related to context cancellation
 }
