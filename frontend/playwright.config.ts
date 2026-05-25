@@ -1,49 +1,49 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright E2E Test Configuration
- * Siehe https://playwright.dev/docs/test-configuration
+ * Playwright E2E configuration.
+ * Three projects:
+ *  - setup: validates the cached real session (playwright/.auth/user.json)
+ *  - public: unauthenticated use cases (CI-capable)
+ *  - auth: authenticated use cases, reuses the captured session, depends on setup
+ * See docs/superpowers/specs/2026-05-25-e2e-test-suite-design.md
  */
 export default defineConfig({
   testDir: './tests/e2e',
-  
-  // Timeout für einzelne Tests
-  timeout: 60 * 1000, // 60 Sekunden (OAuth Flow kann länger dauern)
-  
-  // Erwarte dass Services laufen (make docker-rebuild)
+  timeout: 60 * 1000,
   fullyParallel: false,
-  
-  // Keine Retries in CI (echte OAuth Tests sollten stabil sein)
   retries: 0,
-  
-  // Reporter
   use: {
-    // Base URL (Frontend)
     baseURL: 'http://localhost:9000',
-    
-    // Screenshot bei Fehler
     screenshot: 'only-on-failure',
-    
-    // Video bei Fehler
     video: 'retain-on-failure',
-    
-    // Trace bei Fehler
     trace: 'retain-on-failure',
   },
-
-  // Chromium headless für CI
   projects: [
     {
-      name: 'chromium',
+      name: 'setup',
+      testMatch: /auth\.setup\.ts/,
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'public',
+      testMatch: /public\/.*\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'auth',
+      testMatch: /auth\/.*\.spec\.ts/,
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'playwright/.auth/user.json',
+      },
+    },
   ],
-
-  // Web Server (optional - falls noch nicht gestartet)
-  // webServer: {
-  //   command: 'make docker-up',
-  //   url: 'http://localhost:9000',
-  //   reuseExistingServer: true,
-  //   timeout: 120 * 1000,
-  // },
+  webServer: {
+    command: 'make -C ../ docker-up',
+    url: 'http://localhost:9000',
+    reuseExistingServer: true,
+    timeout: 180 * 1000,
+  },
 });
