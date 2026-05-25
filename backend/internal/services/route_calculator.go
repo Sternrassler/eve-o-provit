@@ -135,41 +135,20 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 	// Calculate minimum security status across entire route
 	minRouteSecurity := ro.getMinRouteSecurityStatus(ctx, travelResult.Route)
 
-	// Calculate trading fees (Issue #39)
-	// Use worst-case assumptions (all skills = 0) for conservative estimates
-	// Fees are calculated based on total buy/sell order values
-	buyValue := item.BuyPrice * float64(totalQuantity)
+	// Calculate trading fees — Modell A (Sofort-Arbitrage): nur Sales-Tax.
+	// Worst-case-Annahme (Accounting = 0) für konservative Bulk-Schätzung.
 	sellValue := item.SellPrice * float64(totalQuantity)
 
-	// Calculate individual fees using worst-case skills (all = 0)
-	buyBrokerFee := ro.feeService.CalculateBrokerFee(
-		0, // BrokerRelations = 0
-		0, // AdvancedBrokerRelations = 0
-		0, // FactionStanding = 0
-		0, // CorpStanding = 0
-		buyValue,
-	)
-	sellBrokerFee := ro.feeService.CalculateBrokerFee(
-		0, // BrokerRelations = 0
-		0, // AdvancedBrokerRelations = 0
-		0, // FactionStanding = 0
-		0, // CorpStanding = 0
-		sellValue,
-	)
-	salesTax := ro.feeService.CalculateSalesTax(
-		0, // Accounting = 0
-		sellValue,
-	)
+	salesTax := ro.feeService.CalculateSalesTax(0, sellValue)
 
-	// Sum all fees
-	totalFees := buyBrokerFee + sellBrokerFee + salesTax
+	// Modell A: keine Broker-Fees, kein Relisting.
+	buyBrokerFee := 0.0
+	sellBrokerFee := 0.0
+	brokerFees := 0.0
+	estimatedRelistFee := 0.0
 
-	// Calculate broker fees (combined)
-	brokerFees := buyBrokerFee + sellBrokerFee
-
-	// Estimated relist fee is the sell broker fee
-	// (represents the cost if the order needs to be modified/relisted)
-	estimatedRelistFee := sellBrokerFee
+	// Sum all fees (Modell A: nur Sales-Tax)
+	totalFees := salesTax
 
 	// Calculate net profit (total profit minus all fees)
 	netProfit := totalProfit - totalFees
