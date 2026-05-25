@@ -37,8 +37,10 @@ type characterResponse struct {
 	PortraitURL   string   `json:"portrait_url"`
 }
 
+// cookieSecure defaults to true (fail-closed). Set COOKIE_SECURE=false ONLY for local
+// HTTP development. In production, omitting the variable keeps cookies Secure.
 func cookieSecure() bool {
-	return os.Getenv("COOKIE_SECURE") == "true"
+	return os.Getenv("COOKIE_SECURE") != "false"
 }
 
 // HandleCallback handles POST /auth/callback
