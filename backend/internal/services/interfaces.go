@@ -74,16 +74,6 @@ type FeeServicer interface {
 	// CalculateSalesTax calculates sales tax based on Accounting skill level
 	// Base: 5%, Max reduction: 50% (Accounting V), Min fee: 100 ISK
 	CalculateSalesTax(accountingLevel int, orderValue float64) float64
-
-	// CalculateBrokerFee calculates broker fee based on skills and standing
-	// Base: 3%, Reduced by Broker Relations + Advanced + Faction + Corp Standing, Min: 1%, Min fee: 100 ISK
-	CalculateBrokerFee(
-		brokerRelationsLevel int,
-		advancedBrokerRelationsLevel int,
-		factionStanding float64,
-		corpStanding float64,
-		orderValue float64,
-	) float64
 }
 
 // CargoServicer defines the interface for cargo optimization operations
