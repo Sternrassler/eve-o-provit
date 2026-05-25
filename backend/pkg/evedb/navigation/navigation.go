@@ -7,7 +7,81 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"sync"
 )
+
+var (
+	graphCacheMu    sync.RWMutex
+	graphCache      = map[bool]map[int64][]edge{} // key: avoidLowSec
+	graphLoadsTotal int
+)
+
+// resetGraphCache leert den Graph-Cache (für Tests).
+func resetGraphCache() {
+	graphCacheMu.Lock()
+	defer graphCacheMu.Unlock()
+	graphCache = map[bool]map[int64][]edge{}
+}
+
+// graphLoadCount gibt zurück, wie oft der Graph aus der DB geladen wurde (für Tests).
+func graphLoadCount() int {
+	graphCacheMu.RLock()
+	defer graphCacheMu.RUnlock()
+	return graphLoadsTotal
+}
+
+// getCachedGraph lädt den Graphen einmalig pro avoidLowSec-Variante und cached ihn.
+func getCachedGraph(db *sql.DB, avoidLowSec bool) (map[int64][]edge, error) {
+	graphCacheMu.RLock()
+	if g, ok := graphCache[avoidLowSec]; ok {
+		graphCacheMu.RUnlock()
+		return g, nil
+	}
+	graphCacheMu.RUnlock()
+
+	graphCacheMu.Lock()
+	defer graphCacheMu.Unlock()
+	if g, ok := graphCache[avoidLowSec]; ok { // double-check
+		return g, nil
+	}
+	g, err := loadGraph(db, avoidLowSec)
+	if err != nil {
+		return nil, err
+	}
+	graphCache[avoidLowSec] = g
+	graphLoadsTotal++
+	return g, nil
+}
+
+// bfs findet den kürzesten Pfad (in Jumps) per Breitensuche.
+// Alle Stargate-Kanten haben Gewicht 1, daher liefert BFS das Optimum.
+func bfs(graph map[int64][]edge, start, goal int64) ([]int64, bool) {
+	if _, exists := graph[start]; !exists {
+		return nil, false
+	}
+	if start == goal {
+		return []int64{start}, true
+	}
+	visited := map[int64]bool{start: true}
+	prev := map[int64]int64{}
+	queue := []int64{start}
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		for _, e := range graph[current] {
+			if visited[e.toSystemID] {
+				continue
+			}
+			visited[e.toSystemID] = true
+			prev[e.toSystemID] = current
+			if e.toSystemID == goal {
+				return reconstructPath(prev, start, goal), true
+			}
+			queue = append(queue, e.toSystemID)
+		}
+	}
+	return nil, false
+}
 
 // NavigationParams contains optional parameters for route calculation
 type NavigationParams struct {
@@ -113,14 +187,14 @@ func getEffectiveParams(params *NavigationParams) (warpSpeed, alignTime, avgWarp
 
 // ShortestPath finds the shortest path between two systems using Dijkstra's algorithm
 func ShortestPath(db *sql.DB, fromSystemID, toSystemID int64, avoidLowSec bool) (*PathResult, error) {
-	// Load the graph from database
-	graph, err := loadGraph(db, avoidLowSec)
+	// Load the graph from cache (or DB on first call)
+	graph, err := getCachedGraph(db, avoidLowSec)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load graph: %w", err)
 	}
 
-	// Run Dijkstra's algorithm
-	path, found := dijkstra(graph, fromSystemID, toSystemID)
+	// Run BFS (optimal for unit-weight graphs)
+	path, found := bfs(graph, fromSystemID, toSystemID)
 	if !found {
 		return nil, fmt.Errorf("no path found between systems %d and %d", fromSystemID, toSystemID)
 	}
@@ -172,77 +246,6 @@ func loadGraph(db *sql.DB, avoidLowSec bool) (map[int64][]edge, error) {
 	}
 
 	return graph, nil
-}
-
-// dijkstra implements Dijkstra's shortest path algorithm
-func dijkstra(graph map[int64][]edge, start, goal int64) ([]int64, bool) {
-	// Check if start and goal exist in graph
-	if _, exists := graph[start]; !exists {
-		return nil, false
-	}
-
-	// Distance map: system -> distance from start
-	dist := make(map[int64]int)
-	dist[start] = 0
-
-	// Previous node map for path reconstruction
-	prev := make(map[int64]int64)
-
-	// Visited set
-	visited := make(map[int64]bool)
-
-	// Priority queue (using simple slice for now, can optimize with heap)
-	pq := []struct {
-		systemID int64
-		distance int
-	}{{start, 0}}
-
-	for len(pq) > 0 {
-		// Find minimum distance node (linear search for simplicity)
-		minIdx := 0
-		for i := 1; i < len(pq); i++ {
-			if pq[i].distance < pq[minIdx].distance {
-				minIdx = i
-			}
-		}
-
-		// Extract minimum
-		current := pq[minIdx]
-		pq = append(pq[:minIdx], pq[minIdx+1:]...)
-
-		// Skip if already visited
-		if visited[current.systemID] {
-			continue
-		}
-
-		// Mark as visited
-		visited[current.systemID] = true
-
-		// Early termination: if we reached the goal, reconstruct path
-		if current.systemID == goal {
-			return reconstructPath(prev, start, goal), true
-		}
-
-		// Explore neighbors
-		for _, e := range graph[current.systemID] {
-			if visited[e.toSystemID] {
-				continue
-			}
-
-			newDist := current.distance + 1
-			if oldDist, exists := dist[e.toSystemID]; !exists || newDist < oldDist {
-				dist[e.toSystemID] = newDist
-				prev[e.toSystemID] = current.systemID
-				pq = append(pq, struct {
-					systemID int64
-					distance int
-				}{e.toSystemID, newDist})
-			}
-		}
-	}
-
-	// No path found
-	return nil, false
 }
 
 // reconstructPath builds the path from start to goal using the prev map

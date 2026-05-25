@@ -1,8 +1,11 @@
 package navigation
 
 import (
+	"database/sql"
 	"math"
 	"testing"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestCalculateWarpTime(t *testing.T) {
@@ -159,4 +162,35 @@ func TestGetEffectiveParams(t *testing.T) {
 // Helper function to create float64 pointers
 func ptrFloat64(v float64) *float64 {
 	return &v
+}
+
+// TestGraphCache_LoadsOnce prüft, dass der statische Graph nur einmal pro avoidLowSec-Variante geladen wird.
+func TestGraphCache_LoadsOnce(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	resetGraphCache()
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to create database: %v", err)
+	}
+	defer db.Close()
+
+	setupTestData(t, db)
+	if err := initializeNavigationViewsIntegration(db); err != nil {
+		t.Fatalf("Failed to initialize views: %v", err)
+	}
+
+	loads0 := graphLoadCount()
+	_, err = ShortestPath(db, 1, 2, false)
+	if err != nil {
+		t.Fatalf("ShortestPath: %v", err)
+	}
+	_, _ = ShortestPath(db, 1, 2, false)
+	loads1 := graphLoadCount()
+	if loads1-loads0 != 1 {
+		t.Errorf("Graph wurde %d mal geladen, erwartet 1 (Cache greift nicht)", loads1-loads0)
+	}
 }
