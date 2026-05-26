@@ -35,6 +35,14 @@ node tests/e2e/capture-session.mjs
 ```
 Verify with `npx playwright test --project=setup`.
 
+If only the short-lived access token expired (the `setup` project fails but the
+saved file is recent), renew the session non-interactively via the refresh token
+(~30d) — no browser login needed:
+```bash
+node tests/e2e/refresh-session.mjs
+```
+If that reports the refresh token is also expired, fall back to `capture-session.mjs`.
+
 ## CI
 Run only `--project=public` in CI (no session secret needed, deterministic). The
 `auth`/`setup` projects are local/nightly because the captured session expires
