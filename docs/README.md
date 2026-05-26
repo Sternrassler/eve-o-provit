@@ -8,6 +8,8 @@ Frontend) liegt zentral im Monorepo:
 
 ## Subprojekt-spezifisch
 
+- **[flutter-app-design.md](flutter-app-design.md)** — Design der Flutter-Tablet-App (geplant)
+- **[flutter-app-implementation-plan.md](flutter-app-implementation-plan.md)** — Implementierungsplan dazu (Phase 0 = manuelle EVE-App-Registrierung)
 - **[../README.md](../README.md)** — Quick Start & Features
 - **[testing/README.md](testing/README.md)** — Test-Strategie
 - **[testing/migrations.md](testing/migrations.md)** — DB-Migration-Tests (Testcontainers)
