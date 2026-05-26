@@ -1,30 +1,46 @@
-// This is a basic Flutter widget test.
+// Smoke test: verifies that EveOProvitApp renders the LoginScreen when
+// the auth state is overridden to Unauthenticated.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// The test does NOT require a real backend or token store — it overrides
+// authControllerProvider (and tokenStoreProvider) with in-memory stubs.
 
-import 'package:flutter/material.dart';
+import 'package:eve_o_provit/auth/auth_controller.dart';
+import 'package:eve_o_provit/auth/auth_providers.dart';
+import 'package:eve_o_provit/auth/token_store.dart';
+import 'package:eve_o_provit/main.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:eve_o_provit/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets('shows LoginScreen when unauthenticated', (tester) async {
+    // Override authControllerProvider so it immediately returns Unauthenticated,
+    // and tokenStoreProvider so no secure storage is touched.
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          // Prevent the real TokenStore from hitting flutter_secure_storage.
+          tokenStoreProvider.overrideWithValue(TokenStore()),
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+          // Force the auth state to Unauthenticated — no network calls.
+          authControllerProvider.overrideWith(() => _FakeAuthController()),
+        ],
+        child: const EveOProvitApp(),
+      ),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Let the router evaluate the redirect (one frame for async build).
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // The LoginScreen must be visible.
+    expect(find.text('Login mit EVE'), findsOneWidget);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Stub AuthController — always returns Unauthenticated synchronously.
+// ---------------------------------------------------------------------------
+
+class _FakeAuthController extends AuthController {
+  @override
+  Future<AuthState> build() async => const Unauthenticated();
 }
