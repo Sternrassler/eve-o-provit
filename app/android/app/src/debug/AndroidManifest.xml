@@ -4,4 +4,9 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Debug-only: allow cleartext HTTP so the app can reach a dev backend over
+         LAN / `adb reverse` (http://localhost:9001). Release builds stay
+         cleartext-blocked; production uses HTTPS via Caddy. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>
