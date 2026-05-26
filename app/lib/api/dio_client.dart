@@ -16,6 +16,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_controller.dart';
+import '../auth/auth_providers.dart';
 import '../auth/auth_repository.dart';
 import '../auth/token_store.dart';
 import '../core/env.dart';
@@ -106,11 +107,6 @@ Dio buildDio(TokenStore store, AuthRepository Function() getAuthRepo) {
 // ---------------------------------------------------------------------------
 // Riverpod providers
 // ---------------------------------------------------------------------------
-
-/// Provider exposing a [TokenStore] instance.
-///
-/// Exposed as a provider so it can be overridden in tests.
-final tokenStoreProvider = Provider<TokenStore>((_) => TokenStore());
 
 /// Provider exposing the interceptor-equipped [Dio] for app API calls.
 ///

@@ -238,5 +238,32 @@ void main() {
       // First call + one retry = 2 total; loop guard must stop further retries.
       expect(callCount, 2);
     });
+
+    test(
+        '401 on the refresh path itself: does NOT retry and clears tokens',
+        () async {
+      await store.save(access: 'expired_acc', refresh: 'stale_ref');
+
+      // shouldFail is irrelevant here — refresh() must never be invoked.
+      final fakeRepo = _FakeAuthRepo(shouldFail: false, store: store);
+      final dio = _buildTestDio(store, fakeRepo);
+
+      var callCount = 0;
+      dio.httpClientAdapter = _CallbackAdapter((options) {
+        callCount++;
+        return ResponseBody.fromString('Unauthorized', 401);
+      });
+
+      await expectLater(
+        () => dio.get('/auth/mobile/refresh'),
+        throwsA(isA<DioException>()),
+      );
+
+      // No retry — the request to the refresh endpoint itself must not loop.
+      expect(callCount, 1);
+      // Tokens cleared because the refresh-path 401 means the session is dead.
+      expect(await store.readAccess(), isNull);
+      expect(await store.readRefresh(), isNull);
+    });
   });
 }

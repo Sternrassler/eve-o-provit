@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../auth/token_store.dart';
+import '../core/env.dart';
+import 'auth_providers.dart';
 import 'auth_repository.dart';
 import 'character.dart';
 
@@ -99,15 +100,17 @@ final authControllerProvider =
 ///
 /// Uses a plain Dio instance without the Bearer/refresh interceptor so that
 /// auth calls (mobile/callback, mobile/refresh) never trigger the interceptor.
+/// Shares the [tokenStoreProvider] so both auth and app Dio use one store.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final authDio = Dio(
     BaseOptions(
+      baseUrl: Env.apiBaseUrl,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
     ),
   );
 
-  final store = TokenStore();
+  final store = ref.watch(tokenStoreProvider);
 
   return AuthRepository(
     dio: authDio,

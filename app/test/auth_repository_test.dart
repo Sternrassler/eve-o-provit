@@ -176,4 +176,23 @@ void main() {
       );
     });
   });
+
+  // ── logout() ──────────────────────────────────────────────────────────────
+
+  group('AuthRepository.logout()', () {
+    test('clears stored tokens', () async {
+      await store.save(access: 'acc', refresh: 'ref');
+
+      final repo = AuthRepository(
+        dio: dio,
+        tokenStore: store,
+        authenticate: fakeAuthenticate(),
+      );
+
+      await repo.logout();
+
+      expect(await store.readAccess(), isNull);
+      expect(await store.readRefresh(), isNull);
+    });
+  });
 }
