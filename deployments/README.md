@@ -123,8 +123,10 @@ curl http://localhost:9001/health
 
 ### Rebuild nach Code-Änderungen
 
+`make docker-up` baut geänderte Images automatisch neu (und stellt die aktuelle SDE bereit):
+
 ```bash
-make docker-restart
+make docker-up
 ```
 
 ### Database Shell
@@ -276,13 +278,13 @@ Alle Services laufen im gleichen Docker Network `eve-network`:
 
 | Target | Beschreibung |
 |--------|--------------|
-| `make docker-up` | Startet alle Services |
+| `make docker-up` | Startet alle Services (Image-Rebuild + aktuelle SDE) |
 | `make docker-down` | Stoppt alle Services |
+| `make sde` | Aktualisiert die selbst-gebaute EVE SDE (eve-sde sync) |
 | `make docker-logs` | Zeigt Logs (SERVICE=name für einzelnen) |
 | `make docker-ps` | Status aller Container |
-| `make docker-build` | Rebuild alle Images |
+| `make docker-build` | Rebuild aller Images (--no-cache) |
 | `make docker-clean` | Entfernt Container + Volumes + Images |
-| `make docker-restart` | Down → Up |
 | `make docker-shell-api` | Shell im Backend Container |
 | `make docker-shell-db` | PostgreSQL psql CLI |
 | `make docker-shell-redis` | Redis CLI |

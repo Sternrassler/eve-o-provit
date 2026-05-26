@@ -23,7 +23,7 @@
 3. **Docker Services starten:**
 
    ```bash
-   make docker-rebuild
+   make docker-up
    ```
 
 ## Tests ausführen
@@ -178,7 +178,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: make docker-rebuild
+      - run: make docker-up
       - run: make fe-install
       - run: make test-e2e
         env:
@@ -243,7 +243,7 @@ jobs:
 ```bash
 make docker-ps       # Status prüfen
 make docker-logs     # Logs anschauen
-make docker-restart  # Neustart
+make docker-up       # Neustart (mit Image-Rebuild + aktueller SDE)
 ```
 
 ### Playwright Browser fehlt

@@ -8,7 +8,7 @@ End-to-End Tests für EVE-O-Provit Frontend mit echtem EVE SSO OAuth Flow.
 
    ```bash
    cd /home/ix/vscode/eve-o-provit
-   make docker-rebuild
+   make docker-up
    ```
 
 2. **EVE Test Account Credentials:**
@@ -133,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: make docker-rebuild
+      - run: make docker-up
       - run: cd frontend && npm ci
       - run: cd frontend && npx playwright install --with-deps chromium
       - run: cd frontend && npm run test:e2e

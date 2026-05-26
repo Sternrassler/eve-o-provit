@@ -1,7 +1,7 @@
 # Makefile – Zentrale Orchestrierung für Projekt-Automationen
 # Referenz: copilot-instructions.md Abschnitt 3.1
 
-.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json secrets-scan secrets-check pr-check release ci-local clean ensure-trivy ensure-gitleaks push-ci pr-quality-gates-ci docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-restart docker-rebuild docker-shell-api docker-shell-db docker-shell-redis migrate migrate-up migrate-down migrate-create
+.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json secrets-scan secrets-check pr-check release ci-local clean ensure-trivy ensure-gitleaks push-ci pr-quality-gates-ci sde docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-shell-api docker-shell-db docker-shell-redis migrate migrate-up migrate-down migrate-create
 
 # Standardwerte
 TRIVY_FAIL_ON ?= HIGH,CRITICAL
@@ -13,6 +13,10 @@ COMPOSE_FILE ?= deployments/docker-compose.yml
 DOCKER_COMPOSE ?= $(shell command -v docker-compose 2>/dev/null || echo "docker compose")
 DATABASE_URL ?= postgresql://eveprovit:dev@localhost:5432/eveprovit?sslmode=disable
 MIGRATIONS_DIR ?= $(BACKEND_DIR)/migrations
+# Selbst-gebaute SDE: erzeugt vom eve-sde-Projekt (nicht vom GitHub-Release)
+EVE_SDE_DIR ?= ../eve-sde
+SDE_SOURCE := $(EVE_SDE_DIR)/data/sqlite/eve-sde.db
+SDE_TARGET := $(BACKEND_DIR)/data/sde/eve-sde.db
 
 .DEFAULT_GOAL := help
 
@@ -57,7 +61,7 @@ help: ## Zeigt verfügbare Targets (gruppiert)
 	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
 	@echo ""
 	@echo "┌─ Docker & Compose ────────────────────────────────────────────────────────────────────────────────────"
-	@grep -E '^docker.*:.*?## .*$$' $(MAKEFILE_LIST) | \
+	@grep -E '^(sde|docker).*:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "│ \033[36m%-26s\033[0m %-68s\n", $$1, $$2}'
 	@echo "└───────────────────────────────────────────────────────────────────────────────────────────────────────"
 	@echo ""
@@ -342,14 +346,16 @@ ensure-gitleaks: ## Stellt sicher, dass Gitleaks verfügbar ist
 
 # Docker & Compose Targets
 
-db-load: ## Lädt EVE SDE SQLite DB vom offiziellen GitHub Release
-	@echo "[make db-load] Lade EVE SDE Datenbank..."
-	@bash scripts/download-sde.sh
-	@echo "[make db-load] ✅ SDE Datenbank geladen"
+sde: ## Baut/aktualisiert die selbst-gebaute EVE SDE (eve-sde sync) und kopiert sie ins Backend
+	@echo "[make sde] Aktualisiere selbst-gebaute SDE via eve-sde sync (versionsgeprüft)..."
+	@$(MAKE) -C $(EVE_SDE_DIR) sync
+	@mkdir -p $(dir $(SDE_TARGET))
+	@cp $(SDE_SOURCE) $(SDE_TARGET)
+	@echo "[make sde] ✅ Aktuelle SDE bereitgestellt: $(SDE_TARGET)"
 
-docker-up: ## Startet alle Services (PostgreSQL, Redis, Backend)
-	@echo "[make docker-up] Starte Docker Compose Services..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d
+docker-up: sde ## Startet alle Services mit aktuellem Code (Image-Rebuild) und aktueller SDE
+	@echo "[make docker-up] Starte Docker Compose Services (mit Image-Rebuild)..."
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d --build
 	@echo "[make docker-up] ✅ Services gestartet"
 	@echo ""
 	@echo "Services verfügbar unter:"
@@ -385,10 +391,6 @@ docker-clean: ## Entfernt alle Container, Volumes und Images
 	@echo "[make docker-clean] Räume Docker Ressourcen auf..."
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) down -v --rmi all
 	@echo "[make docker-clean] ✅ Cleanup abgeschlossen"
-
-docker-restart: docker-down docker-up ## Neustart aller Services (ohne Rebuild)
-
-docker-rebuild: docker-down docker-build docker-up ## Kompletter Rebuild: Down → Build → Up
 
 docker-shell-api: ## Shell im Backend Container
 	@docker exec -it eve-o-provit-api /bin/sh
