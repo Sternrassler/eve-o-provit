@@ -23,8 +23,9 @@ var validIssuers = map[string]bool{
 
 // TokenValidator validates EVE SSO access tokens (JWTs) locally against the SSO JWKS.
 type TokenValidator struct {
-	clientID string
-	keys     jwk.Set
+	clientID        string
+	acceptedClients []string
+	keys            jwk.Set
 }
 
 // NewTokenValidator creates a validator that fetches and auto-refreshes the EVE SSO JWKS.
@@ -36,12 +37,21 @@ func NewTokenValidator(ctx context.Context, clientID string) (*TokenValidator, e
 	if _, err := cache.Refresh(ctx, jwksURL); err != nil {
 		return nil, fmt.Errorf("initial jwks fetch: %w", err)
 	}
-	return &TokenValidator{clientID: clientID, keys: jwk.NewCachedSet(cache, jwksURL)}, nil
+	return &TokenValidator{clientID: clientID, acceptedClients: []string{clientID}, keys: jwk.NewCachedSet(cache, jwksURL)}, nil
 }
 
 // NewTokenValidatorWithKeySet creates a validator using a provided key set (useful for tests).
 func NewTokenValidatorWithKeySet(clientID string, keys jwk.Set) *TokenValidator {
-	return &TokenValidator{clientID: clientID, keys: keys}
+	return &TokenValidator{clientID: clientID, acceptedClients: []string{clientID}, keys: keys}
+}
+
+// AddAcceptedClientID lets the validator accept tokens whose audience contains an
+// additional client ID (e.g. the mobile app), alongside the primary one.
+func (v *TokenValidator) AddAcceptedClientID(id string) {
+	if id == "" {
+		return
+	}
+	v.acceptedClients = append(v.acceptedClients, id)
 }
 
 // Validate verifies the token signature, expiration, issuer and audience, then extracts character info.
@@ -57,7 +67,7 @@ func (v *TokenValidator) Validate(ctx context.Context, token string) (*Character
 		return nil, fmt.Errorf("invalid issuer: %q", tok.Issuer())
 	}
 	aud := tok.Audience()
-	if !containsString(aud, v.clientID) || !containsString(aud, audienceEVE) {
+	if !containsString(aud, audienceEVE) || !audienceHasAcceptedClient(aud, v.acceptedClients) {
 		return nil, fmt.Errorf("invalid audience: %v", aud)
 	}
 	charID, err := parseCharacterID(tok.Subject())
@@ -78,6 +88,16 @@ func (v *TokenValidator) Validate(ctx context.Context, token string) (*Character
 func containsString(haystack []string, needle string) bool {
 	for _, s := range haystack {
 		if s == needle {
+			return true
+		}
+	}
+	return false
+}
+
+// audienceHasAcceptedClient returns true if aud contains at least one entry from accepted.
+func audienceHasAcceptedClient(aud, accepted []string) bool {
+	for _, id := range accepted {
+		if containsString(aud, id) {
 			return true
 		}
 	}

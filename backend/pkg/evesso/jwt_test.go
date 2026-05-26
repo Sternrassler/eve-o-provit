@@ -137,3 +137,16 @@ func TestValidate_RejectsEmptyToken(t *testing.T) {
 		t.Error("empty token must be rejected")
 	}
 }
+
+func TestValidate_AcceptsSecondaryClientID(t *testing.T) {
+	v, signer := newTestValidator(t)
+	v.AddAcceptedClientID("mobile-client")
+	tok := signToken(t, signer, "login.eveonline.com", []string{"mobile-client", audienceEVE}, "CHARACTER:EVE:12345", time.Now().Add(10*time.Minute), validClaims())
+	info, err := v.Validate(context.Background(), tok)
+	if err != nil {
+		t.Fatalf("Validate with secondary client ID: %v", err)
+	}
+	if info.CharacterID != 12345 {
+		t.Errorf("CharacterID = %d, want 12345", info.CharacterID)
+	}
+}
