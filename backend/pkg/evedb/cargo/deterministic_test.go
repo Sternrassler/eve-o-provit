@@ -119,12 +119,15 @@ func TestGetShipCapacitiesDeterministic_Nereus_Scenario3(t *testing.T) {
 	}
 }
 
-// TestGetShipCapacitiesDeterministic_Nereus_Scenario4 validates error handling (Issue #77 Scenario 4)
+// TestGetShipCapacitiesDeterministic_Nereus_Scenario4 validates graceful degradation
+// when a required skill is missing from (incomplete or stale) ESI data: the skill
+// bonus is skipped and the calculation falls back to base capacity instead of
+// failing the whole request (Issue #77 Scenario 4).
 func TestGetShipCapacitiesDeterministic_Nereus_Scenario4(t *testing.T) {
 	db := testutil.OpenTestDB(t)
 	defer db.Close()
 
-	// Character without required skill
+	// Character without the required skill (3340) — simulates incomplete ESI data
 	charSkills := &CharacterSkills{
 		Skills: []struct {
 			SkillID           int64 `json:"skill_id"`
@@ -135,12 +138,21 @@ func TestGetShipCapacitiesDeterministic_Nereus_Scenario4(t *testing.T) {
 		},
 	}
 
-	_, err := GetShipCapacitiesDeterministic(context.Background(), db, 650, charSkills, nil)
-	if err == nil {
-		t.Fatal("Expected error for missing skill, got nil")
+	result, err := GetShipCapacitiesDeterministic(context.Background(), db, 650, charSkills, nil)
+	if err != nil {
+		t.Fatalf("Expected graceful degradation, got error: %v", err)
 	}
 
-	t.Logf("✅ Scenario 4: Error handling → %v", err)
+	// Missing skill bonus is skipped → no bonuses applied, effective equals base.
+	if len(result.AppliedBonuses) != 0 {
+		t.Errorf("Expected no applied bonuses for missing skill, got %d", len(result.AppliedBonuses))
+	}
+	if !almostEqual(result.EffectiveCargoHold, result.BaseCargoHold, 0.01) {
+		t.Errorf("Expected effective (%.2f) to equal base (%.2f) when required skill is missing",
+			result.EffectiveCargoHold, result.BaseCargoHold)
+	}
+
+	t.Logf("✅ Scenario 4: Graceful degradation → base %.1f m³, no bonuses applied", result.BaseCargoHold)
 }
 
 // Helper: almostEqual checks float equality with tolerance
