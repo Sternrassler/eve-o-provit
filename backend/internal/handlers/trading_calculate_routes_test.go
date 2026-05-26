@@ -36,9 +36,21 @@ func (m *MockRouteCalculator) CalculateWithFilters(ctx context.Context, req *mod
 	return m.Calculate(ctx, req.RegionID, req.ShipTypeID, req.CargoCapacity, nil, nil)
 }
 
+// setTradingAuth installs middleware that mimics AuthMiddleware by seeding the
+// character_id/access_token locals CalculateRoutes requires for authenticated
+// trading operations.
+func setTradingAuth(app *fiber.App) {
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("character_id", 12345)
+		c.Locals("access_token", "test-token")
+		return c.Next()
+	})
+}
+
 // TestCalculateRoutes_Success_Unit tests successful route calculation
 func TestCalculateRoutes_Success_Unit(t *testing.T) {
 	app := fiber.New()
+	setTradingAuth(app)
 
 	// Mock RouteCalculator
 	mockCalc := &MockRouteCalculator{
@@ -104,6 +116,7 @@ func TestCalculateRoutes_Success_Unit(t *testing.T) {
 // TestCalculateRoutes_WithCargoCapacity_Unit tests with custom cargo capacity
 func TestCalculateRoutes_WithCargoCapacity_Unit(t *testing.T) {
 	app := fiber.New()
+	setTradingAuth(app)
 
 	mockCalc := &MockRouteCalculator{
 		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
@@ -246,6 +259,7 @@ func TestCalculateRoutes_InvalidShipTypeID_Unit(t *testing.T) {
 // TestCalculateRoutes_CalculatorError_Unit tests calculator service error
 func TestCalculateRoutes_CalculatorError_Unit(t *testing.T) {
 	app := fiber.New()
+	setTradingAuth(app)
 
 	mockCalc := &MockRouteCalculator{
 		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
@@ -273,12 +287,13 @@ func TestCalculateRoutes_CalculatorError_Unit(t *testing.T) {
 	err = parseJSON(resp.Body, &result)
 	assert.NoError(t, err)
 	assert.Equal(t, "Failed to calculate routes", result["error"])
-	assert.Contains(t, result["details"], "failed to fetch market orders")
+	// Internal error detail is logged server-side, not leaked in the response.
 }
 
 // TestCalculateRoutes_PartialResults_Unit tests timeout warning with partial results
 func TestCalculateRoutes_PartialResults_Unit(t *testing.T) {
 	app := fiber.New()
+	setTradingAuth(app)
 
 	mockCalc := &MockRouteCalculator{
 		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {
@@ -327,6 +342,7 @@ func TestCalculateRoutes_PartialResults_Unit(t *testing.T) {
 // TestCalculateRoutes_EmptyRoutes_Unit tests successful calculation with no profitable routes
 func TestCalculateRoutes_EmptyRoutes_Unit(t *testing.T) {
 	app := fiber.New()
+	setTradingAuth(app)
 
 	mockCalc := &MockRouteCalculator{
 		CalculateFunc: func(ctx context.Context, regionID, shipTypeID int, cargoCapacity float64, warpSpeed, alignTime *float64) (*models.RouteCalculationResponse, error) {

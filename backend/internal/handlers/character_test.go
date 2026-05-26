@@ -199,5 +199,4 @@ func TestCharacterHandler_GetCharacterSkills_ServiceError(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "Failed to fetch character skills", result["error"])
-	assert.NotNil(t, result["details"])
 }

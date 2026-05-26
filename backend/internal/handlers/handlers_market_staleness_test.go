@@ -132,7 +132,6 @@ func TestGetMarketDataStaleness_InvalidRegion_Unit(t *testing.T) {
 	err = parseJSON(resp.Body, &result)
 	assert.NoError(t, err)
 	assert.Contains(t, result["error"], "invalid region ID")
-	assert.NotEmpty(t, result["details"]) // strconv.Atoi error details
 }
 
 // TestGetMarketDataStaleness_QueryError_Unit tests database query error

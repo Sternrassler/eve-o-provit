@@ -119,7 +119,7 @@ func TestGetRegions_QueryError_Unit(t *testing.T) {
 	bodyBytes, _ := io.ReadAll(resp.Body)
 	body := string(bodyBytes)
 	assert.Contains(t, body, "Failed to fetch regions")
-	assert.Contains(t, body, "database connection lost")
+	// The raw DB error is logged server-side, not leaked in the response body.
 }
 
 // TestGetRegions_NilQuerier_Unit tests handler with nil region querier
