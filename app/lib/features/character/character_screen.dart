@@ -223,38 +223,39 @@ class _ActiveShipCard extends StatelessWidget {
 // Skills card
 // ---------------------------------------------------------------------------
 
-/// Shows total SP and the relevant cargo/navigation skills found in the list.
-///
-/// The interesting skill IDs for traders:
-///   - 3456 = Trade
-///   - 3443 = Navigation
-///   - 3428 = Warp Drive Operation
-///   - 3327 = Gallente Hauler (example)
-///   - 3340 = Spaceship Command
-///   - 3463 = Evasive Maneuvering
+/// Shows the trading-relevant character skills (cargo + navigation) by their
+/// real names + levels, sourced from the flat `TradingSkills` map the backend
+/// returns. The backend already pre-selects only trading-relevant skills, so
+/// we surface the cargo/navigation subset most useful for route planning.
 class _SkillsCard extends StatelessWidget {
   const _SkillsCard({required this.skillsData});
 
   final CharacterSkillsData skillsData;
 
-  // Highlight skill IDs relevant to hauling / trading
-  static const _highlightedSkillIds = <int>{
-    3340, // Spaceship Command
-    3428, // Warp Drive Operation
-    3463, // Evasive Maneuvering
-    3443, // Navigation
-  };
+  // The cargo/navigation-relevant skills to surface, mapped from the real
+  // TradingSkills Go field names (PascalCase) → human-readable labels.
+  static const _displayedSkills = <(String, String)>[
+    ('SpaceshipCommand', 'Spaceship Command'),
+    ('Navigation', 'Navigation'),
+    ('EvasiveManeuvering', 'Evasive Maneuvering'),
+    ('GallenteIndustrial', 'Gallente Industrial'),
+    ('CaldariIndustrial', 'Caldari Industrial'),
+    ('AmarrIndustrial', 'Amarr Industrial'),
+    ('MinmatarIndustrial', 'Minmatar Industrial'),
+    ('GallenteHauler', 'Gallente Hauler'),
+    ('CaldariHauler', 'Caldari Hauler'),
+    ('AmarrHauler', 'Amarr Hauler'),
+    ('MinmatarHauler', 'Minmatar Hauler'),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final highlighted = skillsData.skills
-        .where((s) => _highlightedSkillIds.contains(s.skillId))
-        .toList()
-      ..sort((a, b) => a.skillId.compareTo(b.skillId));
-
-    final totalSpStr = _formatSP(skillsData.totalSp);
+    // Only show skills that are actually present in the response.
+    final rows = _displayedSkills
+        .where((entry) => skillsData.skills.containsKey(entry.$1))
+        .toList();
 
     return Card(
       child: Padding(
@@ -279,51 +280,41 @@ class _SkillsCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            _InfoRow(label: 'Gesamt-SP', value: totalSpStr),
-            _InfoRow(
-              label: 'Trainierte Skills',
-              value: skillsData.skills.length.toString(),
+            Text(
+              'Navigations- & Cargo-Skills',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withAlpha(153),
+              ),
             ),
-            if (highlighted.isNotEmpty) ...[
-              const Divider(height: 20),
+            const SizedBox(height: 8),
+            if (rows.isEmpty)
               Text(
-                'Navigations- & Cargo-Skills',
-                style: theme.textTheme.labelMedium?.copyWith(
+                'Keine Skill-Daten verfügbar.',
+                style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurface.withAlpha(153),
                 ),
-              ),
-              const SizedBox(height: 8),
-              ...highlighted.map(
-                (skill) => Padding(
+              )
+            else
+              ...rows.map(
+                (entry) => Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Row(
                     children: [
                       Expanded(
                         child: Text(
-                          'Skill ${skill.skillId}',
+                          entry.$2,
                           style: theme.textTheme.bodySmall,
                         ),
                       ),
-                      _SkillLevelDots(level: skill.activeSkillLevel),
+                      _SkillLevelDots(level: skillsData.level(entry.$1)),
                     ],
                   ),
                 ),
               ),
-            ],
           ],
         ),
       ),
     );
-  }
-
-  static String _formatSP(int sp) {
-    if (sp >= 1000000) {
-      return '${(sp / 1000000).toStringAsFixed(1)}M SP';
-    }
-    if (sp >= 1000) {
-      return '${(sp / 1000).toStringAsFixed(0)}K SP';
-    }
-    return '$sp SP';
   }
 }
 

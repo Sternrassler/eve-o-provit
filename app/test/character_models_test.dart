@@ -107,40 +107,66 @@ void main() {
   });
 
   group('CharacterSkillsData.fromJson', () {
-    test('parses nested skills structure from backend handler', () {
-      // The character handler returns:
-      // { "character_id": X, "skills": { "total_sp": Y, "skills": [...] } }
+    test('parses the flat TradingSkills map (PascalCase keys) from handler', () {
+      // REAL shape: the handler serializes *TradingSkills (no json tags), so
+      // the "skills" value is a FLAT skill-name → value map.
+      // Mirrors backend/internal/handlers/character_test.go (Accounting=5,
+      // BrokerRelations=4, Navigation=5).
       final json = {
-        'character_id': 12345678,
+        'character_id': 12345,
         'skills': {
-          'total_sp': 50000000,
-          'skills': [
-            {
-              'skill_id': 3340,
-              'active_skill_level': 5,
-              'trained_skill_level': 5,
-              'skillpoints_in_skill': 256000,
-            },
-            {
-              'skill_id': 3428,
-              'active_skill_level': 4,
-              'trained_skill_level': 4,
-              'skillpoints_in_skill': 90510,
-            },
-          ],
+          'Accounting': 5,
+          'BrokerRelations': 4,
+          'AdvancedBrokerRelations': 0,
+          'FactionStanding': 0,
+          'CorpStanding': 0,
+          'SpaceshipCommand': 5,
+          'Navigation': 5,
+          'EvasiveManeuvering': 4,
+          'GallenteIndustrial': 3,
+          'CaldariIndustrial': 0,
+          'AmarrIndustrial': 0,
+          'MinmatarIndustrial': 0,
+          'GallenteHauler': 2,
+          'CaldariHauler': 0,
+          'AmarrHauler': 0,
+          'MinmatarHauler': 0,
         },
       };
 
       final data = CharacterSkillsData.fromJson(json);
 
-      expect(data.characterId, equals(12345678));
-      expect(data.totalSp, equals(50000000));
-      expect(data.skills.length, equals(2));
+      expect(data.characterId, equals(12345));
+      // Real assertions against the actual backend test values.
+      expect(data.level('Accounting'), equals(5));
+      expect(data.level('BrokerRelations'), equals(4));
+      expect(data.level('Navigation'), equals(5));
+      expect(data.level('SpaceshipCommand'), equals(5));
+      expect(data.level('EvasiveManeuvering'), equals(4));
+      expect(data.level('GallenteIndustrial'), equals(3));
+      expect(data.level('GallenteHauler'), equals(2));
+      // The raw map is preserved as a flat name → value map.
+      expect(data.skills['CaldariHauler'], equals(0));
+    });
 
-      final first = data.skills.first;
-      expect(first.skillId, equals(3340));
-      expect(first.activeSkillLevel, equals(5));
-      expect(first.skillpointsInSkill, equals(256000));
+    test('level() returns 0 for an absent skill key', () {
+      final data = CharacterSkillsData.fromJson({
+        'character_id': 1,
+        'skills': {'Navigation': 3},
+      });
+      expect(data.level('Navigation'), equals(3));
+      expect(data.level('DoesNotExist'), equals(0));
+    });
+
+    test('parses float standing values without crashing', () {
+      // FactionStanding / CorpStanding are float64 on the Go side.
+      final data = CharacterSkillsData.fromJson({
+        'character_id': 7,
+        'skills': {'FactionStanding': 2.5, 'CorpStanding': -1.0},
+      });
+      expect(data.skills['FactionStanding'], closeTo(2.5, 0.001));
+      // level() truncates the float to an int.
+      expect(data.level('FactionStanding'), equals(2));
     });
   });
 

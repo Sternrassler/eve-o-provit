@@ -202,79 +202,67 @@ class CharacterShipsResponse {
 }
 
 // ---------------------------------------------------------------------------
-// CharacterSkill + CharacterSkillsData — GET /api/v1/characters/:id/skills
+// CharacterSkillsData — GET /api/v1/characters/:id/skills
 // ---------------------------------------------------------------------------
-
-/// A single skill entry.
-///
-/// Backend shape (services/character_helper.go CharacterSkill):
-/// ```json
-/// {
-///   "skill_id": 3340,
-///   "active_skill_level": 5,
-///   "trained_skill_level": 5,
-///   "skillpoints_in_skill": 256000
-/// }
-/// ```
-@immutable
-class CharacterSkill {
-  const CharacterSkill({
-    required this.skillId,
-    required this.activeSkillLevel,
-    required this.trainedSkillLevel,
-    required this.skillpointsInSkill,
-  });
-
-  final int skillId;
-  final int activeSkillLevel;
-  final int trainedSkillLevel;
-  final int skillpointsInSkill;
-
-  factory CharacterSkill.fromJson(Map<String, dynamic> json) {
-    return CharacterSkill(
-      skillId: (json['skill_id'] as num).toInt(),
-      activeSkillLevel: (json['active_skill_level'] as num).toInt(),
-      trainedSkillLevel: (json['trained_skill_level'] as num).toInt(),
-      skillpointsInSkill: (json['skillpoints_in_skill'] as num).toInt(),
-    );
-  }
-}
 
 /// Response body from `GET /api/v1/characters/:characterId/skills`.
 ///
-/// Handler returns:
+/// The handler serializes a `*TradingSkills` struct
+/// (backend/internal/services/skills_service.go) which has NO json tags — so
+/// the JSON keys are the exported Go field names (PascalCase). The `skills`
+/// value is a FLAT skill-name → value map, NOT an array:
+///
 /// ```json
 /// {
-///   "character_id": 12345678,
+///   "character_id": 12345,
 ///   "skills": {
-///     "total_sp": 50000000,
-///     "skills": [...]
+///     "Accounting": 5,
+///     "BrokerRelations": 4,
+///     "AdvancedBrokerRelations": 0,
+///     "FactionStanding": 0,
+///     "CorpStanding": 0,
+///     "SpaceshipCommand": 5,
+///     "Navigation": 5,
+///     "EvasiveManeuvering": 4,
+///     "GallenteIndustrial": 0,
+///     "CaldariIndustrial": 0,
+///     "AmarrIndustrial": 0,
+///     "MinmatarIndustrial": 0,
+///     "GallenteHauler": 0,
+///     "CaldariHauler": 0,
+///     "AmarrHauler": 0,
+///     "MinmatarHauler": 0
 ///   }
 /// }
 /// ```
+///
+/// Most values are skill levels (int 0–5); `FactionStanding`/`CorpStanding`
+/// are float standings (-10.0..+10.0). We parse the map as `Map<String, num>`
+/// for resilience and expose an int [level] helper for level-style skills.
 @immutable
 class CharacterSkillsData {
   const CharacterSkillsData({
     required this.characterId,
-    required this.totalSp,
     required this.skills,
   });
 
   final int characterId;
-  final int totalSp;
-  final List<CharacterSkill> skills;
+
+  /// Flat map of skill name (PascalCase, matching the Go field names) → value.
+  final Map<String, num> skills;
+
+  /// Returns the integer level for [name] (0 if absent).
+  int level(String name) => (skills[name] ?? 0).toInt();
 
   factory CharacterSkillsData.fromJson(Map<String, dynamic> json) {
-    // The handler wraps CharacterSkills under the key "skills"
-    final skillsMap = json['skills'] as Map<String, dynamic>? ?? {};
-    final rawSkills = skillsMap['skills'] as List<dynamic>? ?? [];
+    final rawSkills = json['skills'] as Map<String, dynamic>? ?? const {};
+    final parsed = <String, num>{};
+    rawSkills.forEach((key, value) {
+      if (value is num) parsed[key] = value;
+    });
     return CharacterSkillsData(
       characterId: (json['character_id'] as num).toInt(),
-      totalSp: (skillsMap['total_sp'] as num?)?.toInt() ?? 0,
-      skills: rawSkills
-          .cast<Map<String, dynamic>>()
-          .map(CharacterSkill.fromJson)
-          .toList(),
+      skills: parsed,
     );
   }
 }
