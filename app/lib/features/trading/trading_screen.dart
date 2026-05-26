@@ -1,32 +1,85 @@
 /// Adaptive TradingScreen — single-pane on phones / tablets in portrait,
 /// two-pane side-by-side on wide displays (≥840 dp).
 ///
-/// Controls area: region dropdown, ship type input, market staleness/refresh,
-/// security-zone filter toggles, and the "Berechnen" action.
+/// Controls area: region dropdown, ship selector, market staleness/refresh,
+/// Lo/Null sec-zone quick toggles, and the "Berechnen" action.
+///
+/// Left-column sidebar (two-pane only): TradingFiltersPanel + ShipFittingCard.
+/// In single-pane the filters panel appears below the controls bar.
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/trading_models.dart';
+import '../../auth/auth_controller.dart';
 import '../../core/breakpoint.dart';
 import '../trading/providers.dart';
 import 'route_detail.dart';
 import 'route_list.dart';
+import 'ship_fitting_card.dart';
+import 'ship_select.dart';
+import 'trading_filters_panel.dart';
 
 // ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
 
 /// The main trading screen.
-///
-/// Uses [LayoutBuilder] to switch between single-pane (list only) and
-/// two-pane (list + detail side-by-side) layouts at the [kTwoPaneBreakpoint].
-class TradingScreen extends ConsumerWidget {
+class TradingScreen extends ConsumerStatefulWidget {
   const TradingScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TradingScreen> createState() => _TradingScreenState();
+}
+
+class _TradingScreenState extends ConsumerState<TradingScreen> {
+  /// Whether the active-ship prefill has already been applied this session.
+  bool _activeShipPrefilled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed selectedShipTypeIdProvider from the active ship once the provider
+    // resolves — mirrors the web's `shipOverride ?? activeShip ?? 648`.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prefillActiveShip());
+  }
+
+  void _prefillActiveShip() {
+    if (_activeShipPrefilled) return;
+    final asyncActiveShip = ref.read(activeShipTypeIdProvider);
+    asyncActiveShip.whenData((typeId) {
+      if (typeId != null &&
+          ref.read(selectedShipTypeIdProvider) == null) {
+        ref.read(selectedShipTypeIdProvider.notifier).select(typeId);
+        _activeShipPrefilled = true;
+      }
+    });
+
+    // If still loading, listen once it resolves.
+    if (asyncActiveShip is AsyncLoading) {
+      ref.listenManual(activeShipTypeIdProvider, (_, next) {
+        next.whenData((typeId) {
+          if (_activeShipPrefilled) return;
+          if (typeId != null && ref.read(selectedShipTypeIdProvider) == null) {
+            ref.read(selectedShipTypeIdProvider.notifier).select(typeId);
+          }
+          _activeShipPrefilled = true;
+        });
+      });
+    }
+
+    // Fallback: if no active-ship data at all, default to 648.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(selectedShipTypeIdProvider) == null) {
+        ref.read(selectedShipTypeIdProvider.notifier).select(648);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Trading'),
@@ -65,17 +118,41 @@ class _TwoPaneLayout extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedRoute = ref.watch(selectedRouteProvider);
+    final selectedShipTypeId = ref.watch(selectedShipTypeIdProvider);
+    final authState = ref.watch(authControllerProvider).value;
+    final character =
+        authState is Authenticated ? authState.character : null;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Left pane: route list — fixed 360 dp
+        // Left pane: filters + fitting card — fixed 320 dp
+        SizedBox(
+          width: 320,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const TradingFiltersPanel(),
+                const SizedBox(height: 12),
+                if (character != null && selectedShipTypeId != null)
+                  ShipFittingCard(
+                    characterId: character.id,
+                    shipTypeId: selectedShipTypeId,
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const VerticalDivider(width: 1),
+        // Right pane: route list (360 dp) + detail
         SizedBox(
           width: 360,
           child: RouteList(),
         ),
         const VerticalDivider(width: 1),
-        // Right pane: detail or placeholder
+        // Detail pane
         Expanded(
           child: selectedRoute != null
               ? RouteDetail(route: selectedRoute)
@@ -165,49 +242,19 @@ class _DetailPlaceholder extends StatelessWidget {
 // Controls bar
 // ---------------------------------------------------------------------------
 
-/// Horizontal (or wrapping) bar with all trading controls.
+/// Horizontal (or wrapping) bar with trading controls.
+///
+/// Contains: Region dropdown, ShipSelect, market refresh, Lo/Null quick toggles,
+/// Berechnen button.
 class _ControlsBar extends ConsumerStatefulWidget {
   @override
   ConsumerState<_ControlsBar> createState() => _ControlsBarState();
 }
 
 class _ControlsBarState extends ConsumerState<_ControlsBar> {
-  final _shipController = TextEditingController(text: '648'); // Badger default
   String? _stalenessText;
   bool _refreshing = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Sync text field from existing provider state.
-    final existing = ref.read(selectedShipTypeIdProvider);
-    if (existing != null) {
-      _shipController.text = existing.toString();
-    }
-    _shipController.addListener(_onShipTypeChanged);
-    // Seed the default ship type (Badger 648) after the first frame so we
-    // don't mutate providers during the build phase.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (ref.read(selectedShipTypeIdProvider) == null) {
-        ref.read(selectedShipTypeIdProvider.notifier).select(648);
-      }
-    });
-  }
-
-  void _onShipTypeChanged() {
-    final v = int.tryParse(_shipController.text);
-    if (v != null && v > 0) {
-      ref.read(selectedShipTypeIdProvider.notifier).select(v);
-    }
-  }
-
-  @override
-  void dispose() {
-    _shipController.removeListener(_onShipTypeChanged);
-    _shipController.dispose();
-    super.dispose();
-  }
+  bool _calculating = false;
 
   Future<void> _refreshMarket() async {
     final region = ref.read(selectedRegionProvider);
@@ -221,7 +268,6 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
     });
     try {
       final api = ref.read(tradingApiProvider);
-      // refreshMarket takes a typeId; we use 34 (Tritanium) as a proxy trigger.
       await api.refreshMarket(region.id, 34);
       final staleness = await api.staleness(region.id);
       if (mounted) {
@@ -256,10 +302,15 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
       return;
     }
     if (shipTypeId == null) {
-      _showSnack('Bitte eine Schiff-Typ-ID eingeben.');
+      _showSnack('Bitte ein Schiff auswählen.');
       return;
     }
-    await ref.read(routesProvider.notifier).calculate();
+    setState(() => _calculating = true);
+    try {
+      await ref.read(routesProvider.notifier).calculate();
+    } finally {
+      if (mounted) setState(() => _calculating = false);
+    }
   }
 
   @override
@@ -268,6 +319,7 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
     final selectedRegion = ref.watch(selectedRegionProvider);
     final filters = ref.watch(filtersProvider);
     final accent = Theme.of(context).colorScheme.primary;
+    final busy = _refreshing || _calculating;
 
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -317,21 +369,10 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
               ),
             ),
 
-            // ── Ship type ID input ──────────────────────────────────────────
+            // ── Ship selector ───────────────────────────────────────────────
             SizedBox(
-              width: 140,
-              child: TextFormField(
-                controller: _shipController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Schiff-Typ-ID',
-                  border: OutlineInputBorder(),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  isDense: true,
-                  hintText: '648',
-                ),
-              ),
+              width: 220,
+              child: ShipSelect(enabled: !busy),
             ),
 
             // ── Market refresh + staleness ──────────────────────────────────
@@ -342,7 +383,7 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : IconButton.outlined(
-                    onPressed: _refreshMarket,
+                    onPressed: busy ? null : _refreshMarket,
                     icon: const Icon(Icons.refresh_rounded),
                     tooltip: 'Marktdaten aktualisieren',
                   ),
@@ -357,7 +398,7 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
                     ),
               ),
 
-            // ── Security-zone toggles ──────────────────────────────────────
+            // ── Quick sec-zone toggles (Lo / Null) ─────────────────────────
             _SecZoneToggle(
               label: 'Lo',
               active: filters.lowSec,
@@ -377,17 +418,27 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
 
             // ── Calculate button ───────────────────────────────────────────
             FilledButton(
-              onPressed: _calculate,
+              onPressed: busy ? null : _calculate,
               style: FilledButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Colors.white,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               ),
-              child: const Text(
-                'Berechnen',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
+              child: _calculating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Text(
+                      'Berechnen',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
             ),
           ],
         ),

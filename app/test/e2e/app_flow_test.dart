@@ -26,7 +26,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:eve_o_provit/features/character/providers.dart';
 import 'package:eve_o_provit/features/trading/route_detail.dart';
 import 'package:eve_o_provit/features/trading/route_list.dart';
 import 'package:eve_o_provit/features/trading/trading_screen.dart';
@@ -107,14 +106,15 @@ void main() {
 
   group('Adaptive layout', () {
     testWidgets(
-        'Landscape (1280×800, ≥840 dp) → two-pane: RouteList + VerticalDivider',
+        'Landscape (1280×800, ≥840 dp) → two-pane: RouteList + at least one VerticalDivider',
         (tester) async {
       _setViewSize(tester, 1280, 800);
       await _pumpApp(tester, authenticatedOverrides());
 
       expect(find.byType(RouteList), findsOneWidget);
-      // VerticalDivider is the structural marker for the two-column layout.
-      expect(find.byType(VerticalDivider), findsOneWidget);
+      // VerticalDivider is the structural marker for the multi-column layout.
+      // The trading screen now has a sidebar + list + detail = 2 dividers.
+      expect(find.byType(VerticalDivider), findsAtLeastNWidgets(1));
     });
 
     testWidgets(
@@ -237,18 +237,15 @@ void main() {
   // ── 6. Character flow ───────────────────────────────────────────────────────
 
   group('Character flow', () {
+    // authenticatedOverrides() now includes characterApiProvider fake;
+    // no need to extend — adding it again would cause a duplicate-override error.
+
     testWidgets(
         'Navigating to Character tab shows character name and ship from mocked data',
         (tester) async {
       _setViewSize(tester, 1280, 800);
 
-      // Extend the authenticated overrides with the fake CharacterApi.
-      final overrides = [
-        ...authenticatedOverrides(),
-        characterApiProvider.overrideWithValue(FakeCharacterApi()),
-      ];
-
-      await _pumpApp(tester, overrides);
+      await _pumpApp(tester, authenticatedOverrides());
 
       // Tap the "Character" bottom navigation destination.
       await tester.tap(find.text('Character').last);
@@ -269,12 +266,7 @@ void main() {
         (tester) async {
       _setViewSize(tester, 1280, 800);
 
-      final overrides = [
-        ...authenticatedOverrides(),
-        characterApiProvider.overrideWithValue(FakeCharacterApi()),
-      ];
-
-      await _pumpApp(tester, overrides);
+      await _pumpApp(tester, authenticatedOverrides());
 
       await tester.tap(find.text('Character').last);
       await tester.pumpAndSettle();
@@ -291,12 +283,7 @@ void main() {
         (tester) async {
       _setViewSize(tester, 800, 1280);
 
-      final overrides = [
-        ...authenticatedOverrides(),
-        characterApiProvider.overrideWithValue(FakeCharacterApi()),
-      ];
-
-      await _pumpApp(tester, overrides);
+      await _pumpApp(tester, authenticatedOverrides());
 
       await tester.tap(find.text('Character').last);
       await tester.pumpAndSettle();

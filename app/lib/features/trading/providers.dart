@@ -9,6 +9,10 @@
 ///
 /// Filter state:
 ///   filtersProvider (Notifier)
+///
+/// Character ship providers:
+///   characterShipsProvider — list of ships in hangar (FutureProvider)
+///   fittingProvider        — CharacterFitting for (characterId, shipTypeId)
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +20,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/dio_client.dart';
 import '../../api/trading_api.dart';
 import '../../api/trading_models.dart';
+import '../character/character_models.dart';
+import '../character/providers.dart' show characterApiProvider;
 
 // ---------------------------------------------------------------------------
 // TradingApi provider
@@ -25,6 +31,47 @@ import '../../api/trading_models.dart';
 final tradingApiProvider = Provider<TradingApi>((ref) {
   return TradingApi(ref.watch(dioProvider));
 });
+
+// ---------------------------------------------------------------------------
+// Character-ship providers (used by ShipSelect + ShipFittingCard)
+// ---------------------------------------------------------------------------
+
+/// Fetches all ships in the character's hangar.
+///
+/// Returns an empty list on error so the UI can fall back gracefully.
+/// Uses [characterApiProvider] from the character feature.
+final characterShipsProvider =
+    FutureProvider<List<CharacterAssetShip>>((ref) async {
+  final api = ref.watch(characterApiProvider);
+  try {
+    final response = await api.ships();
+    return response.ships;
+  } catch (_) {
+    return const [];
+  }
+});
+
+/// Fetches the active ship type id; used to seed [selectedShipTypeIdProvider].
+///
+/// Returns null on error so the fallback (648) is used.
+final activeShipTypeIdProvider = FutureProvider<int?>((ref) async {
+  final api = ref.watch(characterApiProvider);
+  try {
+    final ship = await api.activeShip();
+    return ship.shipTypeId;
+  } catch (_) {
+    return null;
+  }
+});
+
+/// Fetches [CharacterFitting] for a given (characterId, shipTypeId) pair.
+final fittingProvider = FutureProvider.family<CharacterFitting, (int, int)>(
+  (ref, args) async {
+    final (characterId, shipTypeId) = args;
+    final api = ref.watch(characterApiProvider);
+    return api.fitting(characterId, shipTypeId);
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Regions
@@ -95,15 +142,17 @@ final selectedRouteProvider =
 
 /// Immutable filter parameters controlling which routes are surfaced.
 ///
-/// Security zones default to high-sec only; min spread / min profit default
-/// to null (no threshold applied).
+/// Defaults match the web frontend exactly:
+///   minSpread=5, minProfit=100000, maxTravelTime=30,
+///   highSec=true, lowSec=false, nullSec=false.
 class TradingFilters {
   const TradingFilters({
     this.highSec = true,
     this.lowSec = false,
     this.nullSec = false,
-    this.minSpread,
-    this.minProfit,
+    this.minSpread = 5.0,
+    this.minProfit = 100000.0,
+    this.maxTravelTime = 30.0,
   });
 
   /// Include high-security systems (security status ≥ 0.5).
@@ -112,14 +161,17 @@ class TradingFilters {
   /// Include low-security systems (security status 0.0 – 0.4).
   final bool lowSec;
 
-  /// Include null-security systems (security status < 0.0).
+  /// Include null-security systems (security status ≤ 0.0).
   final bool nullSec;
 
-  /// Minimum spread percentage required for a route (null = no limit).
-  final double? minSpread;
+  /// Minimum spread percentage required for a route.
+  final double minSpread;
 
-  /// Minimum ISK profit required for a route (null = no limit).
-  final double? minProfit;
+  /// Minimum ISK net profit required for a route.
+  final double minProfit;
+
+  /// Maximum travel time in minutes for a route.
+  final double maxTravelTime;
 
   TradingFilters copyWith({
     bool? highSec,
@@ -127,6 +179,7 @@ class TradingFilters {
     bool? nullSec,
     double? minSpread,
     double? minProfit,
+    double? maxTravelTime,
   }) {
     return TradingFilters(
       highSec: highSec ?? this.highSec,
@@ -134,6 +187,7 @@ class TradingFilters {
       nullSec: nullSec ?? this.nullSec,
       minSpread: minSpread ?? this.minSpread,
       minProfit: minProfit ?? this.minProfit,
+      maxTravelTime: maxTravelTime ?? this.maxTravelTime,
     );
   }
 
@@ -145,16 +199,18 @@ class TradingFilters {
           lowSec == other.lowSec &&
           nullSec == other.nullSec &&
           minSpread == other.minSpread &&
-          minProfit == other.minProfit;
+          minProfit == other.minProfit &&
+          maxTravelTime == other.maxTravelTime;
 
   @override
   int get hashCode =>
-      Object.hash(highSec, lowSec, nullSec, minSpread, minProfit);
+      Object.hash(highSec, lowSec, nullSec, minSpread, minProfit, maxTravelTime);
 
   @override
   String toString() => 'TradingFilters('
       'highSec: $highSec, lowSec: $lowSec, nullSec: $nullSec, '
-      'minSpread: $minSpread, minProfit: $minProfit)';
+      'minSpread: $minSpread, minProfit: $minProfit, '
+      'maxTravelTime: $maxTravelTime)';
 }
 
 // ---------------------------------------------------------------------------
@@ -247,15 +303,31 @@ double routeMinSecurityStatus(TradingRoute route) {
 /// Returns true when [route] passes the supplied [filters] — applied
 /// CLIENT-SIDE, exactly like the Next.js web client.
 ///
-/// Security-zone classification (matches the web):
-///   high-sec: sec >= 0.5
-///   low-sec : 0.0 < sec < 0.5
-///   null-sec: sec <= 0.0
-///
-/// A route in a zone whose toggle is OFF is hidden. Optional [minSpread] /
-/// [minProfit] thresholds (null = no threshold) are also applied client-side
-/// against the route's spread percent and net profit.
+/// Full predicate (matches web page.tsx):
+///   1. netProfit < 0            → drop
+///   2. spreadPercent < minSpread → drop
+///   3. totalProfit < minProfit  → drop
+///   4. travelTimeSeconds / 60 > maxTravelTime → drop
+///   5. Security-zone classification:
+///      high-sec: sec >= 0.5
+///      low-sec : 0.0 < sec < 0.5
+///      null-sec: sec <= 0.0
+///      A route in a zone whose toggle is OFF is hidden.
 bool routeMatchesFilters(TradingRoute route, TradingFilters filters) {
+  // 1. Drop unprofitable routes.
+  if (route.netProfit < 0) return false;
+
+  // 2. Spread threshold.
+  if (route.spreadPercent < filters.minSpread) return false;
+
+  // 3. Profit threshold (total_profit, matching web's totalProfit check).
+  if (route.totalProfit < filters.minProfit) return false;
+
+  // 4. Travel-time threshold.
+  final travelTimeMinutes = route.travelTimeSeconds / 60.0;
+  if (travelTimeMinutes > filters.maxTravelTime) return false;
+
+  // 5. Security-zone classification.
   final sec = routeMinSecurityStatus(route);
 
   final isHighSec = sec >= 0.5;
@@ -265,12 +337,6 @@ bool routeMatchesFilters(TradingRoute route, TradingFilters filters) {
   if (isHighSec && !filters.highSec) return false;
   if (isLowSec && !filters.lowSec) return false;
   if (isNullSec && !filters.nullSec) return false;
-
-  final minSpread = filters.minSpread;
-  if (minSpread != null && route.spreadPercent < minSpread) return false;
-
-  final minProfit = filters.minProfit;
-  if (minProfit != null && route.netProfit < minProfit) return false;
 
   return true;
 }

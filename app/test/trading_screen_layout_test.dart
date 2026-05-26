@@ -200,8 +200,9 @@ void main() {
     // RouteList must be in the tree.
     expect(find.byType(RouteList), findsOneWidget);
 
-    // The VerticalDivider is the structural marker for the two-column layout.
-    expect(find.byType(VerticalDivider), findsOneWidget);
+    // The VerticalDivider is the structural marker for the multi-column layout.
+    // The trading screen now has sidebar + list + detail = 2 dividers.
+    expect(find.byType(VerticalDivider), findsAtLeastNWidgets(1));
   });
 
   // ── 4.4 Layout: Single-pane at 800 dp ────────────────────────────────────

@@ -16,6 +16,8 @@ import 'package:eve_o_provit/auth/character.dart';
 import 'package:eve_o_provit/auth/token_store.dart';
 import 'package:eve_o_provit/features/character/character_api.dart';
 import 'package:eve_o_provit/features/character/character_models.dart';
+import 'package:eve_o_provit/features/character/providers.dart'
+    show characterApiProvider;
 import 'package:eve_o_provit/features/trading/providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -191,6 +193,27 @@ class FakeTradingApi extends TradingApi {
 // FakeCharacterApi
 // ---------------------------------------------------------------------------
 
+/// Canned [CharacterFitting] returned by the fake CharacterApi.
+final fakeCharacterFitting = CharacterFitting(
+  characterId: 12345678,
+  shipTypeId: 648,
+  effectiveCargoM3: 9656.9,
+  warpSpeedAuS: 6.87,
+  alignTimeSeconds: 4.82,
+  baseCargoHoldM3: 2700.0,
+  baseWarpSpeedAuS: 3.0,
+  fittedModules: 3,
+  bonuses: FittingBonuses(
+    cargoBonusM3: 6956.9,
+    warpSpeedMultiplier: 2.29,
+    inertiaModifier: 0.8,
+    skillsBonusM3: 2700.0,
+    skillsBonusPct: 100.0,
+    modulesBonusM3: 4256.9,
+  ),
+  cached: true,
+);
+
 /// A [CharacterApi] that returns canned data without network access.
 class FakeCharacterApi extends CharacterApi {
   FakeCharacterApi() : super(Dio());
@@ -208,6 +231,10 @@ class FakeCharacterApi extends CharacterApi {
   @override
   Future<CharacterShipsResponse> ships() async =>
       const CharacterShipsResponse(ships: [], count: 0);
+
+  @override
+  Future<CharacterFitting> fitting(int characterId, int shipTypeId) async =>
+      fakeCharacterFitting;
 }
 
 // ---------------------------------------------------------------------------
@@ -259,6 +286,8 @@ List<dynamic> authenticatedOverrides() => [
       authControllerProvider.overrideWith(FakeAuthControllerAuthenticated.new),
       tradingApiProvider.overrideWithValue(FakeTradingApi()),
       routesProvider.overrideWith(FakeRoutesNotifier.new),
+      // Provide fake character API so ship selector / fitting card work offline.
+      characterApiProvider.overrideWithValue(FakeCharacterApi()),
     ];
 
 /// Provider overrides for an unauthenticated session.

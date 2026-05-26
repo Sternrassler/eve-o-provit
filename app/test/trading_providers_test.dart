@@ -58,6 +58,8 @@ TradingRoute _fakeRoute({
   double minRouteSecurityStatus = 0.5,
   double spreadPercent = 23.6,
   double netProfit = 116000.0,
+  double totalProfit = 130000.0,
+  double travelTimeSeconds = 1200.0, // 20 min — within default 30-min limit
 }) {
   return TradingRoute(
     itemTypeId: typeId,
@@ -77,9 +79,9 @@ TradingRoute _fakeRoute({
     minRouteSecurityStatus: minRouteSecurityStatus,
     quantity: 100000,
     profitPerUnit: 1.3,
-    totalProfit: 130000.0,
+    totalProfit: totalProfit,
     spreadPercent: spreadPercent,
-    travelTimeSeconds: 1200.0,
+    travelTimeSeconds: travelTimeSeconds,
     roundTripSeconds: 2400.0,
     iskPerHour: 195000000.0,
     jumps: 9,
@@ -373,7 +375,10 @@ void main() {
   // ── filtersProvider ────────────────────────────────────────────────────────
 
   group('filtersProvider', () {
-    test('has correct defaults: highSec=true, lowSec=false, nullSec=false',
+    test(
+        'has correct web-matching defaults: '
+        'highSec=true, lowSec=false, nullSec=false, '
+        'minSpread=5, minProfit=100000, maxTravelTime=30',
         () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
@@ -383,8 +388,9 @@ void main() {
       expect(filters.highSec, isTrue);
       expect(filters.lowSec, isFalse);
       expect(filters.nullSec, isFalse);
-      expect(filters.minSpread, isNull);
-      expect(filters.minProfit, isNull);
+      expect(filters.minSpread, 5.0);
+      expect(filters.minProfit, 100000.0);
+      expect(filters.maxTravelTime, 30.0);
     });
 
     test('copyWith toggles lowSec without affecting other fields', () {
@@ -566,36 +572,128 @@ void main() {
           ['AtZero']);
     });
 
-    test('minSpread threshold filters low-spread routes client-side',
+    test(
+        'default minSpread=5 hides routes with spreadPercent < 5',
         () async {
-      final lowSpread = _fakeRoute(typeId: 4, name: 'LowSpread', spreadPercent: 2);
+      // Default filters include minSpread=5; spread=2 is below threshold.
+      final lowSpread =
+          _fakeRoute(typeId: 4, name: 'LowSpread', spreadPercent: 2);
       final highSpread =
           _fakeRoute(typeId: 5, name: 'HighSpread', spreadPercent: 20);
       final container = await containerWithRoutes([lowSpread, highSpread]);
       addTearDown(container.dispose);
 
+      // No manual update needed — default minSpread=5 already hides LowSpread.
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['HighSpread']);
+    });
+
+    test('raising minSpread to 15 hides medium-spread routes', () async {
+      final midSpread =
+          _fakeRoute(typeId: 4, name: 'MidSpread', spreadPercent: 10);
+      final highSpread =
+          _fakeRoute(typeId: 5, name: 'HighSpread', spreadPercent: 20);
+      final container = await containerWithRoutes([midSpread, highSpread]);
+      addTearDown(container.dispose);
+
       container.read(filtersProvider.notifier).update(
-            (f) => f.copyWith(minSpread: 5),
+            (f) => f.copyWith(minSpread: 15),
           );
 
       final filtered = container.read(filteredRoutesProvider);
       expect(filtered.map((r) => r.itemName), ['HighSpread']);
     });
 
-    test('minProfit threshold filters low-profit routes client-side',
+    test(
+        'default minProfit=100000 hides routes with totalProfit < 100000',
         () async {
-      final lowProfit = _fakeRoute(typeId: 6, name: 'LowProfit', netProfit: 1000);
+      // The web predicate filters on totalProfit (not netProfit).
+      final lowProfit =
+          _fakeRoute(typeId: 6, name: 'LowProfit', totalProfit: 50000);
       final highProfit =
-          _fakeRoute(typeId: 7, name: 'HighProfit', netProfit: 500000);
+          _fakeRoute(typeId: 7, name: 'HighProfit', totalProfit: 200000);
       final container = await containerWithRoutes([lowProfit, highProfit]);
       addTearDown(container.dispose);
 
+      // Default minProfit=100000 already hides LowProfit.
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['HighProfit']);
+    });
+
+    test('raising minProfit to 300000 hides medium-profit routes', () async {
+      final midProfit =
+          _fakeRoute(typeId: 6, name: 'MidProfit', totalProfit: 150000);
+      final highProfit =
+          _fakeRoute(typeId: 7, name: 'HighProfit', totalProfit: 500000);
+      final container = await containerWithRoutes([midProfit, highProfit]);
+      addTearDown(container.dispose);
+
       container.read(filtersProvider.notifier).update(
-            (f) => f.copyWith(minProfit: 100000),
+            (f) => f.copyWith(minProfit: 300000),
           );
 
       final filtered = container.read(filteredRoutesProvider);
       expect(filtered.map((r) => r.itemName), ['HighProfit']);
+    });
+
+    test('routes with netProfit < 0 are always dropped (web predicate)', () async {
+      final negative =
+          _fakeRoute(typeId: 8, name: 'Negative', netProfit: -500);
+      final positive =
+          _fakeRoute(typeId: 9, name: 'Positive', netProfit: 50000);
+      // Enable all sec-zones and set very permissive filters so only netProfit
+      // check is the discriminator.
+      final container = await containerWithRoutes([negative, positive]);
+      addTearDown(container.dispose);
+
+      container.read(filtersProvider.notifier).update(
+            (f) => f.copyWith(
+              minSpread: 0,
+              minProfit: 0,
+              maxTravelTime: 60,
+            ),
+          );
+
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['Positive']);
+    });
+
+    test('maxTravelTime=30 hides routes that take more than 30 min', () async {
+      // 1200 s = 20 min → passes; 2400 s = 40 min → filtered out.
+      final fast =
+          _fakeRoute(typeId: 10, name: 'Fast', travelTimeSeconds: 1200);
+      final slow =
+          _fakeRoute(typeId: 11, name: 'Slow', travelTimeSeconds: 2400);
+      final container = await containerWithRoutes([fast, slow]);
+      addTearDown(container.dispose);
+
+      // Default maxTravelTime=30 min already hides Slow.
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['Fast']);
+    });
+
+    test('raising maxTravelTime to 60 reveals slow routes', () async {
+      final fast =
+          _fakeRoute(typeId: 10, name: 'Fast', travelTimeSeconds: 1200);
+      final slow =
+          _fakeRoute(typeId: 11, name: 'Slow', travelTimeSeconds: 2400);
+      final container = await containerWithRoutes([fast, slow]);
+      addTearDown(container.dispose);
+
+      container.read(filtersProvider.notifier).update(
+            (f) => f.copyWith(maxTravelTime: 60),
+          );
+
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['Fast', 'Slow']);
+    });
+
+    test('copyWith preserves maxTravelTime when only sec-zone is toggled', () {
+      const f = TradingFilters();
+      expect(f.maxTravelTime, 30.0);
+
+      final updated = f.copyWith(lowSec: true);
+      expect(updated.maxTravelTime, 30.0); // unchanged
     });
 
     test('returns empty list before any calculation', () {
