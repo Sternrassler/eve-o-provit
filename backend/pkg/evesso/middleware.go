@@ -22,7 +22,7 @@ func NewAuthMiddleware(v *TokenValidator) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		accessToken := bearerOrCookie(c)
 		if accessToken == "" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing authentication cookie"})
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing or invalid credentials"})
 		}
 		charInfo, err := v.Validate(c.Context(), accessToken)
 		if err != nil {
