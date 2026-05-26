@@ -34,7 +34,10 @@ Dio buildDio(TokenStore store, AuthRepository Function() getAuthRepo) {
     BaseOptions(
       baseUrl: Env.apiBaseUrl,
       connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
+      // Heavy route-calc / market-refresh calls can take ~30s on the backend
+      // (CalculationTimeout / MarketFetchTimeout). 60s gives ample margin so
+      // the app does not abort with a receive timeout before the 200 arrives.
+      receiveTimeout: const Duration(seconds: 60),
     ),
   );
 
