@@ -13,7 +13,7 @@ Eine spezialisierte Web-Anwendung zur Gewinnmaximierung in EVE Online mit Fokus 
 
 ✅ **Trading Routes** - Intra-Region & Multi-Hub Trading Optimizer  
 ✅ **ROI Calculator** - Return on Investment für Trading-Opportunitäten  
-✅ **EVE SSO Authentication** - Frontend-only PKCE Flow (ADR-004)  
+✅ **EVE SSO Authentication** - PKCE-Flow (Backend-Token-Exchange, HttpOnly-Cookies)  
 ✅ **Live Market Data** - Echtzeit-Daten via EVE ESI API (Parallel Fetching, <9s für The Forge)  
 ✅ **Dual-Database** - PostgreSQL (dynamic) + SQLite SDE (static)  
 🚧 **Manufacturing Module** - In Planung
@@ -23,9 +23,9 @@ Eine spezialisierte Web-Anwendung zur Gewinnmaximierung in EVE Online mit Fokus 
 **Voraussetzungen:** Docker & Docker Compose
 
 ```bash
-# Repository klonen
-git clone https://github.com/Sternrassler/eve-o-provit.git
-cd eve-o-provit
+# Monorepo klonen
+git clone https://github.com/Sternrassler/eveonline.git
+cd eveonline/eve-o-provit
 
 # Environment konfigurieren
 cd backend
@@ -48,12 +48,12 @@ make migrate
 
 ## Architektur
 
-**Frontend:** Next.js 14 (TypeScript, Radix UI, TanStack Table)  
+**Frontend:** Next.js 16 (React 19, TypeScript, shadcn/ui)  
 **Backend:** Go 1.24+ (Fiber, PostgreSQL, Redis)  
 **Static Data:** SQLite SDE (via [eve-sde](https://github.com/Sternrassler/eve-sde))  
-**ESI Client:** [eve-esi-client](https://github.com/Sternrassler/eve-esi-client) v0.3.0
+**ESI Client:** [eve-esi-client](https://github.com/Sternrassler/eve-esi-client)
 
-Siehe [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) für Details
+Siehe [../docs/eve-o-provit.md](../docs/eve-o-provit.md) für Details
 
 ## Entwicklung
 
@@ -85,10 +85,8 @@ make migrate-create NAME=add_table  # Neue Migration
 
 ## Dokumentation
 
-- [Projekt-Struktur](docs/PROJECT_STRUCTURE.md)
-- [Architektur](docs/ARCHITECTURE.md)
-- [EVE SSO Integration](docs/EVE-SSO-INTEGRATION.md)
-- [ADRs (Architektur-Entscheidungen)](docs/adr/)
+- [Architektur, API, DB-Schema & EVE-SSO-Flow](../docs/eve-o-provit.md) (kanonisch)
+- [docs/](docs/) — Subprojekt-Index
 - [Testing Guide](docs/testing/README.md)
 - [Migration Testing](docs/testing/migrations.md)
 

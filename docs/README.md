@@ -1,42 +1,22 @@
 # Dokumentation
 
-**Version:** v0.1.0 | **Stand:** November 2025
+Die kanonische Detail-Doku (Architektur, API-Endpunkte, DB-Schema, EVE-SSO-Flow,
+Frontend) liegt zentral im Monorepo:
 
-## Schnellstart
+- **[../../docs/eve-o-provit.md](../../docs/eve-o-provit.md)** — eve-o-provit komplett
+- **[../../docs/architecture.md](../../docs/architecture.md)** — Monorepo-Architektur & Deployment
 
-- **[../README.md](../README.md)** - Quick Start & Features
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System-Architektur
-- **[EVE-SSO-INTEGRATION.md](EVE-SSO-INTEGRATION.md)** - OAuth2 Setup
+## Subprojekt-spezifisch
 
-## Architecture Decision Records (ADRs)
-
-Wichtige architektonische Entscheidungen:
-
-| ADR | Titel | Status |
-|-----|-------|--------|
-| [ADR-001](adr/ADR-001-tech-stack.md) | Tech Stack | Proposed |
-| [ADR-004](adr/ADR-004-frontend-oauth-pkce.md) | Frontend OAuth PKCE | Accepted |
-| [ADR-009](adr/ADR-009-shared-redis-infrastructure.md) | Shared Redis Infrastructure | Proposed |
-| [ADR-010](adr/ADR-010-sde-database-path-convention.md) | SDE Database Path Convention | Accepted |
-| [ADR-012](adr/ADR-012-redis-caching-strategy.md) | Redis Caching Strategy | Accepted |
-| [ADR-013](adr/ADR-013-timeout-handling-partial-content.md) | Timeout Handling | Accepted |
-| [ADR-014](adr/ADR-014-esi-integration-pattern.md) | ESI Integration Pattern | Accepted |
-| [ADR-015](adr/ADR-015-fitting-integration-architecture.md) | Fitting Integration | Accepted |
-
-**Superseded:** ADR-011 (Worker Pool) → eve-esi-client BatchFetcher
-
-## Testing
-
-- **[testing/migrations.md](testing/migrations.md)** - Database Migration Tests (Testcontainers)
-
-## Verwandte Projekte
-
-- [eve-sde](https://github.com/Sternrassler/eve-sde) - EVE Static Data Export Tools
-- [eve-esi-client](https://github.com/Sternrassler/eve-esi-client) - Go ESI API Client
+- **[../README.md](../README.md)** — Quick Start & Features
+- **[testing/README.md](testing/README.md)** — Test-Strategie
+- **[testing/migrations.md](testing/migrations.md)** — DB-Migration-Tests (Testcontainers)
+- **[testing/e2e-quick-start.md](testing/e2e-quick-start.md)** — Playwright E2E
+- **[../backend/MIGRATION.md](../backend/MIGRATION.md)** — DB-Migrationen
+- **[../backend/TESTING.md](../backend/TESTING.md)** — Backend-Tests
 
 ## Externe Ressourcen
 
-- [EVE ESI Docs](https://esi.evetech.net/ui/) - API Reference
-- [EVE SSO Guide](https://docs.esi.evetech.net/docs/sso/) - OAuth2
-- [Next.js Docs](https://nextjs.org/docs) - Frontend Framework
-- [Fiber Docs](https://docs.gofiber.io/) - Backend Framework
+- [EVE ESI Docs](https://esi.evetech.net/ui/) — API Reference
+- [EVE SSO Guide](https://docs.esi.evetech.net/docs/sso/) — OAuth2
+- [Next.js Docs](https://nextjs.org/docs) · [Fiber Docs](https://docs.gofiber.io/)
