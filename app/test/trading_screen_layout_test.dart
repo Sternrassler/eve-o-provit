@@ -65,7 +65,11 @@ class _FakeApi extends TradingApi {
 // Canned data
 // ---------------------------------------------------------------------------
 
-TradingRoute _fakeRoute({int typeId = 34, String name = 'Tritanium'}) {
+TradingRoute _fakeRoute({
+  int typeId = 34,
+  String name = 'Tritanium',
+  double minRouteSecurityStatus = 0.5,
+}) {
   return TradingRoute(
     itemTypeId: typeId,
     itemName: name,
@@ -81,7 +85,7 @@ TradingRoute _fakeRoute({int typeId = 34, String name = 'Tritanium'}) {
     sellPrice: 6.80,
     buySecurityStatus: 1.0,
     sellSecurityStatus: 1.0,
-    minRouteSecurityStatus: 0.5,
+    minRouteSecurityStatus: minRouteSecurityStatus,
     quantity: 100000,
     profitPerUnit: 1.3,
     totalProfit: 130000.0,
@@ -128,6 +132,10 @@ RouteCalculationResponse _fakeResponse() => RouteCalculationResponse(
       routes: [
         _fakeRoute(typeId: 34, name: 'Tritanium'),
         _fakeRoute(typeId: 35, name: 'Pyerite'),
+        // A low-sec route — hidden by default (high-sec only), revealed by
+        // toggling the "Lo" filter.
+        _fakeRoute(
+            typeId: 36, name: 'Megacyte', minRouteSecurityStatus: 0.3),
       ],
     );
 
@@ -144,11 +152,6 @@ class _StubRoutesNotifier extends RoutesNotifier {
     state = AsyncData(_fakeResponse());
   }
 }
-
-// ---------------------------------------------------------------------------
-// Provider overrides
-// ---------------------------------------------------------------------------
-
 
 // ---------------------------------------------------------------------------
 // Helper — pump TradingScreen at a given logical width
@@ -224,6 +227,27 @@ void main() {
 
     expect(find.text('Tritanium'), findsOneWidget);
     expect(find.text('Pyerite'), findsOneWidget);
+  });
+
+  // ── Sec-zone filter actually changes the displayed routes ─────────────────
+
+  testWidgets(
+      'toggling "Lo" filter reveals the low-sec route (client-side filtering)',
+      (tester) async {
+    await _pumpScreen(tester, 1280);
+
+    // By default (high-sec only) the high-sec routes are shown and the
+    // low-sec route (Megacyte, sec 0.3) is hidden.
+    expect(find.text('Tritanium'), findsOneWidget);
+    expect(find.text('Megacyte'), findsNothing);
+
+    // Tap the "Lo" sec-zone toggle in the controls bar.
+    await tester.tap(find.text('Lo'));
+    await tester.pumpAndSettle();
+
+    // Now the low-sec route appears alongside the high-sec ones.
+    expect(find.text('Megacyte'), findsOneWidget);
+    expect(find.text('Tritanium'), findsOneWidget);
   });
 
   // ── Tapping a card in two-pane shows detail ──────────────────────────────

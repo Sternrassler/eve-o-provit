@@ -192,24 +192,28 @@ class RoutesNotifier extends AsyncNotifier<RouteCalculationResponse?> {
   @override
   Future<RouteCalculationResponse?> build() async => null;
 
-  /// Runs a route calculation with the current selection and filter state.
+  /// Runs a route calculation with the current selection.
   ///
   /// Requires [selectedRegionProvider] and [selectedShipTypeIdProvider] to be
   /// non-null; if either is missing, this is a no-op.
+  ///
+  /// The backend `RouteCalculationRequest` accepts only region/ship (plus
+  /// optional fitting/volume params) — it has NO security-zone or
+  /// profit/spread filter fields. Like the Next.js web client, filtering by
+  /// security zone / min-spread / min-profit happens CLIENT-SIDE on the
+  /// returned routes (see [filteredRoutesProvider]). We therefore send only
+  /// region_id + ship_type_id, matching the web request body exactly.
   Future<void> calculate() async {
     final region = ref.read(selectedRegionProvider);
     final shipTypeId = ref.read(selectedShipTypeIdProvider);
 
     if (region == null || shipTypeId == null) return;
 
-    final filters = ref.read(filtersProvider);
-
     state = const AsyncLoading();
 
     final request = RouteCalculationRequest(
       regionId: region.id,
       shipTypeId: shipTypeId,
-      minDailyVolume: filters.minProfit,
     );
 
     state = await AsyncValue.guard(() async {
@@ -224,3 +228,69 @@ final routesProvider =
     AsyncNotifierProvider<RoutesNotifier, RouteCalculationResponse?>(
   RoutesNotifier.new,
 );
+
+// ---------------------------------------------------------------------------
+// Client-side filtering
+// ---------------------------------------------------------------------------
+
+/// Returns the minimum security status along [route] used to classify its
+/// security zone — mirrors the Next.js web client:
+///   `min_route_security_status ?? min(buy_security_status, sell_security_status)`
+///
+/// On the Flutter [TradingRoute] all three fields are non-nullable, so we use
+/// [TradingRoute.minRouteSecurityStatus] directly (it already represents the
+/// most dangerous hop along the route).
+double routeMinSecurityStatus(TradingRoute route) {
+  return route.minRouteSecurityStatus;
+}
+
+/// Returns true when [route] passes the supplied [filters] — applied
+/// CLIENT-SIDE, exactly like the Next.js web client.
+///
+/// Security-zone classification (matches the web):
+///   high-sec: sec >= 0.5
+///   low-sec : 0.0 < sec < 0.5
+///   null-sec: sec <= 0.0
+///
+/// A route in a zone whose toggle is OFF is hidden. Optional [minSpread] /
+/// [minProfit] thresholds (null = no threshold) are also applied client-side
+/// against the route's spread percent and net profit.
+bool routeMatchesFilters(TradingRoute route, TradingFilters filters) {
+  final sec = routeMinSecurityStatus(route);
+
+  final isHighSec = sec >= 0.5;
+  final isLowSec = sec > 0.0 && sec < 0.5;
+  final isNullSec = sec <= 0.0;
+
+  if (isHighSec && !filters.highSec) return false;
+  if (isLowSec && !filters.lowSec) return false;
+  if (isNullSec && !filters.nullSec) return false;
+
+  final minSpread = filters.minSpread;
+  if (minSpread != null && route.spreadPercent < minSpread) return false;
+
+  final minProfit = filters.minProfit;
+  if (minProfit != null && route.netProfit < minProfit) return false;
+
+  return true;
+}
+
+/// The routes from [routesProvider], filtered CLIENT-SIDE by [filtersProvider].
+///
+/// Returns an empty list while no calculation has run yet (data is null) or
+/// while loading/in error — those states are surfaced separately by watching
+/// [routesProvider] directly. This provider only exposes the *displayable*
+/// (filtered) routes so the UI does not re-implement the filter predicate.
+final filteredRoutesProvider = Provider<List<TradingRoute>>((ref) {
+  final routesAsync = ref.watch(routesProvider);
+  final filters = ref.watch(filtersProvider);
+
+  // `.value` is non-null only in the AsyncData state; null while loading,
+  // in error, or before the first calculation.
+  final response = routesAsync.value;
+  if (response == null) return const [];
+
+  return response.routes
+      .where((route) => routeMatchesFilters(route, filters))
+      .toList();
+});

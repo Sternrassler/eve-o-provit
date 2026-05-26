@@ -27,6 +27,9 @@ class RouteList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final routesAsync = ref.watch(routesProvider);
     final selectedRoute = ref.watch(selectedRouteProvider);
+    // Routes filtered CLIENT-SIDE by the active sec-zone / threshold toggles
+    // (the backend has no security-zone request field — see providers.dart).
+    final filteredRoutes = ref.watch(filteredRoutesProvider);
 
     return routesAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -58,7 +61,16 @@ class RouteList extends ConsumerWidget {
         ),
       ),
       data: (response) {
-        if (response == null || response.routes.isEmpty) {
+        // Empty when: no calculation yet, backend returned 0 routes, or all
+        // routes were filtered out client-side by the sec-zone toggles.
+        if (response == null || filteredRoutes.isEmpty) {
+          // Distinguish "filtered everything out" from "backend had nothing".
+          final filteredOut =
+              response != null && response.routes.isNotEmpty;
+          final message = filteredOut
+              ? 'Keine Routen für die gewählten Sicherheitszonen'
+              : 'Keine Routen gefunden';
+
           return Center(
             child: Padding(
               padding: const EdgeInsets.all(32),
@@ -75,7 +87,7 @@ class RouteList extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Keine Routen gefunden',
+                    message,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: Theme.of(context)
                               .colorScheme
@@ -84,7 +96,7 @@ class RouteList extends ConsumerWidget {
                         ),
                     textAlign: TextAlign.center,
                   ),
-                  if (response?.warning != null) ...[
+                  if (!filteredOut && response?.warning != null) ...[
                     const SizedBox(height: 8),
                     Text(
                       response!.warning!,
@@ -103,7 +115,7 @@ class RouteList extends ConsumerWidget {
           );
         }
 
-        final routes = response.routes;
+        final routes = filteredRoutes;
         return ListView.separated(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           itemCount: routes.length,

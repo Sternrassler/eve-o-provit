@@ -52,7 +52,13 @@ final _fakeRegions = [
   const Region(id: 10000043, name: 'Domain'),
 ];
 
-TradingRoute _fakeRoute({int typeId = 34, String name = 'Tritanium'}) {
+TradingRoute _fakeRoute({
+  int typeId = 34,
+  String name = 'Tritanium',
+  double minRouteSecurityStatus = 0.5,
+  double spreadPercent = 23.6,
+  double netProfit = 116000.0,
+}) {
   return TradingRoute(
     itemTypeId: typeId,
     itemName: name,
@@ -68,11 +74,11 @@ TradingRoute _fakeRoute({int typeId = 34, String name = 'Tritanium'}) {
     sellPrice: 6.80,
     buySecurityStatus: 1.0,
     sellSecurityStatus: 1.0,
-    minRouteSecurityStatus: 0.5,
+    minRouteSecurityStatus: minRouteSecurityStatus,
     quantity: 100000,
     profitPerUnit: 1.3,
     totalProfit: 130000.0,
-    spreadPercent: 23.6,
+    spreadPercent: spreadPercent,
     travelTimeSeconds: 1200.0,
     roundTripSeconds: 2400.0,
     iskPerHour: 195000000.0,
@@ -93,7 +99,7 @@ TradingRoute _fakeRoute({int typeId = 34, String name = 'Tritanium'}) {
     totalFees: 14000.0,
     grossProfit: 144000.0,
     grossMarginPercent: 19.1,
-    netProfit: 116000.0,
+    netProfit: netProfit,
     netProfitPercent: 15.4,
     cargoUsed: 1000.0,
     cargoCapacity: 50000.0,
@@ -239,6 +245,42 @@ void main() {
 
       expect(capturedRequest?.regionId, 10000043); // Domain
       expect(capturedRequest?.shipTypeId, 12345);
+    });
+
+    test(
+        'calculate() sends ONLY region_id + ship_type_id — no security/filter '
+        'params (backend has none; filtering is client-side)', () async {
+      RouteCalculationRequest? capturedRequest;
+      final api = FakeTradingApi(
+        regionsCallback: () async =>
+            RegionsResponse(regions: _fakeRegions, count: 2),
+        calculateCallback: (req) async {
+          capturedRequest = req;
+          return _fakeResponse();
+        },
+      );
+      final container = _makeContainer(api);
+      addTearDown(container.dispose);
+
+      // Set non-default filters; they must NOT leak into the request body.
+      container.read(filtersProvider.notifier).update(
+            (f) => f.copyWith(
+              lowSec: true,
+              nullSec: true,
+              minSpread: 10,
+              minProfit: 250000,
+            ),
+          );
+      container.read(selectedRegionProvider.notifier).state = _fakeRegions[0];
+      container.read(selectedShipTypeIdProvider.notifier).state = 648;
+
+      await container.read(routesProvider.notifier).calculate();
+
+      // The request carries only the two required fields. The previous bug
+      // mapped filters.minProfit → min_daily_volume; that must be gone.
+      expect(capturedRequest?.minDailyVolume, isNull);
+      final json = capturedRequest!.toJson();
+      expect(json.keys, unorderedEquals(<String>['region_id', 'ship_type_id']));
     });
   });
 
@@ -426,6 +468,150 @@ void main() {
       container.read(selectedRouteProvider.notifier).state = null;
 
       expect(container.read(selectedRouteProvider), isNull);
+    });
+  });
+
+  // ── filteredRoutesProvider — client-side security-zone filtering ──────────
+
+  group('filteredRoutesProvider (client-side filtering)', () {
+    // Build a container with a calculation already performed, returning the
+    // three supplied routes.
+    Future<ProviderContainer> containerWithRoutes(
+      List<TradingRoute> routes,
+    ) async {
+      final api = FakeTradingApi(
+        regionsCallback: () async =>
+            RegionsResponse(regions: _fakeRegions, count: 2),
+        calculateCallback: (_) async => _fakeResponse(routes: routes),
+      );
+      final container = _makeContainer(api);
+      container.read(selectedRegionProvider.notifier).state = _fakeRegions[0];
+      container.read(selectedShipTypeIdProvider.notifier).state = 648;
+      await container.read(routesProvider.notifier).calculate();
+      return container;
+    }
+
+    final hiSec = _fakeRoute(
+        typeId: 1, name: 'HiSec', minRouteSecurityStatus: 0.7);
+    final lowSec = _fakeRoute(
+        typeId: 2, name: 'LowSec', minRouteSecurityStatus: 0.3);
+    final nullSec = _fakeRoute(
+        typeId: 3, name: 'NullSec', minRouteSecurityStatus: -0.1);
+
+    test('default filters (high-sec only) hide low/null routes', () async {
+      final container = await containerWithRoutes([hiSec, lowSec, nullSec]);
+      addTearDown(container.dispose);
+
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['HiSec']);
+    });
+
+    test('enabling low-sec reveals low-sec routes', () async {
+      final container = await containerWithRoutes([hiSec, lowSec, nullSec]);
+      addTearDown(container.dispose);
+
+      // Sanity: before toggling, only HiSec is shown.
+      expect(container.read(filteredRoutesProvider).map((r) => r.itemName),
+          ['HiSec']);
+
+      container.read(filtersProvider.notifier).update(
+            (f) => f.copyWith(lowSec: true),
+          );
+
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['HiSec', 'LowSec']);
+    });
+
+    test('enabling null-sec reveals null-sec routes', () async {
+      final container = await containerWithRoutes([hiSec, lowSec, nullSec]);
+      addTearDown(container.dispose);
+
+      container.read(filtersProvider.notifier).update(
+            (f) => f.copyWith(lowSec: true, nullSec: true),
+          );
+
+      final filtered = container.read(filteredRoutesProvider);
+      expect(
+        filtered.map((r) => r.itemName),
+        ['HiSec', 'LowSec', 'NullSec'],
+      );
+    });
+
+    test('disabling high-sec hides high-sec routes', () async {
+      final container = await containerWithRoutes([hiSec, lowSec, nullSec]);
+      addTearDown(container.dispose);
+
+      container.read(filtersProvider.notifier).update(
+            (f) => f.copyWith(highSec: false, lowSec: true),
+          );
+
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['LowSec']);
+    });
+
+    test('sec=0.0 boundary is classified as null-sec (sec <= 0.0)', () async {
+      final atZero = _fakeRoute(
+          typeId: 9, name: 'AtZero', minRouteSecurityStatus: 0.0);
+      final container = await containerWithRoutes([atZero]);
+      addTearDown(container.dispose);
+
+      // High-sec only (default) → hidden.
+      expect(container.read(filteredRoutesProvider), isEmpty);
+
+      // Null-sec on → visible.
+      container.read(filtersProvider.notifier).update(
+            (f) => f.copyWith(nullSec: true),
+          );
+      expect(container.read(filteredRoutesProvider).map((r) => r.itemName),
+          ['AtZero']);
+    });
+
+    test('minSpread threshold filters low-spread routes client-side',
+        () async {
+      final lowSpread = _fakeRoute(typeId: 4, name: 'LowSpread', spreadPercent: 2);
+      final highSpread =
+          _fakeRoute(typeId: 5, name: 'HighSpread', spreadPercent: 20);
+      final container = await containerWithRoutes([lowSpread, highSpread]);
+      addTearDown(container.dispose);
+
+      container.read(filtersProvider.notifier).update(
+            (f) => f.copyWith(minSpread: 5),
+          );
+
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['HighSpread']);
+    });
+
+    test('minProfit threshold filters low-profit routes client-side',
+        () async {
+      final lowProfit = _fakeRoute(typeId: 6, name: 'LowProfit', netProfit: 1000);
+      final highProfit =
+          _fakeRoute(typeId: 7, name: 'HighProfit', netProfit: 500000);
+      final container = await containerWithRoutes([lowProfit, highProfit]);
+      addTearDown(container.dispose);
+
+      container.read(filtersProvider.notifier).update(
+            (f) => f.copyWith(minProfit: 100000),
+          );
+
+      final filtered = container.read(filteredRoutesProvider);
+      expect(filtered.map((r) => r.itemName), ['HighProfit']);
+    });
+
+    test('returns empty list before any calculation', () {
+      final container = ProviderContainer(
+        overrides: [
+          tradingApiProvider.overrideWithValue(
+            FakeTradingApi(
+              regionsCallback: () async =>
+                  RegionsResponse(regions: _fakeRegions, count: 2),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(container.read(filteredRoutesProvider), isEmpty);
     });
   });
 }
