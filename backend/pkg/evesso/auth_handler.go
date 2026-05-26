@@ -1,6 +1,7 @@
 package evesso
 
 import (
+	"context"
 	"log"
 	"os"
 	"strings"
@@ -13,6 +14,17 @@ type AuthHandler struct {
 	clientID    string
 	redirectURI string
 	validator   *TokenValidator
+
+	// Mobile EVE application credentials (optional — set via WithMobile)
+	mobileClientID    string
+	mobileRedirectURI string
+
+	// exchange is the seam for code exchange; defaults to ExchangeCode.
+	// Tests may replace it to avoid real HTTP calls.
+	exchange func(ctx context.Context, code, redirectURI, clientID, codeVerifier string) (*TokenResponse, error)
+
+	// refreshFn is the seam for token refresh; defaults to RefreshToken.
+	refreshFn func(ctx context.Context, refreshToken, clientID string) (*TokenResponse, error)
 }
 
 // NewAuthHandler creates a new AuthHandler with the given EVE SSO credentials
@@ -21,7 +33,16 @@ func NewAuthHandler(clientID, redirectURI string, validator *TokenValidator) *Au
 		clientID:    clientID,
 		redirectURI: redirectURI,
 		validator:   validator,
+		exchange:    ExchangeCode,
+		refreshFn:   RefreshToken,
 	}
+}
+
+// WithMobile configures the mobile EVE application credentials and returns h (fluent).
+func (h *AuthHandler) WithMobile(clientID, redirectURI string) *AuthHandler {
+	h.mobileClientID = clientID
+	h.mobileRedirectURI = redirectURI
+	return h
 }
 
 // callbackRequest is the body the SPA POSTs to /auth/callback.
@@ -40,6 +61,15 @@ type characterResponse struct {
 	CharacterName string   `json:"character_name"`
 	Scopes        []string `json:"scopes"`
 	PortraitURL   string   `json:"portrait_url"`
+}
+
+// mobileTokenResponse is returned by the mobile callback/refresh endpoints.
+// Tokens are in the body (no cookies) so native clients can store them securely.
+type mobileTokenResponse struct {
+	AccessToken  string            `json:"access_token"`
+	RefreshToken string            `json:"refresh_token"`
+	ExpiresIn    int               `json:"expires_in"`
+	Character    characterResponse `json:"character,omitempty"`
 }
 
 // cookieSecure defaults to true (fail-closed). Set COOKIE_SECURE=false ONLY for local
@@ -65,7 +95,7 @@ func (h *AuthHandler) HandleCallback(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code_verifier"})
 	}
 
-	tokenResp, err := ExchangeCode(c.Context(), req.Code, h.redirectURI, h.clientID, req.CodeVerifier)
+	tokenResp, err := h.exchange(c.Context(), req.Code, h.redirectURI, h.clientID, req.CodeVerifier)
 	if err != nil {
 		log.Printf("ERROR [auth/callback] ExchangeCode failed: %v", err)
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to exchange code"})
@@ -138,7 +168,7 @@ func (h *AuthHandler) HandleRefresh(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing refresh token"})
 	}
 
-	tokenResp, err := RefreshToken(c.Context(), refreshToken, h.clientID)
+	tokenResp, err := h.refreshFn(c.Context(), refreshToken, h.clientID)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to refresh token"})
 	}
@@ -180,4 +210,72 @@ func (h *AuthHandler) HandleLogout(c *fiber.Ctx) error {
 	})
 
 	return c.SendStatus(fiber.StatusOK)
+}
+
+// HandleMobileCallback handles POST /auth/mobile/callback
+// Exchanges the authorization code for tokens using the mobile EVE application credentials.
+// Returns tokens in the JSON body (no cookies) for native clients.
+func (h *AuthHandler) HandleMobileCallback(c *fiber.Ctx) error {
+	var req callbackRequest
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if req.Code == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code"})
+	}
+
+	if req.CodeVerifier == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing code_verifier"})
+	}
+
+	tokenResp, err := h.exchange(c.Context(), req.Code, h.mobileRedirectURI, h.mobileClientID, req.CodeVerifier)
+	if err != nil {
+		log.Printf("ERROR [auth/mobile/callback] ExchangeCode failed: %v", err)
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to exchange code"})
+	}
+
+	charInfo, err := h.validator.Validate(c.Context(), tokenResp.AccessToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to verify token"})
+	}
+
+	return c.JSON(mobileTokenResponse{
+		AccessToken:  tokenResp.AccessToken,
+		RefreshToken: tokenResp.RefreshToken,
+		ExpiresIn:    tokenResp.ExpiresIn,
+		Character: characterResponse{
+			CharacterID:   charInfo.CharacterID,
+			CharacterName: charInfo.CharacterName,
+			Scopes:        strings.Split(charInfo.Scopes, " "),
+			PortraitURL:   GetPortraitURL(charInfo.CharacterID, 128),
+		},
+	})
+}
+
+// HandleMobileRefresh handles POST /auth/mobile/refresh
+// Accepts a refresh token in the JSON body and returns new tokens in the JSON body.
+func (h *AuthHandler) HandleMobileRefresh(c *fiber.Ctx) error {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
+	}
+
+	if req.RefreshToken == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing refresh_token"})
+	}
+
+	tokenResp, err := h.refreshFn(c.Context(), req.RefreshToken, h.mobileClientID)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "failed to refresh token"})
+	}
+
+	return c.JSON(mobileTokenResponse{
+		AccessToken:  tokenResp.AccessToken,
+		RefreshToken: tokenResp.RefreshToken,
+		ExpiresIn:    tokenResp.ExpiresIn,
+		// Character is zero-value (omitempty) — mobile refresh doesn't re-validate character info
+	})
 }

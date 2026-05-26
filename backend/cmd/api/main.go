@@ -138,6 +138,8 @@ func setupApp(c *AppContainer) *fiber.App {
 	auth.Get("/session", c.AuthHandler.HandleSession)
 	auth.Post("/refresh", c.AuthHandler.HandleRefresh)
 	auth.Post("/logout", c.AuthHandler.HandleLogout)
+	auth.Post("/mobile/callback", c.AuthHandler.HandleMobileCallback)
+	auth.Post("/mobile/refresh", c.AuthHandler.HandleMobileRefresh)
 
 	// API routes
 	api := app.Group("/api/v1")

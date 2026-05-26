@@ -17,12 +17,12 @@ import (
 
 // AppContainer holds all initialized application dependencies.
 type AppContainer struct {
-	Redis     *redis.Client
-	DB        *database.DB
-	SDERepo   *database.SDERepository
+	Redis      *redis.Client
+	DB         *database.DB
+	SDERepo    *database.SDERepository
 	MarketRepo *database.MarketRepository
-	ESIClient *esi.Client
-	AppLogger *applogger.Logger
+	ESIClient  *esi.Client
+	AppLogger  *applogger.Logger
 
 	// Auth
 	TokenValidator *evesso.TokenValidator
@@ -123,6 +123,15 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	// Auth handler
 	eveCallbackURL := getEnv("EVE_CALLBACK_URL", "http://localhost:9000/callback")
 	c.AuthHandler = evesso.NewAuthHandler(eveClientID, eveCallbackURL, c.TokenValidator)
+
+	// Mobile EVE application (optional — set EVE_MOBILE_CLIENT_ID to enable)
+	mobileClientID := getEnv("EVE_MOBILE_CLIENT_ID", "")
+	if mobileClientID != "" {
+		mobileRedirectURI := getEnv("EVE_MOBILE_REDIRECT_URI", "eveauth-eveoprovit://callback")
+		c.AuthHandler.WithMobile(mobileClientID, mobileRedirectURI)
+		c.TokenValidator.AddAcceptedClientID(mobileClientID)
+		log.Printf("Mobile auth enabled (client_id=%s, redirect=%s)", mobileClientID, mobileRedirectURI)
+	}
 
 	// Request handlers
 	c.Handlers = handlers.New(c.DB, c.SDERepo, c.MarketRepo, c.ESIClient)
