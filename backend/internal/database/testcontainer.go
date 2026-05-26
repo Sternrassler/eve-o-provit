@@ -140,7 +140,7 @@ func (tc *TestPostgresContainer) CreateTestSchema(t *testing.T) {
 	// Create minimal schema for testing
 	schema := `
 		CREATE TABLE IF NOT EXISTS market_orders (
-			order_id BIGINT NOT NULL,
+			order_id BIGINT PRIMARY KEY,
 			type_id INTEGER NOT NULL,
 			region_id INTEGER NOT NULL,
 			location_id BIGINT NOT NULL,
@@ -151,8 +151,7 @@ func (tc *TestPostgresContainer) CreateTestSchema(t *testing.T) {
 			min_volume INTEGER,
 			issued_at TIMESTAMP NOT NULL,
 			duration INTEGER NOT NULL,
-			cached_at TIMESTAMP NOT NULL,
-			PRIMARY KEY (order_id, cached_at)
+			cached_at TIMESTAMP NOT NULL
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_market_orders_region_type 
@@ -196,7 +195,7 @@ func (tc *TestPostgresContainer) SeedTestData(t *testing.T) {
 			(123456789, 34, 10000002, 60003760, false, 5.50, 1000, 500, 1, NOW() - INTERVAL '1 day', 90, NOW()),
 			(987654321, 34, 10000002, 60003760, true, 5.25, 5000, 5000, 10, NOW() - INTERVAL '2 days', 90, NOW()),
 			(111222333, 35, 10000002, 60003760, false, 10.00, 2000, 1500, 5, NOW() - INTERVAL '3 hours', 30, NOW())
-		ON CONFLICT (order_id, cached_at) DO NOTHING;
+		ON CONFLICT (order_id) DO NOTHING;
 	`
 
 	_, err := tc.Pool.Exec(ctx, seedSQL)
