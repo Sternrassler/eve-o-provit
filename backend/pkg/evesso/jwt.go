@@ -23,7 +23,6 @@ var validIssuers = map[string]bool{
 
 // TokenValidator validates EVE SSO access tokens (JWTs) locally against the SSO JWKS.
 type TokenValidator struct {
-	clientID        string
 	acceptedClients []string
 	keys            jwk.Set
 }
@@ -37,12 +36,12 @@ func NewTokenValidator(ctx context.Context, clientID string) (*TokenValidator, e
 	if _, err := cache.Refresh(ctx, jwksURL); err != nil {
 		return nil, fmt.Errorf("initial jwks fetch: %w", err)
 	}
-	return &TokenValidator{clientID: clientID, acceptedClients: []string{clientID}, keys: jwk.NewCachedSet(cache, jwksURL)}, nil
+	return &TokenValidator{acceptedClients: []string{clientID}, keys: jwk.NewCachedSet(cache, jwksURL)}, nil
 }
 
 // NewTokenValidatorWithKeySet creates a validator using a provided key set (useful for tests).
 func NewTokenValidatorWithKeySet(clientID string, keys jwk.Set) *TokenValidator {
-	return &TokenValidator{clientID: clientID, acceptedClients: []string{clientID}, keys: keys}
+	return &TokenValidator{acceptedClients: []string{clientID}, keys: keys}
 }
 
 // AddAcceptedClientID lets the validator accept tokens whose audience contains an
