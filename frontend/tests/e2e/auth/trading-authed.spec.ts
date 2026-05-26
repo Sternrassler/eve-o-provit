@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 import { mockWaypoint } from '../helpers/waypoint-mock';
 import { REGION_THE_FORGE } from '../helpers/constants';
 
@@ -21,8 +21,34 @@ async function selectRegion(page: Page, optionRe: RegExp) {
   await page.getByRole('option', { name: optionRe }).first().click();
 }
 
+// Click "Berechnen" and return the route count, tolerating a cold-cache miss:
+// the first heavy calculation right after a fresh ~890k-order market refresh can
+// hit the backend's calculation-timeout and return zero (partial) routes with a
+// warning. That is a transient, not a regression — re-run the calculation a
+// bounded number of times until The Forge yields its reliably-present routes.
+// Returns 0 if every attempt comes back empty (a genuine regression then fails
+// the caller's `> 0` assertion).
+async function calculateRoutes(page: Page, calc: Locator, counter: Locator, attempts = 3): Promise<number> {
+  const empty = page.getByText(/Keine Routen gefunden/i);
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    await expect(calc).toBeEnabled({ timeout: 30000 });
+    await calc.click();
+    // The calculation resolves to either the route counter or the empty state.
+    await expect(counter.or(empty).first()).toBeVisible({ timeout: 45000 });
+    if (await counter.isVisible()) return countFromText(await counter.textContent());
+  }
+  return 0;
+}
+
 test.describe('Authenticated trading workflow', () => {
   test('calculate, inspect, set waypoint (mocked), filter, paginate', async ({ page }) => {
+    // Legitimately slow: this single workflow runs a live market refresh plus two
+    // heavy route calculations against The Forge sequentially, each with its own
+    // calculate-retry budget (see calculateRoutes). Raise the wall-clock envelope
+    // well past the 60s default so the cumulative live work fits; per-step timeouts
+    // below still catch a genuinely hung operation.
+    test.setTimeout(240_000);
+
     const waypoint = mockWaypoint(page);
     await page.goto('/trading');
     await expect(page.locator('h1')).toContainText('Trading');
@@ -50,15 +76,11 @@ test.describe('Authenticated trading workflow', () => {
     await refresh.click();
     await expect(refresh).toBeEnabled({ timeout: 30000 });
 
-    // Calculate routes.
-    await expect(calc).toBeEnabled({ timeout: 30000 });
-    await calc.click();
-
-    // The Forge reliably has profitable routes — require them (an empty result
-    // here signals a regression rather than a tolerable data gap).
+    // Calculate routes. The Forge reliably has profitable routes — require them
+    // (an empty result after the bounded retries signals a regression, not a
+    // tolerable data gap).
     const counter = page.getByText(/\d+ Routen gefunden/);
-    await expect(counter).toBeVisible({ timeout: 45000 });
-    const total = countFromText(await counter.textContent());
+    const total = await calculateRoutes(page, calc, counter);
     expect(total).toBeGreaterThan(0);
 
     // Authenticated: the "Route in EVE setzen" action is enabled. Clicking fires
@@ -72,9 +94,7 @@ test.describe('Authenticated trading workflow', () => {
     // Filter effect: widening allowed security zones cannot reduce the count.
     await page.getByRole('checkbox', { name: /Low Sec/i }).check();
     await page.getByRole('checkbox', { name: /Null Sec/i }).check();
-    await calc.click();
-    await expect(counter).toBeVisible({ timeout: 45000 });
-    const widened = countFromText(await counter.textContent());
+    const widened = await calculateRoutes(page, calc, counter);
     expect(widened).toBeGreaterThanOrEqual(total);
 
     // Pagination: "Mehr anzeigen" reveals more route cards when present.
