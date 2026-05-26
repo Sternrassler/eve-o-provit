@@ -1,14 +1,26 @@
 package evesso
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 )
 
-// NewAuthMiddleware returns a Fiber handler that requires a valid eve_access_token cookie,
-// validates it locally as a JWT, and stores character info in locals. Returns 401 otherwise.
+// bearerOrCookie returns the access token from the Authorization: Bearer header
+// (mobile clients) or the eve_access_token cookie (web), in that order.
+func bearerOrCookie(c *fiber.Ctx) string {
+	if h := c.Get("Authorization"); len(h) > 7 && strings.EqualFold(h[:7], "Bearer ") {
+		return strings.TrimSpace(h[7:])
+	}
+	return c.Cookies("eve_access_token")
+}
+
+// NewAuthMiddleware returns a Fiber handler that requires a valid eve_access_token cookie
+// or Authorization: Bearer token, validates it locally as a JWT, and stores character info
+// in locals. Returns 401 otherwise.
 func NewAuthMiddleware(v *TokenValidator) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		accessToken := c.Cookies("eve_access_token")
+		accessToken := bearerOrCookie(c)
 		if accessToken == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Missing authentication cookie"})
 		}
@@ -21,10 +33,10 @@ func NewAuthMiddleware(v *TokenValidator) fiber.Handler {
 	}
 }
 
-// NewOptionalAuthMiddleware validates the cookie if present but allows unauthenticated requests.
+// NewOptionalAuthMiddleware validates the Bearer token or cookie if present but allows unauthenticated requests.
 func NewOptionalAuthMiddleware(v *TokenValidator) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		accessToken := c.Cookies("eve_access_token")
+		accessToken := bearerOrCookie(c)
 		if accessToken == "" {
 			return c.Next()
 		}
