@@ -5,8 +5,7 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/../.." && pwd)
 
-# Normative labels & ADR governance
-bash "$ROOT_DIR/common/check-normative.sh"
+# ADR governance
 bash "$ROOT_DIR/common/check-adr.sh"
 
 # ADR reference enforcement via make target (handles skip markers)

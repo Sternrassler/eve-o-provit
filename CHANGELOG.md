@@ -7,12 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- SemVer-Quelle ist jetzt ausschließlich `CHANGELOG.md` + git-Tags. `release-check`/`release` lesen die Version aus dem CHANGELOG.
+
 ### Removed
 
 - GitHub-Workflows (`codeql-analysis`, `integration-tests`, `lint-test`, `load-tests`, `pr-quality-gates`, `test-migrations`, `workflow-run-cleanup`)
 - Issue-Templates (`bug_issue`, `feature_issue`) und Template-Config
 - `CODEOWNERS`
 - `copilot-instructions.md` und `copilot-instructions-old.md`
+- `VERSION`-Dateien (Root + Backend) — SemVer lebt nur noch im CHANGELOG
+- Copilot-Governance-Reste: `scripts/common/check-normative.sh` (inkl. pre-commit/CI-Aufruf), Copilot-Bot-Skip in der Commit-Message-Prüfung und `copilot-instructions.md`-Verweise
 
 ## [0.5.0] - 2025-11-13
 
