@@ -4,8 +4,6 @@
 /// override) so no network calls are made.
 library;
 
-import 'dart:async';
-
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

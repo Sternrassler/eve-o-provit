@@ -46,6 +46,9 @@ final regionsProvider = FutureProvider<List<Region>>((ref) async {
 class SelectedRegionNotifier extends Notifier<Region?> {
   @override
   Region? build() => null;
+
+  /// Sets the selected region.
+  void select(Region? region) => state = region;
 }
 
 /// Provider for the currently selected [Region].
@@ -59,6 +62,9 @@ final selectedRegionProvider =
 class SelectedShipTypeIdNotifier extends Notifier<int?> {
   @override
   int? build() => null;
+
+  /// Sets the selected ship type ID.
+  void select(int? typeId) => state = typeId;
 }
 
 /// Provider for the currently selected ship type ID (int?).
@@ -72,6 +78,9 @@ final selectedShipTypeIdProvider =
 class SelectedRouteNotifier extends Notifier<TradingRoute?> {
   @override
   TradingRoute? build() => null;
+
+  /// Sets the selected route.
+  void select(TradingRoute? route) => state = route;
 }
 
 /// Provider for the currently selected [TradingRoute].
