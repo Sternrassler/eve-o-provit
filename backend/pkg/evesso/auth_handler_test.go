@@ -208,6 +208,34 @@ func TestHandleMobileRefresh_ReturnsTokensInBody(t *testing.T) {
 	if !strings.Contains(refreshToken, "old-refresh") {
 		t.Errorf("refresh_token %q doesn't contain the original token", refreshToken)
 	}
+	if _, hasChar := result["character"]; hasChar {
+		t.Errorf("refresh response must not include character, got %v", result["character"])
+	}
+}
+
+// TestHandleMobile_NotConfigured verifies both mobile endpoints return 503
+// when no mobile client ID is configured.
+func TestHandleMobile_NotConfigured(t *testing.T) {
+	h, _ := newTestAuthHandler(t) // no WithMobile call -> mobileClientID == ""
+	app := newTestApp(h)
+
+	for _, path := range []string{"/auth/mobile/callback", "/auth/mobile/refresh"} {
+		body, _ := json.Marshal(map[string]string{
+			"code":          "c",
+			"code_verifier": "v",
+			"refresh_token": "r",
+		})
+		req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Fatalf("app.Test(%s): %v", path, err)
+		}
+		if resp.StatusCode != http.StatusServiceUnavailable {
+			t.Errorf("%s status = %d, want 503", path, resp.StatusCode)
+		}
+	}
 }
 
 // newTestApp creates a minimal Fiber app with the mobile auth routes wired.

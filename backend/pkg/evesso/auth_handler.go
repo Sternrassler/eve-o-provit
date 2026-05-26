@@ -66,10 +66,10 @@ type characterResponse struct {
 // mobileTokenResponse is returned by the mobile callback/refresh endpoints.
 // Tokens are in the body (no cookies) so native clients can store them securely.
 type mobileTokenResponse struct {
-	AccessToken  string            `json:"access_token"`
-	RefreshToken string            `json:"refresh_token"`
-	ExpiresIn    int               `json:"expires_in"`
-	Character    characterResponse `json:"character,omitempty"`
+	AccessToken  string             `json:"access_token"`
+	RefreshToken string             `json:"refresh_token"`
+	ExpiresIn    int                `json:"expires_in"`
+	Character    *characterResponse `json:"character,omitempty"`
 }
 
 // cookieSecure defaults to true (fail-closed). Set COOKIE_SECURE=false ONLY for local
@@ -216,6 +216,10 @@ func (h *AuthHandler) HandleLogout(c *fiber.Ctx) error {
 // Exchanges the authorization code for tokens using the mobile EVE application credentials.
 // Returns tokens in the JSON body (no cookies) for native clients.
 func (h *AuthHandler) HandleMobileCallback(c *fiber.Ctx) error {
+	if h.mobileClientID == "" {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "mobile auth not configured"})
+	}
+
 	var req callbackRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
@@ -244,7 +248,7 @@ func (h *AuthHandler) HandleMobileCallback(c *fiber.Ctx) error {
 		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
 		ExpiresIn:    tokenResp.ExpiresIn,
-		Character: characterResponse{
+		Character: &characterResponse{
 			CharacterID:   charInfo.CharacterID,
 			CharacterName: charInfo.CharacterName,
 			Scopes:        strings.Split(charInfo.Scopes, " "),
@@ -256,6 +260,10 @@ func (h *AuthHandler) HandleMobileCallback(c *fiber.Ctx) error {
 // HandleMobileRefresh handles POST /auth/mobile/refresh
 // Accepts a refresh token in the JSON body and returns new tokens in the JSON body.
 func (h *AuthHandler) HandleMobileRefresh(c *fiber.Ctx) error {
+	if h.mobileClientID == "" {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{"error": "mobile auth not configured"})
+	}
+
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -263,6 +271,9 @@ func (h *AuthHandler) HandleMobileRefresh(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
+	// 400 (not 401) is intentional here: the refresh token is a body field, so its
+	// absence means a malformed request — unlike the web handler where a missing
+	// eve_refresh_token cookie means the caller is unauthenticated (401).
 	if req.RefreshToken == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "missing refresh_token"})
 	}
