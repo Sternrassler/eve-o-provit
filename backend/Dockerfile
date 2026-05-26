@@ -13,8 +13,12 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build binary
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o api ./cmd/api
+# Build binary. APP_VERSION is the top released CHANGELOG version (SemVer source
+# of truth), injected into internal/version; defaults to "dev" for plain builds.
+ARG APP_VERSION=dev
+RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo \
+	-ldflags "-X github.com/Sternrassler/eve-o-provit/backend/internal/version.Version=${APP_VERSION}" \
+	-o api ./cmd/api
 
 # Runtime stage
 FROM alpine:latest

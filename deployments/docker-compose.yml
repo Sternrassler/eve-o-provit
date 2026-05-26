@@ -44,6 +44,8 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-dev}
     container_name: eve-o-provit-api
     ports:
       - "9001:8080"

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/version"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 )
@@ -28,7 +29,7 @@ func TestVersion_Unit(t *testing.T) {
 	var result map[string]interface{}
 	err = parseJSON(resp.Body, &result)
 	assert.NoError(t, err)
-	assert.Equal(t, "0.1.0", result["version"])
+	assert.Equal(t, version.Version, result["version"])
 	assert.Equal(t, "eve-o-provit-api", result["service"])
 }
 

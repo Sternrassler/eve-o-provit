@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - SemVer-Quelle ist jetzt ausschließlich `CHANGELOG.md` + git-Tags. `release-check`/`release` lesen die Version aus dem CHANGELOG.
+- `/api/v1/version` liefert nicht mehr hardcoded `0.1.0`, sondern die zur Build-Zeit injizierte Version (`internal/version.Version` via `-ldflags`). `APP_VERSION` wird im Makefile aus dem obersten veröffentlichten CHANGELOG-Eintrag abgeleitet und über den Docker-Build-Arg an das Backend gereicht; Fallback `dev` für lokale Builds.
 
 ### Removed
 

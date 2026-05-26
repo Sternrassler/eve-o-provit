@@ -16,6 +16,10 @@ MIGRATIONS_DIR ?= $(BACKEND_DIR)/migrations
 EVE_SDE_DIR ?= ../eve-sde
 SDE_SOURCE := $(EVE_SDE_DIR)/data/sqlite/eve-sde.db
 SDE_TARGET := $(BACKEND_DIR)/data/sde/eve-sde.db
+# API-Version: oberster veröffentlichter CHANGELOG-Eintrag (SemVer-Single-Source-of-Truth),
+# wird in den Backend-Build injiziert (siehe backend/Dockerfile ARG APP_VERSION).
+APP_VERSION ?= $(shell grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+export APP_VERSION
 
 .DEFAULT_GOAL := help
 
