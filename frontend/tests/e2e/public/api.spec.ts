@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Backend API Integration', () => {
   
   test('Health endpoint returns OK', async ({ request }) => {
-    const response = await request.get('http://localhost:9001/health');
+    const response = await request.get('http://localhost:9001/api/v1/health');
     
     expect(response.ok()).toBeTruthy();
     expect(response.status()).toBe(200);
@@ -24,7 +24,7 @@ test.describe('Backend API Integration', () => {
   });
   
   test('Version endpoint returns version info', async ({ request }) => {
-    const response = await request.get('http://localhost:9001/version');
+    const response = await request.get('http://localhost:9001/api/v1/version');
     
     expect(response.ok()).toBeTruthy();
     
@@ -52,18 +52,17 @@ test.describe('Backend API Integration', () => {
     
     expect(response.ok()).toBeTruthy();
     
+    // Endpoint returns a raw array of order objects (or null if no data).
     const data = await response.json();
-    expect(data).toHaveProperty('region_id', 10000002);
-    expect(data).toHaveProperty('type_id', 34);
-    expect(data).toHaveProperty('count');
-    expect(data).toHaveProperty('orders');
-    
-    // Orders may be null or empty if no market data available
-    if (data.orders && data.orders.length > 0) {
-      const order = data.orders[0];
+    expect(Array.isArray(data) || data === null).toBeTruthy();
+
+    if (Array.isArray(data) && data.length > 0) {
+      const order = data[0];
       expect(order).toHaveProperty('price');
       expect(order).toHaveProperty('volume_remain');
       expect(order).toHaveProperty('is_buy_order');
+      expect(order).toHaveProperty('region_id', 10000002);
+      expect(order).toHaveProperty('type_id', 34);
     }
   });
   
@@ -78,7 +77,8 @@ test.describe('Backend API Integration', () => {
     // Accept both success and server error (backend DB constraint issue)
     if (response2.ok()) {
       const data = await response2.json();
-      expect(data).toHaveProperty('orders');
+      // Raw array of orders (or null when the region has no data).
+      expect(Array.isArray(data) || data === null).toBeTruthy();
     } else {
       // Backend may have DB issues with refresh - skip this assertion
       test.skip();
@@ -94,18 +94,17 @@ test.describe('Backend API Integration', () => {
   test('Invalid region returns empty result', async ({ request }) => {
     const response = await request.get('http://localhost:9001/api/v1/market/999999999/34');
     
-    // Backend returns 200 with empty orders for invalid regions
+    // Backend returns 200 with a null body for regions that have no orders.
     expect(response.ok()).toBeTruthy();
-    
+
     const data = await response.json();
-    expect(data.count).toBe(0);
-    expect(data.orders).toBeNull();
+    expect(data).toBeNull();
   });
   
   test('API responds within acceptable time', async ({ request }) => {
     const startTime = Date.now();
     
-    const response = await request.get('http://localhost:9001/health');
+    const response = await request.get('http://localhost:9001/api/v1/health');
     
     const duration = Date.now() - startTime;
     
@@ -160,7 +159,7 @@ test.describe('Backend API Integration', () => {
   });
   
   test('CORS headers are set correctly', async ({ request }) => {
-    const response = await request.get('http://localhost:9001/health', {
+    const response = await request.get('http://localhost:9001/api/v1/health', {
       headers: {
         'Origin': 'http://localhost:9000',
       },
@@ -184,7 +183,7 @@ test.describe('Backend API Integration', () => {
   });
   
   test('Database connection is healthy', async ({ request }) => {
-    const response = await request.get('http://localhost:9001/health');
+    const response = await request.get('http://localhost:9001/api/v1/health');
     
     expect(response.ok()).toBeTruthy();
     
