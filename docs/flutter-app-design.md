@@ -1,6 +1,6 @@
 # Flutter Tablet-App — Design
 
-**Stand:** 2026-05-26 · **Status:** Design abgenommen, Implementierungs-Plan ausstehend
+**Stand:** 2026-05-26 · **Status:** Implementiert (Branch `feat/flutter-tablet-app`) — siehe [`app/README.md`](../app/README.md) für Build/Run/Deploy.
 
 Ein zweites Frontend für eve-o-provit: eine Flutter-App für das Android-Tablet, parallel zum Next.js-Web-Frontend. Konsumiert die bestehende Go/Fiber-Backend-API. Farbstil am Web orientiert (neutrales shadcn-System), modernes, UX-zentriertes Material-3-Design.
 
@@ -112,6 +112,6 @@ State je Feature über Riverpod-Provider; Repository-Layer kapselt dio-Calls + D
 
 ## Offene Punkte (für den Implementierungs-Plan)
 
-- Exakte Akzent-Token light/dark final justieren (am Gerät prüfen).
+- ~~Exakte Akzent-Token light/dark final justieren (am Gerät prüfen).~~ ✅ Akzent-Token implementiert und auf dem Galaxy Tab validiert (`~oklch(0.45 0.13 230)`, `Color(0xFF1F6FB0)`).
 - Release-/CI-Anbindung: ob die App in eine `make`-/release-Linie des Repos eingebunden wird (kein eigenes Deployment für v1 zwingend).
-- Ordnername final: `app/` (Vorschlag, Portfolio-Konvention) vs. `mobile/`.
+- ~~Ordnername final: `app/` (Vorschlag, Portfolio-Konvention) vs. `mobile/`.~~ ✅ `app/` verwendet (Portfolio-Konvention).

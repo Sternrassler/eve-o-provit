@@ -14,6 +14,16 @@
 
 ---
 
+## Status (2026-05-26)
+
+Phases 0–7 implemented on branch `feat/flutter-tablet-app`. Real-device E2E validated on Galaxy Tab SM-X236B: EVE SSO login via Custom Tab, live trading route calculation (portrait + landscape), waypoint-setting in EVE client. Automated tests in `test/e2e/` (108 tests, all green).
+
+Remaining follow-ups:
+- (a) Document the mobile auth endpoints (`POST /auth/mobile/callback`, `POST /auth/mobile/refresh`, Bearer middleware) in the monorepo-root `docs/eve-o-provit.md` (parent repo — handled separately, outside this branch).
+- (b) Character ship pre-fill in the trading filter currently defaults to ship-type 648 (Badger); a future enhancement would read the active ship from the character provider.
+
+---
+
 ## Phase 0 — Manual prerequisite (you, in the EVE Developer portal)
 
 > **This is a manual step for the human owner. The implementation cannot proceed past Phase 3 (auth) without the resulting `client_id`.** EVE SSO applications allow only ONE callback URL each, so the mobile app needs its own application.
