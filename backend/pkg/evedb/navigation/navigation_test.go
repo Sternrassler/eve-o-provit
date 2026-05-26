@@ -116,7 +116,7 @@ func TestGetEffectiveParams(t *testing.T) {
 				InertiaModifier: ptrFloat64(0.4),
 			},
 			wantWarpSpeed:   DefaultWarpSpeed,
-			wantAlignTime:   13.3, // Approximate
+			wantAlignTime:   6.65, // ln(2) × 0.4 × 12_000_000 / 500_000 ≈ 6.65s
 			wantAvgWarpDist: DefaultAvgWarpDistance,
 			wantSource:      "calculated",
 		},
