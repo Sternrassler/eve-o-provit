@@ -11,6 +11,7 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/version"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/gofiber/fiber/v2"
 )
@@ -113,7 +114,7 @@ func (h *Handler) Health(c *fiber.Ctx) error {
 // @Router /api/v1/version [get]
 func (h *Handler) Version(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
-		"version": "0.1.0",
+		"version": version.Version,
 		"service": "eve-o-provit-api",
 	})
 }

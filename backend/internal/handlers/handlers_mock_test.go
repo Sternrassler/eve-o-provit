@@ -11,6 +11,7 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/handlers"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/testutil"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/version"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/esi"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -89,7 +90,7 @@ func TestVersion_Success(t *testing.T) {
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	assert.Contains(t, string(body), `"version":"0.1.0"`)
+	assert.Contains(t, string(body), `"version":"`+version.Version+`"`)
 	assert.Contains(t, string(body), `"service":"eve-o-provit-api"`)
 }
 

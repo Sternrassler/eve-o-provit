@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Sternrassler/eve-o-provit/backend/internal/version"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -30,9 +31,9 @@ func TestVersion(t *testing.T) {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	version, ok := response["version"].(string)
-	if !ok || version != "0.1.0" {
-		t.Errorf("Version = %v, want '0.1.0'", response["version"])
+	got, ok := response["version"].(string)
+	if !ok || got != version.Version {
+		t.Errorf("Version = %v, want %q", response["version"], version.Version)
 	}
 
 	service, ok := response["service"].(string)
