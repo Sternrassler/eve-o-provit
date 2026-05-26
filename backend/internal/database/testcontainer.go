@@ -7,7 +7,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -101,29 +103,28 @@ func (tc *TestPostgresContainer) ApplyMigrations(t *testing.T, migrationsDir str
 	}
 	defer db.Close()
 
-	// Read and execute migration files
-	migrations, err := filepath.Glob(filepath.Join(migrationsDir, "*.sql"))
+	// Apply the real up-migrations in ascending order so the test schema can
+	// never drift from production. Down-migrations are intentionally skipped.
+	migrations, err := filepath.Glob(filepath.Join(migrationsDir, "*.up.sql"))
 	if err != nil {
 		t.Fatalf("Failed to find migration files: %v", err)
 	}
 
 	if len(migrations) == 0 {
-		t.Logf("No migration files found in %s", migrationsDir)
-		return
+		t.Fatalf("No *.up.sql migration files found in %s", migrationsDir)
 	}
+
+	sort.Strings(migrations)
 
 	for _, migration := range migrations {
 		t.Logf("Applying migration: %s", filepath.Base(migration))
 
-		// Read migration file
-		content, err := filepath.Glob(migration)
+		content, err := os.ReadFile(migration)
 		if err != nil {
 			t.Fatalf("Failed to read migration %s: %v", migration, err)
 		}
 
-		// Execute migration (simplified - in production use proper migration tool)
-		_, err = db.ExecContext(ctx, string(content[0]))
-		if err != nil {
+		if _, err := db.ExecContext(ctx, string(content)); err != nil {
 			t.Fatalf("Failed to execute migration %s: %v", migration, err)
 		}
 	}
@@ -131,52 +132,15 @@ func (tc *TestPostgresContainer) ApplyMigrations(t *testing.T, migrationsDir str
 	t.Logf("Applied %d migrations successfully", len(migrations))
 }
 
-// CreateTestSchema creates minimal test schema without full migrations
-func (tc *TestPostgresContainer) CreateTestSchema(t *testing.T) {
+// MigrationsDir is the path to the real migrations, relative to the
+// internal/database test package, so integration tests exercise the exact
+// production schema instead of a hand-maintained copy that can drift.
+const MigrationsDir = "../../migrations"
+
+// SetupSchema applies the real production migrations to the test database.
+func (tc *TestPostgresContainer) SetupSchema(t *testing.T) {
 	t.Helper()
-
-	ctx := context.Background()
-
-	// Create minimal schema for testing
-	schema := `
-		CREATE TABLE IF NOT EXISTS market_orders (
-			order_id BIGINT PRIMARY KEY,
-			type_id INTEGER NOT NULL,
-			region_id INTEGER NOT NULL,
-			location_id BIGINT NOT NULL,
-			is_buy_order BOOLEAN NOT NULL,
-			price DOUBLE PRECISION NOT NULL,
-			volume_total INTEGER NOT NULL,
-			volume_remain INTEGER NOT NULL,
-			min_volume INTEGER,
-			issued_at TIMESTAMP NOT NULL,
-			duration INTEGER NOT NULL,
-			cached_at TIMESTAMP NOT NULL
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_market_orders_region_type 
-			ON market_orders(region_id, type_id);
-
-		CREATE TABLE IF NOT EXISTS price_history (
-			id SERIAL PRIMARY KEY,
-			type_id INTEGER NOT NULL,
-			region_id INTEGER NOT NULL,
-			date DATE NOT NULL,
-			highest DOUBLE PRECISION,
-			lowest DOUBLE PRECISION,
-			average DOUBLE PRECISION,
-			volume BIGINT,
-			order_count INTEGER,
-			UNIQUE(type_id, region_id, date)
-		);
-	`
-
-	_, err := tc.Pool.Exec(ctx, schema)
-	if err != nil {
-		t.Fatalf("Failed to create test schema: %v", err)
-	}
-
-	t.Log("Test schema created successfully")
+	tc.ApplyMigrations(t, MigrationsDir)
 }
 
 // SeedTestData inserts test data into the database

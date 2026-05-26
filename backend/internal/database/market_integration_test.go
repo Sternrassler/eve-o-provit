@@ -19,7 +19,7 @@ func TestMarketRepository_Integration_UpsertAndGet(t *testing.T) {
 
 	// Setup PostgreSQL container
 	tc := SetupPostgresContainer(t)
-	tc.CreateTestSchema(t)
+	tc.SetupSchema(t)
 
 	// Create repository
 	repo := NewMarketRepository(tc.Pool)
@@ -90,7 +90,7 @@ func TestMarketRepository_Integration_EmptyResult(t *testing.T) {
 	}
 
 	tc := SetupPostgresContainer(t)
-	tc.CreateTestSchema(t)
+	tc.SetupSchema(t)
 
 	repo := NewMarketRepository(tc.Pool)
 	ctx := context.Background()
@@ -108,7 +108,7 @@ func TestMarketRepository_Integration_UpdateExisting(t *testing.T) {
 	}
 
 	tc := SetupPostgresContainer(t)
-	tc.CreateTestSchema(t)
+	tc.SetupSchema(t)
 
 	repo := NewMarketRepository(tc.Pool)
 	ctx := context.Background()
@@ -170,7 +170,7 @@ func TestMarketRepository_Integration_GetAllForRegion(t *testing.T) {
 	}
 
 	tc := SetupPostgresContainer(t)
-	tc.CreateTestSchema(t)
+	tc.SetupSchema(t)
 	tc.SeedTestData(t) // Use seeded data
 
 	repo := NewMarketRepository(tc.Pool)
@@ -194,7 +194,7 @@ func TestMarketRepository_Integration_LargeDataset(t *testing.T) {
 	}
 
 	tc := SetupPostgresContainer(t)
-	tc.CreateTestSchema(t)
+	tc.SetupSchema(t)
 
 	repo := NewMarketRepository(tc.Pool)
 	ctx := context.Background()
