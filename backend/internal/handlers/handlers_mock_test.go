@@ -66,7 +66,8 @@ func TestHealth_DatabaseUnhealthy(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	assert.Contains(t, string(body), `"status":"unhealthy"`)
-	assert.Contains(t, string(body), "database connection lost")
+	// Handler returns a generic message; the raw DB error is logged, not leaked.
+	assert.Contains(t, string(body), "database unavailable")
 }
 
 func TestVersion_Success(t *testing.T) {
@@ -171,5 +172,6 @@ func TestGetType_NotFound(t *testing.T) {
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	assert.Contains(t, string(body), "type 99999 not found")
+	// Handler returns a generic message; the raw lookup error is logged, not leaked.
+	assert.Contains(t, string(body), "type not found")
 }
