@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # check-adr-ref.sh – Erzwingt ADR-Referenzen in PRs bei Governance-Pfad-Änderungen
-# Referenz: copilot-instructions.md Abschnitt 3.0 (Quick Start Hinweis)
 # Exit Codes: 0 = OK, 1 = Fehler (blockiert), 2 = Skip Marker (Warnung)
 
 set -euo pipefail

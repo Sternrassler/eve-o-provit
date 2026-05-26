@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # check-adr.sh – Prüft ADR-Konsistenz (Status, Supersessions, Template-Konformität)
-# Referenz: copilot-instructions.md Abschnitt 2.5
 
 set -euo pipefail
 

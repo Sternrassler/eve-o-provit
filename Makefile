@@ -1,5 +1,4 @@
 # Makefile – Zentrale Orchestrierung für Projekt-Automationen
-# Referenz: copilot-instructions.md Abschnitt 3.1
 
 .PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json secrets-scan secrets-check pr-check release ci-local clean ensure-trivy ensure-gitleaks push-ci pr-quality-gates-ci sde docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-shell-api docker-shell-db docker-shell-redis migrate migrate-up migrate-down migrate-create
 
@@ -204,8 +203,8 @@ commit-lint: ## Validiert Commit Messages (RANGE=origin/main..HEAD oder COMMIT_F
 		exit 1; \
 	fi
 
-release-check: ## Prüft VERSION/CHANGELOG Synchronität (für Release PRs)
-	@echo "[make release-check] Prüfe VERSION und CHANGELOG..."; \
+release-check: ## Prüft CHANGELOG-Konsistenz (für Release PRs)
+	@echo "[make release-check] Prüfe CHANGELOG..."; \
 	if [ -x scripts/common/check-version-changelog.sh ]; then \
 		bash scripts/common/check-version-changelog.sh; \
 	else \
@@ -276,13 +275,11 @@ release: ## Version bump + CHANGELOG Transform (Beispiel: make release VERSION=0
 		exit 1; \
 	fi
 	@echo "[make release] Bump Version auf $(VERSION)..."
-	@echo "$(VERSION)" > VERSION
 	@sed -i "s/^## \[Unreleased\]/## [Unreleased]\n\n## [$(VERSION)] - $$(date +%Y-%m-%d)/" CHANGELOG.md
-	@echo "[make release] VERSION und CHANGELOG aktualisiert – bitte commit + tag erstellen"
+	@echo "[make release] CHANGELOG aktualisiert – bitte commit + tag (v$(VERSION)) erstellen"
 
 ci-local: ## Simulation definierter CI-Gates lokal
 	@echo "[make ci-local] Simuliere CI Pipeline lokal..."
-	@bash scripts/common/check-normative.sh
 	@bash scripts/common/check-adr.sh
 	@$(MAKE) --no-print-directory test
 	@$(MAKE) --no-print-directory scan

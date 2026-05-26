@@ -75,7 +75,6 @@ eve-o-provit/
 │
 ├── .github/
 │   ├── workflows/             # CI/CD Workflows
-│   ├── copilot-instructions.md
 │   └── ISSUE_TEMPLATE/
 │
 ├── .githooks/                 # Pre-commit Hooks
