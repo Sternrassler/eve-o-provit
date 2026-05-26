@@ -66,7 +66,7 @@ func TestGetMarketOrders_Integration(t *testing.T) {
 
 	// Setup PostgreSQL container
 	tc := database.SetupPostgresContainer(t)
-	tc.CreateTestSchema(t)
+	tc.SetupSchema(t)
 	tc.SeedTestData(t)
 
 	// Setup Redis container
@@ -123,7 +123,7 @@ func TestGetMarketOrders_Integration_InvalidParams(t *testing.T) {
 	}
 
 	tc := database.SetupPostgresContainer(t)
-	tc.CreateTestSchema(t)
+	tc.SetupSchema(t)
 
 	redisClient := setupRedisContainer(t)
 	marketRepo := database.NewMarketRepository(tc.Pool)
@@ -183,7 +183,7 @@ func TestGetMarketOrders_Integration_EmptyResult(t *testing.T) {
 	}
 
 	tc := database.SetupPostgresContainer(t)
-	tc.CreateTestSchema(t)
+	tc.SetupSchema(t)
 	// No seed data = empty result
 
 	redisClient := setupRedisContainer(t)
@@ -264,7 +264,7 @@ func TestGetMarketDataStaleness_Integration(t *testing.T) {
 	}
 
 	tc := database.SetupPostgresContainer(t)
-	tc.CreateTestSchema(t)
+	tc.SetupSchema(t)
 	tc.SeedTestData(t)
 
 	marketRepo := database.NewMarketRepository(tc.Pool)
