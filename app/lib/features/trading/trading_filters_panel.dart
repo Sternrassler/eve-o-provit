@@ -214,14 +214,14 @@ class _TradingFiltersPanelState extends ConsumerState<TradingFiltersPanel> {
                   ),
                   const SizedBox(height: 8),
                   _SecCheckbox(
-                    label: 'High Sec (≥0.5)',
+                    label: 'High Sec (≥ 0.5)',
                     value: filters.highSec,
                     onChanged: (v) => ref
                         .read(filtersProvider.notifier)
                         .update((f) => f.copyWith(highSec: v)),
                   ),
                   _SecCheckbox(
-                    label: 'Low Sec (0.1–0.4)',
+                    label: 'Low Sec (< 0.5)',
                     value: filters.lowSec,
                     activeColor: const Color(0xFFFF9800),
                     onChanged: (v) => ref
@@ -229,7 +229,7 @@ class _TradingFiltersPanelState extends ConsumerState<TradingFiltersPanel> {
                         .update((f) => f.copyWith(lowSec: v)),
                   ),
                   _SecCheckbox(
-                    label: 'Null Sec (≤0.0)',
+                    label: 'Null Sec (≤ 0.0)',
                     value: filters.nullSec,
                     activeColor: const Color(0xFFF44336),
                     onChanged: (v) => ref

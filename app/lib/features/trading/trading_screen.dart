@@ -49,11 +49,12 @@ class _TradingScreenState extends ConsumerState<TradingScreen> {
     if (_activeShipPrefilled) return;
     final asyncActiveShip = ref.read(activeShipTypeIdProvider);
     asyncActiveShip.whenData((typeId) {
-      if (typeId != null &&
-          ref.read(selectedShipTypeIdProvider) == null) {
+      // Only WRITE when the user has not already chosen a ship, but mark the
+      // prefill as done unconditionally once the active ship has resolved.
+      if (typeId != null && ref.read(selectedShipTypeIdProvider) == null) {
         ref.read(selectedShipTypeIdProvider.notifier).select(typeId);
-        _activeShipPrefilled = true;
       }
+      _activeShipPrefilled = true;
     });
 
     // If still loading, listen once it resolves.
@@ -61,6 +62,8 @@ class _TradingScreenState extends ConsumerState<TradingScreen> {
       ref.listenManual(activeShipTypeIdProvider, (_, next) {
         next.whenData((typeId) {
           if (_activeShipPrefilled) return;
+          // Same guard: never overwrite an explicit user choice, but always
+          // mark prefill done so this listener does not stay live forever.
           if (typeId != null && ref.read(selectedShipTypeIdProvider) == null) {
             ref.read(selectedShipTypeIdProvider.notifier).select(typeId);
           }
