@@ -1,0 +1,73 @@
+# Self-deploying CD for the eve-o-provit backend.
+#
+# Trigger: pushing a SemVer tag (vX.Y.Z) — matches this repo's release convention
+# (`make release VERSION=x.y.z` bumps CHANGELOG + creates the git tag). Builds and
+# pushes the backend image to GHCR (tag = the git tag + latest), then runs the shared
+# deploy-app.sh on the backend host, which recreates ONLY eve-o-provit-api.
+#
+# Prereq secret: BACKEND_SSH_KEY (private deploy key whose public part is in
+# root@backend authorized_keys). GHCR auth uses the built-in GITHUB_TOKEN.
+name: deploy
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/sternrassler/eve-o-provit-backend
+  APP_NAME: eveoprovit
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Derive image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=${{ github.ref_name }}
+            type=raw,value=latest
+      - name: Build & push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          build-args: |
+            APP_VERSION=${{ github.ref_name }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=eve-o-provit-backend
+          cache-to: type=gha,scope=eve-o-provit-backend,mode=max
+
+  deploy:
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH deploy to backend host
+        uses: appleboy/ssh-action@v1.2.5
+        env:
+          APP_NAME: ${{ env.APP_NAME }}
+          TAG: ${{ github.ref_name }}
+        with:
+          host: 46.225.188.34
+          username: root
+          key: ${{ secrets.BACKEND_SSH_KEY }}
+          envs: APP_NAME,TAG
+          script: |
+            set -euo pipefail
+            /opt/apps/scripts/deploy-app.sh "$APP_NAME" "$TAG"
