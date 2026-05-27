@@ -29,7 +29,14 @@ const _refreshPath = '/auth/mobile/refresh';
 /// - [store] provides the current access / refresh tokens.
 /// - [getAuthRepo] is a lazy factory so the [AuthRepository] is only resolved
 ///   when an actual 401 occurs, keeping startup fast.
-Dio buildDio(TokenStore store, AuthRepository Function() getAuthRepo) {
+/// - [onSessionExpired] is invoked when a token refresh fails mid-session, so
+///   the app can drop to the login screen instead of getting stuck with a dead
+///   session (the router redirects on the resulting Unauthenticated state).
+Dio buildDio(
+  TokenStore store,
+  AuthRepository Function() getAuthRepo, {
+  void Function()? onSessionExpired,
+}) {
   final dio = Dio(
     BaseOptions(
       baseUrl: Env.apiBaseUrl,
@@ -65,8 +72,9 @@ Dio buildDio(TokenStore store, AuthRepository Function() getAuthRepo) {
 
         final requestPath = error.requestOptions.path;
         if (requestPath.contains(_refreshPath)) {
-          // The refresh call itself returned 401 → clear tokens, propagate.
+          // The refresh call itself returned 401 → clear tokens, drop to login.
           await store.clear();
+          onSessionExpired?.call();
           handler.next(error);
           return;
         }
@@ -82,7 +90,9 @@ Dio buildDio(TokenStore store, AuthRepository Function() getAuthRepo) {
         try {
           await getAuthRepo().refresh();
         } catch (_) {
-          // Refresh failed — tokens already cleared by AuthRepository.refresh()
+          // Refresh failed — tokens already cleared by AuthRepository.refresh().
+          // Notify the app so it leaves the now-dead session for the login screen.
+          onSessionExpired?.call();
           handler.next(error);
           return;
         }
@@ -121,5 +131,9 @@ final dioProvider = Provider<Dio>((ref) {
     store,
     // Lazy getter — resolved only when a 401 needs handling.
     () => ref.read(authRepositoryProvider),
+    // Flip auth state to Unauthenticated when a mid-session refresh fails, so
+    // the router redirects to /login (read lazily — only fires on 401).
+    onSessionExpired: () =>
+        ref.read(authControllerProvider.notifier).expireSession(),
   );
 });

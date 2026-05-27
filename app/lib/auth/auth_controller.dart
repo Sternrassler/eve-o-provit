@@ -79,6 +79,15 @@ class AuthController extends AsyncNotifier<AuthState> {
     await repo.logout();
     state = const AsyncData(Unauthenticated());
   }
+
+  /// Marks the session as expired. Called by the API interceptor when a
+  /// mid-session token refresh fails (tokens are already cleared by then), so
+  /// the router can redirect to the login screen instead of leaving the user
+  /// stuck on an authenticated route with a dead session.
+  void expireSession() {
+    if (state.value is Unauthenticated) return;
+    state = const AsyncData(Unauthenticated());
+  }
 }
 
 /// Provider for [AuthController].
