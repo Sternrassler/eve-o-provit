@@ -42,3 +42,6 @@ frontend/node_modules/
 # Docker
 .dockerignore
 
+
+# Superpowers brainstorming visual companion (local, not committed)
+.superpowers/
