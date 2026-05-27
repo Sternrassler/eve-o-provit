@@ -210,3 +210,79 @@ func TestGetSystemIDForLocation_EdgeCases(t *testing.T) {
 		}
 	})
 }
+
+// TestGetSystemSecurityStatus guards against a regression where the query
+// referenced a non-existent `security` column, making SQLite fail every
+// statement so all systems defaulted to 1.0 (high-sec) and the security-zone
+// filter could never surface low/null-sec routes.
+//
+// The schema below mirrors the real eve-sde `mapSolarSystems` table — note it
+// has `securityStatus` and NO `security` column.
+func TestGetSystemSecurityStatus(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping database integration test in short mode")
+	}
+
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to create database: %v", err)
+	}
+	defer db.Close()
+
+	schema := `
+		CREATE TABLE mapSolarSystems (
+			_key INTEGER PRIMARY KEY,
+			name TEXT NOT NULL,
+			regionID INTEGER NOT NULL,
+			securityStatus REAL NOT NULL
+		);
+	`
+	if _, err := db.Exec(schema); err != nil {
+		t.Fatalf("Failed to create schema: %v", err)
+	}
+
+	testData := `
+		INSERT INTO mapSolarSystems (_key, name, regionID, securityStatus) VALUES
+			(30000142, 'Jita',     10000002, 0.9459),
+			(30002659, 'Dodixie',  10000032, 0.8684),
+			(30003504, 'Vestouve', 10000048, 0.04),
+			(30000789, 'Null Hole',10000048, -0.12);
+	`
+	if _, err := db.Exec(testData); err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	repo := NewSDERepository(db)
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		systemID int64
+		want     float64
+		wantErr  bool
+	}{
+		{name: "high-sec (Jita)", systemID: 30000142, want: 0.9459},
+		{name: "low-sec (Vestouve)", systemID: 30003504, want: 0.04},
+		{name: "null-sec (negative)", systemID: 30000789, want: -0.12},
+		{name: "unknown system → error", systemID: 39999999, want: 1.0, wantErr: true},
+	}
+
+	const eps = 1e-6
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := repo.GetSystemSecurityStatus(ctx, tt.systemID)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error for system %d, got nil", tt.systemID)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error for system %d: %v", tt.systemID, err)
+			}
+			if diff := got - tt.want; diff > eps || diff < -eps {
+				t.Errorf("GetSystemSecurityStatus(%d) = %v, want %v", tt.systemID, got, tt.want)
+			}
+		})
+	}
+}
