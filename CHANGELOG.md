@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-05-27
+
+### Added
+
+- CI/CD GitHub Actions: `ci.yml` (gofmt + go vet, docker-free unit lane, report-only govulncheck), `deploy.yml` (SemVer-tag → build+push backend image to GHCR → `deploy-app.sh eveoprovit` on the backend host), `smoke-test.yml` (post-deploy + daily health/TLS check).
+- Production deployment behind `edge-caddy` at `https://eveonline.sternrassler.de` with the dedicated prod EVE SSO application; deploy runbook + `deployments/.env.example`.
+
 ### Changed
 
 - SemVer-Quelle ist jetzt ausschließlich `CHANGELOG.md` + git-Tags. `release-check`/`release` lesen die Version aus dem CHANGELOG.
