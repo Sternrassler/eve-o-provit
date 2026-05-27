@@ -2,11 +2,10 @@
 ///
 /// Selecting a ship writes to [selectedShipTypeIdProvider].
 /// Falls back gracefully when the character has no ships or the fetch fails:
-/// the current selection is kept and the dropdown shows a manual-entry option.
+/// the dropdown then offers a list of common hauler fallback ships.
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../trading/providers.dart';
@@ -36,7 +35,7 @@ const List<_FallbackShip> _fallbackShips = [
 // ShipSelect widget
 // ---------------------------------------------------------------------------
 
-/// Dropdown + optional manual-ID fallback for selecting a ship type.
+/// Dropdown for selecting a ship type.
 ///
 /// Shows the character's hangar ships when available; otherwise shows fallback
 /// ships.  Selecting sets [selectedShipTypeIdProvider].
@@ -51,27 +50,9 @@ class ShipSelect extends ConsumerStatefulWidget {
 }
 
 class _ShipSelectState extends ConsumerState<ShipSelect> {
-  /// True when the user taps "Manuell eingeben" to type a raw type-ID.
-  bool _showManualEntry = false;
-  final _manualController = TextEditingController();
-
-  @override
-  void dispose() {
-    _manualController.dispose();
-    super.dispose();
-  }
-
   void _onDropdownChanged(int? typeId) {
     if (typeId == null) return;
     ref.read(selectedShipTypeIdProvider.notifier).select(typeId);
-  }
-
-  void _onManualSubmit() {
-    final v = int.tryParse(_manualController.text.trim());
-    if (v != null && v > 0) {
-      ref.read(selectedShipTypeIdProvider.notifier).select(v);
-      setState(() => _showManualEntry = false);
-    }
   }
 
   @override
@@ -106,10 +87,6 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
         }
 
         // Build dropdown from character's hangar ships.
-        if (_showManualEntry) {
-          return _buildManualEntry(context);
-        }
-
         // Deduplicate by type id — the hangar can hold several ships of the
         // same type (e.g. two Ventures). DropdownButtonFormField requires a
         // unique value per item, and the selection is a ship TYPE id.
@@ -149,12 +126,6 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
               ],
               onChanged: widget.enabled ? _onDropdownChanged : null,
             ),
-            TextButton(
-              onPressed: widget.enabled
-                  ? () => setState(() => _showManualEntry = true)
-                  : null,
-              child: const Text('Typ-ID manuell eingeben'),
-            ),
           ],
         );
       },
@@ -167,8 +138,6 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
     required int? selectedTypeId,
     required bool loading,
   }) {
-    if (_showManualEntry) return _buildManualEntry(context);
-
     final typeIds = ships.map((s) => s.typeId).toList();
     final currentValue =
         typeIds.contains(selectedTypeId) ? selectedTypeId : null;
@@ -199,46 +168,6 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
               )
               .toList(),
           onChanged: (widget.enabled && !loading) ? _onDropdownChanged : null,
-        ),
-        TextButton(
-          onPressed: widget.enabled
-              ? () => setState(() => _showManualEntry = true)
-              : null,
-          child: const Text('Typ-ID manuell eingeben'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildManualEntry(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        TextFormField(
-          controller: _manualController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(
-            labelText: 'Schiff Typ-ID',
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            isDense: true,
-            hintText: '648',
-          ),
-          onFieldSubmitted: (_) => _onManualSubmit(),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: () => setState(() => _showManualEntry = false),
-              child: const Text('Abbrechen'),
-            ),
-            TextButton(
-              onPressed: _onManualSubmit,
-              child: const Text('Übernehmen'),
-            ),
-          ],
         ),
       ],
     );

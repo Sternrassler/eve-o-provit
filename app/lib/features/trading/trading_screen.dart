@@ -274,8 +274,10 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
       final staleness = await api.staleness(region.id);
       if (mounted) {
         setState(() {
-          _stalenessText =
-              '${staleness.ageMinutes} Min. alt · ${staleness.status}';
+          final age = staleness.ageMinutes;
+          _stalenessText = age != null
+              ? '${age.round()} Min. alt · ${staleness.status}'
+              : 'Keine Marktdaten · ${staleness.status}';
         });
       }
     } catch (e) {

@@ -262,6 +262,34 @@ void main() {
       expect(resp.refreshAllowed, isTrue);
       expect(resp.lastUpdate, DateTime.utc(2025, 5, 26, 10, 0, 0));
     });
+
+    test('accepts a float age_minutes (backend returns epoch diff / 60)', () {
+      final resp = MarketDataStalenessResponse.fromJson({
+        'region_id': 10000002,
+        'region_name': 'The Forge',
+        'last_update': '2025-05-26T10:00:00Z',
+        'age_minutes': 0.05,
+        'status': 'fresh',
+        'refresh_allowed': true,
+      });
+
+      expect(resp.ageMinutes, 0.05);
+    });
+
+    test('tolerates null last_update / age_minutes (region without data)', () {
+      final resp = MarketDataStalenessResponse.fromJson({
+        'region_id': 10000002,
+        'region_name': 'The Forge',
+        'last_update': null,
+        'age_minutes': null,
+        'status': 'very_stale',
+        'refresh_allowed': true,
+      });
+
+      expect(resp.lastUpdate, isNull);
+      expect(resp.ageMinutes, isNull);
+      expect(resp.status, 'very_stale');
+    });
   });
 
   // ── VolumeMetrics.fromJson ─────────────────────────────────────────────────

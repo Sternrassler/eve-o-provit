@@ -511,8 +511,8 @@ class MarketDataStalenessResponse {
   const MarketDataStalenessResponse({
     required this.regionId,
     required this.regionName,
-    required this.lastUpdate,
-    required this.ageMinutes,
+    this.lastUpdate,
+    this.ageMinutes,
     required this.status,
     required this.refreshAllowed,
   });
@@ -523,11 +523,11 @@ class MarketDataStalenessResponse {
   /// Backend: `region_name`
   final String regionName;
 
-  /// Backend: `last_update`
-  final DateTime lastUpdate;
+  /// Backend: `last_update` — null when the region has no cached market data.
+  final DateTime? lastUpdate;
 
-  /// Backend: `age_minutes`
-  final int ageMinutes;
+  /// Backend: `age_minutes` — float (epoch diff / 60); null when no data.
+  final double? ageMinutes;
 
   /// Backend: `status` — "fresh" | "stale" | "very_stale"
   final String status;
@@ -536,13 +536,17 @@ class MarketDataStalenessResponse {
   final bool refreshAllowed;
 
   factory MarketDataStalenessResponse.fromJson(Map<String, dynamic> json) {
+    final lastRaw = json['last_update'];
+    final ageRaw = json['age_minutes'];
     return MarketDataStalenessResponse(
       regionId: (json['region_id'] as num).toInt(),
-      regionName: json['region_name'] as String,
-      lastUpdate: DateTime.parse(json['last_update'] as String),
-      ageMinutes: json['age_minutes'] as int,
-      status: json['status'] as String,
-      refreshAllowed: json['refresh_allowed'] as bool,
+      regionName: json['region_name'] as String? ?? '',
+      // Null/absent when the region has no cached market data yet.
+      lastUpdate: lastRaw is String ? DateTime.tryParse(lastRaw) : null,
+      // Backend returns a float (epoch diff / 60) or null — accept any num.
+      ageMinutes: ageRaw is num ? ageRaw.toDouble() : null,
+      status: json['status'] as String? ?? 'unknown',
+      refreshAllowed: json['refresh_allowed'] as bool? ?? true,
     );
   }
 }
