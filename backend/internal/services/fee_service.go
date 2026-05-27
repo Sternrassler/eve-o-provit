@@ -99,4 +99,3 @@ func (s *FeeService) CalculateSalesTax(accountingLevel int, orderValue float64) 
 
 	return tax
 }
-

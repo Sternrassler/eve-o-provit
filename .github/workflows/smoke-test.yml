@@ -1,0 +1,35 @@
+# Production smoke test for eve-o-provit.
+# Runs after a successful deploy and daily; verifies HTTP health + TLS validity.
+name: smoke-test
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_run:
+    workflows: ["deploy"]
+    types: [completed]
+  workflow_dispatch:
+
+env:
+  HEALTH_URL: "https://eveonline.sternrassler.de/api/v1/health"
+
+jobs:
+  smoke:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: HTTP health check
+        run: |
+          set -euo pipefail
+          echo "Smoke test against ${HEALTH_URL}"
+          curl -fsSL --max-time 10 "${HEALTH_URL}" | tee /tmp/health.out
+          echo
+          grep -q '"status":"ok"' /tmp/health.out
+      - name: TLS certificate check (>=14 days valid)
+        run: |
+          set -euo pipefail
+          host="$(echo "${HEALTH_URL}" | awk -F/ '{print $3}')"
+          echo | openssl s_client -servername "${host}" -connect "${host}:443" 2>/dev/null \
+            | openssl x509 -noout -checkend 1209600
+          echo "TLS cert for ${host} valid >= 14 days."
