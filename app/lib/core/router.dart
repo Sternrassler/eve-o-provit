@@ -104,12 +104,15 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 // Navigation shell — bottom NavigationBar
 // ---------------------------------------------------------------------------
 
-class _AppShell extends StatelessWidget {
+class _AppShell extends ConsumerWidget {
   const _AppShell({required this.location, required this.child});
 
   final String location;
   final Widget child;
 
+  // Trading + Character are real routes; "Abmelden" is an action (it opens a
+  // confirm dialog instead of navigating), kept here so logout lives next to
+  // the primary navigation rather than hidden in a screen's AppBar.
   static const _destinations = [
     NavigationDestination(
       icon: Icon(Icons.currency_exchange_rounded),
@@ -120,15 +123,19 @@ class _AppShell extends StatelessWidget {
       selectedIcon: Icon(Icons.person_rounded),
       label: 'Character',
     ),
+    NavigationDestination(
+      icon: Icon(Icons.logout_rounded),
+      label: 'Abmelden',
+    ),
   ];
 
   int get _selectedIndex {
     if (location.startsWith('/character')) return 1;
-    return 0; // /trading is default
+    return 0; // /trading is default; "Abmelden" is never a selected state
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       body: child,
       bottomNavigationBar: NavigationBar(
@@ -139,10 +146,37 @@ class _AppShell extends StatelessWidget {
               context.go('/trading');
             case 1:
               context.go('/character');
+            case 2:
+              _confirmLogout(context, ref);
           }
         },
         destinations: _destinations,
       ),
     );
+  }
+
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Abmelden?'),
+        content: const Text(
+          'Du wirst von EVE-O Provit abgemeldet und musst dich erneut anmelden.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Abmelden'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) {
+      await ref.read(authControllerProvider.notifier).logout();
+    }
   }
 }

@@ -292,4 +292,76 @@ void main() {
       expect(find.text('My Badger'), findsOneWidget);
     });
   });
+
+  // ── 7. Logout flow ──────────────────────────────────────────────────────────
+
+  group('Logout flow', () {
+    // The logout "Abmelden" destination lives in the bottom NavigationBar next
+    // to Trading/Character (not hidden in a screen AppBar). Tapping it opens a
+    // confirm dialog; it is an action, not a navigation target.
+
+    testWidgets(
+        'Tapping "Abmelden" opens the confirm dialog without changing the tab',
+        (tester) async {
+      _setViewSize(tester, 1280, 800);
+
+      await _pumpApp(tester, authenticatedOverrides());
+
+      // Starts on Trading.
+      expect(find.text('Trading'), findsWidgets);
+
+      // Tap the bottom-bar "Abmelden" destination (only the nav label so far).
+      await tester.tap(find.text('Abmelden'));
+      await tester.pumpAndSettle();
+
+      // Confirm dialog appears; still authenticated (login button absent).
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Abmelden?'), findsOneWidget);
+      expect(find.text('Login mit EVE'), findsNothing);
+    });
+
+    testWidgets(
+        'Confirming logout clears the session and redirects to LoginScreen',
+        (tester) async {
+      _setViewSize(tester, 1280, 800);
+
+      await _pumpApp(tester, authenticatedOverrides());
+
+      await tester.tap(find.text('Abmelden'));
+      await tester.pumpAndSettle();
+
+      // Tap the dialog's "Abmelden" confirm button (disambiguated from the
+      // nav-bar label by scoping to the AlertDialog).
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Abmelden'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Auth state → Unauthenticated → router redirects to the login screen.
+      expect(find.text('Login mit EVE'), findsOneWidget);
+      expect(find.byType(TradingScreen), findsNothing);
+    });
+
+    testWidgets(
+        'Cancelling the dialog keeps the user logged in on Trading',
+        (tester) async {
+      _setViewSize(tester, 1280, 800);
+
+      await _pumpApp(tester, authenticatedOverrides());
+
+      await tester.tap(find.text('Abmelden'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Abbrechen'));
+      await tester.pumpAndSettle();
+
+      // Dialog dismissed, still authenticated and on the trading screen.
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(TradingScreen), findsOneWidget);
+      expect(find.text('Login mit EVE'), findsNothing);
+    });
+  });
 }

@@ -7,7 +7,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../auth/auth_controller.dart';
 import 'character_models.dart';
 import 'providers.dart';
 
@@ -32,13 +31,6 @@ class CharacterScreen extends ConsumerWidget {
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 1,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Abmelden',
-            onPressed: () => _confirmLogout(context, ref),
-          ),
-        ],
       ),
       body: characterAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -46,31 +38,6 @@ class CharacterScreen extends ConsumerWidget {
         data: (character) => _CharacterContent(character: character),
       ),
     );
-  }
-
-  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Abmelden?'),
-        content: const Text(
-          'Du wirst von EVE-O Provit abgemeldet und musst dich erneut anmelden.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Abbrechen'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Abmelden'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed ?? false) {
-      await ref.read(authControllerProvider.notifier).logout();
-    }
   }
 }
 

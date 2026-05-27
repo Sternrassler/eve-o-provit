@@ -262,6 +262,14 @@ class FakeAuthControllerAuthenticated extends AuthController {
   @override
   Future<AuthState> build() async =>
       const Authenticated(character: fakeCharacter);
+
+  /// Mirrors the real controller's end state without touching the
+  /// [AuthRepository] / [TokenStore] (whose `clear()` calls the
+  /// flutter_secure_storage platform plugin, unavailable under `flutter test`).
+  @override
+  Future<void> logout() async {
+    state = const AsyncData(Unauthenticated());
+  }
 }
 
 /// Always returns [Unauthenticated].
