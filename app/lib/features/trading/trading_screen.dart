@@ -48,37 +48,36 @@ class _TradingScreenState extends ConsumerState<TradingScreen> {
   void _prefillActiveShip() {
     if (_activeShipPrefilled) return;
     final asyncActiveShip = ref.read(activeShipTypeIdProvider);
-    asyncActiveShip.whenData((typeId) {
-      // Only WRITE when the user has not already chosen a ship, but mark the
-      // prefill as done unconditionally once the active ship has resolved.
-      if (typeId != null && ref.read(selectedShipTypeIdProvider) == null) {
-        ref.read(selectedShipTypeIdProvider.notifier).select(typeId);
-      }
-      _activeShipPrefilled = true;
-    });
 
-    // If still loading, listen once it resolves.
-    if (asyncActiveShip is AsyncLoading) {
+    // Apply the prefill only ONCE the active ship has resolved (data or error).
+    // Mirrors the web's `shipOverride ?? activeShip ?? 648`: the 648 fallback
+    // must NOT be applied prematurely while the active ship is still loading,
+    // otherwise it blocks the real active ship (which can resolve late, e.g.
+    // after a 401→token-refresh) from ever being selected.
+    if (asyncActiveShip.hasValue) {
+      _applyShipPrefill(asyncActiveShip.value);
+    } else if (asyncActiveShip is AsyncError) {
+      _applyShipPrefill(null);
+    } else {
       ref.listenManual(activeShipTypeIdProvider, (_, next) {
-        next.whenData((typeId) {
-          if (_activeShipPrefilled) return;
-          // Same guard: never overwrite an explicit user choice, but always
-          // mark prefill done so this listener does not stay live forever.
-          if (typeId != null && ref.read(selectedShipTypeIdProvider) == null) {
-            ref.read(selectedShipTypeIdProvider.notifier).select(typeId);
-          }
-          _activeShipPrefilled = true;
-        });
+        if (_activeShipPrefilled) return;
+        if (next.hasValue) {
+          _applyShipPrefill(next.value);
+        } else if (next is AsyncError) {
+          _applyShipPrefill(null);
+        }
       });
     }
+  }
 
-    // Fallback: if no active-ship data at all, default to 648.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (ref.read(selectedShipTypeIdProvider) == null) {
-        ref.read(selectedShipTypeIdProvider.notifier).select(648);
-      }
-    });
+  /// Seeds [selectedShipTypeIdProvider] with the active ship (or 648 fallback)
+  /// once, never overwriting an explicit user choice.
+  void _applyShipPrefill(int? activeTypeId) {
+    if (_activeShipPrefilled) return;
+    _activeShipPrefilled = true;
+    if (ref.read(selectedShipTypeIdProvider) == null) {
+      ref.read(selectedShipTypeIdProvider.notifier).select(activeTypeId ?? 648);
+    }
   }
 
   @override

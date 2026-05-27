@@ -110,8 +110,15 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
           return _buildManualEntry(context);
         }
 
+        // Deduplicate by type id — the hangar can hold several ships of the
+        // same type (e.g. two Ventures). DropdownButtonFormField requires a
+        // unique value per item, and the selection is a ship TYPE id.
+        final seenTypeIds = <int>{};
+        final dedupShips =
+            ships.where((s) => seenTypeIds.add(s.typeId)).toList();
+
         // Determine current value: must be in the list.
-        final typeIds = ships.map((s) => s.typeId).toList();
+        final typeIds = dedupShips.map((s) => s.typeId).toList();
         final currentValue =
             typeIds.contains(selectedTypeId) ? selectedTypeId : null;
 
@@ -130,7 +137,7 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
               ),
               hint: const Text('Schiff wählen…'),
               items: [
-                ...ships.map(
+                ...dedupShips.map(
                   (s) => DropdownMenuItem<int>(
                     value: s.typeId,
                     child: Text(
