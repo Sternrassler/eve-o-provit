@@ -1,5 +1,5 @@
 // Package database - Testcontainer utilities for integration tests
-//go:build integration || !unit
+//go:build integration
 
 package database
 
