@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-27
+
+### Security
+
+- Build the backend on Go 1.26 (Dockerfile `golang:1.26-alpine`, CI `setup-go 1.26`) to pull in stdlib CVE fixes, and bump `golang.org/x/crypto` to v0.52.0 (GO-2026-5017..5020). `govulncheck` is now a blocking CI gate.
+
 ## [0.7.2] - 2026-05-27
 
 ### Added
