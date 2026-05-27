@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.26"
           cache-dependency-path: backend/go.sum
       - name: gofmt
         run: gofmt -l . | tee /dev/stderr | (! grep .)
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.26"
           cache-dependency-path: backend/go.sum
       # Docker-free unit lane: -tags=unit drops the `!unit` integration files,
       # -short makes the remaining testcontainers-based tests skip.
@@ -49,14 +49,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.26"
           cache-dependency-path: backend/go.sum
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
-      # Report-only (step-level continue-on-error keeps the check green): findings are
-      # mostly stdlib CVEs tied to the Go 1.24 toolchain patch level + one test-path
-      # dependency (x/crypto via testcontainers). Follow-up: bump to Go 1.26 + x/crypto
-      # v0.52.0 (requires Go 1.25+) and flip this to blocking.
+      # Report-only: fixable findings are kept current (Go 1.26 stdlib, x/crypto v0.52.0,
+      # fiber v2.52.12). The only remaining advisory is github.com/docker/docker (GO-2026-4883/4887,
+      # "Fixed in: N/A") pulled in by testcontainers — test-path only, not reachable from cmd/api.
+      # continue-on-error keeps the check green while still surfacing new advisories.
       - name: Scan
         continue-on-error: true
         run: govulncheck ./...

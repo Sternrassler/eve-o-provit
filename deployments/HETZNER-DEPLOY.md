@@ -112,9 +112,11 @@ curl -fsS 'https://eveonline.sternrassler.de/api/v1/sde/regions' | head -c 300
 - **Backup:** `apps-backup.sh` is SQLite-`.backup`-based and would corrupt a live Postgres
   data dir. eve-o-provit needs a **`pg_dump`** path before it joins the nightly backup.
   Currently only health monitoring is wired (`apps-config.sh`).
-- **CD:** No `deploy.yml`/release workflow exists in this repo yet. First deploy is manual
-  (per convention); add CI build+push + `deploy-app.sh eveoprovit` trigger afterwards.
+- **CD:** ✅ Done — `.github/workflows/{ci,deploy,smoke-test}.yml`. Pushing a SemVer tag
+  (`vX.Y.Z`) builds+pushes the image to GHCR and runs `deploy-app.sh eveoprovit <tag>`.
+  The manual steps above are only needed for the very first bring-up / infra changes.
 - **RAM:** `backend` host is 4 GB and already runs 6 containers. Watch memory after adding
   Postgres + Redis + the api.
-- **SSO login round-trip** needs the frontend (callback page) at the domain; backend-only
-  deploy serves health/SDE/market/public endpoints. Full login is out of scope here.
+- **SSO login** is verified against the backend's `POST /auth/callback` (PKCE exchange +
+  JWKS validation + cookie session). The browser-side `/callback` page needs the frontend;
+  backend-only deploy serves health/SDE/market/public + the auth API.
