@@ -60,6 +60,8 @@ services:
       ENV: development
       EVE_CLIENT_ID: ${EVE_CLIENT_ID}
       EVE_CALLBACK_URL: ${EVE_CALLBACK_URL}
+      EVE_MOBILE_CLIENT_ID: ${EVE_MOBILE_CLIENT_ID:-}
+      EVE_MOBILE_REDIRECT_URI: ${EVE_MOBILE_REDIRECT_URI:-eveauth-eveoprovit://callback}
       COOKIE_SECURE: "false"
     volumes:
       - ../backend/data/sde:/data/sde:ro

@@ -14,6 +14,16 @@
 
 ---
 
+## Status (2026-05-26)
+
+Phases 0–7 implemented on branch `feat/flutter-tablet-app`. Real-device E2E validated on Galaxy Tab SM-X236B: EVE SSO login via Custom Tab, live trading route calculation (portrait + landscape), waypoint-setting in EVE client. Automated tests in `test/e2e/` (108 tests, all green).
+
+Remaining follow-ups:
+- (a) Document the mobile auth endpoints (`POST /auth/mobile/callback`, `POST /auth/mobile/refresh`, Bearer middleware) in the monorepo-root `docs/eve-o-provit.md` (parent repo — handled separately, outside this branch).
+- (b) Character ship pre-fill in the trading filter currently defaults to ship-type 648 (Badger); a future enhancement would read the active ship from the character provider.
+
+---
+
 ## Phase 0 — Manual prerequisite (you, in the EVE Developer portal)
 
 > **This is a manual step for the human owner. The implementation cannot proceed past Phase 3 (auth) without the resulting `client_id`.** EVE SSO applications allow only ONE callback URL each, so the mobile app needs its own application.
@@ -24,13 +34,13 @@
   - **Connection Type:** *Authentication & API Access* (so scopes can be requested).
   - **Permissions / Scopes:** add exactly the six the web app uses:
     `esi-location.read_location.v1`, `esi-location.read_ship_type.v1`, `esi-skills.read_skills.v1`, `esi-clones.read_clones.v1`, `esi-assets.read_assets.v1`, `esi-ui.write_waypoint.v1`.
-  - **Callback URL:** `eveoprovit://callback`
+  - **Callback URL:** `eveauth-eveoprovit://callback`
   - Save.
 
 - [ ] **Step 2: Record the credentials**
   - Copy the new application's **Client ID** → this is `EVE_MOBILE_CLIENT_ID`.
   - The mobile flow is a public client (PKCE), so no client secret is used.
-  - Hand these to the implementer: `EVE_MOBILE_CLIENT_ID=<…>` and confirm callback `eveoprovit://callback`.
+  - Hand these to the implementer: `EVE_MOBILE_CLIENT_ID=<…>` and confirm callback `eveauth-eveoprovit://callback`.
 
 - [ ] **Step 3: Confirm the existing web app is untouched** — the web application (`client_id 0828b4bcd…`, callback `localhost:9000/callback`) keeps working unchanged.
 
@@ -188,7 +198,7 @@ git commit -m "feat(auth): accept Authorization: Bearer in addition to cookie"
 func TestHandleMobileCallback_ReturnsTokensInBody(t *testing.T) {
 	// Arrange a handler with a stubbed token exchange returning access+refresh.
 	// (Mirror the stubbing used by the existing HandleCallback test.)
-	h := newTestMobileHandler(t, "mobile-client", "eveoprovit://callback")
+	h := newTestMobileHandler(t, "mobile-client", "eveauth-eveoprovit://callback")
 	body := `{"code":"abc","code_verifier":"v"}`
 	req := httptest.NewRequest("POST", "/auth/mobile/callback", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -267,7 +277,7 @@ func (h *AuthHandler) HandleMobileRefresh(c *fiber.Ctx) error {
 - [ ] **Step 4: Run tests, verify pass** — `TZ=UTC go test ./pkg/evesso/ -v` → PASS.
 
 - [ ] **Step 5: Wire routes + config** in `backend/cmd/api/main.go`:
-  - Read env: `mobileClientID := os.Getenv("EVE_MOBILE_CLIENT_ID")`, `mobileRedirect := getenvDefault("EVE_MOBILE_REDIRECT_URI", "eveoprovit://callback")`.
+  - Read env: `mobileClientID := os.Getenv("EVE_MOBILE_CLIENT_ID")`, `mobileRedirect := getenvDefault("EVE_MOBILE_REDIRECT_URI", "eveauth-eveoprovit://callback")`.
   - When building the AuthHandler: `c.AuthHandler.WithMobile(mobileClientID, mobileRedirect)`.
   - When building the TokenValidator: after construction, `if mobileClientID != "" { tokenValidator.AddAcceptedClientID(mobileClientID) }`.
   - Add routes under the `auth` group:
@@ -312,7 +322,7 @@ git commit -m "feat(auth): mobile callback/refresh endpoints returning tokens in
   ```
   Run `cd app && flutter pub get`.
 - [ ] **Step 3: INTERNET permission (gotcha):** ensure `<uses-permission android:name="android.permission.INTERNET"/>` and `ACCESS_NETWORK_STATE` are in `app/android/app/src/main/AndroidManifest.xml` (NOT only debug/profile — see `brain/kontext/flutter-build.md`).
-- [ ] **Step 4: Register the custom-scheme intent** for `flutter_web_auth_2` — add to `app/android/app/src/main/AndroidManifest.xml` an `<activity>` for `com.linusu.flutter_web_auth_2.CallbackActivity` with an intent-filter for scheme `eveoprovit` (per flutter_web_auth_2 README). 
+- [ ] **Step 4: Register the custom-scheme intent** for `flutter_web_auth_2` — add to `app/android/app/src/main/AndroidManifest.xml` an `<activity>` for `com.linusu.flutter_web_auth_2.CallbackActivity` with an intent-filter for scheme `eveauth-eveoprovit` (per flutter_web_auth_2 README). 
 - [ ] **Step 5: Commit** `chore(app): scaffold flutter project + deps`.
 
 ### Task 2.2: Env config (dart-define)
@@ -322,7 +332,7 @@ git commit -m "feat(auth): mobile callback/refresh endpoints returning tokens in
 class Env {
   static const apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://10.0.2.2:9001');
   static const eveClientId = String.fromEnvironment('EVE_CLIENT_ID');
-  static const redirectUri = 'eveoprovit://callback';
+  static const redirectUri = 'eveauth-eveoprovit://callback';
   static const scopes = [
     'esi-location.read_location.v1','esi-location.read_ship_type.v1','esi-skills.read_skills.v1',
     'esi-clones.read_clones.v1','esi-assets.read_assets.v1','esi-ui.write_waypoint.v1',
@@ -397,7 +407,7 @@ bool isTwoPane(double widthDp) => widthDp >= kTwoPaneBreakpoint;
 
 ### Task 3.3: Login flow (custom tab → backend → tokens)
 - [ ] **Step 1:** Implement `auth_repository.dart`:
-  - `login()`: build PKCE, build authorize URL (`https://login.eveonline.com/v2/oauth/authorize?response_type=code&redirect_uri=eveoprovit://callback&client_id=${Env.eveClientId}&scope=${scopes.join(' ')}&state=…&code_challenge=…&code_challenge_method=S256`), call `FlutterWebAuth2.authenticate(url, callbackUrlScheme: 'eveoprovit')`, parse `code`+`state` (verify state), `POST $apiBaseUrl/auth/mobile/callback {code, code_verifier}` via dio, store tokens, return character.
+  - `login()`: build PKCE, build authorize URL (`https://login.eveonline.com/v2/oauth/authorize?response_type=code&redirect_uri=eveauth-eveoprovit://callback&client_id=${Env.eveClientId}&scope=${scopes.join(' ')}&state=…&code_challenge=…&code_challenge_method=S256`), call `FlutterWebAuth2.authenticate(url, callbackUrlScheme: 'eveauth-eveoprovit')`, parse `code`+`state` (verify state), `POST $apiBaseUrl/auth/mobile/callback {code, code_verifier}` via dio, store tokens, return character.
   - `refresh()`: `POST /auth/mobile/refresh {refresh_token}` → store new tokens.
   - `logout()`: clear store.
 - [ ] **Step 2:** `auth_controller.dart` — Riverpod `AsyncNotifier` exposing `AuthState { unauthenticated | authenticated(character) | loading }`, methods `login/logout`, reads token store on init.

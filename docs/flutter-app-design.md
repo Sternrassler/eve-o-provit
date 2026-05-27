@@ -1,6 +1,6 @@
 # Flutter Tablet-App — Design
 
-**Stand:** 2026-05-26 · **Status:** Design abgenommen, Implementierungs-Plan ausstehend
+**Stand:** 2026-05-26 · **Status:** Implementiert (Branch `feat/flutter-tablet-app`) — siehe [`app/README.md`](../app/README.md) für Build/Run/Deploy.
 
 Ein zweites Frontend für eve-o-provit: eine Flutter-App für das Android-Tablet, parallel zum Next.js-Web-Frontend. Konsumiert die bestehende Go/Fiber-Backend-API. Farbstil am Web orientiert (neutrales shadcn-System), modernes, UX-zentriertes Material-3-Design.
 
@@ -72,8 +72,8 @@ Ein einziger, gerätebezogener Breakpoint — **kein** generisches 600/840/1200-
 
 ## EVE-SSO-Login-Flow (mobil)
 
-1. „Login mit EVE" → App erzeugt `state` + `code_verifier` (PKCE/S256), öffnet die EVE-Authorize-URL im Custom Tab (`flutter_web_auth_2`) mit dem **mobilen `client_id`**, `redirect_uri = eveoprovit://callback`, dieselben 6 ESI-Scopes wie das Web (`esi-location.read_location.v1`, `…read_ship_type.v1`, `esi-skills.read_skills.v1`, `esi-clones.read_clones.v1`, `esi-assets.read_assets.v1`, `esi-ui.write_waypoint.v1`).
-2. EVE leitet auf `eveoprovit://callback?code=…&state=…` zurück → App prüft `state`.
+1. „Login mit EVE" → App erzeugt `state` + `code_verifier` (PKCE/S256), öffnet die EVE-Authorize-URL im Custom Tab (`flutter_web_auth_2`) mit dem **mobilen `client_id`**, `redirect_uri = eveauth-eveoprovit://callback`, dieselben 6 ESI-Scopes wie das Web (`esi-location.read_location.v1`, `…read_ship_type.v1`, `esi-skills.read_skills.v1`, `esi-clones.read_clones.v1`, `esi-assets.read_assets.v1`, `esi-ui.write_waypoint.v1`).
+2. EVE leitet auf `eveauth-eveoprovit://callback?code=…&state=…` zurück → App prüft `state`.
 3. `POST /auth/mobile/callback {code, code_verifier}` → Backend tauscht Code bei EVE SSO (PKCE), validiert das JWT lokal (jwx/v2), antwortet mit `{access_token, refresh_token, character}` **im JSON-Body**.
 4. App speichert Tokens in `flutter_secure_storage`; dio-Interceptor hängt `Authorization: Bearer <access>` an alle API-Calls.
 5. Bei `401` → Interceptor ruft `/auth/mobile/refresh {refresh_token}` → neuer Access-Token; schlägt das fehl → Re-Login.
@@ -101,7 +101,7 @@ State je Feature über Riverpod-Provider; Repository-Layer kapselt dio-Calls + D
 
 ## Externe Voraussetzungen / Abhängigkeiten
 
-- **Zweite EVE-Developer-App registrieren** (eigener `client_id`) mit Callback `eveoprovit://callback`. EVE erlaubt nur **eine** Callback-URL pro App — die bestehende Web-App (`localhost:9000/callback`) kann den mobilen Callback nicht mitführen. Der mobile `client_id` wird per `--dart-define=EVE_CLIENT_ID=…` in die App gegeben; die Web-App bleibt unangetastet.
+- **Zweite EVE-Developer-App registrieren** (eigener `client_id`) mit Callback `eveauth-eveoprovit://callback`. EVE erlaubt nur **eine** Callback-URL pro App — die bestehende Web-App (`localhost:9000/callback`) kann den mobilen Callback nicht mitführen. Der mobile `client_id` wird per `--dart-define=EVE_CLIENT_ID=…` in die App gegeben; die Web-App bleibt unangetastet.
   - *Alternative für später (bei Prod-Deployment):* eine gemeinsame `https`-Callback via Android App Links (verifizierte `assetlinks.json` unter der Domain) → eine App/ein `client_id` für Web + Mobile. Für v1 (Dev-LAN, kein Prod) nicht möglich.
 - **Backend erreichbar:** Dev über LAN (`http://<dev-ip>:9001`) bzw. optional späteres Prod-Deployment.
 
@@ -112,6 +112,6 @@ State je Feature über Riverpod-Provider; Repository-Layer kapselt dio-Calls + D
 
 ## Offene Punkte (für den Implementierungs-Plan)
 
-- Exakte Akzent-Token light/dark final justieren (am Gerät prüfen).
+- ~~Exakte Akzent-Token light/dark final justieren (am Gerät prüfen).~~ ✅ Akzent-Token implementiert und auf dem Galaxy Tab validiert (`~oklch(0.45 0.13 230)`, `Color(0xFF1F6FB0)`).
 - Release-/CI-Anbindung: ob die App in eine `make`-/release-Linie des Repos eingebunden wird (kein eigenes Deployment für v1 zwingend).
-- Ordnername final: `app/` (Vorschlag, Portfolio-Konvention) vs. `mobile/`.
+- ~~Ordnername final: `app/` (Vorschlag, Portfolio-Konvention) vs. `mobile/`.~~ ✅ `app/` verwendet (Portfolio-Konvention).

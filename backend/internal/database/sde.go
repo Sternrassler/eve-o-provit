@@ -360,11 +360,12 @@ func (r *SDERepository) GetRegionName(ctx context.Context, regionID int) (string
 
 // GetSystemSecurityStatus retrieves the security status of a solar system
 func (r *SDERepository) GetSystemSecurityStatus(ctx context.Context, systemID int64) (float64, error) {
-	// Note: SDE schema uses different column names across versions
-	// - 'securityStatus' in newer SDE exports
-	// - 'security' in older SDE exports
-	// Using COALESCE ensures compatibility with both schema versions
-	query := `SELECT COALESCE(securityStatus, security, 0.0) FROM mapSolarSystems WHERE _key = ?`
+	// The eve-sde generator emits `securityStatus REAL NOT NULL` on
+	// mapSolarSystems. A previous COALESCE(securityStatus, security, 0.0)
+	// referenced a non-existent `security` column, which makes SQLite fail the
+	// whole statement ("no such column: security") — so every lookup errored and
+	// fell back to 1.0, classifying every route as high-sec.
+	query := `SELECT securityStatus FROM mapSolarSystems WHERE _key = ?`
 	var secStatus float64
 	err := r.db.QueryRowContext(ctx, query, systemID).Scan(&secStatus)
 	if err == sql.ErrNoRows {
