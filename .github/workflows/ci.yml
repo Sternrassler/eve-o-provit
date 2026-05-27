@@ -45,11 +45,6 @@ jobs:
 
   vuln:
     runs-on: ubuntu-latest
-    # Report-only: dependency CVEs are fixed in go.mod, but govulncheck also flags
-    # stdlib CVEs tied to the Go toolchain patch level (prod builds on Go 1.24).
-    # Surfacing those should not hard-block the pipeline. Follow-up: bump the prod
-    # Dockerfile to Go 1.26 and flip this to blocking.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -58,5 +53,10 @@ jobs:
           cache-dependency-path: backend/go.sum
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      # Report-only (step-level continue-on-error keeps the check green): findings are
+      # mostly stdlib CVEs tied to the Go 1.24 toolchain patch level + one test-path
+      # dependency (x/crypto via testcontainers). Follow-up: bump to Go 1.26 + x/crypto
+      # v0.52.0 (requires Go 1.25+) and flip this to blocking.
       - name: Scan
+        continue-on-error: true
         run: govulncheck ./...
