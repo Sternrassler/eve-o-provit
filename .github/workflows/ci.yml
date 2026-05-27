@@ -31,9 +31,9 @@ jobs:
         with:
           go-version: "1.26"
           cache-dependency-path: backend/go.sum
-      # Docker-free unit lane: -tags=unit drops the `!unit` integration files,
-      # -short makes the remaining testcontainers-based tests skip.
-      # Full integration suite runs separately via `make test-be-int`.
+      # Docker-free unit lane: integration tests (testcontainers/docker) are gated behind
+      # the `integration` build tag, so the default test set needs no Docker.
+      # Full integration suite runs separately via `make test-be-int` (-tags=integration).
       - name: Unit tests with coverage
         run: go test -race -short -tags=unit -coverprofile=cover.out ./...
       - name: Coverage summary
@@ -53,10 +53,8 @@ jobs:
           cache-dependency-path: backend/go.sum
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
-      # Report-only: fixable findings are kept current (Go 1.26 stdlib, x/crypto v0.52.0,
-      # fiber v2.52.12). The only remaining advisory is github.com/docker/docker (GO-2026-4883/4887,
-      # "Fixed in: N/A") pulled in by testcontainers — test-path only, not reachable from cmd/api.
-      # continue-on-error keeps the check green while still surfacing new advisories.
+      # Blocking: testcontainers/docker are gated behind the `integration` build tag, so the
+      # default build graph that govulncheck analyzes has no test-only deps. With Go 1.26 +
+      # current deps (x/crypto, fiber) the gate is expected clean; a new advisory fails CI.
       - name: Scan
-        continue-on-error: true
         run: govulncheck ./...
