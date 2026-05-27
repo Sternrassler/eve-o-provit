@@ -157,11 +157,26 @@ class _MetaCard extends StatelessWidget {
             _Row('Preis', sellPrice),
             const SizedBox(height: 12),
 
+            // ── Gesamt-Ertrag ───────────────────────────────────────────────
+            // Profit if the whole available quantity is bought and hauled,
+            // and how many ship-cargo trips that takes.
+            _SectionLabel('Gesamt-Ertrag'),
+            _Row('Gesamt-Gewinn (netto)', _iskStr(route.netProfit)),
+            _Row('Menge gesamt', '${route.quantity} Stk.'),
+            _Row('Fahrten (Schiffsladungen)', '${route.numberOfTours}'),
+            // Net profit per tour, kept consistent with the net total above
+            // (the backend's profit_per_tour is gross, before fees).
+            _Row(
+              'Gewinn / Fahrt',
+              _iskStr(route.numberOfTours > 0
+                  ? route.netProfit / route.numberOfTours
+                  : route.netProfit),
+            ),
+            const SizedBox(height: 12),
+
             // ── Financials ──────────────────────────────────────────────────
             _SectionLabel('Kennzahlen'),
-            _Row('Netto-Gewinn', _iskStr(route.netProfit)),
             _Row('Spread', '${route.spreadPercent.toStringAsFixed(2)} %'),
-            _Row('Menge', '${route.quantity} Stk.'),
             _Row('Volumen', '${route.itemVolume.toStringAsFixed(2)} m³/Stk.'),
             _Row('Sprünge', '${route.jumps}'),
             _Row('Gebühren', _iskStr(route.totalFees)),
@@ -185,7 +200,7 @@ class _SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: Theme.of(context).colorScheme.primary,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
@@ -206,15 +221,15 @@ class _Row extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final onSurface = Theme.of(context).colorScheme.onSurface;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 140,
+            width: 160,
             child: Text(
               label,
-              style: textTheme.bodySmall?.copyWith(
+              style: textTheme.bodyMedium?.copyWith(
                 color: onSurface.withAlpha(muted ? 120 : 178),
               ),
             ),
@@ -222,7 +237,7 @@ class _Row extends StatelessWidget {
           Expanded(
             child: Text(
               value,
-              style: textTheme.bodySmall?.copyWith(
+              style: textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
                 color: muted ? onSurface.withAlpha(153) : null,
               ),

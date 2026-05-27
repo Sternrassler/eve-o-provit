@@ -242,8 +242,8 @@ void main() {
     expect(find.text('Tritanium'), findsOneWidget);
     expect(find.text('Megacyte'), findsNothing);
 
-    // Tap the "Lo" sec-zone toggle in the controls bar.
-    await tester.tap(find.text('Lo'));
+    // Tap the "Low Sec" checkbox in the filter panel.
+    await tester.tap(find.text('Low Sec (< 0.5)'));
     await tester.pumpAndSettle();
 
     // Now the low-sec route appears alongside the high-sec ones.

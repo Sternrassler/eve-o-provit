@@ -35,7 +35,10 @@ const _defaultFilters = TradingFilters(
 
 /// Collapsible filter panel, suitable for the left-column sidebar on tablets.
 class TradingFiltersPanel extends ConsumerStatefulWidget {
-  const TradingFiltersPanel({super.key});
+  const TradingFiltersPanel({super.key, this.initiallyCollapsed = false});
+
+  /// Whether the panel starts collapsed (used in single-pane/portrait).
+  final bool initiallyCollapsed;
 
   @override
   ConsumerState<TradingFiltersPanel> createState() =>
@@ -43,7 +46,7 @@ class TradingFiltersPanel extends ConsumerStatefulWidget {
 }
 
 class _TradingFiltersPanelState extends ConsumerState<TradingFiltersPanel> {
-  bool _collapsed = false;
+  late bool _collapsed = widget.initiallyCollapsed;
 
   /// Text controller for the Min-Profit input field — kept in sync with provider.
   final _profitController = TextEditingController();

@@ -2,10 +2,10 @@
 /// two-pane side-by-side on wide displays (≥840 dp).
 ///
 /// Controls area: region dropdown, ship selector, market staleness/refresh,
-/// Lo/Null sec-zone quick toggles, and the "Berechnen" action.
+/// and the "Berechnen" action.
 ///
-/// Left-column sidebar (two-pane only): TradingFiltersPanel + ShipFittingCard.
-/// In single-pane the filters panel appears below the controls bar.
+/// Left-column sidebar (two-pane): TradingFiltersPanel + ShipFittingCard.
+/// In single-pane the filters panel appears (collapsed) above the route list.
 library;
 
 import 'package:flutter/material.dart';
@@ -172,8 +172,21 @@ class _TwoPaneLayout extends ConsumerWidget {
 class _SinglePaneLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return RouteList(
-      onRouteTap: (route) => _pushDetail(context, route),
+    // Portrait has no side column, so surface the filter panel (collapsed by
+    // default to save vertical space) above the route list.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: TradingFiltersPanel(initiallyCollapsed: true),
+        ),
+        Expanded(
+          child: RouteList(
+            onRouteTap: (route) => _pushDetail(context, route),
+          ),
+        ),
+      ],
     );
   }
 
@@ -246,8 +259,7 @@ class _DetailPlaceholder extends StatelessWidget {
 
 /// Horizontal (or wrapping) bar with trading controls.
 ///
-/// Contains: Region dropdown, ShipSelect, market refresh, Lo/Null quick toggles,
-/// Berechnen button.
+/// Contains: Region dropdown, ShipSelect, market refresh, Berechnen button.
 class _ControlsBar extends ConsumerStatefulWidget {
   @override
   ConsumerState<_ControlsBar> createState() => _ControlsBarState();
@@ -255,6 +267,7 @@ class _ControlsBar extends ConsumerStatefulWidget {
 
 class _ControlsBarState extends ConsumerState<_ControlsBar> {
   String? _stalenessText;
+  Color? _stalenessColor;
   bool _refreshing = false;
   bool _calculating = false;
 
@@ -274,10 +287,10 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
       final staleness = await api.staleness(region.id);
       if (mounted) {
         setState(() {
-          final age = staleness.ageMinutes;
-          _stalenessText = age != null
-              ? '${age.round()} Min. alt · ${staleness.status}'
-              : 'Keine Marktdaten · ${staleness.status}';
+          // Mirror the web RegionStalenessIndicator: show only the age,
+          // colour-coded by freshness (the backend sends no status field).
+          _stalenessText = _formatAge(staleness.ageMinutes);
+          _stalenessColor = _ageColor(staleness.ageMinutes);
         });
       }
     } catch (e) {
@@ -287,6 +300,24 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
     } finally {
       if (mounted) setState(() => _refreshing = false);
     }
+  }
+
+  /// Human-readable market-data age, mirroring the web's `formatAge`.
+  String _formatAge(double? minutes) {
+    if (minutes == null) return 'Keine Marktdaten';
+    if (minutes < 1) return '< 1 Min.';
+    if (minutes < 60) return '${minutes.floor()} Min. alt';
+    final h = minutes ~/ 60;
+    final m = (minutes % 60).floor();
+    return '${h}h ${m}m alt';
+  }
+
+  /// Freshness colour, mirroring the web's `getStatusColor` thresholds.
+  Color? _ageColor(double? minutes) {
+    if (minutes == null) return null; // muted default
+    if (minutes < 5) return const Color(0xFF66BB6A); // green
+    if (minutes < 15) return const Color(0xFFFFB300); // amber
+    return const Color(0xFFFF9800); // orange
   }
 
   void _showSnack(String msg) {
@@ -321,7 +352,6 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
   Widget build(BuildContext context) {
     final regionsAsync = ref.watch(regionsProvider);
     final selectedRegion = ref.watch(selectedRegionProvider);
-    final filters = ref.watch(filtersProvider);
     final accent = Theme.of(context).colorScheme.primary;
     final busy = _refreshing || _calculating;
 
@@ -395,30 +425,16 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
               Text(
                 _stalenessText!,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withAlpha(153),
+                      color: _stalenessColor ??
+                          Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withAlpha(153),
+                      fontWeight: _stalenessColor != null
+                          ? FontWeight.w600
+                          : null,
                     ),
               ),
-
-            // ── Quick sec-zone toggles (Lo / Null) ─────────────────────────
-            _SecZoneToggle(
-              label: 'Lo',
-              active: filters.lowSec,
-              activeColor: const Color(0xFFFF9800),
-              onChanged: (v) => ref
-                  .read(filtersProvider.notifier)
-                  .update((f) => f.copyWith(lowSec: v)),
-            ),
-            _SecZoneToggle(
-              label: 'Null',
-              active: filters.nullSec,
-              activeColor: const Color(0xFFF44336),
-              onChanged: (v) => ref
-                  .read(filtersProvider.notifier)
-                  .update((f) => f.copyWith(nullSec: v)),
-            ),
 
             // ── Calculate button ───────────────────────────────────────────
             FilledButton(
@@ -451,50 +467,3 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Sec-zone toggle pill
-// ---------------------------------------------------------------------------
-
-class _SecZoneToggle extends StatelessWidget {
-  const _SecZoneToggle({
-    required this.label,
-    required this.active,
-    required this.activeColor,
-    required this.onChanged,
-  });
-
-  final String label;
-  final bool active;
-  final Color activeColor;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => onChanged(!active),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: active ? activeColor.withAlpha(30) : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: active
-                ? activeColor
-                : Theme.of(context).colorScheme.outline.withAlpha(100),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: active
-                ? activeColor
-                : Theme.of(context).colorScheme.onSurface.withAlpha(153),
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
-  }
-}

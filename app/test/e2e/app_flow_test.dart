@@ -193,7 +193,7 @@ void main() {
       expect(find.text('Tritanium'), findsOneWidget);
 
       // Toggle the "Lo" sec-zone pill.
-      await tester.tap(find.text('Lo'));
+      await tester.tap(find.text('Low Sec (< 0.5)'));
       await tester.pumpAndSettle();
 
       // Now the low-sec route appears.
@@ -208,12 +208,12 @@ void main() {
       await _pumpApp(tester, authenticatedOverrides());
 
       // Enable low-sec.
-      await tester.tap(find.text('Lo'));
+      await tester.tap(find.text('Low Sec (< 0.5)'));
       await tester.pumpAndSettle();
       expect(find.text('Megacyte'), findsOneWidget);
 
       // Disable it again.
-      await tester.tap(find.text('Lo'));
+      await tester.tap(find.text('Low Sec (< 0.5)'));
       await tester.pumpAndSettle();
       expect(find.text('Megacyte'), findsNothing);
     });
@@ -225,7 +225,7 @@ void main() {
 
       // Canned data has no null-sec routes; toggling Null must not change the list.
       expect(find.text('Tritanium'), findsOneWidget);
-      await tester.tap(find.text('Null'));
+      await tester.tap(find.text('Null Sec (≤ 0.0)'));
       await tester.pumpAndSettle();
       // High-sec routes still present.
       expect(find.text('Tritanium'), findsOneWidget);
