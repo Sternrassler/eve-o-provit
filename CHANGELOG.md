@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Build the backend on Go 1.26 (Dockerfile `golang:1.26-alpine`, CI `setup-go 1.26`) to pull in stdlib CVE fixes, and bump `golang.org/x/crypto` to v0.52.0 (GO-2026-5017..5020). `govulncheck` is now a blocking CI gate.
+- Build the backend on Go 1.26 (Dockerfile `golang:1.26-alpine`, CI `setup-go 1.26`) to pull in stdlib CVE fixes; bump `golang.org/x/crypto` to v0.52.0 (GO-2026-5017..5020) and `github.com/gofiber/fiber/v2` to v2.52.12 (GO-2026-4543). `govulncheck` runs in CI (report-only): the sole remaining advisory is `github.com/docker/docker` ("Fixed in: N/A") pulled in by testcontainers — test-path only, not reachable from `cmd/api`.
 
 ## [0.7.2] - 2026-05-27
 
