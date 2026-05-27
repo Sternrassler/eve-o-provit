@@ -45,9 +45,13 @@ compose services + Caddy block to the server. (Caddy reload provisions the TLS c
 
 Create `/opt/apps/env/eve-o-provit.env` (mode 600, root). Store the master copy in KeePass.
 
+Use [`.env.example`](.env.example) as the template. Production uses the dedicated EVE
+application "EVE Profit Maximirer (prod)" (client_id `4d0514c205af4e898b0569badd59a38e`),
+with `https://eveonline.sternrassler.de/callback` registered in its Callback URL list.
+
 ```sh
 ssh root@46.225.188.34 'umask 077; cat > /opt/apps/env/eve-o-provit.env' <<'EOF'
-EVE_CLIENT_ID=0828b4bcd20242aeb9b8be10f5451094
+EVE_CLIENT_ID=4d0514c205af4e898b0569badd59a38e
 POSTGRES_PASSWORD=<generate: openssl rand -hex 24>
 REDIS_PASSWORD=<generate: openssl rand -hex 24>
 DATABASE_URL=postgres://eveprovit:<POSTGRES_PASSWORD>@eve-o-provit-postgres:5432/eveprovit?sslmode=disable
