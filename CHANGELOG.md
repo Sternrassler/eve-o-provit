@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-28
+
 ### Added
 
 - **Multi-Hub Comparison (#43):** `POST /api/v1/trading/hubs/compare` compares an item's station-trading profitability across the five major hubs (Jita, Amarr, Dodixie, Rens, Hek) — buy/sell/spread, skill-adjusted net margin (sales tax + broker fee via Accounting/Broker Relations/standings), volume and an order-update-frequency competition indicator. The competition indicator combines a live snapshot-churn metric (periodic background collector over lazily-tracked `(type, region)` pairs) with a daily `order_count` baseline fallback (`source: live|baseline`). New migration `000002_competition_tracking`. Hub price/ranking logic lives in a reusable `MultiHubComparisonService` (consumed later by #107).
