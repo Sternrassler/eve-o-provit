@@ -8,6 +8,7 @@ library;
 import 'package:dio/dio.dart';
 
 import 'hub_comparison_models.dart';
+import 'portfolio_models.dart';
 import 'trading_models.dart';
 
 class TradingApi {
@@ -37,6 +38,19 @@ class TradingApi {
       data: {'type_id': typeId},
     );
     return HubComparisonResponse.fromJson(response.data!);
+  }
+
+  // ── POST /api/v1/trading/portfolio/optimize ───────────────────────────────
+
+  /// Optimizes a capital allocation across items to maximize daily profit.
+  /// Returns a [PortfolioResult] with pre-sorted allocation rows; an empty
+  /// `items` list means no viable portfolio for the given budget.
+  Future<PortfolioResult> optimizePortfolio(PortfolioRequest request) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/trading/portfolio/optimize',
+      data: request.toJson(),
+    );
+    return PortfolioResult.fromJson(response.data!);
   }
 
   // ── POST /api/v1/trading/routes/calculate ──────────────────────────────────
