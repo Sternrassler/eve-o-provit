@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-05-28
+
+### Added
+
+- Web frontend now served in production **same-origin** at `https://eveonline.sternrassler.de` (Next.js container behind `edge-caddy`; API/auth/swagger/metrics paths route to the backend, everything else to the frontend). Unblocks the web SSO `/callback` and the `/multi-hub` UI in prod without cross-origin CORS. The release pipeline builds + pushes the frontend image alongside the backend.
+
 ## [0.9.0] - 2026-05-28
 
 ### Added
