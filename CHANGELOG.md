@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-05-28
+
 ### Changed
 
 - **Single schema source (ADR `2026-05-28-single-schema-source`).** `backend/migrations/*.up.sql` is now the only schema definition. The backend applies the embedded, idempotent migrations at startup (`database.ApplyMigrations` in `db.New`), so deploys can no longer drift from the committed schema and new migrations auto-apply. Removed `deployments/init-db/` (the hand-maintained prod schema that had drifted — root cause of the `price_history`/`market_history` bug); local compose no longer mounts it and the deploy runbook drops the manual `psql` step. Integration test asserts the migrations apply idempotently (twice) on a fresh DB.
