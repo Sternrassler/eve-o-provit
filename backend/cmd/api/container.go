@@ -35,6 +35,7 @@ type AppContainer struct {
 	FittingHandler     *handlers.FittingHandler
 	CalculationHandler *handlers.CalculationHandler
 	MultiHubHandler    *handlers.MultiHubHandler
+	PortfolioHandler   *handlers.PortfolioHandler
 
 	// Background workers
 	CompetitionCollector *services.CompetitionCollector
@@ -151,6 +152,10 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	volumeService := services.NewVolumeService(c.MarketRepo, c.ESIClient)
 	multiHubService := services.NewMultiHubComparisonService(skillsService, c.ESIClient, volumeService, competitionService, c.SDERepo, c.AppLogger)
 	c.MultiHubHandler = handlers.NewMultiHubHandler(multiHubService)
+
+	// ROI Calculator / capital-allocation optimizer (#44) — reuses the route engine.
+	portfolioService := services.NewPortfolioService(routeService, skillsService, c.AppLogger)
+	c.PortfolioHandler = handlers.NewPortfolioHandler(portfolioService)
 
 	// Start the competition collector in the background (lazy-tracked pairs).
 	go c.CompetitionCollector.Start(ctx)
