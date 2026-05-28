@@ -4,7 +4,12 @@ import {
   CharacterShip,
   CharacterFittingResponse
 } from "@/types/character";
-import { Region, Ship } from "@/types/trading";
+import {
+  Region,
+  Ship,
+  ItemSearchResult,
+  HubComparisonResult,
+} from "@/types/trading";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 
@@ -107,6 +112,58 @@ export async function fetchCharacterFitting(
 
   if (!response.ok) {
     throw new Error(`Failed to fetch character fitting: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+interface BackendItemSearchResponse {
+  items: ItemSearchResult[];
+  count?: number;
+}
+
+/**
+ * Search EVE items by name fragment (min 3 chars).
+ * @param q - search query
+ * @param limit - max results (default 20)
+ */
+export async function searchItems(
+  q: string,
+  limit = 20
+): Promise<ItemSearchResult[]> {
+  const params = new URLSearchParams({ q, limit: String(limit) });
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/items/search?${params.toString()}`
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to search items: ${response.statusText}`);
+  }
+
+  const data: BackendItemSearchResponse = await response.json();
+  return data.items || [];
+}
+
+/**
+ * Compare an item's station-trading profitability across the major hubs
+ * (requires authentication). Hubs are pre-sorted by net margin descending.
+ * @param typeId - EVE item type_id
+ */
+export async function compareHubs(
+  typeId: number
+): Promise<HubComparisonResult> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/trading/hubs/compare`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ type_id: typeId }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to compare hubs: ${response.statusText}`);
   }
 
   return response.json();

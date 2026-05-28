@@ -107,6 +107,46 @@ export interface ItemSearchResult {
   group_name: string;
 }
 
+// Multi-Hub Comparison (Issue #43)
+
+export interface CompetitionInfo {
+  changes_per_hour: number;
+  source: "live" | "baseline" | string;
+}
+
+export interface SkillsApplied {
+  applied: boolean;
+  accounting: number;
+  broker_relations: number;
+  sales_tax_rate: number;
+  broker_fee_rate: number;
+}
+
+export interface HubRow {
+  region_id: number;
+  region_name: string;
+  hub_name: string;
+  system_id: number;
+  tier: string;
+  has_data: boolean;
+  buy_price: number;
+  sell_price: number;
+  spread_percent: number;
+  net_margin_percent: number;
+  net_profit_per_unit: number;
+  daily_volume: number;
+  liquidity_score: number;
+  competition: CompetitionInfo;
+}
+
+export interface HubComparisonResult {
+  type_id: number;
+  item_name: string;
+  best_hub_region_id: number;
+  skills_applied: SkillsApplied;
+  hubs: HubRow[];
+}
+
 export interface InventorySellRequest {
   type_id: number;
   quantity: number;
