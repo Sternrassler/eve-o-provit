@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS price_history (
     UNIQUE(type_id, region_id, date)
 );
 
-CREATE INDEX idx_price_history_lookup ON price_history(type_id, region_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_price_history_lookup ON price_history(type_id, region_id, date DESC);
 
 COMMENT ON TABLE price_history IS 'Aggregated historical price data from ESI';
 COMMENT ON COLUMN price_history.date IS 'Date of aggregated data';

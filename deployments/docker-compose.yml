@@ -13,7 +13,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d
+      # No init-db: the backend applies backend/migrations/*.up.sql on startup
+      # (single schema source, idempotent). See ADR 2026-05-28-single-schema-source.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U eveprovit"]
       interval: 10s
