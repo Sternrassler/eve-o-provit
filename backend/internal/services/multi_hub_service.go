@@ -117,13 +117,21 @@ func (s *MultiHubComparisonService) CompareHubs(ctx context.Context, typeID, cha
 // buildRow computes one hub's comparison row.
 func (s *MultiHubComparisonService) buildRow(ctx context.Context, typeID int, hub Hub, salesTaxRate, brokerFeeRate float64) models.HubRow {
 	row := models.HubRow{
-		RegionID:    hub.RegionID,
-		RegionName:  hub.RegionName,
-		HubName:     hub.Name,
-		SystemID:    hub.SystemID,
-		Tier:        hub.Tier,
-		Competition: s.competition.GetCompetition(ctx, typeID, hub.RegionID),
+		RegionID:   hub.RegionID,
+		RegionName: hub.RegionName,
+		HubName:    hub.Name,
+		SystemID:   hub.SystemID,
+		Tier:       hub.Tier,
 	}
+
+	// Volume first: GetVolumeMetrics lazy-populates price_history, which the
+	// competition baseline then reads. Both are set even for hubs without current
+	// orders.
+	if vm, err := s.volume.GetVolumeMetrics(ctx, typeID, hub.RegionID); err == nil && vm != nil {
+		row.DailyVolume = vm.DailyVolumeAvg
+		row.LiquidityScore = vm.LiquidityScore
+	}
+	row.Competition = s.competition.GetCompetition(ctx, typeID, hub.RegionID)
 
 	orders, err := s.market.FetchMarketOrdersForType(ctx, hub.RegionID, typeID)
 	if err != nil {
@@ -149,11 +157,6 @@ func (s *MultiHubComparisonService) buildRow(ctx context.Context, typeID int, hu
 	row.NetProfitPerUnit = sellRevenue - buyCost
 	if buyCost > 0 {
 		row.NetMarginPercent = row.NetProfitPerUnit / buyCost * 100
-	}
-
-	if vm, err := s.volume.GetVolumeMetrics(ctx, typeID, hub.RegionID); err == nil && vm != nil {
-		row.DailyVolume = vm.DailyVolumeAvg
-		row.LiquidityScore = vm.LiquidityScore
 	}
 
 	return row

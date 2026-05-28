@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Market history / daily volume + competition baseline were always 0 in production. Two causes: (1) `FetchAndStoreMarketHistory` was never called, so `price_history` was never populated — `GetVolumeMetrics` now lazy-populates from ESI on a cold (type, region) and re-reads; (2) the prod `init-db` created the table as `market_history`, but the backend queries `price_history` — `init-db` corrected to `price_history` (matching migration 000001) and the dead empty `market_history` dropped. Multi-Hub: volume is fetched before the competition baseline so the baseline reads freshly-populated history.
+
 ## [0.9.2] - 2026-05-28
 
 ### Changed

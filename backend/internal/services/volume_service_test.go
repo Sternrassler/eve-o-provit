@@ -95,8 +95,11 @@ func TestGetVolumeMetrics_NoData(t *testing.T) {
 	typeID := 34
 	regionID := 10000002
 
-	// Mock: No historical data
+	// Mock: No historical data — GetVolumeMetrics then lazy-fetches from ESI, which
+	// also returns nothing, so metrics stay zero. (GetVolumeHistory is read twice:
+	// initial + post-fetch re-read.)
 	mockRepo.On("GetVolumeHistory", ctx, typeID, regionID, 30).Return([]database.PriceHistory{}, nil)
+	mockESI.On("FetchMarketHistory", ctx, regionID, typeID).Return([]esi.PriceHistoryEntry{}, nil)
 
 	metrics, err := vs.GetVolumeMetrics(ctx, typeID, regionID)
 
@@ -110,6 +113,39 @@ func TestGetVolumeMetrics_NoData(t *testing.T) {
 	assert.Equal(t, 0, metrics.DataDays)
 
 	mockRepo.AssertExpectations(t)
+	mockESI.AssertExpectations(t)
+}
+
+func TestGetVolumeMetrics_LazyPopulatesThenReads(t *testing.T) {
+	mockRepo := new(MockMarketRepository)
+	mockESI := new(MockESIClient)
+	vs := NewVolumeService(mockRepo, mockESI)
+
+	ctx := context.Background()
+	typeID := 34
+	regionID := 10000002
+	vol := int64(1000)
+	avg := 5.5
+	oc := 200
+
+	// First read: empty → triggers ESI fetch + store → second read returns data.
+	empty := []database.PriceHistory{}
+	populated := []database.PriceHistory{
+		{TypeID: typeID, RegionID: regionID, Date: time.Now(), Volume: &vol, Average: &avg, OrderCount: &oc},
+	}
+	mockRepo.On("GetVolumeHistory", ctx, typeID, regionID, 30).Return(empty, nil).Once()
+	mockESI.On("FetchMarketHistory", ctx, regionID, typeID).
+		Return([]esi.PriceHistoryEntry{{Date: time.Now(), Volume: &vol, Average: &avg, OrderCount: &oc}}, nil)
+	mockRepo.On("UpsertPriceHistory", ctx, mock.Anything).Return(nil)
+	mockRepo.On("GetVolumeHistory", ctx, typeID, regionID, 30).Return(populated, nil).Once()
+
+	metrics, err := vs.GetVolumeMetrics(ctx, typeID, regionID)
+
+	assert.NoError(t, err)
+	assert.Equal(t, 1000.0, metrics.DailyVolumeAvg)
+	assert.Equal(t, 1, metrics.DataDays)
+	mockRepo.AssertExpectations(t)
+	mockESI.AssertExpectations(t)
 }
 
 func TestGetVolumeMetrics_WithData(t *testing.T) {
