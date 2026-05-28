@@ -102,6 +102,15 @@ func (vs *VolumeService) GetVolumeMetrics(ctx context.Context, typeID, regionID 
 		return nil, fmt.Errorf("failed to get volume history: %w", err)
 	}
 
+	// Lazy-populate: market history is never pre-synced, so on a cold (type, region)
+	// pull it from ESI once and re-read. Best-effort — items/regions with no ESI
+	// history fall through to zero metrics. Once stored, later calls hit the DB.
+	if len(history) == 0 {
+		if ferr := vs.FetchAndStoreMarketHistory(ctx, typeID, regionID); ferr == nil {
+			history, _ = vs.marketRepo.GetVolumeHistory(ctx, typeID, regionID, lookbackDays)
+		}
+	}
+
 	if len(history) == 0 {
 		// No historical data available - return zero metrics
 		return &models.VolumeMetrics{

@@ -39,21 +39,24 @@ CREATE INDEX idx_market_orders_type_region ON market_orders(type_id, region_id);
 CREATE INDEX idx_market_orders_is_buy ON market_orders(is_buy_order);
 CREATE INDEX idx_market_orders_cached ON market_orders(cached_at);
 
--- Market History (aggregated)
-CREATE TABLE IF NOT EXISTS market_history (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    type_id INT NOT NULL,
-    region_id INT NOT NULL,
+-- Price/Market History (aggregated). Table name MUST be price_history — that is
+-- what the backend (MarketRepository.UpsertPriceHistory/GetVolumeHistory) and the
+-- golang-migrate migration 000001 use. (A historical init-db named it market_history,
+-- which the code never queried → volume/baseline silently returned 0 in prod.)
+CREATE TABLE IF NOT EXISTS price_history (
+    id SERIAL PRIMARY KEY,
+    type_id INTEGER NOT NULL,
+    region_id INTEGER NOT NULL,
     date DATE NOT NULL,
-    average NUMERIC(20, 2),
-    highest NUMERIC(20, 2),
-    lowest NUMERIC(20, 2),
+    highest DECIMAL(19, 2),
+    lowest DECIMAL(19, 2),
+    average DECIMAL(19, 2),
     volume BIGINT,
-    order_count INT,
+    order_count INTEGER,
     UNIQUE(type_id, region_id, date)
 );
 
-CREATE INDEX idx_market_history_type_region_date ON market_history(type_id, region_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_price_history_lookup ON price_history(type_id, region_id, date DESC);
 
 -- User Watchlists
 CREATE TABLE IF NOT EXISTS watchlists (
@@ -132,7 +135,7 @@ CREATE TABLE IF NOT EXISTS competition_metric (
 -- Comments
 COMMENT ON TABLE users IS 'User accounts for EVE-O-Provit';
 COMMENT ON TABLE market_orders IS 'Cached market orders from ESI API';
-COMMENT ON TABLE market_history IS 'Historical market data for trend analysis';
+COMMENT ON TABLE price_history IS 'Aggregated historical market data (volume/order_count) from ESI';
 COMMENT ON TABLE watchlists IS 'User-defined item watchlists';
 COMMENT ON TABLE profit_calculations IS 'Cached profit margin calculations';
 
