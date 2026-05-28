@@ -152,6 +152,7 @@ func setupApp(c *AppContainer) *fiber.App {
 	api.Get("/market/:region/:type", c.Handlers.GetMarketOrders)
 
 	api.Post("/trading/routes/calculate", routeCalcLimiter, evesso.NewAuthMiddleware(c.TokenValidator), c.TradingHandler.CalculateRoutes)
+	api.Post("/trading/hubs/compare", routeCalcLimiter, evesso.NewAuthMiddleware(c.TokenValidator), c.MultiHubHandler.CompareHubs)
 	api.Get("/items/search", c.TradingHandler.SearchItems)
 
 	api.Post("/calculations/cargo", c.CalculationHandler.CalculateCargo)

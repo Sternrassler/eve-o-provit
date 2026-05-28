@@ -34,6 +34,10 @@ type AppContainer struct {
 	CharacterHandler   *handlers.CharacterHandler
 	FittingHandler     *handlers.FittingHandler
 	CalculationHandler *handlers.CalculationHandler
+	MultiHubHandler    *handlers.MultiHubHandler
+
+	// Background workers
+	CompetitionCollector *services.CompetitionCollector
 }
 
 // NewContainer initializes all application dependencies and returns a ready-to-use AppContainer.
@@ -139,6 +143,17 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	c.CharacterHandler = handlers.NewCharacterHandler(skillsService)
 	c.FittingHandler = handlers.NewFittingHandler(fittingService)
 	c.CalculationHandler = handlers.NewCalculationHandler(c.DB.SDE, fittingService)
+
+	// Multi-Hub Comparison (#43): competition tracking + hub comparison service.
+	competitionRepo := database.NewCompetitionRepository(c.DB.Postgres)
+	competitionService := services.NewCompetitionService(competitionRepo, c.MarketRepo, c.AppLogger)
+	c.CompetitionCollector = services.NewCompetitionCollector(competitionRepo, c.ESIClient, c.AppLogger)
+	volumeService := services.NewVolumeService(c.MarketRepo, c.ESIClient)
+	multiHubService := services.NewMultiHubComparisonService(skillsService, c.ESIClient, volumeService, competitionService, c.SDERepo, c.AppLogger)
+	c.MultiHubHandler = handlers.NewMultiHubHandler(multiHubService)
+
+	// Start the competition collector in the background (lazy-tracked pairs).
+	go c.CompetitionCollector.Start(ctx)
 
 	return c, nil
 }
