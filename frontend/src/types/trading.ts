@@ -147,6 +147,37 @@ export interface HubComparisonResult {
   hubs: HubRow[];
 }
 
+// ROI Calculator & Capital Allocation Optimizer (Issue #44)
+
+export interface PortfolioRequest {
+  region_id: number;
+  ship_type_id: number;
+  capital: number;
+  time_budget_min: number;
+  liquidity_cap_pct: number;
+  max_item_pct: number;
+  sec_zones: string[]; // e.g. ["high", "low", "null"]
+}
+
+export interface PortfolioItem {
+  type_id: number;
+  name: string;
+  capital_used: number;
+  units: number;
+  trips_per_day: number;
+  daily_profit: number;
+  roi_percent: number;
+}
+
+export interface PortfolioResult {
+  items: PortfolioItem[];
+  total_capital_used: number;
+  total_daily_profit: number;
+  time_used_min: number;
+  diversification_score: number;
+  skills_applied: SkillsApplied;
+}
+
 export interface InventorySellRequest {
   type_id: number;
   quantity: number;

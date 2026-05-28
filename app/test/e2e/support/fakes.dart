@@ -9,6 +9,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:eve_o_provit/api/hub_comparison_models.dart';
+import 'package:eve_o_provit/api/portfolio_models.dart';
 import 'package:eve_o_provit/api/trading_api.dart';
 import 'package:eve_o_provit/api/trading_models.dart';
 import 'package:eve_o_provit/auth/auth_controller.dart';
@@ -21,6 +22,7 @@ import 'package:eve_o_provit/features/character/providers.dart'
     show characterApiProvider;
 import 'package:eve_o_provit/features/trading/hub_comparison_providers.dart';
 import 'package:eve_o_provit/features/trading/providers.dart';
+import 'package:eve_o_provit/features/trading/roi_providers.dart';
 
 // ---------------------------------------------------------------------------
 // Canned data — shared by both TradingApi and CharacterApi fakes
@@ -175,6 +177,41 @@ HubComparisonResponse fakeHubResponse() => const HubComparisonResponse(
       ],
     );
 
+/// Canned [PortfolioResult] — a two-item allocation with totals.
+PortfolioResult fakePortfolioResponse() => const PortfolioResult(
+      items: [
+        PortfolioItem(
+          typeId: 34,
+          name: 'Tritanium',
+          capitalUsed: 1.5e8,
+          units: 120000,
+          tripsPerDay: 4,
+          dailyProfit: 2.5e7,
+          roiPercent: 16.7,
+        ),
+        PortfolioItem(
+          typeId: 35,
+          name: 'Pyerite',
+          capitalUsed: 1.2e8,
+          units: 60000,
+          tripsPerDay: 3,
+          dailyProfit: 1.8e7,
+          roiPercent: 15.0,
+        ),
+      ],
+      totalCapitalUsed: 4.8e8,
+      totalDailyProfit: 6.1e7,
+      timeUsedMin: 118,
+      diversificationScore: 72,
+      skillsApplied: SkillsApplied(
+        applied: true,
+        accounting: 5,
+        brokerRelations: 5,
+        salesTaxRate: 0.025,
+        brokerFeeRate: 0.015,
+      ),
+    );
+
 /// Canned character used in the authenticated auth state.
 const fakeCharacter = Character(
   id: 12345678,
@@ -262,6 +299,10 @@ class FakeTradingApi extends TradingApi {
   @override
   Future<HubComparisonResponse> compareHubs(int typeId) async =>
       fakeHubResponse();
+
+  @override
+  Future<PortfolioResult> optimizePortfolio(PortfolioRequest request) async =>
+      fakePortfolioResponse();
 
   @override
   Future<void> setWaypoint({
@@ -352,6 +393,22 @@ class FakeHubComparisonNotifier extends HubComparisonNotifier {
 }
 
 // ---------------------------------------------------------------------------
+// Fake RoiOptimizeNotifier — starts with canned data
+// ---------------------------------------------------------------------------
+
+/// A [RoiOptimizeNotifier] that initialises with [fakePortfolioResponse] so the
+/// allocation table is immediately visible without calling optimize().
+class FakeRoiOptimizeNotifier extends RoiOptimizeNotifier {
+  @override
+  Future<PortfolioResult?> build() async => fakePortfolioResponse();
+
+  @override
+  Future<void> optimize(PortfolioRequest request) async {
+    state = AsyncData(fakePortfolioResponse());
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Stub AuthControllers
 // ---------------------------------------------------------------------------
 
@@ -393,6 +450,7 @@ List<dynamic> authenticatedOverrides() => [
       tradingApiProvider.overrideWithValue(FakeTradingApi()),
       routesProvider.overrideWith(FakeRoutesNotifier.new),
       hubComparisonProvider.overrideWith(FakeHubComparisonNotifier.new),
+      roiOptimizeProvider.overrideWith(FakeRoiOptimizeNotifier.new),
       // Provide fake character API so ship selector / fitting card work offline.
       characterApiProvider.overrideWithValue(FakeCharacterApi()),
     ];

@@ -27,6 +27,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:eve_o_provit/features/trading/hub_comparison_screen.dart';
+import 'package:eve_o_provit/features/trading/roi_calculator_screen.dart';
 import 'package:eve_o_provit/features/trading/route_detail.dart';
 import 'package:eve_o_provit/features/trading/route_list.dart';
 import 'package:eve_o_provit/features/trading/trading_screen.dart';
@@ -334,6 +335,46 @@ void main() {
       expect(find.byType(HubComparisonScreen), findsOneWidget);
       expect(find.byType(VerticalDivider), findsNothing);
       expect(find.text('Dodixie'), findsOneWidget);
+    });
+  });
+
+  // ── 6c. ROI Calculator ────────────────────────────────────────────────────
+
+  group('ROI Calculator', () {
+    testWidgets(
+        'Navigating to ROI tab renders the allocation table from mocked data '
+        '(item names + totals)', (tester) async {
+      _setViewSize(tester, 1280, 800);
+
+      await _pumpApp(tester, authenticatedOverrides());
+
+      // Open the ROI bottom-nav destination.
+      await tester.tap(find.text('ROI').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoiCalculatorScreen), findsOneWidget);
+      // Allocation table renders with item names from fakePortfolioResponse.
+      expect(find.byKey(const Key('roi-allocation-table')), findsOneWidget);
+      expect(find.text('Tritanium'), findsOneWidget);
+      expect(find.text('Pyerite'), findsOneWidget);
+      // Diversification summary tile.
+      expect(find.text('Diversifikation'), findsOneWidget);
+      expect(find.text('72/100'), findsOneWidget);
+    });
+
+    testWidgets(
+        'ROI screen portrait (800×1280) is single-pane (no VerticalDivider)',
+        (tester) async {
+      _setViewSize(tester, 800, 1280);
+
+      await _pumpApp(tester, authenticatedOverrides());
+
+      await tester.tap(find.text('ROI').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RoiCalculatorScreen), findsOneWidget);
+      expect(find.byType(VerticalDivider), findsNothing);
+      expect(find.text('Tritanium'), findsOneWidget);
     });
   });
 

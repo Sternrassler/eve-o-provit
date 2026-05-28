@@ -1,114 +1,152 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calculator, PieChart, Wallet } from "lucide-react";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth-context";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+  PortfolioInputForm,
+  PortfolioFormState,
+} from "@/components/trading/PortfolioInputForm";
+import { PortfolioResultTable } from "@/components/trading/PortfolioResultTable";
+import { DiversificationScore } from "@/components/trading/DiversificationScore";
+import { SkillsAppliedPanel } from "@/components/trading/SkillsAppliedPanel";
+import { optimizePortfolio } from "@/lib/api-client";
+import { PortfolioRequest } from "@/types/trading";
+import { Loader2 } from "lucide-react";
 
-export default function ROICalculatorPage() {
+const DEFAULT_REGION = "10000002"; // The Forge
+const DEFAULT_SHIP = "649";
+
+const defaultForm: PortfolioFormState = {
+  region: DEFAULT_REGION,
+  ship: DEFAULT_SHIP,
+  capital: 500_000_000,
+  timeBudgetMin: 120,
+  liquidityCapPct: 10,
+  maxItemPct: 30,
+  allowHighSec: true,
+  allowLowSec: false,
+  allowNullSec: false,
+};
+
+function buildRequest(form: PortfolioFormState): PortfolioRequest {
+  const secZones: string[] = [];
+  if (form.allowHighSec) secZones.push("high");
+  if (form.allowLowSec) secZones.push("low");
+  if (form.allowNullSec) secZones.push("null");
+
+  return {
+    region_id: parseInt(form.region, 10),
+    ship_type_id: parseInt(form.ship, 10),
+    capital: form.capital,
+    time_budget_min: form.timeBudgetMin,
+    liquidity_cap_pct: form.liquidityCapPct,
+    max_item_pct: form.maxItemPct,
+    sec_zones: secZones,
+  };
+}
+
+function ROICalculatorContent() {
+  const { isAuthenticated } = useAuth();
+  const [form, setForm] = useState<PortfolioFormState>(defaultForm);
+
+  const optimizeMutation = useMutation({
+    mutationFn: (req: PortfolioRequest) => optimizePortfolio(req),
+  });
+
+  const handleSubmit = () => {
+    optimizeMutation.mutate(buildRequest(form));
+  };
+
+  const apiError = optimizeMutation.isError
+    ? optimizeMutation.error instanceof Error
+      ? optimizeMutation.error.message
+      : "Unbekannter Fehler"
+    : undefined;
+
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold">ROI Calculator & Capital Optimizer</h1>
-          <Badge variant="outline" className="text-blue-600">Phase 2</Badge>
-        </div>
+        <h1 className="mb-2 text-3xl font-bold">
+          ROI Calculator & Capital Optimizer
+        </h1>
         <p className="text-muted-foreground">
-          Optimiere deine Kapital-Allokation für maximalen Return on Investment
+          Verteile dein Kapital optimal über mehrere Items für maximalen
+          Tagesgewinn
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              ROI Ranking
-            </CardTitle>
-            <Calculator className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Daily Profit / Capital</div>
-            <p className="text-xs text-muted-foreground">
-              Sort by efficiency
-            </p>
-          </CardContent>
-        </Card>
+      {!isAuthenticated && (
+        <Alert className="mb-6">
+          <AlertTitle>Login erforderlich</AlertTitle>
+          <AlertDescription>
+            Melde dich per EVE SSO an, um eine skill-bereinigte
+            Kapital-Allokation zu berechnen.
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Portfolio Builder
-            </CardTitle>
-            <PieChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Auto-Allocate</div>
-            <p className="text-xs text-muted-foreground">
-              &ldquo;Invest 500M optimally&rdquo;
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+        {/* Input form */}
+        <PortfolioInputForm
+          state={form}
+          onChange={setForm}
+          onSubmit={handleSubmit}
+          disabled={!isAuthenticated || optimizeMutation.isPending}
+          loading={optimizeMutation.isPending}
+          authenticated={isAuthenticated}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Risk Diversification
-            </CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Score</div>
-            <p className="text-xs text-muted-foreground">
-              Balance your portfolio
-            </p>
-          </CardContent>
-        </Card>
+        {/* Results */}
+        <div className="space-y-6">
+          {optimizeMutation.isPending && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Berechne optimale Kapital-Allokation...
+            </div>
+          )}
+
+          {apiError && (
+            <Alert variant="destructive">
+              <AlertTitle>Fehler</AlertTitle>
+              <AlertDescription className="flex items-center justify-between gap-4">
+                <span>{apiError}</span>
+                <Button variant="outline" size="sm" onClick={handleSubmit}>
+                  Erneut versuchen
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {optimizeMutation.isSuccess && optimizeMutation.data && (
+            <div className="space-y-6">
+              <PortfolioResultTable result={optimizeMutation.data} />
+              <div className="grid gap-6 md:grid-cols-2">
+                <DiversificationScore
+                  score={optimizeMutation.data.diversification_score}
+                />
+                <SkillsAppliedPanel
+                  skills={optimizeMutation.data.skills_applied}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Genutzte Zeit: {optimizeMutation.data.time_used_min} Min/Tag
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle>Coming in Phase 2</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="font-semibold flex items-center gap-2">
-              <span className="text-2xl">📈</span>
-              Smart Capital Allocation
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Enter your available capital and get optimal item mix for maximum daily profit
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="font-semibold flex items-center gap-2">
-              <span className="text-2xl">🎲</span>
-              Risk Management
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Diversification score prevents over-concentration in single items
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="font-semibold flex items-center gap-2">
-              <span className="text-2xl">💰</span>
-              Expected Profit Projection
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              See projected daily/weekly/monthly profits based on historical data
-            </p>
-          </div>
-
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-sm">
-              <strong>Target Release:</strong> March 2026 (Phase 2)
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Dependencies: Volume Filter (#42), Fee Calculator (#38)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
+  );
+}
+
+export default function ROICalculatorPage() {
+  return (
+    <ErrorBoundary>
+      <ROICalculatorContent />
+    </ErrorBoundary>
   );
 }

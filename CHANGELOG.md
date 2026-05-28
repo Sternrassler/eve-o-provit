@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **ROI Calculator & Capital Allocation Optimizer (#44):** `POST /api/v1/trading/portfolio/optimize` — given region, ship, capital and a daily time budget, suggests how to allocate capital across items for maximum expected daily profit. Greedy allocator (most-efficient profit/ISK first) over the existing route-engine candidates, under per-item liquidity and capital caps; returns per-item allocation (capital, units, trips/day, daily profit, ROI%), totals and a Herfindahl-based diversification score. Sec-zone filter applied to candidate routes; skills applied to all figures.
+
 ## [0.9.4] - 2026-05-28
 
 ### Changed

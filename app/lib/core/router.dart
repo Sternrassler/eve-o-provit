@@ -21,6 +21,7 @@ import '../auth/auth_controller.dart';
 import '../auth/login_screen.dart';
 import '../features/character/character_screen.dart';
 import '../features/trading/hub_comparison_screen.dart';
+import '../features/trading/roi_calculator_screen.dart';
 import '../features/trading/trading_screen.dart';
 
 // ---------------------------------------------------------------------------
@@ -96,6 +97,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const HubComparisonScreen(),
           ),
           GoRoute(
+            path: '/roi-calculator',
+            builder: (context, state) => const RoiCalculatorScreen(),
+          ),
+          GoRoute(
             path: '/character',
             builder: (context, state) => const CharacterScreen(),
           ),
@@ -128,6 +133,10 @@ class _AppShell extends ConsumerWidget {
       label: 'Hub-Vergleich',
     ),
     NavigationDestination(
+      icon: Icon(Icons.auto_graph_rounded),
+      label: 'ROI',
+    ),
+    NavigationDestination(
       icon: Icon(Icons.person_outline_rounded),
       selectedIcon: Icon(Icons.person_rounded),
       label: 'Character',
@@ -140,7 +149,8 @@ class _AppShell extends ConsumerWidget {
 
   int get _selectedIndex {
     if (location.startsWith('/hub-comparison')) return 1;
-    if (location.startsWith('/character')) return 2;
+    if (location.startsWith('/roi-calculator')) return 2;
+    if (location.startsWith('/character')) return 3;
     return 0; // /trading is default; "Abmelden" is never a selected state
   }
 
@@ -157,8 +167,10 @@ class _AppShell extends ConsumerWidget {
             case 1:
               context.go('/hub-comparison');
             case 2:
-              context.go('/character');
+              context.go('/roi-calculator');
             case 3:
+              context.go('/character');
+            case 4:
               _confirmLogout(context, ref);
           }
         },

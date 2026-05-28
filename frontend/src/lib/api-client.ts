@@ -9,6 +9,8 @@ import {
   Ship,
   ItemSearchResult,
   HubComparisonResult,
+  PortfolioRequest,
+  PortfolioResult,
 } from "@/types/trading";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
@@ -164,6 +166,32 @@ export async function compareHubs(
 
   if (!response.ok) {
     throw new Error(`Failed to compare hubs: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Optimize capital allocation across items for maximum daily profit
+ * (requires authentication). Returns a portfolio with items pre-sorted by
+ * efficiency (most efficient first) plus a diversification score.
+ * @param req - portfolio optimization parameters
+ */
+export async function optimizePortfolio(
+  req: PortfolioRequest
+): Promise<PortfolioResult> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/trading/portfolio/optimize`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(req),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to optimize portfolio: ${response.statusText}`);
   }
 
   return response.json();
