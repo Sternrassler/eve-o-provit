@@ -3,7 +3,7 @@
 import { HubComparisonResult, HubRow } from "@/types/trading";
 import {
   cn,
-  formatISK,
+  formatISKWithSeparators,
   getSpreadColor,
   getProfitColor,
 } from "@/lib/utils";
@@ -21,6 +21,8 @@ interface HubComparisonTableProps {
  * no-data hubs last. The recommended (best) hub is highlighted.
  */
 export function HubComparisonTable({ result }: HubComparisonTableProps) {
+  const hasData = result.hubs.some((h) => h.has_data);
+  const noProfitableHub = hasData && !result.best_hub_region_id;
   return (
     <Card>
       <CardHeader>
@@ -29,6 +31,16 @@ export function HubComparisonTable({ result }: HubComparisonTableProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
+        {noProfitableHub && (
+          <div
+            data-testid="no-profit-hint"
+            className="mx-4 mt-4 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
+          >
+            Kein profitabler Hub für dieses Item — nach Steuer und Broker-Fee ist die
+            Station-Trading-Marge an allen Hubs negativ. Der beste (am wenigsten
+            verlustreiche) Hub steht oben.
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-sm" aria-label="Hub-Vergleich">
             <thead>
@@ -103,10 +115,10 @@ function HubRowItem({
         </div>
       </td>
       <td className="px-4 py-3 text-right font-medium">
-        {formatISK(hub.buy_price)}
+        {formatISKWithSeparators(hub.buy_price)}
       </td>
       <td className="px-4 py-3 text-right font-medium">
-        {formatISK(hub.sell_price)}
+        {formatISKWithSeparators(hub.sell_price)}
       </td>
       <td
         className={cn(
@@ -125,7 +137,7 @@ function HubRowItem({
         {hub.net_margin_percent.toFixed(1)}%
       </td>
       <td className="px-4 py-3 text-right font-medium">
-        {formatISK(hub.net_profit_per_unit)}
+        {formatISKWithSeparators(hub.net_profit_per_unit)}
       </td>
       <td className="px-4 py-3 text-right">
         {hub.daily_volume.toLocaleString("de-DE")}

@@ -88,9 +88,12 @@ func (s *MultiHubComparisonService) CompareHubs(ctx context.Context, typeID, cha
 		return rows[i].NetMarginPercent > rows[j].NetMarginPercent
 	})
 
+	// Only recommend a hub that is actually profitable. Rows are sorted by net
+	// margin descending, so the first profitable row is the best one; if even the
+	// top hub loses money (e.g. thin-margin commodities), recommend nothing.
 	bestHubRegionID := 0
 	for _, r := range rows {
-		if r.HasData {
+		if r.HasData && r.NetMarginPercent > 0 {
 			bestHubRegionID = r.RegionID
 			break
 		}

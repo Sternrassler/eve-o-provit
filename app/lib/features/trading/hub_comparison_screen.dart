@@ -305,6 +305,23 @@ class _HubDataTable extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
+          if (response.hubs.any((h) => h.hasData) &&
+              response.bestHubRegionId == 0)
+            Container(
+              key: const Key('no-profit-hint'),
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withAlpha(30),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.amber.withAlpha(120)),
+              ),
+              child: const Text(
+                'Kein profitabler Hub für dieses Item — nach Steuer und Broker-Fee '
+                'ist die Station-Trading-Marge an allen Hubs negativ. Der beste '
+                '(am wenigsten verlustreiche) Hub steht oben.',
+              ),
+            ),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: DataTable(
