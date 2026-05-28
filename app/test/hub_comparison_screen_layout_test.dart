@@ -69,6 +69,37 @@ HubComparisonResponse _fakeResponse() => const HubComparisonResponse(
       ],
     );
 
+HubComparisonResponse _noProfitResponse() => const HubComparisonResponse(
+      typeId: 34,
+      itemName: 'Tritanium',
+      bestHubRegionId: 0, // every hub loses money → no recommendation
+      skillsApplied: SkillsApplied(
+        applied: true,
+        accounting: 3,
+        brokerRelations: 2,
+        salesTaxRate: 0.035,
+        brokerFeeRate: 0.024,
+      ),
+      hubs: [
+        HubRow(
+          regionId: 10000030,
+          regionName: 'Heimatar',
+          hubName: 'Rens',
+          systemId: 30002510,
+          tier: 'secondary',
+          hasData: true,
+          buyPrice: 3,
+          sellPrice: 3,
+          spreadPercent: 3.6,
+          netMarginPercent: -4.8,
+          netProfitPerUnit: 0,
+          dailyVolume: 0,
+          liquidityScore: 0,
+          competition: CompetitionInfo(changesPerHour: 0, source: 'baseline'),
+        ),
+      ],
+    );
+
 class _FakeApi extends TradingApi {
   _FakeApi() : super(Dio());
 
@@ -81,6 +112,11 @@ class _FakeApi extends TradingApi {
 class _StubNotifier extends HubComparisonNotifier {
   @override
   Future<HubComparisonResponse?> build() async => _fakeResponse();
+}
+
+class _NoProfitNotifier extends HubComparisonNotifier {
+  @override
+  Future<HubComparisonResponse?> build() async => _noProfitResponse();
 }
 
 Future<void> _pumpScreen(
@@ -137,5 +173,30 @@ void main() {
     expect(find.text('keine Daten'), findsOneWidget);
     // Recommended hub (Dodixie) is highlighted with a star icon.
     expect(find.byIcon(Icons.star_rounded), findsOneWidget);
+  });
+
+  testWidgets('No profitable hub: shows hint, no recommendation star',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          tradingApiProvider.overrideWithValue(_FakeApi()),
+          hubComparisonProvider.overrideWith(_NoProfitNotifier.new),
+        ],
+        child: MaterialApp(
+          theme: buildTheme(Brightness.light),
+          home: const HubComparisonScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('no-profit-hint')), findsOneWidget);
+    expect(find.byIcon(Icons.star_rounded), findsNothing);
   });
 }

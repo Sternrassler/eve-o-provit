@@ -96,3 +96,28 @@ func TestCompareHubs_RanksByNetMargin(t *testing.T) {
 		t.Errorf("skills applied = %+v", res.SkillsApplied)
 	}
 }
+
+func TestCompareHubs_NoProfitableHub_RecommendsNothing(t *testing.T) {
+	const jita = 10000002
+	// Thin commodity: buy ≈ sell, fees push every hub negative.
+	market := fakeMarket{byRegion: map[int][]esi.ESIMarketOrder{
+		jita:     {buy(100), sell(101)},
+		10000032: {buy(100), sell(100.5)},
+	}}
+	svc := NewMultiHubComparisonService(
+		fakeSkills{&TradingSkills{Accounting: 3, BrokerRelations: 2}},
+		market, fakeVolume{}, &fakeCompetition{}, fakeTypes{}, applogger.New(),
+	)
+	res, err := svc.CompareHubs(context.Background(), 34, 123, "token")
+	if err != nil {
+		t.Fatalf("CompareHubs error: %v", err)
+	}
+	// All hubs lose money → no recommendation.
+	if res.BestHubRegionID != 0 {
+		t.Errorf("best hub = %d, want 0 (no profitable hub)", res.BestHubRegionID)
+	}
+	// Sanity: the rows with data do have negative margins.
+	if res.Hubs[0].HasData && res.Hubs[0].NetMarginPercent > 0 {
+		t.Errorf("expected non-positive top margin, got %v", res.Hubs[0].NetMarginPercent)
+	}
+}

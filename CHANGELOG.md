@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Multi-Hub Comparison (#43): recommend a hub only when its net margin is **positive**. For thin-margin commodities where every hub loses money after fees, no hub is starred and the UI shows a "kein profitabler Hub" hint instead of recommending the least-bad loss. Web table now renders prices with full ISK precision (2 decimals + separators) instead of rounding sub-1000 values to whole ISK.
+
 ## [0.9.1] - 2026-05-28
 
 ### Added

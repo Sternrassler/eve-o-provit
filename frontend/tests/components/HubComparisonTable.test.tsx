@@ -96,4 +96,31 @@ describe("HubComparisonTable", () => {
       within(noDataRow!).getByText("Keine Daten verfügbar")
     ).toBeInTheDocument();
   });
+
+  it("shows the no-profitable-hub hint and no badge when best_hub_region_id is 0", () => {
+    const noProfit: HubComparisonResult = {
+      ...result,
+      best_hub_region_id: 0,
+      hubs: [
+        makeHub({ hub_name: "Rens", region_id: 10000030, net_margin_percent: -4.8 }),
+        makeHub({ hub_name: "Jita", region_id: 10000002, net_margin_percent: -32.5 }),
+      ],
+    };
+    render(<HubComparisonTable result={noProfit} />);
+
+    expect(screen.getByTestId("no-profit-hint")).toBeInTheDocument();
+    expect(screen.queryByText("Empfohlen")).not.toBeInTheDocument();
+  });
+
+  it("renders prices with full ISK precision (2 decimals), not compact", () => {
+    const lowValue: HubComparisonResult = {
+      ...result,
+      best_hub_region_id: 0,
+      hubs: [makeHub({ buy_price: 3.45, sell_price: 3.52, net_profit_per_unit: -0.18 })],
+    };
+    render(<HubComparisonTable result={lowValue} />);
+
+    expect(screen.getByText("3,45 ISK")).toBeInTheDocument();
+    expect(screen.getByText("3,52 ISK")).toBeInTheDocument();
+  });
 });
