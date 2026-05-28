@@ -20,6 +20,7 @@ import 'package:go_router/go_router.dart';
 import '../auth/auth_controller.dart';
 import '../auth/login_screen.dart';
 import '../features/character/character_screen.dart';
+import '../features/trading/hub_comparison_screen.dart';
 import '../features/trading/trading_screen.dart';
 
 // ---------------------------------------------------------------------------
@@ -91,6 +92,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const TradingScreen(),
           ),
           GoRoute(
+            path: '/hub-comparison',
+            builder: (context, state) => const HubComparisonScreen(),
+          ),
+          GoRoute(
             path: '/character',
             builder: (context, state) => const CharacterScreen(),
           ),
@@ -119,6 +124,10 @@ class _AppShell extends ConsumerWidget {
       label: 'Trading',
     ),
     NavigationDestination(
+      icon: Icon(Icons.compare_arrows_rounded),
+      label: 'Hub-Vergleich',
+    ),
+    NavigationDestination(
       icon: Icon(Icons.person_outline_rounded),
       selectedIcon: Icon(Icons.person_rounded),
       label: 'Character',
@@ -130,7 +139,8 @@ class _AppShell extends ConsumerWidget {
   ];
 
   int get _selectedIndex {
-    if (location.startsWith('/character')) return 1;
+    if (location.startsWith('/hub-comparison')) return 1;
+    if (location.startsWith('/character')) return 2;
     return 0; // /trading is default; "Abmelden" is never a selected state
   }
 
@@ -145,8 +155,10 @@ class _AppShell extends ConsumerWidget {
             case 0:
               context.go('/trading');
             case 1:
-              context.go('/character');
+              context.go('/hub-comparison');
             case 2:
+              context.go('/character');
+            case 3:
               _confirmLogout(context, ref);
           }
         },

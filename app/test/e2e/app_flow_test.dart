@@ -26,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:eve_o_provit/features/trading/hub_comparison_screen.dart';
 import 'package:eve_o_provit/features/trading/route_detail.dart';
 import 'package:eve_o_provit/features/trading/route_list.dart';
 import 'package:eve_o_provit/features/trading/trading_screen.dart';
@@ -290,6 +291,49 @@ void main() {
 
       expect(find.text('Test Pilot'), findsOneWidget);
       expect(find.text('My Badger'), findsOneWidget);
+    });
+  });
+
+  // ── 6b. Hub Comparison ────────────────────────────────────────────────────
+
+  group('Hub Comparison', () {
+    testWidgets(
+        'Navigating to Hub-Vergleich tab renders the comparison table from '
+        'mocked data (hub names + recommended hub)', (tester) async {
+      _setViewSize(tester, 1280, 800);
+
+      await _pumpApp(tester, authenticatedOverrides());
+
+      // Open the Hub-Vergleich bottom-nav destination.
+      await tester.tap(find.text('Hub-Vergleich').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HubComparisonScreen), findsOneWidget);
+      // Item name header from fakeHubResponse.
+      expect(find.text('Tritanium'), findsWidgets);
+      // Hub names render.
+      expect(find.text('Dodixie'), findsOneWidget);
+      expect(find.text('Jita'), findsOneWidget);
+      expect(find.text('Rens'), findsOneWidget);
+      // Recommended hub (Dodixie, best_hub_region_id) shows the star.
+      expect(find.byIcon(Icons.star_rounded), findsOneWidget);
+      // No-data hub placeholder.
+      expect(find.text('keine Daten'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Hub Comparison portrait (800×1280) is single-pane (no VerticalDivider)',
+        (tester) async {
+      _setViewSize(tester, 800, 1280);
+
+      await _pumpApp(tester, authenticatedOverrides());
+
+      await tester.tap(find.text('Hub-Vergleich').last);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(HubComparisonScreen), findsOneWidget);
+      expect(find.byType(VerticalDivider), findsNothing);
+      expect(find.text('Dodixie'), findsOneWidget);
     });
   });
 
