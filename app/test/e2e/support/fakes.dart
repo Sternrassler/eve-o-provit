@@ -8,6 +8,7 @@ library;
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:eve_o_provit/api/hub_comparison_models.dart';
 import 'package:eve_o_provit/api/trading_api.dart';
 import 'package:eve_o_provit/api/trading_models.dart';
 import 'package:eve_o_provit/auth/auth_controller.dart';
@@ -18,6 +19,7 @@ import 'package:eve_o_provit/features/character/character_api.dart';
 import 'package:eve_o_provit/features/character/character_models.dart';
 import 'package:eve_o_provit/features/character/providers.dart'
     show characterApiProvider;
+import 'package:eve_o_provit/features/trading/hub_comparison_providers.dart';
 import 'package:eve_o_provit/features/trading/providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -109,6 +111,70 @@ RouteCalculationResponse fakeEmptyRouteResponse() => RouteCalculationResponse(
       routes: const [],
     );
 
+/// Canned [HubComparisonResponse] — Dodixie recommended, Rens has no data.
+HubComparisonResponse fakeHubResponse() => const HubComparisonResponse(
+      typeId: 34,
+      itemName: 'Tritanium',
+      bestHubRegionId: 10000032,
+      skillsApplied: SkillsApplied(
+        applied: true,
+        accounting: 5,
+        brokerRelations: 5,
+        salesTaxRate: 0.025,
+        brokerFeeRate: 0.015,
+      ),
+      hubs: [
+        HubRow(
+          regionId: 10000032,
+          regionName: 'Sinq Laison',
+          hubName: 'Dodixie',
+          systemId: 30002659,
+          tier: 'secondary',
+          hasData: true,
+          buyPrice: 100,
+          sellPrice: 110,
+          spreadPercent: 10,
+          netMarginPercent: 3.4,
+          netProfitPerUnit: 4.1,
+          dailyVolume: 125000,
+          liquidityScore: 72,
+          competition:
+              CompetitionInfo(changesPerHour: 42.5, source: 'baseline'),
+        ),
+        HubRow(
+          regionId: 10000002,
+          regionName: 'The Forge',
+          hubName: 'Jita',
+          systemId: 30000142,
+          tier: 'primary',
+          hasData: true,
+          buyPrice: 98,
+          sellPrice: 112,
+          spreadPercent: 14.3,
+          netMarginPercent: 2.1,
+          netProfitPerUnit: 2.4,
+          dailyVolume: 9000000,
+          liquidityScore: 95,
+          competition: CompetitionInfo(changesPerHour: 200, source: 'live'),
+        ),
+        HubRow(
+          regionId: 10000030,
+          regionName: 'Heimatar',
+          hubName: 'Rens',
+          systemId: 30002510,
+          tier: 'tertiary',
+          hasData: false,
+          buyPrice: 0,
+          sellPrice: 0,
+          spreadPercent: 0,
+          netMarginPercent: 0,
+          netProfitPerUnit: 0,
+          dailyVolume: 0,
+          liquidityScore: 0,
+        ),
+      ],
+    );
+
 /// Canned character used in the authenticated auth state.
 const fakeCharacter = Character(
   id: 12345678,
@@ -180,6 +246,22 @@ class FakeTradingApi extends TradingApi {
 
   @override
   Future<void> refreshMarket(int regionId, int typeId) async {}
+
+  @override
+  Future<ItemSearchResponse> searchItems(String q, {int limit = 20}) async =>
+      const ItemSearchResponse(
+        items: [
+          ItemSearchResult(
+            typeId: 34,
+            name: 'Tritanium',
+            groupName: 'Mineral',
+          ),
+        ],
+      );
+
+  @override
+  Future<HubComparisonResponse> compareHubs(int typeId) async =>
+      fakeHubResponse();
 
   @override
   Future<void> setWaypoint({
@@ -254,6 +336,22 @@ class FakeRoutesNotifier extends RoutesNotifier {
 }
 
 // ---------------------------------------------------------------------------
+// Fake HubComparisonNotifier — starts with canned data
+// ---------------------------------------------------------------------------
+
+/// A [HubComparisonNotifier] that initialises with [fakeHubResponse] so the
+/// comparison table is immediately visible without calling search().
+class FakeHubComparisonNotifier extends HubComparisonNotifier {
+  @override
+  Future<HubComparisonResponse?> build() async => fakeHubResponse();
+
+  @override
+  Future<void> search(int typeId) async {
+    state = AsyncData(fakeHubResponse());
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Stub AuthControllers
 // ---------------------------------------------------------------------------
 
@@ -294,6 +392,7 @@ List<dynamic> authenticatedOverrides() => [
       authControllerProvider.overrideWith(FakeAuthControllerAuthenticated.new),
       tradingApiProvider.overrideWithValue(FakeTradingApi()),
       routesProvider.overrideWith(FakeRoutesNotifier.new),
+      hubComparisonProvider.overrideWith(FakeHubComparisonNotifier.new),
       // Provide fake character API so ship selector / fitting card work offline.
       characterApiProvider.overrideWithValue(FakeCharacterApi()),
     ];

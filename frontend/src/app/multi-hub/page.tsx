@@ -1,114 +1,169 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Building2, TrendingUp, Users } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth-context";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { HubComparisonTable } from "@/components/trading/HubComparisonTable";
+import { SkillsAppliedPanel } from "@/components/trading/SkillsAppliedPanel";
+import { searchItems, compareHubs } from "@/lib/api-client";
+import { ItemSearchResult } from "@/types/trading";
+import { Loader2, Search } from "lucide-react";
 
-export default function MultiHubPage() {
+const MIN_QUERY_LENGTH = 3;
+
+function MultiHubPageContent() {
+  const { isAuthenticated } = useAuth();
+  const [query, setQuery] = useState("");
+  const [selectedItem, setSelectedItem] = useState<ItemSearchResult | null>(
+    null
+  );
+
+  // Item search — runs once the query reaches the backend's 3-char minimum.
+  const { data: searchResults = [], isFetching: isSearching } = useQuery({
+    queryKey: ["itemSearch", query],
+    queryFn: () => searchItems(query),
+    enabled: query.trim().length >= MIN_QUERY_LENGTH,
+    staleTime: 60 * 1000,
+  });
+
+  // Multi-hub compare (authed POST), triggered when an item is picked.
+  const compareMutation = useMutation({
+    mutationFn: (typeId: number) => compareHubs(typeId),
+  });
+
+  const handleSelectItem = (item: ItemSearchResult) => {
+    setSelectedItem(item);
+    setQuery(item.name);
+    compareMutation.mutate(item.type_id);
+  };
+
+  const showSuggestions =
+    query.trim().length >= MIN_QUERY_LENGTH &&
+    selectedItem?.name !== query &&
+    searchResults.length > 0;
+
+  const apiError = compareMutation.isError
+    ? compareMutation.error instanceof Error
+      ? compareMutation.error.message
+      : "Unbekannter Fehler"
+    : undefined;
+
   return (
-    <div className="container mx-auto p-8">
+    <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-3xl font-bold">Multi-Hub Comparison</h1>
-          <Badge variant="outline" className="text-blue-600">Phase 2</Badge>
-        </div>
+        <h1 className="mb-2 text-3xl font-bold">Multi-Hub Comparison</h1>
         <p className="text-muted-foreground">
-          Vergleiche Margen über verschiedene Trading Hubs hinweg
+          Vergleiche die Station-Trading-Margen eines Items über die großen
+          Handels-Hubs hinweg
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Trade Hubs
-            </CardTitle>
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">4+</div>
-            <p className="text-xs text-muted-foreground">
-              Jita, Dodixie, Amarr, Rens
-            </p>
-          </CardContent>
-        </Card>
+      {!isAuthenticated && (
+        <Alert className="mb-6">
+          <AlertTitle>Login erforderlich</AlertTitle>
+          <AlertDescription>
+            Melde dich per EVE SSO an, um skill-bereinigte Hub-Vergleiche zu
+            laden.
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Competition Level
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Low/Med/High</div>
-            <p className="text-xs text-muted-foreground">
-              Order update frequency tracking
-            </p>
-          </CardContent>
-        </Card>
+      {/* Item search */}
+      <div className="mb-8 max-w-xl">
+        <label
+          htmlFor="item-search"
+          className="mb-2 block text-sm font-medium"
+        >
+          Item suchen
+        </label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="item-search"
+            type="text"
+            placeholder="z.B. Tritanium (min. 3 Zeichen)"
+            className="pl-9"
+            value={query}
+            disabled={!isAuthenticated}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setSelectedItem(null);
+            }}
+            autoComplete="off"
+          />
+          {isSearching && (
+            <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Best Hub Recommendation
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Auto</div>
-            <p className="text-xs text-muted-foreground">
-              Based on your capital
-            </p>
-          </CardContent>
-        </Card>
+          {showSuggestions && (
+            <ul
+              className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-md border bg-popover shadow-md"
+              role="listbox"
+              aria-label="Suchergebnisse"
+            >
+              {searchResults.map((item) => (
+                <li key={item.type_id} role="option" aria-selected="false">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted"
+                    onClick={() => handleSelectItem(item)}
+                  >
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {item.group_name}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
 
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle>Coming in Phase 2</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <h3 className="font-semibold flex items-center gap-2">
-              <span className="text-2xl">📊</span>
-              Side-by-Side Hub Comparison
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Compare margins, volumes, and competition across all major trade hubs
-            </p>
-          </div>
+      {/* Compare state */}
+      {compareMutation.isPending && (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Lade Hub-Vergleich für {selectedItem?.name}...
+        </div>
+      )}
 
-          <div className="space-y-2">
-            <h3 className="font-semibold flex items-center gap-2">
-              <span className="text-2xl">🎯</span>
-              Smart Hub Recommendation
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Get personalized recommendations based on your available capital
-            </p>
-          </div>
+      {apiError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Fehler</AlertTitle>
+          <AlertDescription className="flex items-center justify-between gap-4">
+            <span>{apiError}</span>
+            {selectedItem && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => compareMutation.mutate(selectedItem.type_id)}
+              >
+                Erneut versuchen
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
-          <div className="space-y-2">
-            <h3 className="font-semibold flex items-center gap-2">
-              <span className="text-2xl">⚠️</span>
-              Competition Indicator
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Avoid high-competition items (0.01 ISK wars) with real-time tracking
-            </p>
-          </div>
-
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-sm">
-              <strong>Target Release:</strong> March 2026 (Phase 2)
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Dependencies: Fee Calculator (#38), Volume Filter (#42)
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {compareMutation.isSuccess && compareMutation.data && (
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <HubComparisonTable result={compareMutation.data} />
+          <SkillsAppliedPanel skills={compareMutation.data.skills_applied} />
+        </div>
+      )}
     </div>
+  );
+}
+
+export default function MultiHubPage() {
+  return (
+    <ErrorBoundary>
+      <MultiHubPageContent />
+    </ErrorBoundary>
   );
 }

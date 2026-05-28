@@ -98,6 +98,37 @@ CREATE INDEX idx_profit_calculations_type ON profit_calculations(type_id);
 CREATE INDEX idx_profit_calculations_margin ON profit_calculations(profit_margin DESC);
 CREATE INDEX idx_profit_calculations_calculated ON profit_calculations(calculated_at);
 
+-- Competition tracking for Multi-Hub Comparison (#43)
+-- Mirrors backend/migrations/000002_competition_tracking.up.sql for the prod
+-- init-db apply path (HETZNER-DEPLOY Step 5). Idempotent.
+CREATE TABLE IF NOT EXISTS competition_tracked (
+    type_id        INT NOT NULL,
+    region_id      INT NOT NULL,
+    last_requested TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (type_id, region_id)
+);
+CREATE INDEX IF NOT EXISTS idx_competition_tracked_last_requested ON competition_tracked(last_requested);
+
+CREATE TABLE IF NOT EXISTS competition_snapshot (
+    id          BIGSERIAL PRIMARY KEY,
+    type_id     INT NOT NULL,
+    region_id   INT NOT NULL,
+    taken_at    TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    fingerprint JSONB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_competition_snapshot_lookup ON competition_snapshot(type_id, region_id, taken_at DESC);
+
+CREATE TABLE IF NOT EXISTS competition_metric (
+    type_id          INT NOT NULL,
+    region_id        INT NOT NULL,
+    changes_per_hour DOUBLE PRECISION NOT NULL DEFAULT 0,
+    window_start     TIMESTAMP WITH TIME ZONE,
+    window_end       TIMESTAMP WITH TIME ZONE,
+    source           VARCHAR(16) NOT NULL DEFAULT 'baseline',
+    updated_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (type_id, region_id)
+);
+
 -- Comments
 COMMENT ON TABLE users IS 'User accounts for EVE-O-Provit';
 COMMENT ON TABLE market_orders IS 'Cached market orders from ESI API';

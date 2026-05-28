@@ -111,6 +111,48 @@ func (c *Client) FetchMarketOrdersPage(ctx context.Context, regionID, page int) 
 	return esiOrders, totalPages, nil
 }
 
+// FetchMarketOrdersForType fetches all market orders (buy + sell) for a single type
+// in a region via the lightweight per-type ESI endpoint. Much cheaper than a full
+// region fetch — used by Multi-Hub Comparison (#43) and the competition collector.
+// Follows X-Pages pagination (capped to avoid runaway loops on pathological items).
+func (c *Client) FetchMarketOrdersForType(ctx context.Context, regionID, typeID int) ([]ESIMarketOrder, error) {
+	const maxPages = 20
+	var all []ESIMarketOrder
+	totalPages := 1
+	for page := 1; page <= totalPages && page <= maxPages; page++ {
+		endpoint := fmt.Sprintf("/v1/markets/%d/orders/?order_type=all&type_id=%d&page=%d", regionID, typeID, page)
+		resp, err := c.esi.Get(ctx, endpoint)
+		if err != nil {
+			return nil, fmt.Errorf("ESI request failed: %w", err)
+		}
+		if resp.StatusCode == 304 {
+			resp.Body.Close()
+			break
+		}
+		if resp.StatusCode != 200 {
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			return nil, fmt.Errorf("unexpected ESI status %d: %s", resp.StatusCode, string(body))
+		}
+		if page == 1 {
+			if xPages := resp.Header.Get("X-Pages"); xPages != "" {
+				_, _ = fmt.Sscanf(xPages, "%d", &totalPages)
+			}
+		}
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response body: %w", err)
+		}
+		var orders []ESIMarketOrder
+		if err := json.Unmarshal(body, &orders); err != nil {
+			return nil, fmt.Errorf("failed to parse ESI response: %w", err)
+		}
+		all = append(all, orders...)
+	}
+	return all, nil
+}
+
 // ESIMarketHistory represents a single day's market history from ESI API
 type ESIMarketHistory struct {
 	Average    float64 `json:"average"`

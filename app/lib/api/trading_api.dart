@@ -7,12 +7,37 @@ library;
 
 import 'package:dio/dio.dart';
 
+import 'hub_comparison_models.dart';
 import 'trading_models.dart';
 
 class TradingApi {
   TradingApi(this._dio);
 
   final Dio _dio;
+
+  // ── GET /api/v1/items/search?q=&limit= ─────────────────────────────────────
+
+  /// Searches EVE items by name. [q] must be at least 3 characters; callers
+  /// are responsible for that gate. [limit] caps the number of hits (≤20).
+  Future<ItemSearchResponse> searchItems(String q, {int limit = 20}) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/v1/items/search',
+      queryParameters: {'q': q, 'limit': limit},
+    );
+    return ItemSearchResponse.fromJson(response.data!);
+  }
+
+  // ── POST /api/v1/trading/hubs/compare ──────────────────────────────────────
+
+  /// Compares an item's station-trading profitability across the major hubs.
+  /// Returns a [HubComparisonResponse] with pre-sorted hub rows.
+  Future<HubComparisonResponse> compareHubs(int typeId) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/trading/hubs/compare',
+      data: {'type_id': typeId},
+    );
+    return HubComparisonResponse.fromJson(response.data!);
+  }
 
   // ── POST /api/v1/trading/routes/calculate ──────────────────────────────────
 
