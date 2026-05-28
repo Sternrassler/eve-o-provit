@@ -52,6 +52,12 @@ func New(ctx context.Context, cfg Config) (*DB, error) {
 
 	db.Postgres = pgPool
 
+	// Apply schema migrations (single source of truth, idempotent) before serving.
+	if err := ApplyMigrations(ctx, cfg.PostgresURL); err != nil {
+		pgPool.Close()
+		return nil, fmt.Errorf("failed to apply migrations: %w", err)
+	}
+
 	// Connect to SQLite SDE (read-only)
 	// Use absolute path with immutable mode for read-only access
 	sdeURI := fmt.Sprintf("file:%s?mode=ro&immutable=1", cfg.SDEPath)

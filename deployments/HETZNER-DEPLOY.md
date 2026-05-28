@@ -82,21 +82,16 @@ ssh root@46.225.188.34 'docker run --rm -v apps_eve_o_provit_sde:/dst -v /tmp/ev
     alpine sh -c "cp /src.db /dst/eve-sde.db" && rm -f /tmp/eve-sde.db'
 ```
 
-## Step 5 — First deploy (manual) + schema
+## Step 5 — First deploy (manual)
 
 ```sh
 ssh root@46.225.188.34 'cd /opt/apps && docker compose up -d \
     eve-o-provit-postgres eve-o-provit-redis eve-o-provit-api'
 ```
 
-Apply the Postgres schema (idempotent, `CREATE … IF NOT EXISTS`). Copy `init-db/01-init.sql`
-to the server, then:
-
-```sh
-ssh root@46.225.188.34 'docker compose -f /opt/apps/compose.yaml exec -T eve-o-provit-postgres \
-    psql -U eveprovit -d eveprovit' < deployments/init-db/01-init.sql
-ssh root@46.225.188.34 'cd /opt/apps && docker compose restart eve-o-provit-api'
-```
+No manual schema step: the backend applies `backend/migrations/*.up.sql` on startup
+(single schema source, idempotent — see ADR `2026-05-28-single-schema-source`). The
+old `init-db/01-init.sql` is gone.
 
 ## Step 6 — Verify
 
