@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,7 +13,11 @@ import {
 import { PortfolioResultTable } from "@/components/trading/PortfolioResultTable";
 import { DiversificationScore } from "@/components/trading/DiversificationScore";
 import { SkillsAppliedPanel } from "@/components/trading/SkillsAppliedPanel";
-import { optimizePortfolio } from "@/lib/api-client";
+import {
+  fetchCharacterLocation,
+  fetchCharacterShip,
+  optimizePortfolio,
+} from "@/lib/api-client";
 import { PortfolioRequest } from "@/types/trading";
 import { Loader2 } from "lucide-react";
 
@@ -52,13 +56,50 @@ function buildRequest(form: PortfolioFormState): PortfolioRequest {
 function ROICalculatorContent() {
   const { isAuthenticated } = useAuth();
   const [form, setForm] = useState<PortfolioFormState>(defaultForm);
+  // null = no manual choice yet; effective region/ship are derived below.
+  const [regionOverride, setRegionOverride] = useState<string | null>(null);
+  const [shipOverride, setShipOverride] = useState<string | null>(null);
+
+  // Load the character's current location + ship to pre-fill region/ship.
+  const { data: characterData } = useQuery({
+    queryKey: ["characterData", isAuthenticated],
+    queryFn: async () => {
+      const [location, ship] = await Promise.all([
+        fetchCharacterLocation(),
+        fetchCharacterShip(),
+      ]);
+      return { location, ship };
+    },
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Effective values: manual override > current character data > default.
+  // Purely derived (no effect), so the user's choice stays sticky.
+  const effectiveForm: PortfolioFormState = {
+    ...form,
+    region:
+      regionOverride ??
+      characterData?.location.region_id?.toString() ??
+      DEFAULT_REGION,
+    ship:
+      shipOverride ??
+      characterData?.ship.ship_type_id?.toString() ??
+      DEFAULT_SHIP,
+  };
+
+  const handleFormChange = (next: PortfolioFormState) => {
+    if (next.region !== effectiveForm.region) setRegionOverride(next.region);
+    if (next.ship !== effectiveForm.ship) setShipOverride(next.ship);
+    setForm(next);
+  };
 
   const optimizeMutation = useMutation({
     mutationFn: (req: PortfolioRequest) => optimizePortfolio(req),
   });
 
   const handleSubmit = () => {
-    optimizeMutation.mutate(buildRequest(form));
+    optimizeMutation.mutate(buildRequest(effectiveForm));
   };
 
   const apiError = optimizeMutation.isError
@@ -92,8 +133,8 @@ function ROICalculatorContent() {
       <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
         {/* Input form */}
         <PortfolioInputForm
-          state={form}
-          onChange={setForm}
+          state={effectiveForm}
+          onChange={handleFormChange}
           onSubmit={handleSubmit}
           disabled={!isAuthenticated || optimizeMutation.isPending}
           loading={optimizeMutation.isPending}

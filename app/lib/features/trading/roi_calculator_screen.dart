@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/portfolio_models.dart';
 import '../../api/trading_models.dart';
 import '../../core/breakpoint.dart';
+import 'current_selection_prefill.dart';
 import 'providers.dart';
 import 'roi_providers.dart';
 import 'ship_select.dart';
@@ -88,7 +89,8 @@ class _InputForm extends ConsumerStatefulWidget {
   ConsumerState<_InputForm> createState() => _InputFormState();
 }
 
-class _InputFormState extends ConsumerState<_InputForm> {
+class _InputFormState extends ConsumerState<_InputForm>
+    with CurrentSelectionPrefill {
   // Numeric inputs.
   final _capitalController = TextEditingController(text: '500000000');
   double _timeBudgetMin = 120;
@@ -101,6 +103,13 @@ class _InputFormState extends ConsumerState<_InputForm> {
   bool _nullSec = false;
 
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill region + ship with the character's current region/active ship.
+    startSelectionPrefill();
+  }
 
   @override
   void dispose() {

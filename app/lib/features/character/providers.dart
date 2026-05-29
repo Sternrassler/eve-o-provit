@@ -40,6 +40,17 @@ final activeShipProvider = FutureProvider<CharacterShip>((ref) async {
   return api.activeShip();
 });
 
+/// Region ID of the character's current solar system; null on error.
+/// Used to pre-fill region selectors with the current region.
+final currentRegionIdProvider = FutureProvider<int?>((ref) async {
+  final api = ref.watch(characterApiProvider);
+  try {
+    return await api.currentRegionId();
+  } catch (_) {
+    return null;
+  }
+});
+
 /// Fetches the character's skills, keyed by [characterId].
 ///
 /// Uses [FutureProvider.family] so callers pass the character ID.

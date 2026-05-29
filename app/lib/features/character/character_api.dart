@@ -30,6 +30,17 @@ class CharacterApi {
     return CharacterShip.fromJson(response.data!);
   }
 
+  // ── GET /api/v1/character/location ─────────────────────────────────────────
+
+  /// Returns the region ID of the character's current solar system, or null if
+  /// the backend can't resolve it. Used to pre-fill region selectors.
+  Future<int?> currentRegionId() async {
+    final response =
+        await _dio.get<Map<String, dynamic>>('/api/v1/character/location');
+    final v = response.data?['region_id'];
+    return v is num ? v.toInt() : null;
+  }
+
   // ── GET /api/v1/character/ships ────────────────────────────────────────────
 
   /// Returns all ships in the character's current hangar.

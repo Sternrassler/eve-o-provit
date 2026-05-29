@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Logout leert jetzt den React-Query-Cache (`queryClient.clear()`), damit charakterbezogene Daten (Standort, Schiff, …) der vorigen Session nicht an eine nachfolgende Anmeldung im selben Browser ausgeliefert werden können (Cache-Key war nur auf `isAuthenticated` gekeyt).
+
+### Changed
+
+- **Region- und Schiff-Auswahl werden überall mit dem aktuellen Wert vorbelegt.** Alle Masken mit Region-/Schiff-Selektor (Web + Flutter: Trading, ROI, Hauling) belegen beim Öffnen die Region mit der aktuellen Region des Characters und das Schiff mit dem aktiven Schiff vor (einmalig, danach bleibt die eigene Auswahl). Fallback wie bisher (Forge / Schiff 648) wenn nicht eingeloggt oder ESI nicht erreichbar. Web-Trading konnte das bereits; jetzt konsistent über alle Masken. Flutter: neuer `currentRegionIdProvider` (aus `GET /character/location`) + geteiltes `CurrentSelectionPrefill`-Mixin. (Hauling nutzt die aktuelle Region weiterhin backend-seitig via `origin_region_id:0`; hier wird nur das Schiff vorbelegt.)
+
 ## [0.12.1] - 2026-05-29
 
 ### Added

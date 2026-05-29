@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ShipSelect } from "@/components/trading/ShipSelect";
 import { HaulingRouteList } from "@/components/trading/HaulingRouteList";
 import { SkillsAppliedPanel } from "@/components/trading/SkillsAppliedPanel";
-import { findHaulingRoutes } from "@/lib/api-client";
+import { fetchCharacterShip, findHaulingRoutes } from "@/lib/api-client";
 import { HaulingRequest } from "@/types/trading";
 import { Loader2 } from "lucide-react";
 
@@ -45,13 +45,26 @@ function buildRequest(form: HaulingFormState): HaulingRequest {
 function HaulingPageContent() {
   const { isAuthenticated } = useAuth();
   const [form, setForm] = useState<HaulingFormState>(defaultForm);
+  const [shipOverride, setShipOverride] = useState<string | null>(null);
+
+  // Pre-fill the ship with the character's current ship.
+  const { data: currentShip } = useQuery({
+    queryKey: ["characterShip", isAuthenticated],
+    queryFn: fetchCharacterShip,
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Effective ship: manual override > current ship > default (purely derived).
+  const selectedShip =
+    shipOverride ?? currentShip?.ship_type_id?.toString() ?? DEFAULT_SHIP;
 
   const haulingMutation = useMutation({
     mutationFn: (req: HaulingRequest) => findHaulingRoutes(req),
   });
 
   const handleSubmit = () => {
-    haulingMutation.mutate(buildRequest(form));
+    haulingMutation.mutate(buildRequest({ ...form, ship: selectedShip }));
   };
 
   const apiError = haulingMutation.isError
@@ -92,8 +105,8 @@ function HaulingPageContent() {
           }}
         >
           <ShipSelect
-            value={form.ship}
-            onChange={(v) => setForm((s) => ({ ...s, ship: v }))}
+            value={selectedShip}
+            onChange={setShipOverride}
             disabled={disabled}
             authenticated={isAuthenticated}
           />

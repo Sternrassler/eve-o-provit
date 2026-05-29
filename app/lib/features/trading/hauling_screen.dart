@@ -20,6 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/hauling_models.dart';
 import '../../core/breakpoint.dart';
+import 'current_selection_prefill.dart';
 import 'hauling_providers.dart';
 import 'providers.dart';
 import 'ship_select.dart';
@@ -124,10 +125,19 @@ class _InputForm extends ConsumerStatefulWidget {
   ConsumerState<_InputForm> createState() => _InputFormState();
 }
 
-class _InputFormState extends ConsumerState<_InputForm> {
+class _InputFormState extends ConsumerState<_InputForm>
+    with CurrentSelectionPrefill {
   final _capitalController = TextEditingController(text: '500000000');
   bool _avoidLowSec = true;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-fill the ship with the character's active ship (region unused here —
+    // hauling derives its origin region from the current location backend-side).
+    startSelectionPrefill();
+  }
 
   @override
   void dispose() {
