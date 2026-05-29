@@ -13,6 +13,9 @@ import {
   PortfolioResult,
   HaulingRequest,
   HaulingResponse,
+  AssetsResponse,
+  SellOptionsRequest,
+  SellOptionsResponse,
 } from "@/types/trading";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
@@ -221,6 +224,53 @@ export async function findHaulingRoutes(
 
   if (!response.ok) {
     throw new Error(`Failed to find hauling routes: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * List the authenticated character's marketable assets (requires
+ * authentication). Each asset carries its current location/system/region so the
+ * sell-options lookup can scope to the item's current region. Assets with
+ * marketable=false have no market group and cannot be sold via market orders.
+ */
+export async function listAssets(): Promise<AssetsResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/trading/assets`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to list assets: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Find the best sell locations for an owned item using a taker model (instant
+ * sell into a buy order, net of sales tax), compared across the major hubs plus
+ * every station in the item's current region (requires authentication).
+ * Options are returned pre-sorted by total_net descending; `best` is the top
+ * actionable option or null. Options with has_data=false have no buy order /
+ * route. An empty options array means no sell locations were found.
+ * @param req - sell options parameters (item, current location, quantity)
+ */
+export async function findSellOptions(
+  req: SellOptionsRequest
+): Promise<SellOptionsResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/trading/assets/sell-options`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(req),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to find sell options: ${response.statusText}`);
   }
 
   return response.json();
