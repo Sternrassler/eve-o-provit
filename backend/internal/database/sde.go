@@ -226,6 +226,33 @@ func (r *SDERepository) GetRegionIDForSystem(ctx context.Context, systemID int64
 	return regionID, nil
 }
 
+// GetNeighborRegions returns region IDs adjacent to regionID — regions whose system
+// is connected by a stargate to a system in regionID. Excludes regionID itself.
+func (r *SDERepository) GetNeighborRegions(ctx context.Context, regionID int) ([]int, error) {
+	const query = `
+		SELECT DISTINCT s2.regionID
+		FROM v_stargate_graph g
+		JOIN mapSolarSystems s1 ON g.from_system_id = s1._key
+		JOIN mapSolarSystems s2 ON g.to_system_id   = s2._key
+		WHERE s1.regionID = ? AND s2.regionID <> ?
+		ORDER BY s2.regionID
+	`
+	rows, err := r.db.QueryContext(ctx, query, regionID, regionID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query neighbor regions for %d: %w", regionID, err)
+	}
+	defer rows.Close()
+	var out []int
+	for rows.Next() {
+		var rid int
+		if err := rows.Scan(&rid); err != nil {
+			return nil, fmt.Errorf("failed to scan neighbor region: %w", err)
+		}
+		out = append(out, rid)
+	}
+	return out, rows.Err()
+}
+
 // SearchItems searches for published items by name with group information
 func (r *SDERepository) SearchItems(ctx context.Context, searchTerm string, limit int) ([]struct {
 	TypeID    int
