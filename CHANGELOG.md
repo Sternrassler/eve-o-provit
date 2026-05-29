@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.3] - 2026-05-29
+
 ### Fixed
 
 - **Aktuelle Region/Schiff-Vorbelegung griff nach frischem Login nicht.** Die Prefill-Provider liefen während des SSO-Login-Übergangs (Token noch nicht da), cachten ein leeres Ergebnis und blieben für die Session leer (Region leer, Schiff fiel auf den 648-Fallback). Jetzt sind `currentRegionIdProvider` (Flutter, neu) an den Auth-Zustand gekoppelt und das `CurrentSelectionPrefill`-Mixin wartet auf `Authenticated` + invalidiert die Quell-Provider einmalig, sodass die echten Werte unter Auth geladen werden.
