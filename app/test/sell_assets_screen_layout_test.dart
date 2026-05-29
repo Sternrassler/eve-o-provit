@@ -145,6 +145,24 @@ class _FakeTradingApi extends TradingApi {
       _fakeResponse();
 }
 
+class _MultiAssetApi extends TradingApi {
+  _MultiAssetApi() : super(Dio());
+
+  @override
+  Future<AssetsResponse> listAssets() async => const AssetsResponse(
+        count: 3,
+        assets: [
+          AssetItem(typeId: 1, name: 'Tritanium', quantity: 5, locationId: 60000001, locationName: 'A', systemId: 1, regionId: 1, marketable: true),
+          AssetItem(typeId: 2, name: 'Arkonor', quantity: 100, locationId: 60000001, locationName: 'A', systemId: 1, regionId: 1, marketable: true),
+          AssetItem(typeId: 3, name: 'Mexallon', quantity: 50, locationId: 60000001, locationName: 'A', systemId: 1, regionId: 1, marketable: true),
+        ],
+      );
+
+  @override
+  Future<SellOptionsResponse> findSellOptions(SellOptionsRequest request) async =>
+      _emptyResponse();
+}
+
 class _StubNotifier extends SellOptionsNotifier {
   @override
   Future<SellOptionsResponse?> build() async => _fakeResponse();
@@ -165,6 +183,7 @@ Future<void> _pumpScreen(
   double width, {
   double height = 1400,
   SellOptionsNotifier Function() notifier = _StubNotifier.new,
+  TradingApi Function() api = _FakeTradingApi.new,
 }) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1.0;
@@ -174,7 +193,7 @@ Future<void> _pumpScreen(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        tradingApiProvider.overrideWithValue(_FakeTradingApi()),
+        tradingApiProvider.overrideWithValue(api()),
         sellOptionsProvider.overrideWith(notifier),
       ],
       child: MaterialApp(
@@ -286,5 +305,30 @@ void main() {
 
     expect(find.text('Item wählen und Verkaufsorte suchen'), findsOneWidget);
     expect(find.byKey(const Key('sell-option-list')), findsNothing);
+  });
+
+  testWidgets('Asset list sorts by name (default) then by quantity',
+      (tester) async {
+    await _pumpScreen(tester, 1280,
+        notifier: _IdleNotifier.new, api: _MultiAssetApi.new);
+
+    double dy(String name) => tester.getTopLeft(find.text(name)).dy;
+
+    // Default: name ascending → Arkonor, Mexallon, Tritanium.
+    expect(dy('Arkonor') < dy('Mexallon'), isTrue);
+    expect(dy('Mexallon') < dy('Tritanium'), isTrue);
+
+    // Toggle direction → name descending.
+    await tester.tap(find.byKey(const Key('sell-sort-dir')));
+    await tester.pumpAndSettle();
+    expect(dy('Tritanium') < dy('Mexallon'), isTrue);
+    expect(dy('Mexallon') < dy('Arkonor'), isTrue);
+
+    // Sort by quantity ascending (5 Tritanium, 50 Mexallon, 100 Arkonor).
+    await tester.tap(find.byKey(const Key('sell-sort-quantity')));
+    await tester.tap(find.byKey(const Key('sell-sort-dir'))); // back to asc
+    await tester.pumpAndSettle();
+    expect(dy('Tritanium') < dy('Mexallon'), isTrue);
+    expect(dy('Mexallon') < dy('Arkonor'), isTrue);
   });
 }

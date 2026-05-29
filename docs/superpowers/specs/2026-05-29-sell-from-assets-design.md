@@ -123,3 +123,11 @@ POST /api/v1/trading/assets/sell-options   (auth)
 - Maker / sell-order placement (broker fee, order competition) — possible future issue.
 - Buy-order *range* semantics (station vs region range) — hubs use region-best routed to hub system; current region uses per-station best. Good-enough approximation; documented here.
 - Multi-item batch optimization / "liquidate my whole hangar" planning.
+
+## Known Limitations
+
+- **Items in player structures / citadels (accepted, not fixed).** The route is computed from the item's current location. The SDE only knows NPC stations, so an item whose `location_id` is a player-owned structure (Upwell citadel/engineering complex, `location_id` outside the NPC-station/system ranges) cannot be resolved to a system. For such items the service returns 200 with `best:null` / empty `options`, and the UI shows "Keine Verkaufsorte". This is an accepted limitation (decided 2026-05-29) — we explicitly do **not** resolve structure locations. A possible future enhancement would be to still show hub net proceeds *without* a route when the origin is an unresolvable structure.
+
+## Follow-up (shipped 2026-05-29, v0.12.1)
+
+- Asset picker is **sortable by name or quantity**, ascending/descending (web + Flutter). Client-side only; no API change.
