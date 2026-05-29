@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -173,6 +174,49 @@ func (h *CharacterHelper) GetActiveShipTypeID(ctx context.Context, characterID i
 		return 0, err
 	}
 	return ship.ShipTypeID, nil
+}
+
+// GetWalletBalance returns the character's wallet balance in ISK
+// (ESI /characters/{id}/wallet/). Cached briefly so the ROI capital prefill
+// doesn't hit ESI on every screen open. Never returns 0 on failure — the
+// caller must distinguish "broke" from "lookup failed".
+func (h *CharacterHelper) GetWalletBalance(ctx context.Context, characterID int, accessToken string) (float64, error) {
+	cacheKey := fmt.Sprintf("character_wallet:%d", characterID)
+
+	if cached, err := h.redisClient.Get(ctx, cacheKey).Result(); err == nil {
+		if balance, perr := strconv.ParseFloat(cached, 64); perr == nil {
+			return balance, nil
+		}
+	}
+
+	url := fmt.Sprintf("https://esi.evetech.net/latest/characters/%d/wallet/", characterID)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("ESI wallet API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var balance float64
+	if err := json.NewDecoder(resp.Body).Decode(&balance); err != nil {
+		return 0, err
+	}
+
+	// Balance changes often; the prefill tolerates ~1 min of staleness.
+	h.redisClient.Set(ctx, cacheKey, strconv.FormatFloat(balance, 'f', -1, 64), 60*time.Second)
+
+	return balance, nil
 }
 
 // CalculateTaxRate calculates broker fee + sales tax based on character skills

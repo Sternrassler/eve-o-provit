@@ -433,6 +433,23 @@ func TestCharacterEndpoints_Authentication(t *testing.T) {
 	t.Skip("Authentication tests require integration test setup with middleware")
 }
 
+// TestGetCharacterWallet_RequiresAuth tests that the wallet endpoint rejects
+// requests without authentication locals (set by middleware in production).
+func TestGetCharacterWallet_RequiresAuth(t *testing.T) {
+	app := fiber.New()
+	handler := &TradingHandler{}
+	app.Get("/wallet", handler.GetCharacterWallet)
+
+	req := httptest.NewRequest("GET", "/wallet", nil)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Failed to execute request: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusUnauthorized {
+		t.Errorf("Status code = %v, want %v", resp.StatusCode, fiber.StatusUnauthorized)
+	}
+}
+
 // TestResponseStructures tests that response structures are correct
 func TestResponseStructures(t *testing.T) {
 	t.Run("RouteCalculationResponse", func(t *testing.T) {

@@ -80,6 +80,22 @@ export async function fetchCharacterShip(): Promise<CharacterShip> {
 }
 
 /**
+ * Fetch character's wallet balance in ISK (requires authentication)
+ */
+export async function fetchCharacterWallet(): Promise<number> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/character/wallet`, {
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch wallet balance: ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as { balance: number };
+  return data.balance;
+}
+
+/**
  * Fetch all character ships in hangars (requires authentication)
  */
 export async function fetchCharacterShips(): Promise<Ship[]> {

@@ -16,6 +16,7 @@ import { SkillsAppliedPanel } from "@/components/trading/SkillsAppliedPanel";
 import {
   fetchCharacterLocation,
   fetchCharacterShip,
+  fetchCharacterWallet,
   optimizePortfolio,
 } from "@/lib/api-client";
 import { PortfolioRequest } from "@/types/trading";
@@ -56,19 +57,23 @@ function buildRequest(form: PortfolioFormState): PortfolioRequest {
 function ROICalculatorContent() {
   const { isAuthenticated } = useAuth();
   const [form, setForm] = useState<PortfolioFormState>(defaultForm);
-  // null = no manual choice yet; effective region/ship are derived below.
+  // null = no manual choice yet; effective region/ship/capital are derived below.
   const [regionOverride, setRegionOverride] = useState<string | null>(null);
   const [shipOverride, setShipOverride] = useState<string | null>(null);
+  const [capitalOverride, setCapitalOverride] = useState<number | null>(null);
 
-  // Load the character's current location + ship to pre-fill region/ship.
+  // Load the character's current location + ship + wallet to pre-fill the form.
   const { data: characterData } = useQuery({
     queryKey: ["characterData", isAuthenticated],
     queryFn: async () => {
-      const [location, ship] = await Promise.all([
+      const [location, ship, wallet] = await Promise.all([
         fetchCharacterLocation(),
         fetchCharacterShip(),
+        // Wallet needs the (newer) wallet scope; tolerate its absence so a
+        // character authorized before the scope was added still works.
+        fetchCharacterWallet().catch(() => null),
       ]);
-      return { location, ship };
+      return { location, ship, wallet };
     },
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
@@ -86,11 +91,18 @@ function ROICalculatorContent() {
       shipOverride ??
       characterData?.ship.ship_type_id?.toString() ??
       DEFAULT_SHIP,
+    capital:
+      capitalOverride ??
+      (characterData?.wallet != null
+        ? Math.floor(characterData.wallet)
+        : form.capital),
   };
 
   const handleFormChange = (next: PortfolioFormState) => {
     if (next.region !== effectiveForm.region) setRegionOverride(next.region);
     if (next.ship !== effectiveForm.ship) setShipOverride(next.ship);
+    if (next.capital !== effectiveForm.capital)
+      setCapitalOverride(next.capital);
     setForm(next);
   };
 

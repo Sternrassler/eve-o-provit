@@ -41,6 +41,20 @@ final activeShipProvider = FutureProvider<CharacterShip>((ref) async {
   return api.activeShip();
 });
 
+/// Character's wallet balance in ISK; null when not authenticated or on error
+/// (e.g. the character authorized before the wallet scope was added). Used to
+/// pre-fill the ROI capital field.
+final walletBalanceProvider = FutureProvider<double?>((ref) async {
+  final auth = ref.watch(authControllerProvider).value;
+  if (auth is! Authenticated) return null;
+  final api = ref.watch(characterApiProvider);
+  try {
+    return await api.walletBalance();
+  } catch (_) {
+    return null;
+  }
+});
+
 /// Region ID of the character's current solar system; null on error.
 /// Used to pre-fill region selectors with the current region.
 final currentRegionIdProvider = FutureProvider<int?>((ref) async {

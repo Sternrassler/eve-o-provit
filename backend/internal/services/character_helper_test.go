@@ -298,6 +298,46 @@ func TestGetCharacterLocation_InSpace(t *testing.T) {
 	assert.Nil(t, result.StructureID)
 }
 
+// TestGetWalletBalance_CacheHit tests wallet retrieval with cache hit (no ESI call)
+func TestGetWalletBalance_CacheHit(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	helper := NewCharacterHelper(redisClient)
+	ctx := context.Background()
+
+	cacheKey := "character_wallet:12345"
+	s.Set(cacheKey, "1234567.89")
+	s.SetTTL(cacheKey, 60*time.Second)
+
+	balance, err := helper.GetWalletBalance(ctx, 12345, "fake-token")
+	require.NoError(t, err)
+	assert.InDelta(t, 1234567.89, balance, 0.001)
+}
+
+// TestGetWalletBalance_EmptyCache tests wallet fetch with cache miss (ESI unavailable → error)
+func TestGetWalletBalance_EmptyCache(t *testing.T) {
+	s := miniredis.RunT(t)
+	defer s.Close()
+
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	defer redisClient.Close()
+
+	helper := NewCharacterHelper(redisClient)
+	ctx := context.Background()
+
+	// No cache entry and ESI is not mocked → must error, never silently return 0.
+	_, err := helper.GetWalletBalance(ctx, 12345, "fake-token")
+	assert.Error(t, err, "Should error when ESI is not available and cache is empty")
+}
+
 // TestCharacterSkill_Marshaling tests JSON marshaling of character skills
 func TestCharacterSkill_Marshaling(t *testing.T) {
 	skill := CharacterSkill{

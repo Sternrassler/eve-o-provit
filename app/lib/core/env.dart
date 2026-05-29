@@ -12,5 +12,6 @@ class Env {
     'esi-clones.read_clones.v1',
     'esi-assets.read_assets.v1',
     'esi-ui.write_waypoint.v1',
+    'esi-wallet.read_character_wallet.v1',
   ];
 }
