@@ -571,18 +571,26 @@ func (s *FittingService) getShipBaseAttributes(ctx context.Context, shipTypeID i
 
 // getDefaultFitting returns empty fitting with no bonuses (graceful degradation)
 func (s *FittingService) getDefaultFitting(shipTypeID int) *FittingData {
+	// No player fitting available (ship not owned / ESI failure). Fall back to
+	// the hull's BASE cargo from the SDE so callers still get a ship-specific
+	// capacity — returning 0 here would make every such ship look identical
+	// (and break route/ROI calc, which divides cargo by item volume).
+	baseCargo := 0.0
+	if caps, err := cargo.GetShipCapacities(s.sdeDB, int64(shipTypeID), nil); err == nil && caps != nil {
+		baseCargo = caps.BaseCargoHold
+	}
 	return &FittingData{
 		ShipTypeID:    shipTypeID,
 		FittedModules: []FittedModule{},
 		Bonuses: FittingBonuses{
-			CargoBonus:          0.0,
+			CargoBonus:          baseCargo,
 			WarpSpeedMultiplier: 1.0,
 			InertiaModifier:     1.0,
-			BaseCargo:           0.0,
+			BaseCargo:           baseCargo,
 			SkillsBonusM3:       0.0,
 			SkillsBonusPct:      0.0,
 			ModulesBonusM3:      0.0,
-			EffectiveCargo:      0.0,
+			EffectiveCargo:      baseCargo,
 		},
 	}
 }
