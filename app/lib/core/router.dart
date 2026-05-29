@@ -23,6 +23,7 @@ import '../features/character/character_screen.dart';
 import '../features/trading/hauling_screen.dart';
 import '../features/trading/hub_comparison_screen.dart';
 import '../features/trading/roi_calculator_screen.dart';
+import '../features/trading/sell_assets_screen.dart';
 import '../features/trading/trading_screen.dart';
 
 // ---------------------------------------------------------------------------
@@ -106,6 +107,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const HaulingScreen(),
           ),
           GoRoute(
+            path: '/sell-assets',
+            builder: (context, state) => const SellAssetsScreen(),
+          ),
+          GoRoute(
             path: '/character',
             builder: (context, state) => const CharacterScreen(),
           ),
@@ -146,6 +151,10 @@ class _AppShell extends ConsumerWidget {
       label: 'Hauling',
     ),
     NavigationDestination(
+      icon: Icon(Icons.sell_rounded),
+      label: 'Verkaufen',
+    ),
+    NavigationDestination(
       icon: Icon(Icons.person_outline_rounded),
       selectedIcon: Icon(Icons.person_rounded),
       label: 'Character',
@@ -160,7 +169,8 @@ class _AppShell extends ConsumerWidget {
     if (location.startsWith('/hub-comparison')) return 1;
     if (location.startsWith('/roi-calculator')) return 2;
     if (location.startsWith('/hauling')) return 3;
-    if (location.startsWith('/character')) return 4;
+    if (location.startsWith('/sell-assets')) return 4;
+    if (location.startsWith('/character')) return 5;
     return 0; // /trading is default; "Abmelden" is never a selected state
   }
 
@@ -181,8 +191,10 @@ class _AppShell extends ConsumerWidget {
             case 3:
               context.go('/hauling');
             case 4:
-              context.go('/character');
+              context.go('/sell-assets');
             case 5:
+              context.go('/character');
+            case 6:
               _confirmLogout(context, ref);
           }
         },
