@@ -20,6 +20,13 @@ type PortfolioItem struct {
 	TripsPerDay float64 `json:"trips_per_day"`
 	DailyProfit float64 `json:"daily_profit"`
 	ROIPercent  float64 `json:"roi_percent"` // daily_profit / capital_used * 100
+	// Where to execute the haul: buy at the buy station, sell at the sell station.
+	BuySystemName   string `json:"buy_system_name"`
+	BuyStationName  string `json:"buy_station_name"`
+	BuyStationID    int64  `json:"buy_station_id"`
+	SellSystemName  string `json:"sell_system_name"`
+	SellStationName string `json:"sell_station_name"`
+	SellStationID   int64  `json:"sell_station_id"`
 } // @name PortfolioItem
 
 // PortfolioResult is the response for POST /api/v1/trading/portfolio/optimize.

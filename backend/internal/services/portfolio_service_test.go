@@ -72,6 +72,22 @@ func TestOptimize_DiversificationScore(t *testing.T) {
 	}
 }
 
+func TestOptimize_CarriesBuySellLocation(t *testing.T) {
+	opt := NewPortfolioOptimizer()
+	c := cand(1, "A", 10, 100, 1, 1e9, 10)
+	c.BuyStationName, c.BuyStationID, c.BuySystemName = "Jita IV-4", 60003760, "Jita"
+	c.SellStationName, c.SellStationID, c.SellSystemName = "Rens VI-8", 60004588, "Rens"
+	res := opt.Optimize([]Candidate{c},
+		OptimizeParams{Capital: 1000, CargoCapacity: 1e9, TimeBudgetMin: 1e9, LiquidityCapPct: 100, MaxItemPct: 100})
+	if len(res.Items) != 1 {
+		t.Fatalf("want 1 item, got %d", len(res.Items))
+	}
+	it := res.Items[0]
+	if it.BuyStationID != 60003760 || it.SellStationID != 60004588 || it.BuySystemName != "Jita" || it.SellSystemName != "Rens" {
+		t.Errorf("buy/sell location not carried through: %+v", it)
+	}
+}
+
 func TestOptimize_EmptyWhenCapitalTooSmall(t *testing.T) {
 	opt := NewPortfolioOptimizer()
 	res := opt.Optimize([]Candidate{cand(1, "A", 5, 1000, 1, 1e9, 1)},
