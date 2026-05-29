@@ -143,6 +143,38 @@ func (h *CharacterHelper) GetCharacterLocation(ctx context.Context, characterID 
 	return &location, nil
 }
 
+// GetActiveShipTypeID returns the type ID of the ship the character is currently
+// flying (ESI /characters/{id}/ship/). Used to make travel-time estimates use
+// the active ship's speed when no ship is explicitly selected (sell-from-assets).
+func (h *CharacterHelper) GetActiveShipTypeID(ctx context.Context, characterID int, accessToken string) (int, error) {
+	url := fmt.Sprintf("https://esi.evetech.net/latest/characters/%d/ship/", characterID)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		body, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("ESI ship API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var ship struct {
+		ShipTypeID int `json:"ship_type_id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&ship); err != nil {
+		return 0, err
+	}
+	return ship.ShipTypeID, nil
+}
+
 // CalculateTaxRate calculates broker fee + sales tax based on character skills
 func (h *CharacterHelper) CalculateTaxRate(ctx context.Context, characterID int, accessToken string) (float64, error) {
 	skills, err := h.GetCharacterSkills(ctx, characterID, accessToken)

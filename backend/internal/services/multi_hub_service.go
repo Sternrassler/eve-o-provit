@@ -61,13 +61,8 @@ func NewMultiHubComparisonService(
 
 // CompareHubs builds the per-hub comparison for an item, sorted by net margin descending.
 func (s *MultiHubComparisonService) CompareHubs(ctx context.Context, typeID, characterID int, accessToken string) (*models.HubComparisonResult, error) {
-	// Skills once (graceful: GetCharacterSkills returns defaults on ESI failure).
-	skills, err := s.skills.GetCharacterSkills(ctx, characterID, accessToken)
-	if err != nil || skills == nil {
-		skills = &TradingSkills{}
-	}
-	salesTaxRate := SalesTaxRate(skills.Accounting)
-	brokerFeeRate := BrokerFeeRate(skills.BrokerRelations, skills.AdvancedBrokerRelations, skills.FactionStanding, skills.CorpStanding)
+	// Skills once (graceful: defaults on ESI failure), shared rate resolver.
+	salesTaxRate, brokerFeeRate, skillsApplied := resolveTradingRates(ctx, s.skills, characterID, accessToken)
 
 	itemName := ""
 	if info, err := s.types.GetTypeInfo(ctx, typeID); err == nil && info != nil {
@@ -104,13 +99,7 @@ func (s *MultiHubComparisonService) CompareHubs(ctx context.Context, typeID, cha
 		ItemName:        itemName,
 		Hubs:            rows,
 		BestHubRegionID: bestHubRegionID,
-		SkillsApplied: models.SkillsApplied{
-			Applied:         err == nil,
-			Accounting:      skills.Accounting,
-			BrokerRelations: skills.BrokerRelations,
-			SalesTaxRate:    salesTaxRate,
-			BrokerFeeRate:   brokerFeeRate,
-		},
+		SkillsApplied:   skillsApplied,
 	}, nil
 }
 

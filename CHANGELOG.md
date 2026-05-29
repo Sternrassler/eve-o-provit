@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Warp-Geschwindigkeit & Align-Zeit jetzt auch in Hauling (#45) und Sell-from-Assets (#107) wirksam.** Beide riefen die Reisezeit-Berechnung mit Default-Geschwindigkeit auf (3,0 AU/s / 6 s) statt der echten Schiffswerte. Hauling reicht jetzt Warp/Align aus dem (ohnehin geladenen) Fitting durch; Sell-from-Assets nutzt das aktuell geflogene Schiff (neuer `CharacterHelper.GetActiveShipTypeID`). Damit ist die schiffsspezifische Reisezeit über alle Routen-Features konsistent.
+- **Verkaufssteuer in Trading-Routen & ROI ist jetzt skill-bereinigt.** Der Routen-Rechner verwendete hart `Accounting=0` (5% worst-case), während alle anderen Features das echte Accounting-Skill anwenden — und das ROI-Panel die echte (niedrigere) Rate anzeigte. Der Routen-Rechner nutzt jetzt das Accounting-Level des Characters (Anzeige = Rechnung).
+
+### Changed
+
+- **Geteilte Helfer gegen Inkonsistenz/Redundanz:** Min-Route-Security (`SDERepository.MinRouteSecurityStatus`, mit Logging bei Lookup-Fehler statt stillem high-sec-Default), Schiff-Navigationsparameter (`shipNavParams`) und Fee/Skills-Auflösung (`resolveTradingRates` → `SkillsApplied`) sind nun je einmal implementiert und werden von allen Trading-Services genutzt (vorher 3×/4× dupliziert).
+
+### Removed
+
+- Toter Code: `FeeService.CalculateFees` + `Fees`-Struct + Interface-Methode (keine Nicht-Test-Aufrufer; Routen-Rechner nutzt direkt `CalculateSalesTax`).
+
 ## [0.12.5] - 2026-05-29
 
 ### Changed

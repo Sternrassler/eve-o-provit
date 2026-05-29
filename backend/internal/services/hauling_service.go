@@ -66,15 +66,15 @@ func (s *HaulingService) FindRoutes(ctx context.Context, req *models.HaulingRequ
 	}
 	regions := append([]int{origin}, neighbors...)
 
-	// 3. Skills + ship cargo.
-	skills, serr := s.skills.GetCharacterSkills(ctx, characterID, accessToken)
-	if serr != nil || skills == nil {
-		skills = &TradingSkills{}
-	}
-	salesTaxRate := SalesTaxRate(skills.Accounting)
+	// 3. Skills (fees) + ship cargo.
+	salesTaxRate, _, skillsApplied := resolveTradingRates(ctx, s.skills, characterID, accessToken)
 	cargoM3 := 0.0
+	var ship shipSpeed
 	if fit, err := s.fitting.GetShipFitting(ctx, characterID, req.ShipTypeID, accessToken); err == nil && fit != nil {
 		cargoM3 = fit.Bonuses.EffectiveCargo
+		ship = shipSpeed{warpAUS: fit.Bonuses.WarpSpeedAUS, alignTime: fit.Bonuses.AlignTime}
+	} else if err != nil {
+		s.logger.Warn("hauling: ship fitting fetch failed", "error", err, "ship", req.ShipTypeID)
 	}
 
 	// 4. Load orders for the region set.
@@ -102,7 +102,7 @@ func (s *HaulingService) FindRoutes(ctx context.Context, req *models.HaulingRequ
 
 	routes := make([]models.HaulingRoute, 0, len(cands))
 	for _, c := range cands {
-		route, ok := s.buildRoute(ctx, c, cargoM3, req.Capital, req.AvoidLowSec)
+		route, ok := s.buildRoute(ctx, c, cargoM3, req.Capital, req.AvoidLowSec, ship)
 		if ok {
 			routes = append(routes, route)
 		}
@@ -117,19 +117,13 @@ func (s *HaulingService) FindRoutes(ctx context.Context, req *models.HaulingRequ
 		OriginRegionID: origin,
 		RegionsScanned: regions,
 		Routes:         routes,
-		SkillsApplied: models.SkillsApplied{
-			Applied:         serr == nil,
-			Accounting:      skills.Accounting,
-			BrokerRelations: skills.BrokerRelations,
-			SalesTaxRate:    salesTaxRate,
-			BrokerFeeRate:   BrokerFeeRate(skills.BrokerRelations, skills.AdvancedBrokerRelations, skills.FactionStanding, skills.CorpStanding),
-		},
+		SkillsApplied:  skillsApplied,
 	}, nil
 }
 
 // buildRoute enriches a candidate with volumes, packs the cargo, resolves the route
 // and computes time/risk/ISK-per-hour. Returns ok=false if not viable.
-func (s *HaulingService) buildRoute(ctx context.Context, c RouteCandidate, cargoM3, capital float64, avoidLowSec bool) (models.HaulingRoute, bool) {
+func (s *HaulingService) buildRoute(ctx context.Context, c RouteCandidate, cargoM3, capital float64, avoidLowSec bool, ship shipSpeed) (models.HaulingRoute, bool) {
 	// Enrich items with name + unit volume.
 	items := make([]HaulItem, 0, len(c.Items))
 	for _, it := range c.Items {
@@ -157,11 +151,11 @@ func (s *HaulingService) buildRoute(ctx context.Context, c RouteCandidate, cargo
 		return models.HaulingRoute{}, false
 	}
 
-	travel, err := navigation.CalculateTravelTime(s.sdeDB, buySystem, sellSystem, &navigation.NavigationParams{AvoidLowSec: avoidLowSec}, false)
+	travel, err := navigation.CalculateTravelTime(s.sdeDB, buySystem, sellSystem, shipNavParams(ship, avoidLowSec), false)
 	if err != nil {
 		return models.HaulingRoute{}, false // e.g. no high-sec route when avoidLowSec
 	}
-	minSec := s.minRouteSecurity(travel.Route)
+	minSec := s.sdeRepo.MinRouteSecurityStatus(ctx, travel.Route)
 	if avoidLowSec && minSec < 0.5 {
 		return models.HaulingRoute{}, false
 	}
@@ -212,24 +206,6 @@ func (s *HaulingService) buildRoute(ctx context.Context, c RouteCandidate, cargo
 		ISKPerHour:      iskPerHour,
 		Items:           outItems,
 	}, true
-}
-
-func (s *HaulingService) minRouteSecurity(route []int64) float64 {
-	if len(route) == 0 {
-		return 1.0
-	}
-	min := 1.0
-	for _, sysID := range route {
-		var sec float64
-		if err := s.sdeDB.QueryRowContext(context.Background(),
-			"SELECT securityStatus FROM mapSolarSystems WHERE _key = ?", sysID).Scan(&sec); err != nil {
-			continue
-		}
-		if sec < min {
-			min = sec
-		}
-	}
-	return min
 }
 
 func (s *HaulingService) stationName(ctx context.Context, stationID int64) string {

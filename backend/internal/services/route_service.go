@@ -127,6 +127,18 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	var skillBonusPercent float64
 	var fittingBonusM3 float64
 
+	// Sales tax uses the character's Accounting skill (consistent with the other
+	// trading features); falls back to level 0 (5%, worst case) when no character
+	// context is present (e.g. anonymous explicit-capacity calls).
+	accountingLevel := 0
+	if cid, ok := calcCtx.Value(contextKeyCharacterID).(int); ok {
+		if token, ok := calcCtx.Value(contextKeyAccessToken).(string); ok && cid > 0 && token != "" {
+			if sk, err := rs.skillsService.GetCharacterSkills(calcCtx, cid, token); err == nil && sk != nil {
+				accountingLevel = sk.Accounting
+			}
+		}
+	}
+
 	// Get ship info if cargo capacity not provided
 	if cargoCapacity == 0 {
 		shipCap, err := cargo.GetShipCapacities(rs.sdeDB, int64(shipTypeID), nil)
@@ -188,7 +200,7 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	routeCtx, routeCancel := context.WithTimeout(calcCtx, rs.config.RouteCalculationTimeout)
 	defer routeCancel()
 
-	routes, err := rs.workerPool.ProcessItemsWithCapacityInfo(routeCtx, profitableItems, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3, warpSpeed, alignTime)
+	routes, err := rs.workerPool.ProcessItemsWithCapacityInfo(routeCtx, profitableItems, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3, warpSpeed, alignTime, accountingLevel)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		return nil, fmt.Errorf("failed to calculate routes: %w", err)
 	}
