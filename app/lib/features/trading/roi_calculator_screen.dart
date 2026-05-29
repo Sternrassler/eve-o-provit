@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/portfolio_models.dart';
 import '../../api/trading_models.dart';
 import '../../core/breakpoint.dart';
+import '../../core/format.dart';
 import 'current_selection_prefill.dart';
 import 'providers.dart';
 import 'roi_providers.dart';
@@ -462,12 +463,12 @@ class _PortfolioTable extends ConsumerWidget {
             children: [
               _SummaryTile(
                 label: 'Tagesgewinn',
-                value: _fmtIsk(result.totalDailyProfit),
+                value: fmtIsk(result.totalDailyProfit),
                 accent: Theme.of(context).colorScheme.primary,
               ),
               _SummaryTile(
                 label: 'Kapital genutzt',
-                value: _fmtIsk(result.totalCapitalUsed),
+                value: fmtIsk(result.totalCapitalUsed),
               ),
               _SummaryTile(
                 label: 'Zeit genutzt',
@@ -502,10 +503,10 @@ class _PortfolioTable extends ConsumerWidget {
                     cells: [
                       DataCell(Text(item.name)),
                       DataCell(_RouteCell(item: item)),
-                      DataCell(Text(_fmtIsk(item.capitalUsed))),
-                      DataCell(Text(_fmtUnits(item.units))),
+                      DataCell(Text(fmtIsk(item.capitalUsed))),
+                      DataCell(Text(fmtUnits(item.units))),
                       DataCell(Text(item.tripsPerDay.toStringAsFixed(1))),
-                      DataCell(Text(_fmtIsk(item.dailyProfit))),
+                      DataCell(Text(fmtIsk(item.dailyProfit))),
                       DataCell(Text('${item.roiPercent.toStringAsFixed(1)}%')),
                       DataCell(_WaypointButton(item: item)),
                     ],
@@ -518,20 +519,6 @@ class _PortfolioTable extends ConsumerWidget {
     );
   }
 
-  // ── Formatting helpers ───────────────────────────────────────────────────
-
-  static String _fmtIsk(double v) {
-    if (v >= 1e9) return '${(v / 1e9).toStringAsFixed(2)}B';
-    if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(2)}M';
-    if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
-    return v.toStringAsFixed(2);
-  }
-
-  static String _fmtUnits(double v) {
-    if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(1)}M';
-    if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
-    return v.toStringAsFixed(0);
-  }
 }
 
 // ---------------------------------------------------------------------------

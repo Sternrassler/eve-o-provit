@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/hub_comparison_models.dart';
 import '../../core/breakpoint.dart';
+import '../../core/format.dart';
 import 'hub_comparison_providers.dart';
 import 'providers.dart' show tradingApiProvider;
 
@@ -371,11 +372,11 @@ class _HubDataTable extends StatelessWidget {
       color: isBest ? WidgetStateProperty.all(highlight) : null,
       cells: [
         DataCell(_hubName(context, hub, isBest: isBest)),
-        DataCell(Text(_fmtIsk(hub.buyPrice))),
-        DataCell(Text(_fmtIsk(hub.sellPrice))),
+        DataCell(Text(fmtIsk(hub.buyPrice))),
+        DataCell(Text(fmtIsk(hub.sellPrice))),
         DataCell(Text('${hub.spreadPercent.toStringAsFixed(1)}%')),
         DataCell(Text('${hub.netMarginPercent.toStringAsFixed(1)}%')),
-        DataCell(Text(_fmtVolume(hub.dailyVolume))),
+        DataCell(Text(fmtVolume(hub.dailyVolume))),
         DataCell(_competition(context, hub.competition)),
       ],
     );
@@ -424,21 +425,5 @@ class _HubDataTable extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  // ── Formatting helpers ─────────────────────────────────────────────────────
-
-  static String _fmtIsk(double v) {
-    if (v >= 1e9) return '${(v / 1e9).toStringAsFixed(2)}B';
-    if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(2)}M';
-    if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
-    return v.toStringAsFixed(2);
-  }
-
-  static String _fmtVolume(double v) {
-    if (v >= 1e9) return '${(v / 1e9).toStringAsFixed(1)}B';
-    if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(1)}M';
-    if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
-    return v.toStringAsFixed(0);
   }
 }

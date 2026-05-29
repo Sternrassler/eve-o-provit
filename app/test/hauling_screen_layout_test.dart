@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:eve_o_provit/api/hauling_models.dart';
 import 'package:eve_o_provit/api/trading_api.dart';
 import 'package:eve_o_provit/core/theme.dart';
+import 'package:eve_o_provit/core/security_risk.dart';
 import 'package:eve_o_provit/features/character/character_api.dart';
 import 'package:eve_o_provit/features/character/character_models.dart';
 import 'package:eve_o_provit/features/character/providers.dart'

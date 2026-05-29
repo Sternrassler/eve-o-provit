@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Frontend-Aufräumarbeiten aus dem Parameter-Review (#10):** Geteilte Zahlenformatter (`app/lib/core/format.dart`: `fmtIsk`/`fmtUnits`/`fmtVolume`) und die Security-Risk-Farb-/Label-Zuordnung (`app/lib/core/security_risk.dart`) sind nun je einmal definiert und werden von allen Flutter-Trading-Screens (Hauling, Sell-Assets, ROI, Hub-Vergleich) genutzt — vorher pro Screen dupliziert, mit Drift-Risiko bei der Darstellung.
+
+### Fixed
+
+- **Schiffsliste-Ladefehler im Web wird nicht mehr stillschweigend verschluckt (#5).** `ShipSelect` zeigt bei fehlgeschlagenem Laden der Charakter-Schiffe einen Hinweis ("Standardliste angezeigt") statt unbemerkt auf die Default-Liste zurückzufallen.
+
+### Removed
+
+- Toter Web-Code: ungenutzte Komponenten `ShipRefreshButton` und `VolumeFilters` entfernt (#7).
+
 ## [0.12.6] - 2026-05-29
 
 ### Fixed

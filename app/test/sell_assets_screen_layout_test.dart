@@ -16,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:eve_o_provit/api/asset_models.dart';
 import 'package:eve_o_provit/api/trading_api.dart';
 import 'package:eve_o_provit/core/theme.dart';
+import 'package:eve_o_provit/core/security_risk.dart';
 import 'package:eve_o_provit/features/trading/providers.dart';
 import 'package:eve_o_provit/features/trading/sell_assets_providers.dart';
 import 'package:eve_o_provit/features/trading/sell_assets_screen.dart';
@@ -256,18 +257,18 @@ void main() {
       find.byKey(const Key('sell-risk-chip-safe')).first,
     );
     final safeDeco = safeChip.decoration as BoxDecoration;
-    expect(safeDeco.color, sellSecurityRiskColor('safe').withAlpha(40));
-    expect(sellSecurityRiskColor('safe'), const Color(0xFF66BB6A)); // green
+    expect(safeDeco.color, securityRiskColor('safe').withAlpha(40));
+    expect(securityRiskColor('safe'), const Color(0xFF66BB6A)); // green
 
     final dangerChip = tester.widget<Container>(
       find.byKey(const Key('sell-risk-chip-danger')).first,
     );
     final dangerDeco = dangerChip.decoration as BoxDecoration;
-    expect(dangerDeco.color, sellSecurityRiskColor('danger').withAlpha(40));
-    expect(sellSecurityRiskColor('danger'), const Color(0xFFF44336)); // red
+    expect(dangerDeco.color, securityRiskColor('danger').withAlpha(40));
+    expect(securityRiskColor('danger'), const Color(0xFFF44336)); // red
 
     // caution maps to amber.
-    expect(sellSecurityRiskColor('caution'), const Color(0xFFFF9800));
+    expect(securityRiskColor('caution'), const Color(0xFFFF9800));
   });
 
   testWidgets('Scope badge renders Hub and Region labels', (tester) async {
