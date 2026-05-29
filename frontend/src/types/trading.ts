@@ -167,6 +167,13 @@ export interface PortfolioItem {
   trips_per_day: number;
   daily_profit: number;
   roi_percent: number;
+  // Buy/sell location (station → station haul)
+  buy_system_name: string;
+  buy_station_name: string;
+  buy_station_id: number;
+  sell_system_name: string;
+  sell_station_name: string;
+  sell_station_id: number;
 }
 
 export interface PortfolioResult {

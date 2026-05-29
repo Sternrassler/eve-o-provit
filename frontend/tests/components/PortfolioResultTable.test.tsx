@@ -1,7 +1,30 @@
-import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, within, fireEvent, act } from "@testing-library/react";
 import { PortfolioResultTable } from "@/components/trading/PortfolioResultTable";
 import { PortfolioItem, PortfolioResult } from "@/types/trading";
+import { setWaypoint } from "@/lib/api-client";
+
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+  }),
+}));
+
+vi.mock("@/hooks/use-toast", () => ({
+  useToast: () => ({
+    toast: vi.fn(),
+  }),
+}));
+
+vi.mock("@/lib/api-client", () => ({
+  setWaypoint: vi.fn().mockResolvedValue(undefined),
+}));
+
+const setWaypointMock = vi.mocked(setWaypoint);
+
+beforeEach(() => {
+  setWaypointMock.mockClear();
+});
 
 function makeItem(overrides: Partial<PortfolioItem>): PortfolioItem {
   return {
@@ -12,6 +35,12 @@ function makeItem(overrides: Partial<PortfolioItem>): PortfolioItem {
     trips_per_day: 4,
     daily_profit: 2.5e7,
     roi_percent: 16.7,
+    buy_system_name: "Jita",
+    buy_station_name: "Jita IV - Moon 4 - Caldari Navy Assembly Plant",
+    buy_station_id: 60003760,
+    sell_system_name: "Amarr",
+    sell_station_name: "Amarr VIII (Oris) - Emperor Family Academy",
+    sell_station_id: 60008494,
     ...overrides,
   };
 }
@@ -71,6 +100,53 @@ describe("PortfolioResultTable", () => {
     const totals = screen.getByTestId("portfolio-totals");
     expect(within(totals).getByText("480.000.000,00 ISK")).toBeInTheDocument();
     expect(within(totals).getByText("61.000.000,00 ISK")).toBeInTheDocument();
+  });
+
+  it("renders the Route column as buy_system_name → sell_system_name with station tooltip", () => {
+    render(<PortfolioResultTable result={result} />);
+
+    const tritRow = screen
+      .getAllByTestId("portfolio-row")
+      .find((r) => r.getAttribute("data-type-id") === "34")!;
+
+    const routeCell = within(tritRow).getByText(
+      (_, el) => el?.textContent === "Jita → Amarr"
+    );
+    expect(routeCell).toBeInTheDocument();
+    expect(routeCell).toHaveAttribute(
+      "title",
+      "Jita IV - Moon 4 - Caldari Navy Assembly Plant → Amarr VIII (Oris) - Emperor Family Academy"
+    );
+  });
+
+  it("renders a waypoint button per row and calls setWaypoint with buy then sell station IDs on click", async () => {
+    render(<PortfolioResultTable result={result} />);
+
+    const buttons = screen.getAllByRole("button", {
+      name: "Route an EVE übertragen",
+    });
+    expect(buttons).toHaveLength(2);
+
+    const tritRow = screen
+      .getAllByTestId("portfolio-row")
+      .find((r) => r.getAttribute("data-type-id") === "34")!;
+    const tritButton = within(tritRow).getByRole("button", {
+      name: "Route an EVE übertragen",
+    });
+
+    await act(async () => {
+      fireEvent.click(tritButton);
+    });
+
+    await vi.waitFor(() => {
+      expect(setWaypointMock).toHaveBeenCalledTimes(2);
+    });
+    expect(setWaypointMock).toHaveBeenNthCalledWith(1, 60003760, {
+      clearOtherWaypoints: true,
+    });
+    expect(setWaypointMock).toHaveBeenNthCalledWith(2, 60008494, {
+      clearOtherWaypoints: false,
+    });
   });
 
   it("renders the empty-state when no viable portfolio exists", () => {

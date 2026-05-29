@@ -196,3 +196,47 @@ export async function optimizePortfolio(
 
   return response.json();
 }
+
+export interface SetWaypointOptions {
+  /** Clear all existing waypoints before adding this one. */
+  clearOtherWaypoints?: boolean;
+  /** Insert this waypoint at the start of the existing route. */
+  addToBeginning?: boolean;
+}
+
+/**
+ * Set an in-game autopilot waypoint to the given destination (station/system)
+ * via ESI (requires authentication and the esi-ui.write_waypoint.v1 scope, plus
+ * a running EVE client). Call once per stop to build a multi-stop route:
+ * first with clearOtherWaypoints=true, then false for each subsequent stop.
+ * @param destinationId - station or system id to route to
+ * @param opts - waypoint placement options
+ */
+export async function setWaypoint(
+  destinationId: number,
+  opts: SetWaypointOptions = {}
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/esi/ui/autopilot/waypoint`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        destination_id: destinationId,
+        clear_other_waypoints: opts.clearOtherWaypoints ?? false,
+        add_to_beginning: opts.addToBeginning ?? false,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Missing scope esi-ui.write_waypoint.v1");
+    }
+    if (response.status === 404) {
+      throw new Error("EVE client not running");
+    }
+    throw new Error(`Failed to set waypoint: ${response.statusText}`);
+  }
+}

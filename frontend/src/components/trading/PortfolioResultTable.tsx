@@ -1,8 +1,14 @@
 "use client";
 
+import { useState } from "react";
+import { Loader2, Navigation } from "lucide-react";
 import { PortfolioResult, PortfolioItem } from "@/types/trading";
 import { cn, formatISKWithSeparators, getProfitColor } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { setWaypoint } from "@/lib/api-client";
 
 interface PortfolioResultTableProps {
   result: PortfolioResult;
@@ -45,6 +51,9 @@ export function PortfolioResultTable({ result }: PortfolioResultTableProps) {
                 <th scope="col" className="px-4 py-3 font-medium">
                   Item
                 </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  Route
+                </th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">
                   Kapital
                 </th>
@@ -60,6 +69,9 @@ export function PortfolioResultTable({ result }: PortfolioResultTableProps) {
                 <th scope="col" className="px-4 py-3 text-right font-medium">
                   ROI%
                 </th>
+                <th scope="col" className="px-4 py-3 font-medium">
+                  <span className="sr-only">Aktion</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -72,7 +84,9 @@ export function PortfolioResultTable({ result }: PortfolioResultTableProps) {
                 data-testid="portfolio-totals"
                 className="border-t-2 font-semibold"
               >
-                <td className="px-4 py-3">Gesamt</td>
+                <td className="px-4 py-3" colSpan={2}>
+                  Gesamt
+                </td>
                 <td className="px-4 py-3 text-right">
                   {formatISKWithSeparators(result.total_capital_used)}
                 </td>
@@ -80,7 +94,7 @@ export function PortfolioResultTable({ result }: PortfolioResultTableProps) {
                 <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">
                   {formatISKWithSeparators(result.total_daily_profit)}
                 </td>
-                <td className="px-4 py-3" />
+                <td className="px-4 py-3" colSpan={2} />
               </tr>
             </tfoot>
           </table>
@@ -91,6 +105,40 @@ export function PortfolioResultTable({ result }: PortfolioResultTableProps) {
 }
 
 function PortfolioRowItem({ item }: { item: PortfolioItem }) {
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [isSettingRoute, setIsSettingRoute] = useState(false);
+
+  const handleSetRoute = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Nicht eingeloggt",
+        description: "EVE SSO Login erforderlich",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSettingRoute(true);
+    try {
+      await setWaypoint(item.buy_station_id, { clearOtherWaypoints: true });
+      await setWaypoint(item.sell_station_id, { clearOtherWaypoints: false });
+
+      toast({
+        title: "Route gesetzt",
+        description: `Waypoints in EVE gesetzt: ${item.buy_station_name} → ${item.sell_station_name}`,
+      });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSettingRoute(false);
+    }
+  };
+
   return (
     <tr
       data-testid="portfolio-row"
@@ -98,6 +146,12 @@ function PortfolioRowItem({ item }: { item: PortfolioItem }) {
       className="border-b transition-colors hover:bg-muted/40"
     >
       <td className="px-4 py-3 font-medium">{item.name}</td>
+      <td
+        className="px-4 py-3 whitespace-nowrap text-muted-foreground"
+        title={`${item.buy_station_name} → ${item.sell_station_name}`}
+      >
+        {item.buy_system_name} → {item.sell_system_name}
+      </td>
       <td className="px-4 py-3 text-right">
         {formatISKWithSeparators(item.capital_used)}
       </td>
@@ -115,6 +169,22 @@ function PortfolioRowItem({ item }: { item: PortfolioItem }) {
         )}
       >
         {item.roi_percent.toFixed(1)}%
+      </td>
+      <td className="px-4 py-3 text-right">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSetRoute}
+          disabled={isSettingRoute}
+          title="Route an EVE übertragen"
+          aria-label="Route an EVE übertragen"
+        >
+          {isSettingRoute ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Navigation className="size-4" />
+          )}
+        </Button>
       </td>
     </tr>
   );
