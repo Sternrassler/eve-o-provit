@@ -575,9 +575,19 @@ func (s *FittingService) getDefaultFitting(shipTypeID int) *FittingData {
 	// the hull's BASE cargo from the SDE so callers still get a ship-specific
 	// capacity — returning 0 here would make every such ship look identical
 	// (and break route/ROI calc, which divides cargo by item volume).
+	ctx := context.Background()
 	baseCargo := 0.0
 	if caps, err := cargo.GetShipCapacities(s.sdeDB, int64(shipTypeID), nil); err == nil && caps != nil {
 		baseCargo = caps.BaseCargoHold
+	}
+	// Also derive the hull's base warp speed + align time (no skills/modules) so
+	// route/ROI travel time is ship-specific even without a player fitting.
+	warpAUS, alignTime := 0.0, 0.0
+	if ws, err := navigation.GetShipWarpSpeedDeterministic(ctx, s.sdeDB, int64(shipTypeID), nil, nil); err == nil && ws != nil {
+		warpAUS = ws.EffectiveWarpSpeed
+	}
+	if ir, err := navigation.GetShipInertiaDeterministic(ctx, s.sdeDB, int64(shipTypeID), nil, nil); err == nil && ir != nil {
+		alignTime = ir.AlignTime
 	}
 	return &FittingData{
 		ShipTypeID:    shipTypeID,
@@ -586,11 +596,13 @@ func (s *FittingService) getDefaultFitting(shipTypeID int) *FittingData {
 			CargoBonus:          baseCargo,
 			WarpSpeedMultiplier: 1.0,
 			InertiaModifier:     1.0,
+			AlignTime:           alignTime,
 			BaseCargo:           baseCargo,
 			SkillsBonusM3:       0.0,
 			SkillsBonusPct:      0.0,
 			ModulesBonusM3:      0.0,
 			EffectiveCargo:      baseCargo,
+			WarpSpeedAUS:        warpAUS,
 		},
 	}
 }
