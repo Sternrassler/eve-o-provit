@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-05-29
+
 ### Added
 
 - **Sell-from-Assets (#107):** `GET /api/v1/trading/assets` (owned items aggregated by type + location) and `POST /api/v1/trading/assets/sell-options` — for a selected item, ranks taker sell locations (instant sell into a buy order, net of sales tax) across the 5 major hubs + every station in the item's current region, each with route (jumps, travel time, security risk). Ranked by total net proceeds. New paginated character-assets fetch; reuses hub price fetch, fee/skills, and navigation.
