@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { ships as fallbackShips } from "@/lib/mock-data/ships";
 import { Ship } from "@/types/trading";
-import { fetchCharacterShips } from "@/lib/api-client";
+import { fetchCharacterShip, fetchCharacterShips } from "@/lib/api-client";
 
 interface ShipSelectProps {
   value: string;
@@ -26,27 +26,38 @@ export function ShipSelect({
   authenticated = false,
 }: ShipSelectProps) {
   const [ships, setShips] = useState<Ship[]>(fallbackShips);
+  // The active ship (the one being flown) — not necessarily in the hangar list,
+  // so it's merged into the options separately to keep the current-ship default
+  // selectable.
+  const [activeShip, setActiveShip] = useState<Ship | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const loadShips = async () => {
       if (!authenticated) {
         setShips(fallbackShips);
+        setActiveShip(null);
         return;
       }
 
       setLoading(true);
       try {
-        const characterShips = await fetchCharacterShips();
+        const [characterShips, active] = await Promise.all([
+          fetchCharacterShips().catch(() => null),
+          fetchCharacterShip().catch(() => null),
+        ]);
         if (characterShips && characterShips.length > 0) {
           setShips(characterShips);
         } else {
-          // If user has no ships, use fallback
           setShips(fallbackShips);
         }
-      } catch (error) {
-        console.error("Failed to fetch character ships, using fallback:", error);
-        setShips(fallbackShips);
+        if (active?.ship_type_id) {
+          setActiveShip({
+            type_id: active.ship_type_id,
+            name: active.ship_type_name || active.ship_name,
+            cargo_capacity: active.cargo_capacity,
+          });
+        }
       } finally {
         setLoading(false);
       }
@@ -54,6 +65,20 @@ export function ShipSelect({
 
     loadShips();
   }, [authenticated]);
+
+  // Active ship first (deduplicated), then the hangar/fallback ships.
+  const options: Ship[] = [];
+  const seen = new Set<number>();
+  if (activeShip) {
+    options.push(activeShip);
+    seen.add(activeShip.type_id);
+  }
+  for (const s of ships) {
+    if (!seen.has(s.type_id)) {
+      options.push(s);
+      seen.add(s.type_id);
+    }
+  }
 
   return (
     <div className="space-y-2">
@@ -63,7 +88,7 @@ export function ShipSelect({
           <SelectValue placeholder={loading ? "Lade Schiffe..." : "Schiff wählen..."} />
         </SelectTrigger>
         <SelectContent>
-          {ships.map((ship) => {
+          {options.map((ship) => {
             // Format cargo capacity: show in m³ if < 1000, otherwise in k m³
             const cargoDisplay = ship.cargo_capacity >= 1000
               ? `${(ship.cargo_capacity / 1000).toFixed(1)}k m³`

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Aktuelle Region/Schiff-Vorbelegung griff nach frischem Login nicht.** Die Prefill-Provider liefen während des SSO-Login-Übergangs (Token noch nicht da), cachten ein leeres Ergebnis und blieben für die Session leer (Region leer, Schiff fiel auf den 648-Fallback). Jetzt sind `currentRegionIdProvider` (Flutter, neu) an den Auth-Zustand gekoppelt und das `CurrentSelectionPrefill`-Mixin wartet auf `Authenticated` + invalidiert die Quell-Provider einmalig, sodass die echten Werte unter Auth geladen werden.
+- **Aktuelles Schiff war nicht auswählbar, wenn es nicht im Hangar liegt.** Das aktive Schiff (geflogen) steht nicht zwingend in der Hangar-Liste, die der Schiff-Selektor anbietet — dadurch konnte „aktuelles Schiff" nicht angezeigt werden. Der `ShipSelect` (Flutter + Web) merged das aktive Schiff jetzt als erste (deduplizierte) Option in die Liste.
+
 ## [0.12.2] - 2026-05-29
 
 ### Security
