@@ -135,10 +135,21 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 		}
 		baseCapacity = shipCap.BaseCargoHold
 
-		// Apply character skills and fitting (required - no fallback)
-		effectiveCapacity, skillBonusPercent, fittingBonusM3 = rs.applyCharacterSkills(calcCtx, baseCapacity, shipTypeID)
+		// Apply character skills and fitting (cargo + warp speed + align time).
+		var shipWarpAUS, shipAlign float64
+		effectiveCapacity, shipWarpAUS, shipAlign, skillBonusPercent, fittingBonusM3 = rs.applyCharacterSkills(calcCtx, baseCapacity, shipTypeID)
 
 		cargoCapacity = effectiveCapacity
+
+		// Feed the ship's deterministic warp speed / align time into the travel-time
+		// calc so faster, more agile ships do more trips per time budget. Explicit
+		// request params (if any) take precedence; otherwise use the ship's values.
+		if warpSpeed == nil && shipWarpAUS > 0 {
+			warpSpeed = &shipWarpAUS
+		}
+		if alignTime == nil && shipAlign > 0 {
+			alignTime = &shipAlign
+		}
 	} else {
 		// Capacity was provided explicitly - use as both base and effective
 		baseCapacity = cargoCapacity
@@ -324,10 +335,12 @@ func (rs *RouteService) getRegionName(ctx context.Context, regionID int) (string
 	return rs.sdeRepo.GetRegionName(ctx, regionID)
 }
 
-// applyCharacterSkills extracts character context and applies skills to cargo capacity
-// Returns (effectiveCapacity, skillBonusPercent, fittingBonusM3)
-// Requires character authentication in context
-func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity float64, shipTypeID int) (float64, float64, float64) {
+// applyCharacterSkills extracts character context and applies skills + fitting to the
+// ship's cargo capacity, warp speed and align time (all deterministic, from FittingService).
+// Returns (effectiveCapacity, warpSpeedAUS, alignTime, skillBonusPercent, fittingBonusM3).
+// warpSpeedAUS/alignTime are 0 when unavailable (caller then falls back to nav defaults).
+// Requires character authentication in context.
+func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity float64, shipTypeID int) (float64, float64, float64, float64, float64) {
 	// Extract character_id (required - no fallback)
 	characterID := ctx.Value(contextKeyCharacterID)
 	accessToken := ctx.Value(contextKeyAccessToken)
@@ -335,7 +348,7 @@ func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity f
 	if characterID == nil || accessToken == nil {
 		// This should never happen if AuthMiddleware is properly configured
 		log.Printf("ERROR: Missing character context in applyCharacterSkills")
-		return baseCapacity, 0.0, 0.0
+		return baseCapacity, 0.0, 0.0, 0.0, 0.0
 	}
 
 	charID, ok1 := characterID.(int)
@@ -343,20 +356,20 @@ func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity f
 
 	if !ok1 || !ok2 || charID <= 0 || token == "" {
 		log.Printf("ERROR: Invalid character context types")
-		return baseCapacity, 0.0, 0.0
+		return baseCapacity, 0.0, 0.0, 0.0, 0.0
 	}
 
-	// Get deterministic cargo capacity directly from FittingService
+	// Get deterministic cargo + warp speed + align time from FittingService (skills + modules).
 	fitting, err := rs.fittingService.GetShipFitting(ctx, charID, shipTypeID, token)
 	if err != nil {
 		log.Printf("ERROR: Failed to get ship fitting: %v", err)
-		return baseCapacity, 0.0, 0.0
+		return baseCapacity, 0.0, 0.0, 0.0, 0.0
 	}
 
 	totalCapacity := fitting.Bonuses.EffectiveCargo
 
-	log.Printf("Applied cargo capacity: base=%.2f, total=%.2f m³",
-		baseCapacity, totalCapacity)
+	log.Printf("Applied cargo=%.2f m³ (base=%.2f), warp=%.2f AU/s, align=%.2fs",
+		totalCapacity, baseCapacity, fitting.Bonuses.WarpSpeedAUS, fitting.Bonuses.AlignTime)
 
-	return totalCapacity, 0.0, 0.0
+	return totalCapacity, fitting.Bonuses.WarpSpeedAUS, fitting.Bonuses.AlignTime, 0.0, 0.0
 }

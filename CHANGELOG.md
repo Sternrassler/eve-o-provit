@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Routen-/ROI-Reisezeit nutzt jetzt die schiff-/fitting-/skill-spezifische Warp-Geschwindigkeit und Align-Zeit.** Bisher rechnete der Routen-/ROI-Pfad die Reisezeit mit festen Default-Werten (3,0 AU/s Warp, 6 s Align) — die Agilität/Geschwindigkeit des Schiffs spielte keine Rolle. `applyCharacterSkills` liefert jetzt zusätzlich die deterministisch berechnete effektive Warp-Geschwindigkeit (AU/s) und Align-Zeit aus dem Fitting (Skills + Module) und speist sie in `CalculateTravelTime` ein; `getDefaultFitting` (nicht besessene Schiffe) liefert die Basis-Werte der Hülle. Dadurch schaffen schnellere, agilere Schiffe korrekt mehr Fahrten im Zeitbudget (z.B. Iteron Mark V align ~16 s vs. Imicus ~6 s). Explizite Request-Parameter haben weiterhin Vorrang.
+
 ## [0.12.4] - 2026-05-29
 
 ### Fixed
