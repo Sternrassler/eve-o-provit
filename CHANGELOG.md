@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-05-29
+
 ### Added
 
 - **ROI-Kapital wird mit dem echten Wallet-Kontostand vorbefüllt.** Neuer Endpoint `GET /api/v1/character/wallet` (ESI `/characters/{id}/wallet/`, 60 s gecacht) liefert den ISK-Stand; ROI-Rechner (Web + Flutter) befüllt das Kapital-Feld damit vor — überschreibbar nach dem `override ?? wallet ?? default`-Muster, das Region/Schiff schon nutzen. Erfordert den neuen Scope `esi-wallet.read_character_wallet.v1`; der Wallet-Abruf ist fehlertolerant (Charaktere, die vor der Scope-Erweiterung autorisiert haben, fallen auf den Default zurück).
