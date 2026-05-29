@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-05-29
+
 ### Security
 
 - Logout leert jetzt den React-Query-Cache (`queryClient.clear()`), damit charakterbezogene Daten (Standort, Schiff, …) der vorigen Session nicht an eine nachfolgende Anmeldung im selben Browser ausgeliefert werden können (Cache-Key war nur auf `isAuthenticated` gekeyt).
