@@ -11,6 +11,8 @@ import {
   HubComparisonResult,
   PortfolioRequest,
   PortfolioResult,
+  HaulingRequest,
+  HaulingResponse,
 } from "@/types/trading";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
@@ -192,6 +194,33 @@ export async function optimizePortfolio(
 
   if (!response.ok) {
     throw new Error(`Failed to optimize portfolio: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Find profitable station→station hauling routes in the character's current
+ * region plus adjacent regions (requires authentication). Routes are returned
+ * pre-sorted by isk_per_hour descending; an empty routes array means no
+ * profitable routes were found nearby.
+ * @param req - hauling search parameters (origin_region_id 0 ⇒ current region)
+ */
+export async function findHaulingRoutes(
+  req: HaulingRequest
+): Promise<HaulingResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/trading/hauling/routes`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(req),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to find hauling routes: ${response.statusText}`);
   }
 
   return response.json();
