@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.6] - 2026-05-29
+
 ### Fixed
 
 - **Warp-Geschwindigkeit & Align-Zeit jetzt auch in Hauling (#45) und Sell-from-Assets (#107) wirksam.** Beide riefen die Reisezeit-Berechnung mit Default-Geschwindigkeit auf (3,0 AU/s / 6 s) statt der echten Schiffswerte. Hauling reicht jetzt Warp/Align aus dem (ohnehin geladenen) Fitting durch; Sell-from-Assets nutzt das aktuell geflogene Schiff (neuer `CharacterHelper.GetActiveShipTypeID`). Damit ist die schiffsspezifische Reisezeit über alle Routen-Features konsistent.
