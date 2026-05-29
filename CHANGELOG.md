@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-05-29
+
 ### Fixed
 
 - **Schiffswahl ohne Wirkung bei nicht besessenen Schiffen (ROI/Trading).** Wählte man ein Schiff, das der Character nicht im Besitz hat (kein abrufbares Fitting), lieferte `getDefaultFitting` eine Cargo-Kapazität von **0** statt der Hüllen-Basiskapazität. Dadurch rechnete der Route-/ROI-Optimizer für *jedes* solche Schiff mit 0 m³ → identisches (degeneriertes) Ergebnis, egal ob 400 m³ oder 5800 m³. `getDefaultFitting` nutzt jetzt das schiffsspezifische Basis-Cargo aus der SDE, sodass die Schiffsgröße wieder korrekt in Einheiten/Fahrt → Fahrten/Tag → Tagesgewinn eingeht.
