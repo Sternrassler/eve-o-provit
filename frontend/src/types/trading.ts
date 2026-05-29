@@ -257,3 +257,56 @@ export interface InventorySellRoute {
   route_system_ids: number[];
   min_route_security_status: number;
 }
+
+// Sell-from-Assets (Issue #107)
+
+export interface AssetItem {
+  type_id: number;
+  name: string;
+  quantity: number;
+  location_id: number;
+  location_name: string;
+  system_id: number;
+  region_id: number;
+  marketable: boolean;
+}
+
+export interface AssetsResponse {
+  assets: AssetItem[];
+  count: number;
+}
+
+export interface SellOptionsRequest {
+  type_id: number;
+  location_id: number;
+  quantity: number;
+  avoid_low_sec: boolean;
+}
+
+export type SellOptionScope = "hub" | "current_region";
+
+export interface SellOption {
+  scope: SellOptionScope;
+  region_id: number;
+  region_name: string;
+  station_id: number;
+  station_name: string;
+  system_name: string;
+  buy_price: number;
+  unit_net: number;
+  total_net: number;
+  jumps: number;
+  travel_time_min: number;
+  security_risk: SecurityRisk;
+  has_data: boolean;
+}
+
+export interface SellOptionsResponse {
+  type_id: number;
+  name: string;
+  quantity: number;
+  origin_system_id: number;
+  best: SellOption | null;
+  options: SellOption[]; // pre-sorted by total_net desc
+  skills_applied: SkillsApplied;
+}

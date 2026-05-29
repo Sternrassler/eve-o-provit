@@ -7,6 +7,7 @@ library;
 
 import 'package:dio/dio.dart';
 
+import 'asset_models.dart';
 import 'hauling_models.dart';
 import 'hub_comparison_models.dart';
 import 'portfolio_models.dart';
@@ -66,6 +67,33 @@ class TradingApi {
       data: request.toJson(),
     );
     return HaulingResponse.fromJson(response.data!);
+  }
+
+  // ── GET /api/v1/trading/assets ─────────────────────────────────────────────
+
+  /// Lists the marketable (and non-marketable) items the character owns, used
+  /// as the source for the Sell-from-Assets picker.
+  Future<AssetsResponse> listAssets() async {
+    final response =
+        await _dio.get<Map<String, dynamic>>('/api/v1/trading/assets');
+    return AssetsResponse.fromJson(response.data!);
+  }
+
+  // ── POST /api/v1/trading/assets/sell-options ───────────────────────────────
+
+  /// Finds ranked sell locations (taker model: instant sell into a buy order,
+  /// net of sales tax) for an owned asset across the major hubs plus every
+  /// station in the item's current region. Returns a [SellOptionsResponse] with
+  /// options pre-sorted by total_net desc; an empty `options` list means no
+  /// sell locations were found.
+  Future<SellOptionsResponse> findSellOptions(
+    SellOptionsRequest request,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/trading/assets/sell-options',
+      data: request.toJson(),
+    );
+    return SellOptionsResponse.fromJson(response.data!);
   }
 
   // ── POST /api/v1/trading/routes/calculate ──────────────────────────────────
