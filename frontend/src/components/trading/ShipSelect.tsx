@@ -31,20 +31,31 @@ export function ShipSelect({
   // selectable.
   const [activeShip, setActiveShip] = useState<Ship | null>(null);
   const [loading, setLoading] = useState(false);
+  // True when the ship fetch failed (network/auth) and we fell back to the
+  // generic hauler list — surfaced so the user isn't silently shown wrong ships.
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const loadShips = async () => {
       if (!authenticated) {
         setShips(fallbackShips);
         setActiveShip(null);
+        setLoadError(false);
         return;
       }
 
       setLoading(true);
+      let failed = false;
       try {
         const [characterShips, active] = await Promise.all([
-          fetchCharacterShips().catch(() => null),
-          fetchCharacterShip().catch(() => null),
+          fetchCharacterShips().catch(() => {
+            failed = true;
+            return null;
+          }),
+          fetchCharacterShip().catch(() => {
+            failed = true;
+            return null;
+          }),
         ]);
         if (characterShips && characterShips.length > 0) {
           setShips(characterShips);
@@ -59,6 +70,7 @@ export function ShipSelect({
           });
         }
       } finally {
+        setLoadError(failed);
         setLoading(false);
       }
     };
@@ -102,6 +114,11 @@ export function ShipSelect({
           })}
         </SelectContent>
       </Select>
+      {loadError && (
+        <p className="text-xs text-amber-600 dark:text-amber-500" role="status">
+          Deine Schiffe konnten nicht geladen werden — Standardliste angezeigt.
+        </p>
+      )}
     </div>
   );
 }

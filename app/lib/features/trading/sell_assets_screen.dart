@@ -20,42 +20,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/asset_models.dart';
 import '../../core/breakpoint.dart';
+import '../../core/format.dart';
+import '../../core/security_risk.dart';
 import 'providers.dart';
 import 'sell_assets_providers.dart';
-
-// ---------------------------------------------------------------------------
-// Security-risk → colour / label mapping (safe=green, caution=amber, danger=red)
-// ---------------------------------------------------------------------------
-
-const Color _kSafeColor = Color(0xFF66BB6A);
-const Color _kCautionColor = Color(0xFFFF9800);
-const Color _kDangerColor = Color(0xFFF44336);
-
-/// Maps a backend `security_risk` value to its chip colour.
-Color sellSecurityRiskColor(String risk) {
-  switch (risk) {
-    case 'danger':
-      return _kDangerColor;
-    case 'caution':
-      return _kCautionColor;
-    case 'safe':
-    default:
-      return _kSafeColor;
-  }
-}
-
-/// Maps a backend `security_risk` value to a German chip label.
-String sellSecurityRiskLabel(String risk) {
-  switch (risk) {
-    case 'danger':
-      return 'Gefahr';
-    case 'caution':
-      return 'Vorsicht';
-    case 'safe':
-    default:
-      return 'Sicher';
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -287,7 +255,7 @@ class _PickerPaneState extends ConsumerState<_PickerPane> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text(
-                      '${_fmtUnits(asset.quantity.toDouble())} × '
+                      '${fmtUnits(asset.quantity.toDouble())} × '
                       '${asset.locationName}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -672,7 +640,7 @@ class _OptionCard extends StatelessWidget {
 
               // ── total_net — large accent (headline) ────────────────────────
               Text(
-                '${_fmtIsk(option.totalNet)} ISK',
+                '${fmtIsk(option.totalNet)} ISK',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: accent,
                       fontWeight: FontWeight.bold,
@@ -687,11 +655,11 @@ class _OptionCard extends StatelessWidget {
                 children: [
                   _Meta(
                     icon: Icons.shopping_cart_rounded,
-                    label: 'Kauf ${_fmtIsk(option.buyPrice)}',
+                    label: 'Kauf ${fmtIsk(option.buyPrice)}',
                   ),
                   _Meta(
                     icon: Icons.attach_money_rounded,
-                    label: 'Netto/Stk ${_fmtIsk(option.unitNet)}',
+                    label: 'Netto/Stk ${fmtIsk(option.unitNet)}',
                   ),
                   _Meta(
                     icon: Icons.alt_route_rounded,
@@ -776,7 +744,7 @@ class _SecurityRiskChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = sellSecurityRiskColor(risk);
+    final color = securityRiskColor(risk);
     return Container(
       key: Key('sell-risk-chip-$risk'),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -791,7 +759,7 @@ class _SecurityRiskChip extends StatelessWidget {
           Icon(Icons.shield_rounded, size: 14, color: color),
           const SizedBox(width: 4),
           Text(
-            sellSecurityRiskLabel(risk),
+            securityRiskLabel(risk),
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.w600,
@@ -864,7 +832,7 @@ class SellOptionDetail extends ConsumerWidget {
           const SizedBox(height: 12),
 
           Text(
-            '${_fmtIsk(option.totalNet)} ISK netto',
+            '${fmtIsk(option.totalNet)} ISK netto',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: accent,
                   fontWeight: FontWeight.bold,
@@ -879,11 +847,11 @@ class SellOptionDetail extends ConsumerWidget {
             children: [
               _Meta(
                 icon: Icons.shopping_cart_rounded,
-                label: 'Kaufpreis ${_fmtIsk(option.buyPrice)}',
+                label: 'Kaufpreis ${fmtIsk(option.buyPrice)}',
               ),
               _Meta(
                 icon: Icons.attach_money_rounded,
-                label: 'Netto/Stk ${_fmtIsk(option.unitNet)}',
+                label: 'Netto/Stk ${fmtIsk(option.unitNet)}',
               ),
               _Meta(
                 icon: Icons.alt_route_rounded,
@@ -956,19 +924,3 @@ class SellOptionDetail extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Formatting helpers (mirrors hauling/roi/hub screens)
-// ---------------------------------------------------------------------------
-
-String _fmtIsk(double v) {
-  if (v >= 1e9) return '${(v / 1e9).toStringAsFixed(2)}B';
-  if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(2)}M';
-  if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
-  return v.toStringAsFixed(2);
-}
-
-String _fmtUnits(double v) {
-  if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(1)}M';
-  if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
-  return v.toStringAsFixed(0);
-}

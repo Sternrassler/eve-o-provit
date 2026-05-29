@@ -20,44 +20,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/hauling_models.dart';
 import '../../core/breakpoint.dart';
+import '../../core/format.dart';
+import '../../core/security_risk.dart';
 import 'current_selection_prefill.dart';
 import 'hauling_providers.dart';
 import 'providers.dart';
 import 'ship_select.dart';
-
-// ---------------------------------------------------------------------------
-// Security-risk → colour mapping (safe=green, caution=amber, danger=red)
-// ---------------------------------------------------------------------------
-
-const Color _kSafeColor = Color(0xFF66BB6A);
-const Color _kCautionColor = Color(0xFFFF9800);
-const Color _kDangerColor = Color(0xFFF44336);
-
-/// Maps a backend `security_risk` value to its chip colour.
-Color securityRiskColor(String risk) {
-  switch (risk) {
-    case 'danger':
-      return _kDangerColor;
-    case 'caution':
-      return _kCautionColor;
-    case 'safe':
-    default:
-      return _kSafeColor;
-  }
-}
-
-/// Maps a backend `security_risk` value to a German chip label.
-String securityRiskLabel(String risk) {
-  switch (risk) {
-    case 'danger':
-      return 'Gefahr';
-    case 'caution':
-      return 'Vorsicht';
-    case 'safe':
-    default:
-      return 'Sicher';
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -446,7 +414,7 @@ class _RouteCard extends StatelessWidget {
 
               // ── ISK/h — large accent ─────────────────────────────────────
               Text(
-                '${_fmtIsk(route.iskPerHour)} ISK/h',
+                '${fmtIsk(route.iskPerHour)} ISK/h',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: accent,
                       fontWeight: FontWeight.bold,
@@ -469,7 +437,7 @@ class _RouteCard extends StatelessWidget {
                   ),
                   _Meta(
                     icon: Icons.payments_rounded,
-                    label: '${_fmtIsk(route.totalProfit)} ISK',
+                    label: '${fmtIsk(route.totalProfit)} ISK',
                   ),
                 ],
               ),
@@ -591,7 +559,7 @@ class HaulingRouteDetail extends ConsumerWidget {
           const SizedBox(height: 12),
 
           Text(
-            '${_fmtIsk(route.iskPerHour)} ISK/h',
+            '${fmtIsk(route.iskPerHour)} ISK/h',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   color: accent,
                   fontWeight: FontWeight.bold,
@@ -614,15 +582,15 @@ class HaulingRouteDetail extends ConsumerWidget {
               ),
               _Meta(
                 icon: Icons.payments_rounded,
-                label: 'Gewinn ${_fmtIsk(route.totalProfit)}',
+                label: 'Gewinn ${fmtIsk(route.totalProfit)}',
               ),
               _Meta(
                 icon: Icons.account_balance_wallet_rounded,
-                label: 'Kapital ${_fmtIsk(route.totalCapital)}',
+                label: 'Kapital ${fmtIsk(route.totalCapital)}',
               ),
               _Meta(
                 icon: Icons.inventory_2_rounded,
-                label: '${_fmtVolume(route.totalVolume)} m³',
+                label: '${fmtVolume(route.totalVolume)} m³',
               ),
             ],
           ),
@@ -652,13 +620,13 @@ class HaulingRouteDetail extends ConsumerWidget {
                   DataRow(
                     cells: [
                       DataCell(Text(item.name)),
-                      DataCell(Text(_fmtUnits(item.quantity.toDouble()))),
-                      DataCell(Text(_fmtIsk(item.buyPrice))),
-                      DataCell(Text(_fmtIsk(item.sellPrice))),
+                      DataCell(Text(fmtUnits(item.quantity.toDouble()))),
+                      DataCell(Text(fmtIsk(item.buyPrice))),
+                      DataCell(Text(fmtIsk(item.sellPrice))),
                       DataCell(Text(
-                          '${_fmtVolume(item.unitVolume * item.quantity)} m³')),
-                      DataCell(Text(_fmtIsk(item.profit))),
-                      DataCell(Text(_fmtIsk(item.profitPerM3))),
+                          '${fmtVolume(item.unitVolume * item.quantity)} m³')),
+                      DataCell(Text(fmtIsk(item.profit))),
+                      DataCell(Text(fmtIsk(item.profitPerM3))),
                     ],
                   ),
               ],
@@ -728,25 +696,3 @@ class HaulingRouteDetail extends ConsumerWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Formatting helpers (mirrors roi/hub screens)
-// ---------------------------------------------------------------------------
-
-String _fmtIsk(double v) {
-  if (v >= 1e9) return '${(v / 1e9).toStringAsFixed(2)}B';
-  if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(2)}M';
-  if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
-  return v.toStringAsFixed(2);
-}
-
-String _fmtVolume(double v) {
-  if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(1)}M';
-  if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
-  return v.toStringAsFixed(0);
-}
-
-String _fmtUnits(double v) {
-  if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(1)}M';
-  if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
-  return v.toStringAsFixed(0);
-}
