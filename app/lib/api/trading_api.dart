@@ -7,6 +7,7 @@ library;
 
 import 'package:dio/dio.dart';
 
+import 'hauling_models.dart';
 import 'hub_comparison_models.dart';
 import 'portfolio_models.dart';
 import 'trading_models.dart';
@@ -51,6 +52,20 @@ class TradingApi {
       data: request.toJson(),
     );
     return PortfolioResult.fromJson(response.data!);
+  }
+
+  // ── POST /api/v1/trading/hauling/routes ────────────────────────────────────
+
+  /// Finds profitable station→station hauling routes in the character's
+  /// current region plus adjacent regions. Returns a [HaulingResponse] with
+  /// routes pre-sorted by isk_per_hour desc; an empty `routes` list means no
+  /// profitable routes were found in the neighborhood.
+  Future<HaulingResponse> findHaulingRoutes(HaulingRequest request) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/trading/hauling/routes',
+      data: request.toJson(),
+    );
+    return HaulingResponse.fromJson(response.data!);
   }
 
   // ── POST /api/v1/trading/routes/calculate ──────────────────────────────────
