@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **ROI-Kapital wird mit dem echten Wallet-Kontostand vorbefüllt.** Neuer Endpoint `GET /api/v1/character/wallet` (ESI `/characters/{id}/wallet/`, 60 s gecacht) liefert den ISK-Stand; ROI-Rechner (Web + Flutter) befüllt das Kapital-Feld damit vor — überschreibbar nach dem `override ?? wallet ?? default`-Muster, das Region/Schiff schon nutzen. Erfordert den neuen Scope `esi-wallet.read_character_wallet.v1`; der Wallet-Abruf ist fehlertolerant (Charaktere, die vor der Scope-Erweiterung autorisiert haben, fallen auf den Default zurück).
+
+### Changed
+
+- **SSO fragt zusätzlich `esi-wallet.read_character_wallet.v1` an** (Web + Mobile). **Achtung:** Der Scope muss in beiden EVE-App-Registrierungen auf developers.eveonline.com aktiviert sein, bevor diese Version deployt wird — sonst schlägt der Login fehl. Bestehende Nutzer müssen die App neu autorisieren.
+
 ## [0.12.7] - 2026-05-29
 
 ### Changed

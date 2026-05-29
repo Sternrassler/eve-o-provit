@@ -19,6 +19,7 @@ import '../../api/portfolio_models.dart';
 import '../../api/trading_models.dart';
 import '../../core/breakpoint.dart';
 import '../../core/format.dart';
+import '../character/providers.dart';
 import 'current_selection_prefill.dart';
 import 'providers.dart';
 import 'roi_providers.dart';
@@ -105,11 +106,30 @@ class _InputFormState extends ConsumerState<_InputForm>
 
   String? _error;
 
+  // Wallet → capital prefill: apply once, and never over an explicit user edit
+  // (mirrors the region/ship `override ?? current ?? default` semantics).
+  bool _capitalPrefilled = false;
+  bool _capitalUserEdited = false;
+
   @override
   void initState() {
     super.initState();
     // Pre-fill region + ship with the character's current region/active ship.
     startSelectionPrefill();
+    // Pre-fill capital with the character's wallet balance.
+    ref.listenManual(walletBalanceProvider, (_, _) => _tryPrefillCapital());
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _tryPrefillCapital());
+  }
+
+  void _tryPrefillCapital() {
+    if (_capitalPrefilled || _capitalUserEdited) return;
+    final async = ref.read(walletBalanceProvider);
+    if (!async.hasValue && async is! AsyncError) return; // still loading
+    _capitalPrefilled = true;
+    final balance = async.value;
+    if (balance == null || balance <= 0) return; // no wallet → keep default
+    _capitalController.text = balance.floor().toString();
   }
 
   @override
@@ -214,6 +234,7 @@ class _InputFormState extends ConsumerState<_InputForm>
           enabled: !busy,
           keyboardType: TextInputType.number,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onChanged: (_) => _capitalUserEdited = true,
           decoration: const InputDecoration(
             labelText: 'Kapital',
             border: OutlineInputBorder(),

@@ -41,6 +41,16 @@ class CharacterApi {
     return v is num ? v.toInt() : null;
   }
 
+  // ── GET /api/v1/character/wallet ───────────────────────────────────────────
+
+  /// Returns the character's wallet balance in ISK. Used to pre-fill ROI capital.
+  Future<double> walletBalance() async {
+    final response =
+        await _dio.get<Map<String, dynamic>>('/api/v1/character/wallet');
+    final v = response.data?['balance'];
+    return v is num ? v.toDouble() : 0;
+  }
+
   // ── GET /api/v1/character/ships ────────────────────────────────────────────
 
   /// Returns all ships in the character's current hangar.

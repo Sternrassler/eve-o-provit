@@ -261,6 +261,38 @@ func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
 	return c.JSON(ships)
 }
 
+// GetCharacterWallet handles GET /api/v1/character/wallet
+//
+// @Summary Get character wallet balance
+// @Description Get the authenticated character's wallet balance in ISK (used to prefill ROI capital)
+// @Tags Character
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Object with balance (float, ISK)"
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/character/wallet [get]
+func (h *TradingHandler) GetCharacterWallet(c *fiber.Ctx) error {
+	characterID, ok := c.Locals("character_id").(int)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
+	accessToken, ok := c.Locals("access_token").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
+
+	balance, err := h.characterHelper.GetWalletBalance(c.Context(), characterID, accessToken)
+	if err != nil {
+		log.Printf("ERROR: GetCharacterWallet failed for characterID=%d: %v", characterID, err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch wallet balance",
+		})
+	}
+
+	return c.JSON(fiber.Map{"balance": balance})
+}
+
 // SetAutopilotWaypoint handles POST /api/v1/esi/ui/autopilot/waypoint
 // Sets a waypoint in the EVE client's autopilot via ESI UI API
 //

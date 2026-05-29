@@ -169,6 +169,7 @@ func setupApp(c *AppContainer) *fiber.App {
 	protected.Get("/character/location", c.TradingHandler.GetCharacterLocation)
 	protected.Get("/character/ship", c.TradingHandler.GetCharacterShip)
 	protected.Get("/character/ships", c.TradingHandler.GetCharacterShips)
+	protected.Get("/character/wallet", c.TradingHandler.GetCharacterWallet)
 
 	protected.Get("/characters/:characterId/skills", c.CharacterHandler.GetCharacterSkills)
 	protected.Get("/characters/:characterId/fitting/:shipTypeId", c.FittingHandler.GetCharacterFitting)
