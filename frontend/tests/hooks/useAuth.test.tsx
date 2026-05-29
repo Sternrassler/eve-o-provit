@@ -1,6 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+
+// AuthProvider uses useQueryClient(); wrap it in a QueryClientProvider.
+function Wrapper({ children }: { children: React.ReactNode }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return (
+    <QueryClientProvider client={client}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
+  );
+}
 
 vi.mock("@/lib/eve-sso", () => ({
   buildAuthorizationUrl: vi.fn(async () => "https://login.eveonline.com/authorize?mock=1"),
@@ -39,7 +51,7 @@ describe("useAuth Hook (cookie session)", () => {
 
   it("returns the auth context within AuthProvider", async () => {
     vi.stubGlobal("fetch", mockFetchSession(false));
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     expect(result.current).toBeDefined();
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.character).toBeNull();
@@ -55,7 +67,7 @@ describe("useAuth Hook (cookie session)", () => {
   it("checks the session on mount via GET /auth/session with credentials", async () => {
     const fetchMock = mockFetchSession(false);
     vi.stubGlobal("fetch", fetchMock);
-    renderHook(() => useAuth(), { wrapper: AuthProvider });
+    renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalled();
     });
@@ -66,7 +78,7 @@ describe("useAuth Hook (cookie session)", () => {
 
   it("populates character and isAuthenticated for an authenticated session", async () => {
     vi.stubGlobal("fetch", mockFetchSession(true));
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => {
       expect(result.current.isAuthenticated).toBe(true);
     });
@@ -77,7 +89,7 @@ describe("useAuth Hook (cookie session)", () => {
   it("logout calls POST /auth/logout and clears the character", async () => {
     const fetchMock = mockFetchSession(true);
     vi.stubGlobal("fetch", fetchMock);
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isAuthenticated).toBe(true));
 
     await result.current.logout();
@@ -97,7 +109,7 @@ describe("useAuth Hook (cookie session)", () => {
     delete (window as unknown as { location?: unknown }).location;
     (window as unknown as { location: { href: string } }).location = { href: "" };
 
-    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await result.current.login();

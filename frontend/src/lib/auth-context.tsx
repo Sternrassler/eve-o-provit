@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { buildAuthorizationUrl } from "./eve-sso";
 
 interface CharacterInfo {
@@ -37,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [character, setCharacter] = useState<CharacterInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   const logout = useCallback(async () => {
     await fetch(`${API_BASE_URL}/auth/logout`, {
@@ -45,7 +47,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     setIsAuthenticated(false);
     setCharacter(null);
-  }, []);
+    // Drop all cached per-character data (location, ship, …) so the next login
+    // in the same browser can't be served the previous character's data.
+    queryClient.clear();
+  }, [queryClient]);
 
   const checkSession = useCallback(async () => {
     try {
