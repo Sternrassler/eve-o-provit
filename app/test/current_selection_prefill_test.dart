@@ -8,9 +8,31 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:eve_o_provit/api/trading_models.dart';
+import 'package:eve_o_provit/auth/auth_controller.dart';
+import 'package:eve_o_provit/features/character/character_models.dart';
 import 'package:eve_o_provit/features/character/providers.dart';
 import 'package:eve_o_provit/features/trading/current_selection_prefill.dart';
 import 'package:eve_o_provit/features/trading/providers.dart';
+
+CharacterShip _ship(int typeId) => CharacterShip(
+      shipTypeId: typeId,
+      shipName: 'Test',
+      shipItemId: 1,
+      shipTypeName: 'Test Ship',
+      cargoCapacity: 1000,
+    );
+
+// Auth controller stub that reports an authenticated session (the prefill is
+// gated on Authenticated).
+class _AuthedController extends AuthController {
+  @override
+  Future<AuthState> build() async => const Authenticated();
+}
+
+class _UnauthedController extends AuthController {
+  @override
+  Future<AuthState> build() async => const Unauthenticated();
+}
 
 // Minimal host widget that mounts the mixin.
 class _Host extends ConsumerStatefulWidget {
@@ -48,7 +70,8 @@ void main() {
 
   testWidgets('seeds region + ship from current values', (tester) async {
     final c = ProviderContainer(overrides: [
-      activeShipTypeIdProvider.overrideWith((ref) async => 12005),
+      authControllerProvider.overrideWith(_AuthedController.new),
+      activeShipProvider.overrideWith((ref) async => _ship(12005)),
       currentRegionIdProvider.overrideWith((ref) async => 10000042),
       regionsProvider.overrideWith((ref) async => regions),
     ]);
@@ -59,18 +82,36 @@ void main() {
     expect(c.read(selectedRegionProvider)?.id, 10000042);
   });
 
-  testWidgets('falls back to ship 648 when no active ship; region stays null',
+  testWidgets('region stays null when no current region is available',
       (tester) async {
     final c = ProviderContainer(overrides: [
-      // Real provider returns null on error → mixin applies the 648 fallback.
-      activeShipTypeIdProvider.overrideWith((ref) async => null),
+      authControllerProvider.overrideWith(_AuthedController.new),
+      activeShipProvider.overrideWith((ref) async => _ship(12005)),
       currentRegionIdProvider.overrideWith((ref) async => null),
       regionsProvider.overrideWith((ref) async => regions),
     ]);
     addTearDown(c.dispose);
     await _pump(tester, c);
 
-    expect(c.read(selectedShipTypeIdProvider), 648);
+    // Ship still seeds; region has no current value → left unset (no fallback).
+    expect(c.read(selectedShipTypeIdProvider), 12005);
+    expect(c.read(selectedRegionProvider), isNull);
+  });
+
+  // Regression guard: a mount before authentication must NOT prematurely apply
+  // the 648 fallback / leave region empty for the session (the original bug —
+  // the prefill fired during the SSO login transition and cached null).
+  testWidgets('does not prefill while unauthenticated', (tester) async {
+    final c = ProviderContainer(overrides: [
+      authControllerProvider.overrideWith(_UnauthedController.new),
+      activeShipProvider.overrideWith((ref) async => _ship(12005)),
+      currentRegionIdProvider.overrideWith((ref) async => 10000042),
+      regionsProvider.overrideWith((ref) async => regions),
+    ]);
+    addTearDown(c.dispose);
+    await _pump(tester, c);
+
+    expect(c.read(selectedShipTypeIdProvider), isNull);
     expect(c.read(selectedRegionProvider), isNull);
   });
 }

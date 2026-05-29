@@ -8,6 +8,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/dio_client.dart';
+import '../../auth/auth_controller.dart';
 import 'character_api.dart';
 import 'character_models.dart';
 
@@ -43,6 +44,10 @@ final activeShipProvider = FutureProvider<CharacterShip>((ref) async {
 /// Region ID of the character's current solar system; null on error.
 /// Used to pre-fill region selectors with the current region.
 final currentRegionIdProvider = FutureProvider<int?>((ref) async {
+  // Gate on auth: only fetch once authenticated, and re-run when auth flips so a
+  // login transition refetches with a valid token (no stale pre-auth null cached).
+  final auth = ref.watch(authControllerProvider).value;
+  if (auth is! Authenticated) return null;
   final api = ref.watch(characterApiProvider);
   try {
     return await api.currentRegionId();

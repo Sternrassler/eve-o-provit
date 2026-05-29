@@ -16,6 +16,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/trading_models.dart';
+import '../../auth/auth_controller.dart';
 import '../character/providers.dart';
 import 'providers.dart';
 
@@ -23,35 +24,55 @@ mixin CurrentSelectionPrefill<T extends ConsumerStatefulWidget>
     on ConsumerState<T> {
   bool _shipPrefilled = false;
   bool _regionPrefilled = false;
+  bool _refreshedForAuth = false;
 
   /// Kicks off the one-time region + ship pre-fill after the first frame.
+  ///
+  /// The prefill only finalizes once the user is [Authenticated] — otherwise a
+  /// mount during the SSO login transition (token not yet available) would
+  /// resolve the data providers to null and prematurely apply the fallback. We
+  /// listen to the auth state and the data providers and re-attempt on each
+  /// change; the gated providers refetch when auth flips, so the real values
+  /// arrive and get applied.
   void startSelectionPrefill() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _tryPrefillShip();
-      // Region depends on two async sources (current region id + region list);
-      // set up listeners once, then re-check on every change.
-      ref.listenManual(currentRegionIdProvider, (_, _) => _tryPrefillRegion());
-      ref.listenManual(regionsProvider, (_, _) => _tryPrefillRegion());
-      _tryPrefillRegion();
-    });
+    ref.listenManual(authControllerProvider, (_, _) => _attempt());
+    ref.listenManual(currentRegionIdProvider, (_, _) => _attempt());
+    ref.listenManual(regionsProvider, (_, _) => _attempt());
+    ref.listenManual(activeShipProvider, (_, _) => _attempt());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _attempt());
+  }
+
+  void _attempt() {
+    // Wait until authenticated before finalizing anything (incl. the fallback).
+    if (ref.read(authControllerProvider).value is! Authenticated) return;
+
+    // On the first authenticated tick, discard any value the gated providers
+    // computed during the pre-auth window. Without this, a mount right after the
+    // SSO login transition reads a stale AsyncData(null) (the dependent provider
+    // hasn't re-run yet) and prematurely applies the ship fallback. Forcing a
+    // fresh computation under auth makes the real values arrive before we apply.
+    if (!_refreshedForAuth) {
+      _refreshedForAuth = true;
+      // Discard any value these providers computed during the pre-auth window
+      // so the real values are fetched under auth before we apply.
+      ref.invalidate(activeShipProvider);
+      ref.invalidate(currentRegionIdProvider);
+      return; // the providers' listeners re-invoke _attempt once they resolve
+    }
+
+    _tryPrefillShip();
+    _tryPrefillRegion();
   }
 
   void _tryPrefillShip() {
     if (_shipPrefilled) return;
-    final async = ref.read(activeShipTypeIdProvider);
+    // Read the active ship directly (the same provider ShipSelect uses). Act
+    // only once it has resolved (data or error); _attempt() re-runs on changes.
+    final async = ref.read(activeShipProvider);
     if (async.hasValue) {
-      _applyShip(async.value);
+      _applyShip(async.value?.shipTypeId);
     } else if (async is AsyncError) {
       _applyShip(null);
-    } else {
-      ref.listenManual(activeShipTypeIdProvider, (_, next) {
-        if (_shipPrefilled) return;
-        if (next.hasValue) {
-          _applyShip(next.value);
-        } else if (next is AsyncError) {
-          _applyShip(null);
-        }
-      });
     }
   }
 

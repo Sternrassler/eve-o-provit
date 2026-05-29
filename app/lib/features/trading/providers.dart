@@ -51,18 +51,6 @@ final characterShipsProvider =
   }
 });
 
-/// Fetches the active ship type id; used to seed [selectedShipTypeIdProvider].
-///
-/// Returns null on error so the fallback (648) is used.
-final activeShipTypeIdProvider = FutureProvider<int?>((ref) async {
-  final api = ref.watch(characterApiProvider);
-  try {
-    final ship = await api.activeShip();
-    return ship.shipTypeId;
-  } catch (_) {
-    return null;
-  }
-});
 
 /// Fetches [CharacterFitting] for a given (characterId, shipTypeId) pair.
 final fittingProvider = FutureProvider.family<CharacterFitting, (int, int)>(
