@@ -15,6 +15,7 @@ import '../../api/trading_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/breakpoint.dart';
 import '../trading/providers.dart';
+import 'current_selection_prefill.dart';
 import 'route_detail.dart';
 import 'route_list.dart';
 import 'ship_fitting_card.dart';
@@ -33,51 +34,13 @@ class TradingScreen extends ConsumerStatefulWidget {
   ConsumerState<TradingScreen> createState() => _TradingScreenState();
 }
 
-class _TradingScreenState extends ConsumerState<TradingScreen> {
-  /// Whether the active-ship prefill has already been applied this session.
-  bool _activeShipPrefilled = false;
-
+class _TradingScreenState extends ConsumerState<TradingScreen>
+    with CurrentSelectionPrefill {
   @override
   void initState() {
     super.initState();
-    // Seed selectedShipTypeIdProvider from the active ship once the provider
-    // resolves — mirrors the web's `shipOverride ?? activeShip ?? 648`.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _prefillActiveShip());
-  }
-
-  void _prefillActiveShip() {
-    if (_activeShipPrefilled) return;
-    final asyncActiveShip = ref.read(activeShipTypeIdProvider);
-
-    // Apply the prefill only ONCE the active ship has resolved (data or error).
-    // Mirrors the web's `shipOverride ?? activeShip ?? 648`: the 648 fallback
-    // must NOT be applied prematurely while the active ship is still loading,
-    // otherwise it blocks the real active ship (which can resolve late, e.g.
-    // after a 401→token-refresh) from ever being selected.
-    if (asyncActiveShip.hasValue) {
-      _applyShipPrefill(asyncActiveShip.value);
-    } else if (asyncActiveShip is AsyncError) {
-      _applyShipPrefill(null);
-    } else {
-      ref.listenManual(activeShipTypeIdProvider, (_, next) {
-        if (_activeShipPrefilled) return;
-        if (next.hasValue) {
-          _applyShipPrefill(next.value);
-        } else if (next is AsyncError) {
-          _applyShipPrefill(null);
-        }
-      });
-    }
-  }
-
-  /// Seeds [selectedShipTypeIdProvider] with the active ship (or 648 fallback)
-  /// once, never overwriting an explicit user choice.
-  void _applyShipPrefill(int? activeTypeId) {
-    if (_activeShipPrefilled) return;
-    _activeShipPrefilled = true;
-    if (ref.read(selectedShipTypeIdProvider) == null) {
-      ref.read(selectedShipTypeIdProvider.notifier).select(activeTypeId ?? 648);
-    }
+    // Seed region + ship from the character's current region/active ship once.
+    startSelectionPrefill();
   }
 
   @override
