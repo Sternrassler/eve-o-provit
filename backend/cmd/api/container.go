@@ -37,6 +37,7 @@ type AppContainer struct {
 	MultiHubHandler    *handlers.MultiHubHandler
 	PortfolioHandler   *handlers.PortfolioHandler
 	HaulingHandler     *handlers.HaulingHandler
+	AssetsHandler      *handlers.AssetsHandler
 
 	// Background workers
 	CompetitionCollector *services.CompetitionCollector
@@ -162,6 +163,10 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	haulingRouteFinder := services.NewRouteFinder(c.ESIClient, c.MarketRepo, c.SDERepo, c.DB.SDE, c.Redis)
 	haulingService := services.NewHaulingService(c.SDERepo, haulingRouteFinder, fittingService, skillsService, characterHelper, c.DB.SDE, c.AppLogger)
 	c.HaulingHandler = handlers.NewHaulingHandler(haulingService)
+
+	// Sell-from-assets (#107) — reuses hub price fetch + skills + navigation.
+	assetSaleService := services.NewAssetSaleService(skillsService, c.ESIClient, c.SDERepo, services.NewESIAssetFetcher(), c.SDERepo, c.DB.SDE, c.AppLogger)
+	c.AssetsHandler = handlers.NewAssetsHandler(assetSaleService)
 
 	// Start the competition collector in the background (lazy-tracked pairs).
 	go c.CompetitionCollector.Start(ctx)
