@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-05-29
+
 ### Added
 
 - **Neighborhood Hauling Routes (#45):** `POST /api/v1/trading/hauling/routes` — from the character's current region + adjacent regions (1 hop, derived from the stargate graph), finds profitable station→station arbitrage (buy cheap, haul, sell dear; direct/taker, no order placing). Per route an optimal cargo load (greedy by profit/m³ under cargo m³ + capital + liquidity), travel time + jumps + security risk (safe/caution/danger), ranked by ISK/h. New `SDERepository.GetNeighborRegions`; reuses the region order fetch, navigation, fitting cargo and skills.
