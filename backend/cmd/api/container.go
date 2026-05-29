@@ -36,6 +36,7 @@ type AppContainer struct {
 	CalculationHandler *handlers.CalculationHandler
 	MultiHubHandler    *handlers.MultiHubHandler
 	PortfolioHandler   *handlers.PortfolioHandler
+	HaulingHandler     *handlers.HaulingHandler
 
 	// Background workers
 	CompetitionCollector *services.CompetitionCollector
@@ -156,6 +157,11 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	// ROI Calculator / capital-allocation optimizer (#44) — reuses the route engine.
 	portfolioService := services.NewPortfolioService(routeService, skillsService, c.AppLogger)
 	c.PortfolioHandler = handlers.NewPortfolioHandler(portfolioService)
+
+	// Neighborhood hauling routes (#45) — reuses order fetch + navigation + cargo + skills.
+	haulingRouteFinder := services.NewRouteFinder(c.ESIClient, c.MarketRepo, c.SDERepo, c.DB.SDE, c.Redis)
+	haulingService := services.NewHaulingService(c.SDERepo, haulingRouteFinder, fittingService, skillsService, characterHelper, c.DB.SDE, c.AppLogger)
+	c.HaulingHandler = handlers.NewHaulingHandler(haulingService)
 
 	// Start the competition collector in the background (lazy-tracked pairs).
 	go c.CompetitionCollector.Start(ctx)
