@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.7] - 2026-05-29
+
 ### Changed
 
 - **Frontend-Aufräumarbeiten aus dem Parameter-Review (#10):** Geteilte Zahlenformatter (`app/lib/core/format.dart`: `fmtIsk`/`fmtUnits`/`fmtVolume`) und die Security-Risk-Farb-/Label-Zuordnung (`app/lib/core/security_risk.dart`) sind nun je einmal definiert und werden von allen Flutter-Trading-Screens (Hauling, Sell-Assets, ROI, Hub-Vergleich) genutzt — vorher pro Screen dupliziert, mit Drift-Risiko bei der Darstellung.
