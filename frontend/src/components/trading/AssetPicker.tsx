@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Search } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, Loader2, Search } from "lucide-react";
 import { AssetItem, SellOptionsRequest } from "@/types/trading";
 import { listAssets } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,8 @@ export function AssetPicker({
   onSearch,
 }: AssetPickerProps) {
   const [filter, setFilter] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "quantity">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [selected, setSelected] = useState<AssetItem | null>(null);
   const [quantity, setQuantity] = useState<number>(0);
   const [avoidLowSec, setAvoidLowSec] = useState(true);
@@ -51,9 +53,19 @@ export function AssetPicker({
   const filtered = useMemo(() => {
     const assets = data?.assets ?? [];
     const q = filter.trim().toLowerCase();
-    if (!q) return assets;
-    return assets.filter((a) => a.name.toLowerCase().includes(q));
-  }, [data, filter]);
+    const matched = q
+      ? assets.filter((a) => a.name.toLowerCase().includes(q))
+      : [...assets];
+    const dir = sortDir === "asc" ? 1 : -1;
+    matched.sort((a, b) => {
+      const cmp =
+        sortBy === "name"
+          ? a.name.localeCompare(b.name, "de")
+          : a.quantity - b.quantity;
+      return cmp * dir;
+    });
+    return matched;
+  }, [data, filter, sortBy, sortDir]);
 
   const handleSelect = (asset: AssetItem) => {
     if (!asset.marketable) return;
@@ -91,6 +103,44 @@ export function AssetPicker({
           />
         </div>
       </div>
+
+      {!isLoading && !isError && (data?.assets?.length ?? 0) > 0 && (
+        <div className="flex items-center gap-2" data-testid="asset-sort">
+          <span className="text-xs text-muted-foreground">Sortieren:</span>
+          <Button
+            type="button"
+            variant={sortBy === "name" ? "secondary" : "ghost"}
+            size="sm"
+            data-testid="sort-name"
+            onClick={() => setSortBy("name")}
+          >
+            Name
+          </Button>
+          <Button
+            type="button"
+            variant={sortBy === "quantity" ? "secondary" : "ghost"}
+            size="sm"
+            data-testid="sort-quantity"
+            onClick={() => setSortBy("quantity")}
+          >
+            Menge
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="sort-dir"
+            aria-label={sortDir === "asc" ? "Aufsteigend" : "Absteigend"}
+            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+          >
+            {sortDir === "asc" ? (
+              <ArrowDownAZ className="size-4" />
+            ) : (
+              <ArrowUpAZ className="size-4" />
+            )}
+          </Button>
+        </div>
+      )}
 
       {isLoading && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">

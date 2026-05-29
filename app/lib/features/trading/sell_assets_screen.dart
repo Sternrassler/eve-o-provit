@@ -119,6 +119,8 @@ class _PickerPaneState extends ConsumerState<_PickerPane> {
   final _searchController = TextEditingController();
   final _quantityController = TextEditingController();
   String _query = '';
+  String _sortBy = 'name'; // 'name' | 'quantity'
+  bool _sortAsc = true;
   AssetItem? _selected;
   bool _avoidLowSec = true;
   String? _error;
@@ -190,6 +192,43 @@ class _PickerPaneState extends ConsumerState<_PickerPane> {
           ),
         ),
 
+        // ── Sort control ───────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              ChoiceChip(
+                key: const Key('sell-sort-name'),
+                label: const Text('Name'),
+                visualDensity: VisualDensity.compact,
+                selected: _sortBy == 'name',
+                onSelected: busy ? null : (_) => setState(() => _sortBy = 'name'),
+              ),
+              ChoiceChip(
+                key: const Key('sell-sort-quantity'),
+                label: const Text('Menge'),
+                visualDensity: VisualDensity.compact,
+                selected: _sortBy == 'quantity',
+                onSelected:
+                    busy ? null : (_) => setState(() => _sortBy = 'quantity'),
+              ),
+              IconButton(
+                key: const Key('sell-sort-dir'),
+                visualDensity: VisualDensity.compact,
+                tooltip: _sortAsc ? 'Aufsteigend' : 'Absteigend',
+                icon: Icon(_sortAsc
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded),
+                onPressed:
+                    busy ? null : () => setState(() => _sortAsc = !_sortAsc),
+              ),
+            ],
+          ),
+        ),
+
         // ── Asset list ─────────────────────────────────────────────────────
         Expanded(
           child: assetsAsync.when(
@@ -211,6 +250,12 @@ class _PickerPaneState extends ConsumerState<_PickerPane> {
                   .where((a) =>
                       _query.isEmpty || a.name.toLowerCase().contains(_query))
                   .toList();
+              filtered.sort((a, b) {
+                final cmp = _sortBy == 'name'
+                    ? a.name.toLowerCase().compareTo(b.name.toLowerCase())
+                    : a.quantity.compareTo(b.quantity);
+                return _sortAsc ? cmp : -cmp;
+              });
               if (resp.isEmpty) {
                 return const Center(
                   child: Padding(
