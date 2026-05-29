@@ -37,6 +37,12 @@ PortfolioResult _fakeResult() => const PortfolioResult(
           tripsPerDay: 4,
           dailyProfit: 2.5e7,
           roiPercent: 16.7,
+          buySystemName: 'Jita',
+          buyStationName: 'Jita IV - Moon 4 - Caldari Navy Assembly Plant',
+          buyStationId: 60003760,
+          sellSystemName: 'Amarr',
+          sellStationName: 'Amarr VIII (Oris) - Emperor Family Academy',
+          sellStationId: 60008494,
         ),
         PortfolioItem(
           typeId: 35,
@@ -46,6 +52,12 @@ PortfolioResult _fakeResult() => const PortfolioResult(
           tripsPerDay: 3,
           dailyProfit: 1.8e7,
           roiPercent: 15.0,
+          buySystemName: 'Jita',
+          buyStationName: 'Jita IV - Moon 4 - Caldari Navy Assembly Plant',
+          buyStationId: 60003760,
+          sellSystemName: 'Dodixie',
+          sellStationName: 'Dodixie IX - Moon 20 - Federation Navy Assembly',
+          sellStationId: 60011866,
         ),
       ],
       totalCapitalUsed: 4.8e8,
@@ -163,6 +175,18 @@ void main() {
     // Diversification summary tile.
     expect(find.text('Diversifikation'), findsOneWidget);
     expect(find.text('72/100'), findsOneWidget);
+  });
+
+  testWidgets('Allocation rows render Route text + waypoint button',
+      (tester) async {
+    await _pumpScreen(tester, 1280);
+
+    // Compact "buy → sell" route label.
+    expect(find.text('Jita → Amarr'), findsOneWidget);
+    expect(find.text('Jita → Dodixie'), findsOneWidget);
+    // One waypoint button per allocation row.
+    expect(find.byKey(const Key('roi-waypoint-34')), findsOneWidget);
+    expect(find.byKey(const Key('roi-waypoint-35')), findsOneWidget);
   });
 
   testWidgets('Empty items result shows the no-viable-portfolio empty-state',

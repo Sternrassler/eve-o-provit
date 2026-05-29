@@ -57,6 +57,12 @@ func (s *PortfolioService) Optimize(ctx context.Context, req *models.PortfolioRe
 			UnitVolume:      r.ItemVolume,
 			DailyVolume:     dailyVol,
 			TripMinutes:     r.RoundTripSeconds / 60.0,
+			BuySystemName:   r.BuySystemName,
+			BuyStationName:  r.BuyStationName,
+			BuyStationID:    r.BuyStationID,
+			SellSystemName:  r.SellSystemName,
+			SellStationName: r.SellStationName,
+			SellStationID:   r.SellStationID,
 		})
 	}
 
@@ -80,13 +86,19 @@ func (s *PortfolioService) Optimize(ctx context.Context, req *models.PortfolioRe
 			roi = it.DailyProfit / it.CapitalUsed * 100
 		}
 		items = append(items, models.PortfolioItem{
-			TypeID:      it.TypeID,
-			Name:        it.Name,
-			CapitalUsed: it.CapitalUsed,
-			Units:       it.Units,
-			TripsPerDay: it.TripsPerDay,
-			DailyProfit: it.DailyProfit,
-			ROIPercent:  roi,
+			TypeID:          it.TypeID,
+			Name:            it.Name,
+			CapitalUsed:     it.CapitalUsed,
+			Units:           it.Units,
+			TripsPerDay:     it.TripsPerDay,
+			DailyProfit:     it.DailyProfit,
+			ROIPercent:      roi,
+			BuySystemName:   it.BuySystemName,
+			BuyStationName:  it.BuyStationName,
+			BuyStationID:    it.BuyStationID,
+			SellSystemName:  it.SellSystemName,
+			SellStationName: it.SellStationName,
+			SellStationID:   it.SellStationID,
 		})
 	}
 
@@ -139,6 +151,13 @@ type Candidate struct {
 	UnitVolume      float64 // m³ per unit
 	DailyVolume     float64 // market daily volume (for liquidity cap)
 	TripMinutes     float64 // round-trip minutes for this route
+	// Execution location (buy at the buy station, sell at the sell station).
+	BuySystemName   string
+	BuyStationName  string
+	BuyStationID    int64
+	SellSystemName  string
+	SellStationName string
+	SellStationID   int64
 }
 
 // OptimizeParams are the allocation constraints.
@@ -158,6 +177,13 @@ type OutcomeItem struct {
 	Units       int
 	TripsPerDay float64
 	DailyProfit float64
+	// Execution location, carried through from the candidate.
+	BuySystemName   string
+	BuyStationName  string
+	BuyStationID    int64
+	SellSystemName  string
+	SellStationName string
+	SellStationID   int64
 }
 
 // PortfolioOutcome is the optimizer result (internal).
@@ -239,6 +265,8 @@ func (o *PortfolioOptimizer) Optimize(cands []Candidate, p OptimizeParams) Portf
 		items = append(items, OutcomeItem{
 			TypeID: s.c.TypeID, Name: s.c.Name, CapitalUsed: capUsed,
 			Units: units, TripsPerDay: float64(trips), DailyProfit: profit,
+			BuySystemName: s.c.BuySystemName, BuyStationName: s.c.BuyStationName, BuyStationID: s.c.BuyStationID,
+			SellSystemName: s.c.SellSystemName, SellStationName: s.c.SellStationName, SellStationID: s.c.SellStationID,
 		})
 		capitalLeft -= capUsed
 		timeLeft -= timeUsed

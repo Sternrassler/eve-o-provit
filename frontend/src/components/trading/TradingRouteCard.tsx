@@ -12,8 +12,7 @@ import { RouteProfitSection } from "./RouteProfitSection";
 import { RouteTravelSection } from "./RouteTravelSection";
 import { RouteCargoSection } from "./RouteCargoSection";
 import { RouteVolumeSection } from "./RouteVolumeSection";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
+import { setWaypoint } from "@/lib/api-client";
 
 interface TradingRouteCardProps {
   route: TradingRoute;
@@ -67,38 +66,8 @@ export function TradingRouteCard({ route }: TradingRouteCardProps) {
 
     setIsSettingRoute(true);
     try {
-      const buyRes = await fetch(`${API_BASE_URL}/api/v1/esi/ui/autopilot/waypoint`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          destination_id: route.buy_station_id,
-          clear_other_waypoints: true,
-          add_to_beginning: false,
-        }),
-      });
-
-      if (!buyRes.ok) {
-        if (buyRes.status === 401 || buyRes.status === 403) throw new Error("Missing scope esi-ui.write_waypoint.v1");
-        if (buyRes.status === 404) throw new Error("EVE client not running");
-        throw new Error(`Failed to set buy waypoint: ${buyRes.statusText}`);
-      }
-
-      const sellRes = await fetch(`${API_BASE_URL}/api/v1/esi/ui/autopilot/waypoint`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          destination_id: route.sell_station_id,
-          clear_other_waypoints: false,
-          add_to_beginning: false,
-        }),
-      });
-
-      if (!sellRes.ok) {
-        if (sellRes.status === 404) throw new Error("EVE client not running");
-        throw new Error(`Failed to set sell waypoint: ${sellRes.statusText}`);
-      }
+      await setWaypoint(route.buy_station_id, { clearOtherWaypoints: true });
+      await setWaypoint(route.sell_station_id, { clearOtherWaypoints: false });
 
       toast({
         title: "Route gesetzt",

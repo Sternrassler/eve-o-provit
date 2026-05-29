@@ -43,6 +43,12 @@ void main() {
           'trips_per_day': 4,
           'daily_profit': 2.5e7,
           'roi_percent': 16.7,
+          'buy_system_name': 'Jita',
+          'buy_station_name': 'Jita IV - Moon 4 - Caldari Navy Assembly Plant',
+          'buy_station_id': 60003760,
+          'sell_system_name': 'Amarr',
+          'sell_station_name': 'Amarr VIII (Oris) - Emperor Family Academy',
+          'sell_station_id': 60008494,
         },
         // Item with missing / null numeric fields.
         {
@@ -109,6 +115,17 @@ void main() {
         expect(item.dailyProfit, 2.5e7);
         expect(item.roiPercent, 16.7);
       });
+
+      test('maps buy/sell location fields', () {
+        expect(item.buySystemName, 'Jita');
+        expect(item.buyStationName,
+            'Jita IV - Moon 4 - Caldari Navy Assembly Plant');
+        expect(item.buyStationId, 60003760);
+        expect(item.sellSystemName, 'Amarr');
+        expect(item.sellStationName,
+            'Amarr VIII (Oris) - Emperor Family Academy');
+        expect(item.sellStationId, 60008494);
+      });
     });
 
     group('item with null / missing numerics', () {
@@ -124,6 +141,15 @@ void main() {
 
       test('present int field coerced to double', () {
         expect(item.tripsPerDay, 2.0);
+      });
+
+      test('absent buy/sell location fields default to empty/0', () {
+        expect(item.buySystemName, '');
+        expect(item.buyStationName, '');
+        expect(item.buyStationId, 0);
+        expect(item.sellSystemName, '');
+        expect(item.sellStationName, '');
+        expect(item.sellStationId, 0);
       });
     });
 

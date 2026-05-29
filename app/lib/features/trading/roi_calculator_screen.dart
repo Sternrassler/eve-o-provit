@@ -419,13 +419,13 @@ class _EmptyResult extends StatelessWidget {
 // Portfolio table + totals + diversification
 // ---------------------------------------------------------------------------
 
-class _PortfolioTable extends StatelessWidget {
+class _PortfolioTable extends ConsumerWidget {
   const _PortfolioTable({required this.result});
 
   final PortfolioResult result;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final skills = result.skillsApplied;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -479,22 +479,26 @@ class _PortfolioTable extends StatelessWidget {
               key: const Key('roi-allocation-table'),
               columns: const [
                 DataColumn(label: Text('Item')),
+                DataColumn(label: Text('Route')),
                 DataColumn(label: Text('Kapital'), numeric: true),
                 DataColumn(label: Text('Units'), numeric: true),
                 DataColumn(label: Text('Fahrten/Tag'), numeric: true),
                 DataColumn(label: Text('Tagesgewinn'), numeric: true),
                 DataColumn(label: Text('ROI%'), numeric: true),
+                DataColumn(label: Text('EVE')),
               ],
               rows: [
                 for (final item in result.items)
                   DataRow(
                     cells: [
                       DataCell(Text(item.name)),
+                      DataCell(_RouteCell(item: item)),
                       DataCell(Text(_fmtIsk(item.capitalUsed))),
                       DataCell(Text(_fmtUnits(item.units))),
                       DataCell(Text(item.tripsPerDay.toStringAsFixed(1))),
                       DataCell(Text(_fmtIsk(item.dailyProfit))),
                       DataCell(Text('${item.roiPercent.toStringAsFixed(1)}%')),
+                      DataCell(_WaypointButton(item: item)),
                     ],
                   ),
               ],
@@ -518,6 +522,93 @@ class _PortfolioTable extends StatelessWidget {
     if (v >= 1e6) return '${(v / 1e6).toStringAsFixed(1)}M';
     if (v >= 1e3) return '${(v / 1e3).toStringAsFixed(1)}K';
     return v.toStringAsFixed(0);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Route cell — compact "buy → sell" system names with station tooltip
+// ---------------------------------------------------------------------------
+
+class _RouteCell extends StatelessWidget {
+  const _RouteCell({required this.item});
+
+  final PortfolioItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasRoute =
+        item.buySystemName.isNotEmpty || item.sellSystemName.isNotEmpty;
+    if (!hasRoute) {
+      return const Text('—');
+    }
+    final label = '${item.buySystemName} → ${item.sellSystemName}';
+    final tooltip = 'Kaufen: ${item.buyStationName}\n'
+        'Verkaufen: ${item.sellStationName}';
+    return Tooltip(
+      message: tooltip,
+      child: Text(label),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Waypoint button — sets in-game autopilot waypoints (buy then sell)
+//
+// Reuses the exact pattern from route_detail.dart's `_setWaypoint`: clear the
+// route and set the buy station first, then add the sell station, then show a
+// success/error SnackBar.
+// ---------------------------------------------------------------------------
+
+class _WaypointButton extends ConsumerWidget {
+  const _WaypointButton({required this.item});
+
+  final PortfolioItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = item.buyStationId > 0 && item.sellStationId > 0;
+    return IconButton(
+      key: Key('roi-waypoint-${item.typeId}'),
+      icon: const Icon(Icons.navigation_rounded),
+      tooltip: 'Route an EVE übertragen',
+      visualDensity: VisualDensity.compact,
+      onPressed: enabled ? () => _setWaypoint(context, ref) : null,
+    );
+  }
+
+  Future<void> _setWaypoint(BuildContext context, WidgetRef ref) async {
+    final api = ref.read(tradingApiProvider);
+    try {
+      // Clear existing route; set buy station first, then sell station.
+      await api.setWaypoint(
+        destinationId: item.buyStationId,
+        clearOtherWaypoints: true,
+        addToBeginning: false,
+      );
+      await api.setWaypoint(
+        destinationId: item.sellStationId,
+        clearOtherWaypoints: false,
+        addToBeginning: false,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Route an EVE übertragen'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Fehler beim Setzen der Route: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 

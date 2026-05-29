@@ -77,6 +77,12 @@ class PortfolioItem {
     required this.tripsPerDay,
     required this.dailyProfit,
     required this.roiPercent,
+    this.buySystemName = '',
+    this.buyStationName = '',
+    this.buyStationId = 0,
+    this.sellSystemName = '',
+    this.sellStationName = '',
+    this.sellStationId = 0,
   });
 
   /// Backend: `type_id`
@@ -100,6 +106,24 @@ class PortfolioItem {
   /// Backend: `roi_percent` — return on invested capital, in percent.
   final double roiPercent;
 
+  /// Backend: `buy_system_name` — solar system where the item is bought.
+  final String buySystemName;
+
+  /// Backend: `buy_station_name` — station where the item is bought.
+  final String buyStationName;
+
+  /// Backend: `buy_station_id` — station/structure id used as buy waypoint.
+  final int buyStationId;
+
+  /// Backend: `sell_system_name` — solar system where the item is sold.
+  final String sellSystemName;
+
+  /// Backend: `sell_station_name` — station where the item is sold.
+  final String sellStationName;
+
+  /// Backend: `sell_station_id` — station/structure id used as sell waypoint.
+  final int sellStationId;
+
   factory PortfolioItem.fromJson(Map<String, dynamic> json) {
     return PortfolioItem(
       typeId: (json['type_id'] as num?)?.toInt() ?? 0,
@@ -109,6 +133,12 @@ class PortfolioItem {
       tripsPerDay: (json['trips_per_day'] as num?)?.toDouble() ?? 0,
       dailyProfit: (json['daily_profit'] as num?)?.toDouble() ?? 0,
       roiPercent: (json['roi_percent'] as num?)?.toDouble() ?? 0,
+      buySystemName: json['buy_system_name'] as String? ?? '',
+      buyStationName: json['buy_station_name'] as String? ?? '',
+      buyStationId: (json['buy_station_id'] as num?)?.toInt() ?? 0,
+      sellSystemName: json['sell_system_name'] as String? ?? '',
+      sellStationName: json['sell_station_name'] as String? ?? '',
+      sellStationId: (json['sell_station_id'] as num?)?.toInt() ?? 0,
     );
   }
 }
