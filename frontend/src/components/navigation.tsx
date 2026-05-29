@@ -16,6 +16,7 @@ const navItems = [
   { href: "/character", label: "Character" },
   { href: "/multi-hub", label: "Multi-Hub", badge: "Phase 2" },
   { href: "/roi-calculator", label: "ROI Calculator", badge: "Phase 2" },
+  { href: "/hauling", label: "Hauling", badge: "Phase 2" },
   { href: "/trends", label: "Trends", badge: "Phase 3" },
   { href: "/watchlist", label: "Watchlist", badge: "Phase 3" },
 ];

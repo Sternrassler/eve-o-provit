@@ -185,6 +185,53 @@ export interface PortfolioResult {
   skills_applied: SkillsApplied;
 }
 
+// Neighborhood Hauling Routes (Issue #45)
+
+export type SecurityRisk = "safe" | "caution" | "danger";
+
+export interface HaulingRequest {
+  origin_region_id: number; // 0 ⇒ backend uses character's current region
+  ship_type_id: number;
+  capital: number;
+  avoid_low_sec: boolean;
+  max_routes: number;
+}
+
+export interface HaulingItem {
+  type_id: number;
+  name: string;
+  quantity: number;
+  buy_price: number;
+  sell_price: number;
+  unit_volume: number;
+  profit: number;
+  profit_per_m3: number;
+}
+
+export interface HaulingRoute {
+  buy_system_name: string;
+  buy_station_name: string;
+  buy_station_id: number;
+  sell_system_name: string;
+  sell_station_name: string;
+  sell_station_id: number;
+  jumps: number;
+  travel_time_min: number;
+  security_risk: SecurityRisk;
+  total_profit: number;
+  total_capital: number;
+  total_volume: number;
+  isk_per_hour: number;
+  items: HaulingItem[];
+}
+
+export interface HaulingResponse {
+  origin_region_id: number;
+  regions_scanned: number[];
+  routes: HaulingRoute[]; // pre-sorted by isk_per_hour desc
+  skills_applied: SkillsApplied;
+}
+
 export interface InventorySellRequest {
   type_id: number;
   quantity: number;
