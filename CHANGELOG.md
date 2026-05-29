@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-05-29
+
 ### Added
 
 - **Sell-from-Assets:** the asset picker is now sortable by name or quantity (ascending/descending), in both the web and Flutter clients. Client-side only — no API change. Items stored in player structures/citadels remain a documented limitation (no route resolvable → "Keine Verkaufsorte").
