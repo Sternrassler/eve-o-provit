@@ -74,10 +74,7 @@ func (s *PortfolioService) Optimize(ctx context.Context, req *models.PortfolioRe
 		MaxItemPct:      req.MaxItemPct,
 	})
 
-	skills, serr := s.skills.GetCharacterSkills(ctx, characterID, accessToken)
-	if serr != nil || skills == nil {
-		skills = &TradingSkills{}
-	}
+	_, _, skillsApplied := resolveTradingRates(ctx, s.skills, characterID, accessToken)
 
 	items := make([]models.PortfolioItem, 0, len(outcome.Items))
 	for _, it := range outcome.Items {
@@ -108,13 +105,7 @@ func (s *PortfolioService) Optimize(ctx context.Context, req *models.PortfolioRe
 		TotalDailyProfit:     outcome.TotalDailyProfit,
 		TimeUsedMin:          outcome.TimeUsedMin,
 		DiversificationScore: outcome.DiversificationScore,
-		SkillsApplied: models.SkillsApplied{
-			Applied:         serr == nil,
-			Accounting:      skills.Accounting,
-			BrokerRelations: skills.BrokerRelations,
-			SalesTaxRate:    SalesTaxRate(skills.Accounting),
-			BrokerFeeRate:   BrokerFeeRate(skills.BrokerRelations, skills.AdvancedBrokerRelations, skills.FactionStanding, skills.CorpStanding),
-		},
+		SkillsApplied:        skillsApplied,
 	}, nil
 }
 

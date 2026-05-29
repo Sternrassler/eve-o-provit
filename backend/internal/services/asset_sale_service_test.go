@@ -33,6 +33,19 @@ func (f fakeHubFetcher) FetchMarketOrdersForType(_ context.Context, regionID, _ 
 	return f.ordersByRegion[regionID], nil
 }
 
+type fakeFitting struct{}
+
+func (fakeFitting) GetShipFitting(_ context.Context, _, _ int, _ string) (*FittingData, error) {
+	return nil, nil
+}
+func (fakeFitting) InvalidateFittingCache(_ context.Context, _, _ int) {}
+
+type fakeActiveShip struct{ typeID int }
+
+func (f fakeActiveShip) GetActiveShipTypeID(_ context.Context, _ int, _ string) (int, error) {
+	return f.typeID, nil
+}
+
 type fakeTypeNamer struct {
 	name       string
 	marketable bool
@@ -150,7 +163,7 @@ func TestAssetSaleService_ListAssets_Aggregates(t *testing.T) {
 			{TypeID: 34, LocationID: 60003760, Quantity: 100, LocationFlag: "Hangar"},
 			{TypeID: 34, LocationID: 60003760, Quantity: 50, LocationFlag: "Hangar"},
 		}},
-		repo, sde, applogger.New(),
+		fakeFitting{}, fakeActiveShip{}, repo, sde, applogger.New(),
 	)
 	res, err := svc.ListAssets(context.Background(), 1, "tok")
 	if err != nil {
@@ -176,7 +189,7 @@ func TestAssetSaleService_SellOptions_RanksTakerNet(t *testing.T) {
 		}},
 		fakeTypeNamer{name: "Tritanium", marketable: true},
 		fakeAssetFetcher{},
-		repo, sde, applogger.New(),
+		fakeFitting{}, fakeActiveShip{}, repo, sde, applogger.New(),
 	)
 	req := &models.SellOptionsRequest{TypeID: 34, LocationID: 60003760, Quantity: 1000, AvoidLowSec: true}
 	res, err := svc.SellOptions(context.Background(), req, 1, "tok")

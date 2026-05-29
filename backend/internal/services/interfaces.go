@@ -60,17 +60,6 @@ type FittingServicer interface {
 
 // FeeServicer defines the interface for trading fee calculations
 type FeeServicer interface {
-	// CalculateFees calculates all trading fees for a transaction
-	// Integrates with SkillsService for accurate skill-based fee calculation
-	// Falls back to worst-case fees if skills unavailable
-	CalculateFees(
-		ctx context.Context,
-		characterID int,
-		accessToken string,
-		buyValue float64,
-		sellValue float64,
-	) (*Fees, error)
-
 	// CalculateSalesTax calculates sales tax based on Accounting skill level
 	// Base: 5%, Max reduction: 50% (Accounting V), Min fee: 100 ISK
 	CalculateSalesTax(accountingLevel int, orderValue float64) float64

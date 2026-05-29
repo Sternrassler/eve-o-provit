@@ -46,12 +46,12 @@ func NewRouteCalculator(sdeRepo *database.SDERepository, sdeDB *sql.DB, feeServi
 // cargoCapacity is the effective capacity (with skills already applied)
 // baseCapacity and skillBonus are optional - if 0, they'll match cargoCapacity
 func (ro *RouteCalculator) CalculateRoute(ctx context.Context, item models.ItemPair, cargoCapacity float64) (models.TradingRoute, error) {
-	return ro.CalculateRouteWithCapacityInfo(ctx, item, cargoCapacity, cargoCapacity, 0, 0, nil, nil)
+	return ro.CalculateRouteWithCapacityInfo(ctx, item, cargoCapacity, cargoCapacity, 0, 0, nil, nil, 0)
 }
 
 // CalculateRouteWithCapacityInfo calculates a route with detailed capacity and navigation information
 // warpSpeed and alignTime are optional pointers - if nil, navigation package uses defaults
-func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, item models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3 float64, warpSpeed, alignTime *float64) (models.TradingRoute, error) {
+func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, item models.ItemPair, effectiveCapacity, baseCapacity, skillBonusPercent, fittingBonusM3 float64, warpSpeed, alignTime *float64, accountingLevel int) (models.TradingRoute, error) {
 	var route models.TradingRoute
 
 	// Use effective capacity for calculations
@@ -152,11 +152,12 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 	// Calculate minimum security status across entire route
 	minRouteSecurity := ro.getMinRouteSecurityStatus(ctx, travelResult.Route)
 
-	// Calculate trading fees — Modell A (Sofort-Arbitrage): nur Sales-Tax.
-	// Worst-case-Annahme (Accounting = 0) für konservative Bulk-Schätzung.
+	// Calculate trading fees — Modell A (Sofort-Arbitrage): nur Sales-Tax,
+	// skill-bereinigt über das Accounting-Level des Characters (konsistent mit
+	// Multi-Hub/ROI/Hauling/Sell-Assets; früher hart Accounting=0 → 5%).
 	sellValue := item.SellPrice * float64(totalQuantity)
 
-	salesTax := ro.feeService.CalculateSalesTax(0, sellValue)
+	salesTax := ro.feeService.CalculateSalesTax(accountingLevel, sellValue)
 
 	// Modell A: keine Broker-Fees, kein Relisting.
 	buyBrokerFee := 0.0
@@ -299,19 +300,8 @@ func (ro *RouteCalculator) getSystemSecurityStatus(ctx context.Context, systemID
 	return secStatus
 }
 
-// getMinRouteSecurityStatus finds the minimum security status across all systems in a route
+// getMinRouteSecurityStatus finds the minimum security status across all systems
+// in a route (shared impl on the SDE repo, which logs per-system lookup failures).
 func (ro *RouteCalculator) getMinRouteSecurityStatus(ctx context.Context, route []int64) float64 {
-	if len(route) == 0 {
-		return 1.0 // Default to high-sec if no route
-	}
-
-	minSecurity := 1.0
-	for _, systemID := range route {
-		security := ro.getSystemSecurityStatus(ctx, systemID)
-		if security < minSecurity {
-			minSecurity = security
-		}
-	}
-
-	return minSecurity
+	return ro.sdeRepo.MinRouteSecurityStatus(ctx, route)
 }

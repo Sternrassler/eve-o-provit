@@ -164,8 +164,8 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	haulingService := services.NewHaulingService(c.SDERepo, haulingRouteFinder, fittingService, skillsService, characterHelper, c.DB.SDE, c.AppLogger)
 	c.HaulingHandler = handlers.NewHaulingHandler(haulingService)
 
-	// Sell-from-assets (#107) — reuses hub price fetch + skills + navigation.
-	assetSaleService := services.NewAssetSaleService(skillsService, c.ESIClient, c.SDERepo, services.NewESIAssetFetcher(), c.SDERepo, c.DB.SDE, c.AppLogger)
+	// Sell-from-assets (#107) — reuses hub price fetch + skills + navigation + fitting.
+	assetSaleService := services.NewAssetSaleService(skillsService, c.ESIClient, c.SDERepo, services.NewESIAssetFetcher(), fittingService, characterHelper, c.SDERepo, c.DB.SDE, c.AppLogger)
 	c.AssetsHandler = handlers.NewAssetsHandler(assetSaleService)
 
 	// Start the competition collector in the background (lazy-tracked pairs).

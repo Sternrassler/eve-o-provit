@@ -2,20 +2,8 @@
 package services
 
 import (
-	"context"
-
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 )
-
-// Fees contains all calculated trading fees for a transaction.
-// Trading-Modell A (Sofort-Arbitrage): nur SalesTax ist > 0; Broker/Relist sind stets 0.
-type Fees struct {
-	SalesTax           float64 // Sales tax on sell orders (base 5%, reduced by Accounting)
-	BrokerFeeBuy       float64 // Modell A: 0 (keine Order-Platzierung)
-	BrokerFeeSell      float64 // Modell A: 0 (keine Order-Platzierung)
-	EstimatedRelistFee float64 // Modell A: 0 (kein Relisting)
-	TotalFees          float64 // Sum of all fees (== SalesTax unter Modell A)
-}
 
 // FeeService provides trading fee calculations with skill integration
 type FeeService struct {
@@ -32,40 +20,6 @@ func NewFeeService(
 		skillsService: skillsService,
 		logger:        logger,
 	}
-}
-
-// CalculateFees calculates all trading fees for a transaction.
-// Trading-Modell A (Sofort-Arbitrage): Kauf/Verkauf gegen bestehende Orders.
-// Es fallen KEINE Broker-Fees an (keine Order-Platzierung), nur Sales-Tax beim Verkauf.
-func (s *FeeService) CalculateFees(
-	ctx context.Context,
-	characterID int,
-	accessToken string,
-	buyValue float64,
-	sellValue float64,
-) (*Fees, error) {
-	// Trading-Modell A (Sofort-Arbitrage): Kauf/Verkauf gegen bestehende Orders.
-	// Es fallen KEINE Broker-Fees an (keine Order-Platzierung), nur Sales-Tax beim Verkauf.
-	accounting := 0 // worst-case, falls Skills nicht ladbar
-	if s.skillsService != nil {
-		skills, err := s.skillsService.GetCharacterSkills(ctx, characterID, accessToken)
-		if err != nil {
-			s.logger.Warn("Failed to fetch skills - using worst-case sales tax",
-				"error", err, "characterID", characterID)
-		} else {
-			accounting = skills.Accounting
-		}
-	}
-
-	salesTax := s.CalculateSalesTax(accounting, sellValue)
-
-	return &Fees{
-		SalesTax:           salesTax,
-		BrokerFeeBuy:       0, // Modell A: keine Broker-Fee
-		BrokerFeeSell:      0, // Modell A: keine Broker-Fee
-		EstimatedRelistFee: 0, // Modell A: kein Relisting
-		TotalFees:          salesTax,
-	}, nil
 }
 
 // SalesTaxRate returns the sales-tax RATE (not absolute fee) for an Accounting level.

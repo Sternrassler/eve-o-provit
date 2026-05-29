@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 )
 
 // TypeInfo represents basic type information from SDE
@@ -403,4 +404,23 @@ func (r *SDERepository) GetSystemSecurityStatus(ctx context.Context, systemID in
 		return 1.0, fmt.Errorf("failed to query security status: %w", err)
 	}
 	return secStatus, nil
+}
+
+// MinRouteSecurityStatus returns the lowest security status across the route's
+// systems (1.0 for an empty route). A per-system lookup failure is logged and
+// that system skipped — never silently treated as high-sec, which would let a
+// dangerous route pass a high-sec filter.
+func (r *SDERepository) MinRouteSecurityStatus(ctx context.Context, route []int64) float64 {
+	minSec := 1.0
+	for _, systemID := range route {
+		sec, err := r.GetSystemSecurityStatus(ctx, systemID)
+		if err != nil {
+			log.Printf("Warning: security lookup failed for system %d: %v", systemID, err)
+			continue
+		}
+		if sec < minSec {
+			minSec = sec
+		}
+	}
+	return minSec
 }
