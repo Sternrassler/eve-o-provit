@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-05-30
+
+### Added
+
+- **Sell-Assets sortiert nach ISK/h und zeigt den Wert pro Verkaufsort.** Bisher wurden Optionen nur nach Netto-Total sortiert — nahe Hubs sahen damit gleichwertig zu fernen Hubs aus, obwohl die Reisezeit den effektiven Stundenlohn massiv verändert (z.B. Dodixie 6 Sprünge vs. Amarr 37 Sprünge bei gleichem Netto). Neue `SellOption.isk_per_hour` (net ISK pro Reise-Stunde, 0 bei lokalen Verkäufen). Ranking: lokale Verkäufe zuerst (instant), dann Remotes nach ISK/h, Tiebreak Netto-Total. Web + Flutter zeigen den Wert als zusätzliche Metric („sofort" bei lokalem Verkauf).
+
 ## [0.15.5] - 2026-05-30
 
 ### Fixed
