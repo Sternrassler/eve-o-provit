@@ -314,4 +314,8 @@ export interface SellOptionsResponse {
   best: SellOption | null;
   options: SellOption[]; // pre-sorted by total_net desc
   skills_applied: SkillsApplied;
+  /** Set when the empty options list deserves an explanation. Current values:
+   *  "origin_in_player_structure" — the item sits in a citadel; SDE can't
+   *  resolve its system, so no route is possible. */
+  not_routable_reason?: string;
 }

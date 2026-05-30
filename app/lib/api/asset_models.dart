@@ -241,6 +241,7 @@ class SellOptionsResponse {
     required this.best,
     required this.options,
     required this.skillsApplied,
+    this.notRoutableReason,
   });
 
   /// Backend: `type_id`
@@ -263,6 +264,11 @@ class SellOptionsResponse {
 
   /// Backend: `skills_applied`
   final SkillsApplied skillsApplied;
+
+  /// Backend: `not_routable_reason` — set when the empty result has a known
+  /// cause (currently only `"origin_in_player_structure"`). UI shows an
+  /// actionable hint instead of the generic "no buyers" message.
+  final String? notRoutableReason;
 
   /// True when no sell locations were returned.
   bool get isEmpty => options.isEmpty;
@@ -292,6 +298,7 @@ class SellOptionsResponse {
               salesTaxRate: 0,
               brokerFeeRate: 0,
             ),
+      notRoutableReason: json['not_routable_reason'] as String?,
     );
   }
 }
