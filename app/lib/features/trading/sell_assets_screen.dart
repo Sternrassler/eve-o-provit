@@ -683,6 +683,12 @@ class _OptionCard extends StatelessWidget {
                     icon: Icons.schedule_rounded,
                     label: '${option.travelTimeMin.toStringAsFixed(1)} min',
                   ),
+                  _Meta(
+                    icon: Icons.trending_up_rounded,
+                    label: option.travelTimeMin > 0
+                        ? '${fmtIsk(option.iskPerHour)} ISK/h'
+                        : 'sofort',
+                  ),
                 ],
               ),
             ],
@@ -874,6 +880,12 @@ class SellOptionDetail extends ConsumerWidget {
               _Meta(
                 icon: Icons.schedule_rounded,
                 label: '${option.travelTimeMin.toStringAsFixed(1)} min',
+              ),
+              _Meta(
+                icon: Icons.trending_up_rounded,
+                label: option.travelTimeMin > 0
+                    ? '${fmtIsk(option.iskPerHour)} ISK/h'
+                    : 'sofort',
               ),
               _Meta(
                 icon: Icons.public_rounded,

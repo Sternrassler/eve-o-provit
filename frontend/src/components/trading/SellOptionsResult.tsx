@@ -67,7 +67,8 @@ function ScopeBadge({ scope }: { scope: SellOptionScope }) {
 /**
  * Ranked sell locations for an owned item (taker model, net of sales tax). The
  * best actionable option is highlighted at the top, followed by the full list
- * pre-sorted by total_net. Each option can be pushed to the in-game autopilot.
+ * pre-sorted by ISK/h (local sales first, then remote by net-per-hour). Each
+ * option can be pushed to the in-game autopilot.
  * Options without market data render muted. An empty list shows a hint.
  */
 export function SellOptionsResult({
@@ -225,7 +226,7 @@ function SellOptionCard({
       </CardHeader>
       <CardContent>
         {option.has_data ? (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <Metric
               label="Kaufpreis"
               value={formatISKWithSeparators(option.buy_price)}
@@ -237,6 +238,15 @@ function SellOptionCard({
             <Metric
               label="Netto gesamt"
               value={formatISKWithSeparators(option.total_net)}
+              positive
+            />
+            <Metric
+              label="ISK/h"
+              value={
+                option.travel_time_min > 0
+                  ? formatISKWithSeparators(option.isk_per_hour)
+                  : "sofort"
+              }
               positive
             />
           </div>

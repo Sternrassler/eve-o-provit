@@ -156,6 +156,7 @@ class SellOption {
     required this.buyPrice,
     required this.unitNet,
     required this.totalNet,
+    required this.iskPerHour,
     required this.jumps,
     required this.travelTimeMin,
     required this.securityRisk,
@@ -189,6 +190,10 @@ class SellOption {
   /// Backend: `total_net` — total net ISK for the full quantity (headline).
   final double totalNet;
 
+  /// Backend: `isk_per_hour` — net ISK per hour of travel; 0 for local sales.
+  /// Drives the option ranking.
+  final double iskPerHour;
+
   /// Backend: `jumps` — number of jumps from the asset's origin system.
   final int jumps;
 
@@ -215,6 +220,7 @@ class SellOption {
       buyPrice: (json['buy_price'] as num?)?.toDouble() ?? 0,
       unitNet: (json['unit_net'] as num?)?.toDouble() ?? 0,
       totalNet: (json['total_net'] as num?)?.toDouble() ?? 0,
+      iskPerHour: (json['isk_per_hour'] as num?)?.toDouble() ?? 0,
       jumps: (json['jumps'] as num?)?.toInt() ?? 0,
       travelTimeMin: (json['travel_time_min'] as num?)?.toDouble() ?? 0,
       securityRisk: json['security_risk'] as String? ?? 'safe',
