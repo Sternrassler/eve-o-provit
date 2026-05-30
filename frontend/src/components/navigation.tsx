@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -14,12 +13,12 @@ const navItems = [
   { href: "/", label: "Home" },
   { href: "/trading", label: "Trading" },
   { href: "/character", label: "Character" },
-  { href: "/multi-hub", label: "Multi-Hub", badge: "Phase 2" },
-  { href: "/roi-calculator", label: "ROI Calculator", badge: "Phase 2" },
-  { href: "/hauling", label: "Hauling", badge: "Phase 2" },
-  { href: "/sell-assets", label: "Sell Assets", badge: "Phase 2" },
-  { href: "/trends", label: "Trends", badge: "Phase 3" },
-  { href: "/watchlist", label: "Watchlist", badge: "Phase 3" },
+  { href: "/multi-hub", label: "Multi-Hub" },
+  { href: "/roi-calculator", label: "ROI Calculator" },
+  { href: "/hauling", label: "Hauling" },
+  { href: "/sell-assets", label: "Sell Assets" },
+  { href: "/trends", label: "Trends" },
+  { href: "/watchlist", label: "Watchlist" },
 ];
 
 export function Navigation() {
@@ -40,14 +39,9 @@ export function Navigation() {
             <Link
               key={item.href}
               href={item.href}
-              className="text-sm font-medium transition-colors hover:text-primary inline-flex items-center gap-1.5"
+              className="text-sm font-medium transition-colors hover:text-primary"
             >
               {item.label}
-              {item.badge && (
-                <Badge variant="outline" className="text-xs">
-                  {item.badge}
-                </Badge>
-              )}
             </Link>
           ))}
           
@@ -75,14 +69,9 @@ export function Navigation() {
                     key={item.href}
                     href={item.href}
                     onClick={() => setIsOpen(false)}
-                    className="text-lg font-medium transition-colors hover:text-primary inline-flex items-center gap-2"
+                    className="text-lg font-medium transition-colors hover:text-primary"
                   >
                     {item.label}
-                    {item.badge && (
-                      <Badge variant="outline" className="text-xs">
-                        {item.badge}
-                      </Badge>
-                    )}
                   </Link>
                 ))}
               </nav>
