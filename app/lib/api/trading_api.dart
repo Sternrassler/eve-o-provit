@@ -141,36 +141,4 @@ class TradingApi {
     );
   }
 
-  // ── POST /api/v1/esi/ui/autopilot/waypoint ────────────────────────────────
-
-  /// Sets an autopilot waypoint in the EVE client.
-  ///
-  /// [destinationId] — solar system / station / structure ID.
-  /// [addToBeginning] — insert at the start of the route (default false).
-  /// [clearOtherWaypoints] — clear existing route first (default false).
-  Future<void> setWaypoint({
-    required int destinationId,
-    bool addToBeginning = false,
-    bool clearOtherWaypoints = false,
-  }) async {
-    await _dio.post<void>(
-      '/api/v1/esi/ui/autopilot/waypoint',
-      data: {
-        'destination_id': destinationId,
-        'add_to_beginning': addToBeginning,
-        'clear_other_waypoints': clearOtherWaypoints,
-      },
-    );
-  }
-
-  // ── POST /api/v1/esi/ui/openwindow/marketdetails ──────────────────────────
-
-  /// Opens the EVE client's market-details window for [typeId].
-  /// Requires scope `esi-ui.open_window.v1` and a running EVE client.
-  Future<void> openMarketDetails(int typeId) async {
-    await _dio.post<void>(
-      '/api/v1/esi/ui/openwindow/marketdetails',
-      data: {'type_id': typeId},
-    );
-  }
 }

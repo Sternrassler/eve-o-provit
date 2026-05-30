@@ -177,16 +177,12 @@ void main() {
     expect(find.text('72/100'), findsOneWidget);
   });
 
-  testWidgets('Allocation rows render Route text + waypoint button',
-      (tester) async {
+  testWidgets('Allocation rows render compact route text', (tester) async {
     await _pumpScreen(tester, 1280);
 
     // Compact "buy → sell" route label.
     expect(find.text('Jita → Amarr'), findsOneWidget);
     expect(find.text('Jita → Dodixie'), findsOneWidget);
-    // One waypoint button per allocation row.
-    expect(find.byKey(const Key('roi-waypoint-34')), findsOneWidget);
-    expect(find.byKey(const Key('roi-waypoint-35')), findsOneWidget);
   });
 
   testWidgets('Empty items result shows the no-viable-portfolio empty-state',

@@ -257,30 +257,4 @@ void main() {
     });
   });
 
-  // ── setWaypoint ───────────────────────────────────────────────────────────
-
-  group('TradingApi.setWaypoint', () {
-    test('POSTs to /api/v1/esi/ui/autopilot/waypoint with correct body',
-        () async {
-      String? capturedPath;
-      Map<String, dynamic>? capturedBody;
-
-      dio.httpClientAdapter = _CallbackAdapter((options) {
-        capturedPath = options.path;
-        capturedBody = options.data as Map<String, dynamic>?;
-        return ResponseBody.fromString('', 204);
-      });
-
-      await api.setWaypoint(
-        destinationId: 30000142,
-        addToBeginning: true,
-        clearOtherWaypoints: false,
-      );
-
-      expect(capturedPath, '/api/v1/esi/ui/autopilot/waypoint');
-      expect(capturedBody?['destination_id'], 30000142);
-      expect(capturedBody?['add_to_beginning'], true);
-      expect(capturedBody?['clear_other_waypoints'], false);
-    });
-  });
 }

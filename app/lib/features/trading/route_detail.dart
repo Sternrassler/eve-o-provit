@@ -9,7 +9,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../api/trading_models.dart';
-import '../trading/providers.dart';
 import 'route_card.dart' show formatIskPerHour;
 
 /// Full detail view for a [TradingRoute].
@@ -60,66 +59,9 @@ class RouteDetail extends ConsumerWidget {
 
           // ── Route meta block ───────────────────────────────────────────────
           _MetaCard(route: route),
-          const SizedBox(height: 24),
-
-          // ── Action button ──────────────────────────────────────────────────
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () => _setWaypoint(context, ref),
-              icon: const Icon(Icons.navigation_rounded),
-              label: const Text('Route in EVE setzen'),
-              style: FilledButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
-  }
-
-  Future<void> _setWaypoint(BuildContext context, WidgetRef ref) async {
-    final api = ref.read(tradingApiProvider);
-    try {
-      // Clear existing route; set buy system first, then sell system.
-      await api.setWaypoint(
-        destinationId: route.buySystemId,
-        clearOtherWaypoints: true,
-        addToBeginning: false,
-      );
-      await api.setWaypoint(
-        destinationId: route.sellSystemId,
-        clearOtherWaypoints: false,
-        addToBeginning: false,
-      );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Route gesetzt: ${route.buySystemName} → ${route.sellSystemName}',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Fehler beim Setzen der Route: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 }
 

@@ -53,12 +53,6 @@ class _FakeApi extends TradingApi {
         refreshAllowed: true,
       );
 
-  @override
-  Future<void> setWaypoint({
-    required int destinationId,
-    bool addToBeginning = false,
-    bool clearOtherWaypoints = false,
-  }) async {}
 }
 
 // ---------------------------------------------------------------------------
