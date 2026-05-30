@@ -172,6 +172,8 @@ export interface PortfolioItem {
   trips_per_day: number;
   daily_profit: number;
   roi_percent: number;
+  /** Daily profit per hour of haul time. Items are pre-sorted by this metric. */
+  isk_per_hour: number;
   // Buy/sell location (station → station haul)
   buy_system_name: string;
   buy_station_name: string;

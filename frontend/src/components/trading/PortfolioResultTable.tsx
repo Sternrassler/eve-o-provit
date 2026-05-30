@@ -76,6 +76,9 @@ export function PortfolioResultTable({ result }: PortfolioResultTableProps) {
                   Tagesgewinn
                 </th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">
+                  ISK/h
+                </th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">
                   ROI%
                 </th>
                 <th scope="col" className="px-4 py-3 font-medium">
@@ -103,7 +106,7 @@ export function PortfolioResultTable({ result }: PortfolioResultTableProps) {
                 <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">
                   {formatISKWithSeparators(result.total_daily_profit)}
                 </td>
-                <td className="px-4 py-3" colSpan={2} />
+                <td className="px-4 py-3" colSpan={3} />
               </tr>
             </tfoot>
           </table>
@@ -207,6 +210,9 @@ function PortfolioRowItem({ item }: { item: PortfolioItem }) {
       <td className="px-4 py-3 text-right">{item.trips_per_day}</td>
       <td className="px-4 py-3 text-right font-medium text-green-600 dark:text-green-400">
         {formatISKWithSeparators(item.daily_profit)}
+      </td>
+      <td className="px-4 py-3 text-right font-medium text-green-600 dark:text-green-400">
+        {formatISKWithSeparators(item.isk_per_hour)}
       </td>
       <td
         className={cn(
