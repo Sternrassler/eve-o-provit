@@ -1,8 +1,10 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -174,6 +176,44 @@ func TestAssetSaleService_ListAssets_Aggregates(t *testing.T) {
 	}
 	if res.Assets[0].SystemID != 30000142 || res.Assets[0].RegionID != 10000002 {
 		t.Fatalf("location not resolved: %+v", res.Assets[0])
+	}
+}
+
+// TestAssetSaleService_SellOptions_UnresolvableOrigin_ReturnsEmptySlice
+// covers the player-structure / citadel case: GetSystemIDForLocation fails →
+// we return early. The Options field MUST be a non-nil slice (JSON []), never
+// nil (would marshal as JSON null and crash the web client on options.length).
+// Reported: 296× Shield Power Relay I in a player structure crashed sell-assets.
+func TestAssetSaleService_SellOptions_UnresolvableOrigin_ReturnsEmptySlice(t *testing.T) {
+	sde := newAssetTestSDE(t)
+	defer sde.Close()
+	repo := database.NewSDERepository(sde)
+	svc := NewAssetSaleService(
+		fakeAssetSkills{},
+		fakeHubFetcher{ordersByRegion: map[int][]esi.ESIMarketOrder{}},
+		fakeTypeNamer{name: "Shield Power Relay I", marketable: true},
+		fakeAssetFetcher{},
+		fakeFitting{}, fakeActiveShip{}, repo, sde, applogger.New(),
+	)
+	// LocationID that isn't in the SDE (mimics a player structure / citadel).
+	req := &models.SellOptionsRequest{TypeID: 1183, LocationID: 1_040_000_000_000, Quantity: 296}
+	res, err := svc.SellOptions(context.Background(), req, 1, "tok")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Options == nil {
+		t.Fatal("Options must be an empty slice, not nil (JSON null breaks the web client)")
+	}
+	if len(res.Options) != 0 {
+		t.Fatalf("Options should be empty for unresolvable origin, got %d entries", len(res.Options))
+	}
+	// And the JSON encoding must contain `"options":[]`, never `"options":null`.
+	blob, err := json.Marshal(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(blob, []byte(`"options":[]`)) {
+		t.Fatalf("expected JSON to contain `\"options\":[]`, got: %s", string(blob))
 	}
 }
 

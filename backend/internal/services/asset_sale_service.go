@@ -142,9 +142,14 @@ func (s *AssetSaleService) SellOptions(ctx context.Context, req *models.SellOpti
 		name = info.Name
 	}
 
+	// Options is always a (possibly empty) slice — never nil — so the JSON
+	// response stays a JSON array. A nil slice marshals as `null`, which crashes
+	// clients that call .length on the result (saw this when 296 × Shield Power
+	// Relay I sat in a player structure → origin unresolvable → empty path).
 	resp := &models.SellOptionsResponse{
 		TypeID: req.TypeID, Name: name, Quantity: req.Quantity,
 		SkillsApplied: skillsApplied,
+		Options:       []models.SellOption{},
 	}
 
 	originSys, err := s.sdeRepo.GetSystemIDForLocation(ctx, req.LocationID)

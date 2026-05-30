@@ -68,7 +68,10 @@ function ScopeBadge({ scope }: { scope: SellOptionScope }) {
  * Options without market data render muted. An empty list shows a hint.
  */
 export function SellOptionsResult({ best, options }: SellOptionsResultProps) {
-  if (options.length === 0) {
+  // Tolerate `null` from older backends / unresolvable origins (player structures
+  // return an empty path that historically marshaled as JSON null).
+  const safeOptions = options ?? [];
+  if (safeOptions.length === 0) {
     return (
       <div
         data-testid="sell-options-empty"
@@ -89,7 +92,7 @@ export function SellOptionsResult({ best, options }: SellOptionsResultProps) {
         />
       )}
       <div className="space-y-3" data-testid="sell-options-list">
-        {options.map((option, idx) => (
+        {safeOptions.map((option, idx) => (
           <SellOptionCard
             key={`${option.station_id}-${idx}`}
             option={option}
