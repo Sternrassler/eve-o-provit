@@ -450,6 +450,61 @@ func TestGetCharacterWallet_RequiresAuth(t *testing.T) {
 	}
 }
 
+// TestOpenMarketDetails_Validation tests the input validation guards on the
+// open-market-details endpoint (auth presence + valid type_id).
+func TestOpenMarketDetails_Validation(t *testing.T) {
+	tests := []struct {
+		name           string
+		body           string
+		expectedStatus int
+	}{
+		{"missing type_id", `{}`, fiber.StatusBadRequest},
+		{"zero type_id", `{"type_id":0}`, fiber.StatusBadRequest},
+		{"negative type_id", `{"type_id":-5}`, fiber.StatusBadRequest},
+		{"invalid json", `not-json`, fiber.StatusBadRequest},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			app := fiber.New()
+			// Mock auth: provide dummy access_token so we exercise validation.
+			app.Use("/m", func(c *fiber.Ctx) error {
+				c.Locals("access_token", "dummy-token")
+				return c.Next()
+			})
+			handler := &TradingHandler{}
+			app.Post("/m", handler.OpenMarketDetails)
+
+			req := httptest.NewRequest("POST", "/m", bytes.NewBufferString(tt.body))
+			req.Header.Set("Content-Type", "application/json")
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("Test request failed: %v", err)
+			}
+			if resp.StatusCode != tt.expectedStatus {
+				t.Errorf("status = %d, want %d", resp.StatusCode, tt.expectedStatus)
+			}
+		})
+	}
+}
+
+// TestOpenMarketDetails_RequiresAuth confirms the endpoint rejects requests
+// without an access_token local (production has the auth middleware in front).
+func TestOpenMarketDetails_RequiresAuth(t *testing.T) {
+	app := fiber.New()
+	handler := &TradingHandler{}
+	app.Post("/m", handler.OpenMarketDetails)
+
+	req := httptest.NewRequest("POST", "/m", bytes.NewBufferString(`{"type_id":34}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("Test request failed: %v", err)
+	}
+	if resp.StatusCode != fiber.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", resp.StatusCode, fiber.StatusUnauthorized)
+	}
+}
+
 // TestResponseStructures tests that response structures are correct
 func TestResponseStructures(t *testing.T) {
 	t.Run("RouteCalculationResponse", func(t *testing.T) {

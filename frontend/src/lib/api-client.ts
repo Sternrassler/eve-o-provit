@@ -335,3 +335,30 @@ export async function setWaypoint(
     throw new Error(`Failed to set waypoint: ${response.statusText}`);
   }
 }
+
+/**
+ * Open the EVE client's market-details window for a given type. The client must
+ * be running and the character must have authorized the esi-ui.open_window.v1
+ * scope. Useful for jumping straight from a portfolio row to the in-game market.
+ */
+export async function openMarketDetails(typeId: number): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/esi/ui/openwindow/marketdetails`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ type_id: typeId }),
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("Missing scope esi-ui.open_window.v1");
+    }
+    if (response.status === 404) {
+      throw new Error("EVE client not running");
+    }
+    throw new Error(`Failed to open market details: ${response.statusText}`);
+  }
+}

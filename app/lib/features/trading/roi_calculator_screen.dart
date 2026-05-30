@@ -522,7 +522,7 @@ class _PortfolioTable extends ConsumerWidget {
                 for (final item in result.items)
                   DataRow(
                     cells: [
-                      DataCell(Text(item.name)),
+                      DataCell(_ItemNameCell(item: item)),
                       DataCell(_RouteCell(item: item)),
                       DataCell(Text(fmtIsk(item.capitalUsed))),
                       DataCell(Text(fmtUnits(item.units))),
@@ -565,6 +565,58 @@ class _RouteCell extends StatelessWidget {
       message: tooltip,
       child: Text(label),
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Item name cell — tapping opens the EVE client's market-details window for
+// that item. Same UX intent as the Trophy/Trade action on the web side.
+// ---------------------------------------------------------------------------
+
+class _ItemNameCell extends ConsumerWidget {
+  const _ItemNameCell({required this.item});
+
+  final PortfolioItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return InkWell(
+      key: Key('roi-open-market-${item.typeId}'),
+      onTap: () => _openMarket(context, ref),
+      child: Text(
+        item.name,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.primary,
+          decoration: TextDecoration.underline,
+          decorationStyle: TextDecorationStyle.dotted,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openMarket(BuildContext context, WidgetRef ref) async {
+    final api = ref.read(tradingApiProvider);
+    try {
+      await api.openMarketDetails(item.typeId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${item.name} im EVE-Client geöffnet'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Markt konnte nicht geöffnet werden: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }
 

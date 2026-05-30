@@ -297,6 +297,82 @@ func (h *TradingHandler) GetCharacterWallet(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"balance": balance})
 }
 
+// OpenMarketDetails handles POST /api/v1/esi/ui/openwindow/marketdetails
+// Opens the EVE client's market-details window for a given type via ESI UI API.
+//
+// @Summary Open market details window in EVE client
+// @Description Opens the market window for a given type_id in the EVE client.
+// @Description Requires scope: esi-ui.open_window.v1
+// @Tags ESI UI
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body object{type_id=int} true "Type ID to open"
+// @Success 204 "Market details window opened"
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /api/v1/esi/ui/openwindow/marketdetails [post]
+func (h *TradingHandler) OpenMarketDetails(c *fiber.Ctx) error {
+	accessToken, ok := c.Locals("access_token").(string)
+	if !ok {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+	}
+
+	var req struct {
+		TypeID int `json:"type_id"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	}
+	if req.TypeID <= 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid type_id"})
+	}
+
+	if err := h.openESIMarketDetails(c.Context(), accessToken, req.TypeID); err != nil {
+		switch err.Error() {
+		case "unauthorized":
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Not authenticated or missing scope esi-ui.open_window.v1"})
+		case "not_found":
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "EVE client not running"})
+		default:
+			log.Printf("ERROR: OpenMarketDetails failed for typeID=%d: %v", req.TypeID, err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to open market details"})
+		}
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// openESIMarketDetails calls ESI /ui/openwindow/marketdetails for the given type.
+func (h *TradingHandler) openESIMarketDetails(ctx context.Context, accessToken string, typeID int) error {
+	url := fmt.Sprintf("https://esi.evetech.net/latest/ui/openwindow/marketdetails/?type_id=%d", typeID)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 204 {
+		return nil
+	}
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return fmt.Errorf("unauthorized")
+	}
+	if resp.StatusCode == 404 {
+		return fmt.Errorf("not_found")
+	}
+	body, _ := io.ReadAll(resp.Body)
+	return fmt.Errorf("ESI returned status %d: %s", resp.StatusCode, string(body))
+}
+
 // SetAutopilotWaypoint handles POST /api/v1/esi/ui/autopilot/waypoint
 // Sets a waypoint in the EVE client's autopilot via ESI UI API
 //

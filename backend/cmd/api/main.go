@@ -176,6 +176,7 @@ func setupApp(c *AppContainer) *fiber.App {
 
 	esiUI := protected.Group("/esi/ui")
 	esiUI.Post("/autopilot/waypoint", c.TradingHandler.SetAutopilotWaypoint)
+	esiUI.Post("/openwindow/marketdetails", c.TradingHandler.OpenMarketDetails)
 
 	trading := protected.Group("/trading")
 	trading.Get("/profit-margins", handleProfitMargins)
