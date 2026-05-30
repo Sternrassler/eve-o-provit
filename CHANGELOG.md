@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.2] - 2026-05-30
+
+### Fixed
+
+- **ROI-Item-Klick erklärt jetzt das Photon-UI-Verhalten.** Bei ESI-Markt-Open gibt der EVE-Client 204 zurück, öffnet aber kein Fenster, wenn keines bereits offen ist (bekannter Photon-UI-Bug, [esi-issues #1349](https://github.com/esi/esi-issues/issues/1349)). Toast formuliert das jetzt aus („Falls nichts passiert: Alt+R, dann nochmal klicken"); zusätzlich ein statischer Tipp über der ROI-Allokations-Tabelle.
+
 ## [0.15.1] - 2026-05-30
 
 ### Removed
