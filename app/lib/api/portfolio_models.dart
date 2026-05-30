@@ -77,6 +77,7 @@ class PortfolioItem {
     required this.tripsPerDay,
     required this.dailyProfit,
     required this.roiPercent,
+    this.iskPerHour = 0,
     this.buySystemName = '',
     this.buyStationName = '',
     this.buyStationId = 0,
@@ -106,6 +107,10 @@ class PortfolioItem {
   /// Backend: `roi_percent` — return on invested capital, in percent.
   final double roiPercent;
 
+  /// Backend: `isk_per_hour` — daily profit per hour of haul time. Items are
+  /// pre-sorted by this metric desc.
+  final double iskPerHour;
+
   /// Backend: `buy_system_name` — solar system where the item is bought.
   final String buySystemName;
 
@@ -133,6 +138,7 @@ class PortfolioItem {
       tripsPerDay: (json['trips_per_day'] as num?)?.toDouble() ?? 0,
       dailyProfit: (json['daily_profit'] as num?)?.toDouble() ?? 0,
       roiPercent: (json['roi_percent'] as num?)?.toDouble() ?? 0,
+      iskPerHour: (json['isk_per_hour'] as num?)?.toDouble() ?? 0,
       buySystemName: json['buy_system_name'] as String? ?? '',
       buyStationName: json['buy_station_name'] as String? ?? '',
       buyStationId: (json['buy_station_id'] as num?)?.toInt() ?? 0,

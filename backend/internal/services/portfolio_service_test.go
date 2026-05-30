@@ -46,6 +46,50 @@ func TestOptimize_LiquidityCapLimitsUnits(t *testing.T) {
 	}
 }
 
+// TestOptimize_SortsResultByISKPerHour: the displayed list must be ordered by
+// ISK/h descending, even when the internal allocation order (by efficiency)
+// would put items differently. Two items, same daily profit, but item B has
+// half the trip time → item B must come first.
+func TestOptimize_SortsResultByISKPerHour(t *testing.T) {
+	opt := NewPortfolioOptimizer()
+	slow := cand(1, "Slow", 100, 1, 0, 1e9, 60) // 60 min/trip
+	fast := cand(2, "Fast", 100, 1, 0, 1e9, 10) // 10 min/trip
+	res := opt.Optimize([]Candidate{slow, fast}, OptimizeParams{
+		Capital: 1e9, CargoCapacity: 1e9, TimeBudgetMin: 1e9,
+		LiquidityCapPct: 100, MaxItemPct: 50,
+	})
+	if len(res.Items) != 2 {
+		t.Fatalf("expected 2 items, got %d", len(res.Items))
+	}
+	if res.Items[0].Name != "Fast" || res.Items[1].Name != "Slow" {
+		t.Errorf("items must be sorted by ISK/h desc; got %s, %s", res.Items[0].Name, res.Items[1].Name)
+	}
+	if res.Items[0].ISKPerHour <= res.Items[1].ISKPerHour {
+		t.Errorf("ISK/h not descending: %v then %v", res.Items[0].ISKPerHour, res.Items[1].ISKPerHour)
+	}
+}
+
+// TestOptimize_RespectsSellSideAvailability is a focused variant of the
+// general order-book test: even if the cheapest sell-order has unlimited
+// volume, the buyer-side `highest_buy.VolumeRemain` (already baked into
+// route_finder's AvailableQuantity) must cap the recommendation.
+// MaxAvailableUnits encodes that joint min(buy, sell) limit.
+func TestOptimize_RespectsSellSideAvailability(t *testing.T) {
+	opt := NewPortfolioOptimizer()
+	c := cand(1, "Carbon", 300, 85, 0.1, 1_000_000, 10)
+	c.MaxAvailableUnits = 5 // imagine: cheapest sell has 1000, but highest buy only wants 5
+	res := opt.Optimize([]Candidate{c}, OptimizeParams{
+		Capital: 1e9, CargoCapacity: 1e9, TimeBudgetMin: 1e9,
+		LiquidityCapPct: 100, MaxItemPct: 100,
+	})
+	if len(res.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(res.Items))
+	}
+	if res.Items[0].Units > 5 {
+		t.Errorf("sell-side cap violated: got %d units, want ≤ 5", res.Items[0].Units)
+	}
+}
+
 // TestOptimize_CapsAtOrderBookAvailability covers the case we hit on prod:
 // the cheapest sell-order tier has only N units, but the optimizer was
 // extrapolating that price across hundreds of units (capital/price). With

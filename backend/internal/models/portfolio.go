@@ -12,6 +12,10 @@ type PortfolioRequest struct {
 } // @name PortfolioRequest
 
 // PortfolioItem is one allocated position in the suggested portfolio.
+//
+// ISKPerHour rates the position by time-value: `daily_profit / (time_used/60)`
+// where `time_used = trips_per_day * trip_minutes`. Items are pre-sorted by
+// this metric desc (= the actually most efficient line on screen).
 type PortfolioItem struct {
 	TypeID      int     `json:"type_id"`
 	Name        string  `json:"name"`
@@ -19,7 +23,8 @@ type PortfolioItem struct {
 	Units       int     `json:"units"`
 	TripsPerDay float64 `json:"trips_per_day"`
 	DailyProfit float64 `json:"daily_profit"`
-	ROIPercent  float64 `json:"roi_percent"` // daily_profit / capital_used * 100
+	ROIPercent  float64 `json:"roi_percent"`  // daily_profit / capital_used * 100
+	ISKPerHour  float64 `json:"isk_per_hour"` // net daily profit per hour of haul time
 	// Where to execute the haul: buy at the buy station, sell at the sell station.
 	BuySystemName   string `json:"buy_system_name"`
 	BuyStationName  string `json:"buy_station_name"`

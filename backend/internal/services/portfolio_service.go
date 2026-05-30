@@ -91,6 +91,7 @@ func (s *PortfolioService) Optimize(ctx context.Context, req *models.PortfolioRe
 			TripsPerDay:     it.TripsPerDay,
 			DailyProfit:     it.DailyProfit,
 			ROIPercent:      roi,
+			ISKPerHour:      it.ISKPerHour,
 			BuySystemName:   it.BuySystemName,
 			BuyStationName:  it.BuyStationName,
 			BuyStationID:    it.BuyStationID,
@@ -174,6 +175,7 @@ type OutcomeItem struct {
 	Units       int
 	TripsPerDay float64
 	DailyProfit float64
+	ISKPerHour  float64 // daily_profit / (trips_per_day * trip_minutes / 60)
 	// Execution location, carried through from the candidate.
 	BuySystemName   string
 	BuyStationName  string
@@ -266,9 +268,14 @@ func (o *PortfolioOptimizer) Optimize(cands []Candidate, p OptimizeParams) Portf
 		capUsed := float64(units) * s.c.BuyPricePerUnit
 		profit := float64(units) * s.c.ProfitPerUnit
 		timeUsed := float64(trips) * s.c.TripMinutes
+		iskPerHour := 0.0
+		if timeUsed > 0 {
+			iskPerHour = profit / (timeUsed / 60.0)
+		}
 		items = append(items, OutcomeItem{
 			TypeID: s.c.TypeID, Name: s.c.Name, CapitalUsed: capUsed,
 			Units: units, TripsPerDay: float64(trips), DailyProfit: profit,
+			ISKPerHour:    iskPerHour,
 			BuySystemName: s.c.BuySystemName, BuyStationName: s.c.BuyStationName, BuyStationID: s.c.BuyStationID,
 			SellSystemName: s.c.SellSystemName, SellStationName: s.c.SellStationName, SellStationID: s.c.SellStationID,
 		})
@@ -278,6 +285,16 @@ func (o *PortfolioOptimizer) Optimize(cands []Candidate, p OptimizeParams) Portf
 		totalProfit += profit
 		totalTime += timeUsed
 	}
+
+	// Display order: ISK/h desc — the optimizer allocates by efficiency, but
+	// the user reads the list as "where do I make the most money per hour".
+	// Tiebreak by daily profit so the headline number doesn't jump around.
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].ISKPerHour != items[j].ISKPerHour {
+			return items[i].ISKPerHour > items[j].ISKPerHour
+		}
+		return items[i].DailyProfit > items[j].DailyProfit
+	})
 
 	return PortfolioOutcome{
 		Items: items, TotalCapitalUsed: totalCap, TotalDailyProfit: totalProfit,

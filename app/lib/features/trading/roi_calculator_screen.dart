@@ -515,6 +515,7 @@ class _PortfolioTable extends ConsumerWidget {
                 DataColumn(label: Text('Units'), numeric: true),
                 DataColumn(label: Text('Fahrten/Tag'), numeric: true),
                 DataColumn(label: Text('Tagesgewinn'), numeric: true),
+                DataColumn(label: Text('ISK/h'), numeric: true),
                 DataColumn(label: Text('ROI%'), numeric: true),
               ],
               rows: [
@@ -527,6 +528,7 @@ class _PortfolioTable extends ConsumerWidget {
                       DataCell(Text(fmtUnits(item.units))),
                       DataCell(Text(item.tripsPerDay.toStringAsFixed(1))),
                       DataCell(Text(fmtIsk(item.dailyProfit))),
+                      DataCell(Text(fmtIsk(item.iskPerHour))),
                       DataCell(Text('${item.roiPercent.toStringAsFixed(1)}%')),
                     ],
                   ),
