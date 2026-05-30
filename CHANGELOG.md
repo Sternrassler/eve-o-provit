@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-05-30
+
+### Added
+
+- **Sell-Assets: Refresh-Button für die Asset-Liste.** Nach Items-Verschieben im Spiel möchte man die Liste manuell neu laden statt auf einen App-Reload zu warten. Web (Icon neben „Asset suchen") + Flutter (Icon rechts vom Suchfeld); zeigt Spinner während des Ladens. ESI cached Assets serverseitig mit ~1 h TTL — ein Refresh kann also trotzdem den alten Stand zeigen, wenn der EVE-Cache noch nicht abgelaufen ist.
+
 ## [0.16.0] - 2026-05-30
 
 ### Added
