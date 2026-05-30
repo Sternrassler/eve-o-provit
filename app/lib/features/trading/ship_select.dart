@@ -117,7 +117,7 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
             (o) => DropdownMenuItem<int>(
               value: o.typeId,
               child: Text(
-                '${o.name} (${_formatCargo(o.cargoM3)})',
+                '${o.name} (Basis ${_formatCargo(o.cargoM3)})',
                 overflow: TextOverflow.ellipsis,
               ),
             ),

@@ -101,14 +101,16 @@ export function ShipSelect({
         </SelectTrigger>
         <SelectContent>
           {options.map((ship) => {
-            // Format cargo capacity: show in m³ if < 1000, otherwise in k m³
+            // Show the BASE hull cargo (without skills/modules). The optimizer
+            // uses the effective cargo from the fitting; we say "Basis" so the
+            // label doesn't read as the value used for the calculation.
             const cargoDisplay = ship.cargo_capacity >= 1000
               ? `${(ship.cargo_capacity / 1000).toFixed(1)}k m³`
               : `${Math.round(ship.cargo_capacity)} m³`;
 
             return (
               <SelectItem key={ship.type_id} value={ship.type_id.toString()}>
-                {ship.name} ({cargoDisplay})
+                {ship.name} (Basis {cargoDisplay})
               </SelectItem>
             );
           })}
