@@ -137,25 +137,49 @@ class _PickerPaneState extends ConsumerState<_PickerPane> {
     final busy = ref.watch(sellOptionsProvider).isLoading;
     final assetsAsync = ref.watch(characterAssetsProvider);
 
+    final assetsLoading = assetsAsync.isLoading;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Search field ───────────────────────────────────────────────────
+        // ── Search field + refresh action ─────────────────────────────────
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: TextField(
-            key: const Key('sell-asset-search'),
-            controller: _searchController,
-            enabled: !busy,
-            onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
-            decoration: const InputDecoration(
-              labelText: 'Item suchen',
-              prefixIcon: Icon(Icons.search_rounded),
-              border: OutlineInputBorder(),
-              isDense: true,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  key: const Key('sell-asset-search'),
+                  controller: _searchController,
+                  enabled: !busy,
+                  onChanged: (v) =>
+                      setState(() => _query = v.trim().toLowerCase()),
+                  decoration: const InputDecoration(
+                    labelText: 'Item suchen',
+                    prefixIcon: Icon(Icons.search_rounded),
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                key: const Key('sell-asset-refresh'),
+                tooltip: 'Asset-Liste neu laden',
+                visualDensity: VisualDensity.compact,
+                onPressed: (busy || assetsLoading)
+                    ? null
+                    : () => ref.invalidate(characterAssetsProvider),
+                icon: assetsLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded),
+              ),
+            ],
           ),
         ),
 
