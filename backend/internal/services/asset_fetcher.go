@@ -10,7 +10,13 @@ import (
 )
 
 // RawAsset is the minimal ESI asset shape the aggregator needs.
+//
+// ItemID is the ESI item_id of *this* asset stack. We need it so that we can
+// resolve "item-in-container" cases: a child asset's LocationID points to its
+// container's ItemID (not to the station). Walking the chain bottom-up via
+// ItemID → LocationID lookups eventually hits an SDE-known station.
 type RawAsset struct {
+	ItemID       int64
 	TypeID       int
 	LocationID   int64
 	Quantity     int
@@ -37,6 +43,7 @@ func NewESIAssetFetcher() *ESIAssetFetcher {
 }
 
 type esiAssetPage struct {
+	ItemID       int64  `json:"item_id"`
 	TypeID       int    `json:"type_id"`
 	LocationID   int64  `json:"location_id"`
 	Quantity     int    `json:"quantity"`
@@ -90,7 +97,13 @@ func (f *ESIAssetFetcher) page(ctx context.Context, base, token string, page int
 	}
 	out := make([]RawAsset, 0, len(raw))
 	for _, a := range raw {
-		out = append(out, RawAsset{TypeID: a.TypeID, LocationID: a.LocationID, Quantity: a.Quantity, LocationFlag: a.LocationFlag})
+		out = append(out, RawAsset{
+			ItemID:       a.ItemID,
+			TypeID:       a.TypeID,
+			LocationID:   a.LocationID,
+			Quantity:     a.Quantity,
+			LocationFlag: a.LocationFlag,
+		})
 	}
 	return out, pages, nil
 }
