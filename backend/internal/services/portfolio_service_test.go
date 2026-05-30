@@ -46,6 +46,27 @@ func TestOptimize_LiquidityCapLimitsUnits(t *testing.T) {
 	}
 }
 
+// TestOptimize_CapsAtOrderBookAvailability covers the case we hit on prod:
+// the cheapest sell-order tier has only N units, but the optimizer was
+// extrapolating that price across hundreds of units (capital/price). With
+// MaxAvailableUnits set from the route's order-book limit, the allocation
+// must not exceed N — otherwise the projected ROI is fiction.
+func TestOptimize_CapsAtOrderBookAvailability(t *testing.T) {
+	opt := NewPortfolioOptimizer()
+	c := cand(1, "Carbon", 300, 85, 0.1, 1_000_000, 10) // huge daily volume, big capital
+	c.MaxAvailableUnits = 2                             // but only 2 units at this price
+	res := opt.Optimize([]Candidate{c}, OptimizeParams{
+		Capital: 1e9, CargoCapacity: 1e9, TimeBudgetMin: 1e9,
+		LiquidityCapPct: 100, MaxItemPct: 100,
+	})
+	if len(res.Items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(res.Items))
+	}
+	if res.Items[0].Units > 2 {
+		t.Errorf("order-book cap violated: got %d units, want ≤ 2", res.Items[0].Units)
+	}
+}
+
 func TestOptimize_TimeBudgetLimitsTrips(t *testing.T) {
 	opt := NewPortfolioOptimizer()
 	cands := []Candidate{cand(1, "A", 5, 10, 1, 1e9, 10)}
