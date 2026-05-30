@@ -108,7 +108,7 @@ func NewAssetSaleService(
 
 // ListAssets returns the character's owned items aggregated by (type, location).
 func (s *AssetSaleService) ListAssets(ctx context.Context, characterID int, accessToken string) (*models.AssetsResponse, error) {
-	raw, err := s.assets.FetchCharacterAssets(ctx, characterID, accessToken)
+	raw, expiresAt, err := s.assets.FetchCharacterAssets(ctx, characterID, accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,11 @@ func (s *AssetSaleService) ListAssets(ctx context.Context, characterID int, acce
 		}
 		items = append(items, item)
 	}
-	return &models.AssetsResponse{Assets: items, Count: len(items)}, nil
+	resp := &models.AssetsResponse{Assets: items, Count: len(items)}
+	if !expiresAt.IsZero() {
+		resp.CacheExpiresAt = &expiresAt
+	}
+	return resp, nil
 }
 
 // SellOptions ranks taker sell locations for one owned item.
@@ -235,7 +239,7 @@ func (s *AssetSaleService) resolveOriginSystem(ctx context.Context, locationID i
 		return sysID, nil
 	}
 	// Build an ItemID → LocationID lookup from the character's asset list.
-	assets, err := s.assets.FetchCharacterAssets(ctx, characterID, accessToken)
+	assets, _, err := s.assets.FetchCharacterAssets(ctx, characterID, accessToken)
 	if err != nil {
 		return 0, fmt.Errorf("origin unresolvable + asset fetch failed: %w", err)
 	}

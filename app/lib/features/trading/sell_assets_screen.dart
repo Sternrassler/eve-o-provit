@@ -14,6 +14,8 @@
 ///                right; tapping an option shows its detail in a dialog.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -182,6 +184,11 @@ class _PickerPaneState extends ConsumerState<_PickerPane> {
             ],
           ),
         ),
+        if (assetsAsync.value?.cacheExpiresAt != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: _CacheHint(expiresAt: assetsAsync.value!.cacheExpiresAt!),
+          ),
 
         // ── Sort control ───────────────────────────────────────────────────
         Padding(
@@ -919,6 +926,72 @@ class SellOptionDetail extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Surfaces the ESI cache-expiry so the user knows when a refresh can actually
+/// pull fresh state. ESI cached the asset list for ~1 h after CCP's last
+/// update; refreshing before [expiresAt] returns the same snapshot.
+class _CacheHint extends StatefulWidget {
+  const _CacheHint({required this.expiresAt});
+  final DateTime expiresAt;
+
+  @override
+  State<_CacheHint> createState() => _CacheHintState();
+}
+
+class _CacheHintState extends State<_CacheHint> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    // Update the countdown every 30 s.
+    _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final diff = widget.expiresAt.difference(DateTime.now());
+    final time =
+        '${widget.expiresAt.toLocal().hour.toString().padLeft(2, '0')}:${widget.expiresAt.toLocal().minute.toString().padLeft(2, '0')}';
+    String label;
+    if (diff.inSeconds <= 0) {
+      label =
+          'ESI-Cache abgelaufen — Refresh holt jetzt frische Daten.';
+    } else if (diff.inMinutes < 1) {
+      label =
+          'ESI-Cache läuft gleich ab (${diff.inSeconds} s) — Refresh holt dann frische Daten.';
+    } else {
+      label =
+          'ESI-Cache läuft bis $time (${diff.inMinutes} min) — Refresh vorher zeigt denselben Stand.';
+    }
+    return Row(
+      children: [
+        Icon(
+          Icons.access_time_rounded,
+          size: 14,
+          color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface.withAlpha(140),
+                ),
+          ),
+        ),
+      ],
     );
   }
 }
