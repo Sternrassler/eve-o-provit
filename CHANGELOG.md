@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-05-30
+
+### Added
+
+- **Sell-Assets zeigt den ESI-Cache-Countdown.** Reporter: Item längst verkauft, taucht aber nach Refresh weiter in der Liste auf — Ursache ist der ESI-Server-Cache (~1 h TTL). Backend liest jetzt den `Expires`-Header aus jeder Asset-Antwort und reicht ihn als `cache_expires_at` durch. Web + Flutter zeigen unter dem Suchfeld einen Live-Countdown („ESI-Cache läuft bis HH:MM — Refresh vorher zeigt denselben Stand"), der nach Ablauf zu „Refresh holt jetzt frische Daten" wechselt. Auto-Refresh alle 30 s.
+
 ## [0.16.1] - 2026-05-30
 
 ### Added
