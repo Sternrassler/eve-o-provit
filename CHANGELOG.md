@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.3] - 2026-05-30
+
+### Fixed
+
+- **Schiff-Dropdown-Label sagt jetzt „Basis", damit es nicht als Rechenwert missverstanden wird.** Das Label zeigt den Basis-Hull-Cargo (z.B. „Nereus (2,7k m³)") aus `/character/ships`; die Routen-/ROI-Rechnung nutzt seit v0.12.4 aber die echte effektive Cargo-Kapazität aus dem Fitting (z.B. ~9,6k m³ inkl. Cargo Expander + Skills). Label nun „Basis 2,7k m³" (Web + Flutter) — inhaltlich ändert sich nichts am Rechner.
+
 ## [0.13.2] - 2026-05-30
 
 ### Fixed
