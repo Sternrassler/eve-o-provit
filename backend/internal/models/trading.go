@@ -127,23 +127,30 @@ type CharacterLocation struct {
 
 // CharacterShip represents character ship information
 type CharacterShip struct {
-	ShipTypeID    int64   `json:"ship_type_id"`
-	ShipName      string  `json:"ship_name"`
-	ShipItemID    int64   `json:"ship_item_id"`
-	ShipTypeName  string  `json:"ship_type_name"`
-	CargoCapacity float64 `json:"cargo_capacity"`
+	ShipTypeID             int64   `json:"ship_type_id"`
+	ShipName               string  `json:"ship_name"`
+	ShipItemID             int64   `json:"ship_item_id"`
+	ShipTypeName           string  `json:"ship_type_name"`
+	CargoCapacity          float64 `json:"cargo_capacity"`
+	EffectiveCargoCapacity float64 `json:"effective_cargo_capacity,omitempty"`
 }
 
-// CharacterAssetShip represents a ship in character assets
+// CharacterAssetShip represents a ship in character assets.
+//
+// CargoCapacity is the base hull cargo (without skills/modules).
+// EffectiveCargoCapacity is the value the optimizer actually uses (hull +
+// skills + fitted modules); 0 when the per-ship enrichment failed and the
+// client should fall back to the base. The label uses effective when > 0.
 type CharacterAssetShip struct {
-	ItemID        int64   `json:"item_id"`
-	TypeID        int64   `json:"type_id"`
-	TypeName      string  `json:"type_name"`
-	LocationID    int64   `json:"location_id"`
-	LocationName  string  `json:"location_name"`
-	LocationFlag  string  `json:"location_flag"`
-	CargoCapacity float64 `json:"cargo_capacity"`
-	IsSingleton   bool    `json:"is_singleton"`
+	ItemID                 int64   `json:"item_id"`
+	TypeID                 int64   `json:"type_id"`
+	TypeName               string  `json:"type_name"`
+	LocationID             int64   `json:"location_id"`
+	LocationName           string  `json:"location_name"`
+	LocationFlag           string  `json:"location_flag"`
+	CargoCapacity          float64 `json:"cargo_capacity"`
+	EffectiveCargoCapacity float64 `json:"effective_cargo_capacity,omitempty"`
+	IsSingleton            bool    `json:"is_singleton"`
 }
 
 // CharacterShipsResponse represents the response for character ships

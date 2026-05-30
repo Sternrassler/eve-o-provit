@@ -33,12 +33,14 @@ const List<_FallbackShip> _fallbackShips = [
   _FallbackShip(33693, 'Miasmos', 63338.0),
 ];
 
-/// A uniform dropdown option (type id + display name + cargo m³).
+/// A uniform dropdown option. [cargoM3] is the base hull cargo;
+/// [effectiveM3] is the optimizer-value (hull + skills + modules) when known.
 class _ShipOpt {
-  const _ShipOpt(this.typeId, this.name, this.cargoM3);
+  const _ShipOpt(this.typeId, this.name, this.cargoM3, [this.effectiveM3]);
   final int typeId;
   final String name;
   final double cargoM3;
+  final double? effectiveM3;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,7 +76,12 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
     final base = <_ShipOpt>[];
     if (hangar.isNotEmpty) {
       for (final s in hangar) {
-        base.add(_ShipOpt(s.typeId, s.typeName, s.cargoCapacity));
+        base.add(_ShipOpt(
+          s.typeId,
+          s.typeName,
+          s.cargoCapacity,
+          s.effectiveCargoCapacity,
+        ));
       }
     } else {
       for (final f in _fallbackShips) {
@@ -91,7 +98,12 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
     if (active != null && active.shipTypeId > 0) {
       final name =
           active.shipTypeName.isNotEmpty ? active.shipTypeName : active.shipName;
-      opts.add(_ShipOpt(active.shipTypeId, name, active.cargoCapacity));
+      opts.add(_ShipOpt(
+        active.shipTypeId,
+        name,
+        active.cargoCapacity,
+        active.effectiveCargoCapacity,
+      ));
       seen.add(active.shipTypeId);
     }
     for (final o in base) {
@@ -117,7 +129,7 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
             (o) => DropdownMenuItem<int>(
               value: o.typeId,
               child: Text(
-                '${o.name} (Basis ${_formatCargo(o.cargoM3)})',
+                _labelForShip(o),
                 overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -131,6 +143,17 @@ class _ShipSelectState extends ConsumerState<ShipSelect> {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/// Dropdown label: prefer the effective cargo (the optimizer's value, matches
+/// EVE in-game); fall back to base with a "Basis" prefix so the bare number
+/// can't be misread as the calc input.
+String _labelForShip(_ShipOpt o) {
+  final eff = o.effectiveM3;
+  if (eff != null && eff > 0) {
+    return '${o.name} (${_formatCargo(eff)})';
+  }
+  return '${o.name} (Basis ${_formatCargo(o.cargoM3)})';
+}
 
 String _formatCargo(double m3) {
   if (m3 >= 1000) {

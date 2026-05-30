@@ -142,7 +142,7 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 
 	// Request handlers
 	c.Handlers = handlers.New(c.DB, c.SDERepo, c.MarketRepo, c.ESIClient)
-	c.TradingHandler = handlers.NewTradingHandler(routeService, c.SDERepo, shipService, systemService, characterHelper, cargoService)
+	c.TradingHandler = handlers.NewTradingHandler(routeService, c.SDERepo, shipService, systemService, characterHelper, cargoService, fittingService)
 	c.CharacterHandler = handlers.NewCharacterHandler(skillsService)
 	c.FittingHandler = handlers.NewFittingHandler(fittingService)
 	c.CalculationHandler = handlers.NewCalculationHandler(c.DB.SDE, fittingService)

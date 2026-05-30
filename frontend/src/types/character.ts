@@ -16,6 +16,8 @@ export interface CharacterShip {
   ship_item_id: number;
   ship_type_name: string;
   cargo_capacity: number;
+  /** Effective cargo (hull + skills + fitted modules). Absent if enrichment failed. */
+  effective_cargo_capacity?: number;
 }
 
 /**

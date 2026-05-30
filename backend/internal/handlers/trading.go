@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
@@ -25,7 +26,8 @@ type TradingHandler struct {
 	shipService     services.ShipServicer            // For ship capacity queries
 	systemService   services.SystemServicer          // For system/region/station info
 	characterHelper *services.CharacterHelper
-	cargoService    services.CargoServicer // For effective cargo capacity calculation
+	cargoService    services.CargoServicer   // For effective cargo capacity calculation
+	fittingService  services.FittingServicer // For effective cargo per ship (dropdown enrichment)
 }
 
 // NewTradingHandler creates a new trading handler instance
@@ -36,6 +38,7 @@ func NewTradingHandler(
 	systemService services.SystemServicer,
 	charHelper *services.CharacterHelper,
 	cargoService services.CargoServicer,
+	fittingService services.FittingServicer,
 ) *TradingHandler {
 	return &TradingHandler{
 		calculator:      calculator,
@@ -44,6 +47,7 @@ func NewTradingHandler(
 		systemService:   systemService,
 		characterHelper: charHelper,
 		cargoService:    cargoService,
+		fittingService:  fittingService,
 	}
 }
 
@@ -485,6 +489,14 @@ func (h *TradingHandler) fetchESICharacterShip(ctx context.Context, characterID 
 		ship.CargoCapacity = capacities.BaseCargoHold
 	}
 
+	// Effective cargo (hull + skills + fitted modules) for the dropdown label —
+	// best-effort; on failure the client falls back to the base with "Basis".
+	if h.fittingService != nil {
+		if fit, ferr := h.fittingService.GetShipFitting(ctx, characterID, int(esiShip.ShipTypeID), accessToken); ferr == nil && fit != nil && fit.Bonuses.EffectiveCargo > 0 {
+			ship.EffectiveCargoCapacity = fit.Bonuses.EffectiveCargo
+		}
+	}
+
 	return ship, nil
 }
 
@@ -570,10 +582,47 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 		})
 	}
 
+	// Enrich each singleton ship with its effective cargo (hull + skills +
+	// fitted modules) — the same value the optimizer uses. The dropdown then
+	// shows the number that matches EVE in-game instead of the bare hull base.
+	// Fan out with capped concurrency; fittings are cached, so subsequent loads
+	// are cheap. Best-effort: leave EffectiveCargoCapacity == 0 on failure so
+	// the client falls back to the base label.
+	h.enrichShipsWithEffectiveCargo(ctx, ships, characterID, accessToken)
+
 	return &models.CharacterShipsResponse{
 		Ships: ships,
 		Count: len(ships),
 	}, nil
+}
+
+// enrichShipsWithEffectiveCargo fills EffectiveCargoCapacity for each singleton
+// ship in-place. Caps concurrency at 4 to avoid hammering ESI; non-singletons
+// (packaged) and ships with no resolvable fitting keep EffectiveCargoCapacity=0.
+func (h *TradingHandler) enrichShipsWithEffectiveCargo(ctx context.Context, ships []models.CharacterAssetShip, characterID int, accessToken string) {
+	if h.fittingService == nil {
+		return
+	}
+	const maxConcurrent = 4
+	sem := make(chan struct{}, maxConcurrent)
+	var wg sync.WaitGroup
+	for i := range ships {
+		if !ships[i].IsSingleton {
+			continue
+		}
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(idx int) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			fit, err := h.fittingService.GetShipFitting(ctx, characterID, int(ships[idx].TypeID), accessToken)
+			if err != nil || fit == nil || fit.Bonuses.EffectiveCargo <= 0 {
+				return
+			}
+			ships[idx].EffectiveCargoCapacity = fit.Bonuses.EffectiveCargo
+		}(i)
+	}
+	wg.Wait()
 }
 
 // setESIAutopilotWaypoint sets a waypoint in the EVE client via ESI UI API

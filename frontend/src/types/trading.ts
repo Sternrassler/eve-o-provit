@@ -85,7 +85,12 @@ export interface Region {
 export interface Ship {
   type_id: number;
   name: string;
+  /** Base hull cargo (without skills/modules). */
   cargo_capacity: number;
+  /** Effective cargo (hull + skills + fitted modules); same value the optimizer
+   *  uses. Absent when the backend couldn't enrich the entry — fall back to
+   *  `cargo_capacity` with a "Basis" label. */
+  effective_cargo_capacity?: number;
 }
 
 export interface TradingFilters {

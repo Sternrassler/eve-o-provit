@@ -94,6 +94,7 @@ class CharacterShip {
     required this.shipItemId,
     required this.shipTypeName,
     required this.cargoCapacity,
+    this.effectiveCargoCapacity,
   });
 
   final int shipTypeId;
@@ -101,6 +102,7 @@ class CharacterShip {
   final int shipItemId;
   final String shipTypeName;
   final double cargoCapacity;
+  final double? effectiveCargoCapacity;
 
   factory CharacterShip.fromJson(Map<String, dynamic> json) {
     return CharacterShip(
@@ -109,6 +111,8 @@ class CharacterShip {
       shipItemId: (json['ship_item_id'] as num).toInt(),
       shipTypeName: json['ship_type_name'] as String? ?? '',
       cargoCapacity: (json['cargo_capacity'] as num?)?.toDouble() ?? 0.0,
+      effectiveCargoCapacity:
+          (json['effective_cargo_capacity'] as num?)?.toDouble(),
     );
   }
 
@@ -147,6 +151,7 @@ class CharacterAssetShip {
     required this.locationFlag,
     required this.cargoCapacity,
     required this.isSingleton,
+    this.effectiveCargoCapacity,
   });
 
   final int itemId;
@@ -156,6 +161,7 @@ class CharacterAssetShip {
   final String locationName;
   final String locationFlag;
   final double cargoCapacity;
+  final double? effectiveCargoCapacity;
   final bool isSingleton;
 
   factory CharacterAssetShip.fromJson(Map<String, dynamic> json) {
@@ -167,6 +173,8 @@ class CharacterAssetShip {
       locationName: json['location_name'] as String? ?? '',
       locationFlag: json['location_flag'] as String? ?? '',
       cargoCapacity: (json['cargo_capacity'] as num?)?.toDouble() ?? 0.0,
+      effectiveCargoCapacity:
+          (json['effective_cargo_capacity'] as num?)?.toDouble(),
       isSingleton: json['is_singleton'] as bool? ?? false,
     );
   }
