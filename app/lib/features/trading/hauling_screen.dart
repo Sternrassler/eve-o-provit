@@ -632,67 +632,9 @@ class HaulingRouteDetail extends ConsumerWidget {
               ],
             ),
           ),
-          const SizedBox(height: 24),
-
-          // ── Action button ────────────────────────────────────────────────
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              key: const Key('hauling-waypoint-button'),
-              onPressed: () => _setWaypoint(context, ref),
-              icon: const Icon(Icons.navigation_rounded),
-              label: const Text('Route an EVE übertragen'),
-              style: FilledButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
-  }
-
-  Future<void> _setWaypoint(BuildContext context, WidgetRef ref) async {
-    final api = ref.read(tradingApiProvider);
-    try {
-      // Clear existing route; set buy station first, then append sell station.
-      await api.setWaypoint(
-        destinationId: route.buyStationId,
-        clearOtherWaypoints: true,
-        addToBeginning: false,
-      );
-      await api.setWaypoint(
-        destinationId: route.sellStationId,
-        clearOtherWaypoints: false,
-        addToBeginning: false,
-      );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Route gesetzt: ${route.buySystemName} → ${route.sellSystemName}',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Fehler beim Setzen der Route: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 }
 

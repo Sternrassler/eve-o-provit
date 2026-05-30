@@ -516,20 +516,18 @@ class _PortfolioTable extends ConsumerWidget {
                 DataColumn(label: Text('Fahrten/Tag'), numeric: true),
                 DataColumn(label: Text('Tagesgewinn'), numeric: true),
                 DataColumn(label: Text('ROI%'), numeric: true),
-                DataColumn(label: Text('EVE')),
               ],
               rows: [
                 for (final item in result.items)
                   DataRow(
                     cells: [
-                      DataCell(_ItemNameCell(item: item)),
+                      DataCell(Text(item.name)),
                       DataCell(_RouteCell(item: item)),
                       DataCell(Text(fmtIsk(item.capitalUsed))),
                       DataCell(Text(fmtUnits(item.units))),
                       DataCell(Text(item.tripsPerDay.toStringAsFixed(1))),
                       DataCell(Text(fmtIsk(item.dailyProfit))),
                       DataCell(Text('${item.roiPercent.toStringAsFixed(1)}%')),
-                      DataCell(_WaypointButton(item: item)),
                     ],
                   ),
               ],
@@ -565,119 +563,6 @@ class _RouteCell extends StatelessWidget {
       message: tooltip,
       child: Text(label),
     );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Item name cell — tapping opens the EVE client's market-details window for
-// that item. Same UX intent as the Trophy/Trade action on the web side.
-// ---------------------------------------------------------------------------
-
-class _ItemNameCell extends ConsumerWidget {
-  const _ItemNameCell({required this.item});
-
-  final PortfolioItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return InkWell(
-      key: Key('roi-open-market-${item.typeId}'),
-      onTap: () => _openMarket(context, ref),
-      child: Text(
-        item.name,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.primary,
-          decoration: TextDecoration.underline,
-          decorationStyle: TextDecorationStyle.dotted,
-        ),
-      ),
-    );
-  }
-
-  Future<void> _openMarket(BuildContext context, WidgetRef ref) async {
-    final api = ref.read(tradingApiProvider);
-    try {
-      await api.openMarketDetails(item.typeId);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${item.name} im EVE-Client geöffnet'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Markt konnte nicht geöffnet werden: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Waypoint button — sets in-game autopilot waypoints (buy then sell)
-//
-// Reuses the exact pattern from route_detail.dart's `_setWaypoint`: clear the
-// route and set the buy station first, then add the sell station, then show a
-// success/error SnackBar.
-// ---------------------------------------------------------------------------
-
-class _WaypointButton extends ConsumerWidget {
-  const _WaypointButton({required this.item});
-
-  final PortfolioItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final enabled = item.buyStationId > 0 && item.sellStationId > 0;
-    return IconButton(
-      key: Key('roi-waypoint-${item.typeId}'),
-      icon: const Icon(Icons.navigation_rounded),
-      tooltip: 'Route an EVE übertragen',
-      visualDensity: VisualDensity.compact,
-      onPressed: enabled ? () => _setWaypoint(context, ref) : null,
-    );
-  }
-
-  Future<void> _setWaypoint(BuildContext context, WidgetRef ref) async {
-    final api = ref.read(tradingApiProvider);
-    try {
-      // Clear existing route; set buy station first, then sell station.
-      await api.setWaypoint(
-        destinationId: item.buyStationId,
-        clearOtherWaypoints: true,
-        addToBeginning: false,
-      );
-      await api.setWaypoint(
-        destinationId: item.sellStationId,
-        clearOtherWaypoints: false,
-        addToBeginning: false,
-      );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Route an EVE übertragen'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Fehler beim Setzen der Route: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 }
 

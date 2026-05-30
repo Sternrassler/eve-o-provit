@@ -22,7 +22,6 @@ import '../../api/asset_models.dart';
 import '../../core/breakpoint.dart';
 import '../../core/format.dart';
 import '../../core/security_risk.dart';
-import 'providers.dart';
 import 'sell_assets_providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -867,60 +866,9 @@ class SellOptionDetail extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 24),
-
-          // ── Action button ────────────────────────────────────────────────
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              key: const Key('sell-waypoint-button'),
-              onPressed: () => _setWaypoint(context, ref),
-              icon: const Icon(Icons.navigation_rounded),
-              label: const Text('Route an EVE übertragen'),
-              style: FilledButton.styleFrom(
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                textStyle: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
         ],
       ),
     );
-  }
-
-  Future<void> _setWaypoint(BuildContext context, WidgetRef ref) async {
-    final api = ref.read(tradingApiProvider);
-    try {
-      // Single sell destination; clear any existing route.
-      await api.setWaypoint(
-        destinationId: option.stationId,
-        clearOtherWaypoints: true,
-        addToBeginning: false,
-      );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Route gesetzt: ${option.systemName}'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Fehler beim Setzen der Route: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
   }
 }
 

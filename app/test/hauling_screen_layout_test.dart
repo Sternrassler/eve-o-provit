@@ -221,9 +221,6 @@ void main() {
     expect(find.text('Meta-4 Module A'), findsOneWidget);
     // Cargo column headers.
     expect(find.text('Gewinn/m³'), findsOneWidget);
-    // Waypoint action button present.
-    expect(find.byKey(const Key('hauling-waypoint-button')), findsOneWidget);
-    expect(find.text('Route an EVE übertragen'), findsOneWidget);
   });
 
   testWidgets('Empty routes result shows the empty-state', (tester) async {

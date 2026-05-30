@@ -316,12 +316,6 @@ class FakeTradingApi extends TradingApi {
   Future<PortfolioResult> optimizePortfolio(PortfolioRequest request) async =>
       fakePortfolioResponse();
 
-  @override
-  Future<void> setWaypoint({
-    required int destinationId,
-    bool addToBeginning = false,
-    bool clearOtherWaypoints = false,
-  }) async {}
 }
 
 // ---------------------------------------------------------------------------
