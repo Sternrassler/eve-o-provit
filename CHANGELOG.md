@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-05-30
+
+### Removed
+
+- **Veraltete „Phase 2"-/„Phase 3"-Badges aus der Web-Navigation entfernt.** Multi-Hub, ROI Calculator, Hauling und Sell Assets sind seit v0.9.0–v0.13.0 live. Phase-3-Badges (Trends, Watchlist) ebenfalls raus; die Pages haben sichtbare „Coming in Phase 3"-Platzhalter, der Badge war redundant.
+
 ## [0.13.0] - 2026-05-29
 
 ### Added
