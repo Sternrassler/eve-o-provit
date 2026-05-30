@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.5] - 2026-05-30
+
+### Fixed
+
+- **Sell-Assets: Items in Containern innerhalb NPC-Stationen werden jetzt korrekt geroutet.** ESI gibt für ein Item in einem Container `location_id` = Container-ItemID (≥ 1×10¹², sieht wie Citadel-ID aus), nicht die Station-ID — daher rutschte der Fall in den Citadel-Pfad und wurde mit „verlagere in NPC-Station" abgewiesen, obwohl der Container ja bereits in einer NPC-Station lag. Backend baut jetzt aus der Asset-Liste eine `ItemID→LocationID`-Map und läuft die Container-Kette bottom-up (max. 8 Hops); sobald ein Hop SDE-resolvable ist, wird das System verwendet. Echte Citadels (Kette endet ohne Treffer) zeigen weiter den `origin_in_player_structure`-Hinweis. Regressionstest deckt beide Pfade ab.
+
 ## [0.15.4] - 2026-05-30
 
 ### Fixed
