@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-05-30
+
+### Fixed
+
+- **Sell-Assets crasht nicht mehr, wenn das Item in einer Player-Structure/Citadel liegt.** Bei unauflösbarem Origin (SDE kennt nur NPC-Stationen) blieb `Options` ein Go-nil-Slice → JSON `null` → Web crashte mit „Cannot read properties of null (reading 'length')". Backend initialisiert `Options` jetzt immer als leeres Array; Web ist zusätzlich gegen `null` defensiv. UX-Verhalten: leerer Empty-State „Keine Verkaufsorte gefunden" (dokumentierte Citadel-Limitierung bleibt).
+
 ## [0.13.1] - 2026-05-30
 
 ### Removed
