@@ -67,6 +67,7 @@ export function ShipSelect({
             type_id: active.ship_type_id,
             name: active.ship_type_name || active.ship_name,
             cargo_capacity: active.cargo_capacity,
+            effective_cargo_capacity: active.effective_cargo_capacity,
           });
         }
       } finally {
@@ -101,16 +102,21 @@ export function ShipSelect({
         </SelectTrigger>
         <SelectContent>
           {options.map((ship) => {
-            // Show the BASE hull cargo (without skills/modules). The optimizer
-            // uses the effective cargo from the fitting; we say "Basis" so the
-            // label doesn't read as the value used for the calculation.
-            const cargoDisplay = ship.cargo_capacity >= 1000
-              ? `${(ship.cargo_capacity / 1000).toFixed(1)}k m³`
-              : `${Math.round(ship.cargo_capacity)} m³`;
+            // Prefer the effective cargo (matches what the optimizer uses and
+            // what EVE shows in-game). Fall back to the base hull cargo with a
+            // "Basis" prefix when the backend couldn't enrich the entry.
+            const effective = ship.effective_cargo_capacity;
+            const useEffective = effective != null && effective > 0;
+            const value = useEffective ? effective : ship.cargo_capacity;
+            const cargoFmt =
+              value >= 1000
+                ? `${(value / 1000).toFixed(1)}k m³`
+                : `${Math.round(value)} m³`;
+            const cargoDisplay = useEffective ? cargoFmt : `Basis ${cargoFmt}`;
 
             return (
               <SelectItem key={ship.type_id} value={ship.type_id.toString()}>
-                {ship.name} (Basis {cargoDisplay})
+                {ship.name} ({cargoDisplay})
               </SelectItem>
             );
           })}
