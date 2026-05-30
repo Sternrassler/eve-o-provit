@@ -222,6 +222,47 @@ func TestAssetSaleService_SellOptions_UnresolvableOrigin_ReturnsEmptySlice(t *te
 	}
 }
 
+// TestAssetSaleService_SellOptions_ItemInContainerInNPCStation covers the
+// case the owner reported: the asset's LocationID is the *container's* ItemID
+// (≥ 1e12) but that container itself sits in an NPC station's hangar. Walking
+// ItemID→LocationID in the character's asset list one step up yields the
+// station, so sell-options must still be computed (not the citadel fallback).
+func TestAssetSaleService_SellOptions_ItemInContainerInNPCStation(t *testing.T) {
+	sde := newAssetTestSDE(t)
+	defer sde.Close()
+	repo := database.NewSDERepository(sde)
+
+	const containerItemID = int64(1_050_676_761_748) // looks like a citadel, isn't
+	const jitaIVStationID = int64(60003760)          // SDE-known NPC station
+
+	// The container is an asset of the character, residing in the station hangar.
+	// The Carbon stack we want to sell is an asset whose LocationID = container.
+	svc := NewAssetSaleService(
+		fakeAssetSkills{},
+		fakeHubFetcher{ordersByRegion: map[int][]esi.ESIMarketOrder{
+			10000002: {{IsBuyOrder: true, Price: 400.0, VolumeRemain: 1000, LocationID: jitaIVStationID}},
+		}},
+		fakeTypeNamer{name: "Carbon", marketable: true},
+		fakeAssetFetcher{assets: []RawAsset{
+			{ItemID: containerItemID, TypeID: 17363, LocationID: jitaIVStationID, LocationFlag: "Hangar"},
+			// Carbon's own ItemID doesn't matter for the lookup of its origin,
+			// but the request's LocationID must match the container's ItemID.
+		}},
+		fakeFitting{}, fakeActiveShip{}, repo, sde, applogger.New(),
+	)
+	req := &models.SellOptionsRequest{TypeID: 34, LocationID: containerItemID, Quantity: 46}
+	res, err := svc.SellOptions(context.Background(), req, 1, "tok")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.NotRoutableReason != "" {
+		t.Errorf("expected no not_routable_reason (container resolves via asset tree), got %q", res.NotRoutableReason)
+	}
+	if res.OriginSystemID == 0 {
+		t.Errorf("expected origin system resolved via asset tree, got 0")
+	}
+}
+
 func TestAssetSaleService_SellOptions_RanksTakerNet(t *testing.T) {
 	sde := newAssetTestSDE(t)
 	defer sde.Close()

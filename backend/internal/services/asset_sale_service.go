@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sort"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
@@ -152,11 +153,13 @@ func (s *AssetSaleService) SellOptions(ctx context.Context, req *models.SellOpti
 		Options:       []models.SellOption{},
 	}
 
-	originSys, err := s.sdeRepo.GetSystemIDForLocation(ctx, req.LocationID)
+	// Try the direct LocationID first (asset directly in a station hangar).
+	// If that fails, the asset may be nested in a container (item_id ≥ 1e12)
+	// that itself sits in an NPC station — walk the asset tree up to find
+	// the real station. Only a true citadel (no parent in NPC space) keeps
+	// the unresolvable reason.
+	originSys, err := s.resolveOriginSystem(ctx, req.LocationID, characterID, accessToken)
 	if err != nil {
-		// SDE only knows NPC stations — citadel/Upwell IDs (>=1e12) can't be
-		// resolved to a system, so we can't route from them. Tell the client
-		// explicitly so the UI can suggest moving the items to an NPC station.
 		resp.NotRoutableReason = "origin_in_player_structure"
 		return resp, nil
 	}
@@ -215,6 +218,45 @@ func (s *AssetSaleService) SellOptions(ctx context.Context, req *models.SellOpti
 		}
 	}
 	return resp, nil
+}
+
+// resolveOriginSystem returns the system ID that contains the given asset
+// LocationID. If the LocationID resolves directly via the SDE (NPC station),
+// it returns immediately. Otherwise the asset may be nested inside a container
+// (ItemID stored as another asset's LocationID), so we fetch the character's
+// asset list and walk the chain ItemID → LocationID until we either hit an
+// SDE-known station or run out of parents (real citadel / loop).
+//
+// Bounded by maxDepth steps to prevent pathological chains or cycles.
+func (s *AssetSaleService) resolveOriginSystem(ctx context.Context, locationID int64, characterID int, accessToken string) (int64, error) {
+	const maxDepth = 8
+	// Direct hit?
+	if sysID, err := s.sdeRepo.GetSystemIDForLocation(ctx, locationID); err == nil {
+		return sysID, nil
+	}
+	// Build an ItemID → LocationID lookup from the character's asset list.
+	assets, err := s.assets.FetchCharacterAssets(ctx, characterID, accessToken)
+	if err != nil {
+		return 0, fmt.Errorf("origin unresolvable + asset fetch failed: %w", err)
+	}
+	parent := make(map[int64]int64, len(assets))
+	for _, a := range assets {
+		if a.ItemID != 0 {
+			parent[a.ItemID] = a.LocationID
+		}
+	}
+	current := locationID
+	for depth := 0; depth < maxDepth; depth++ {
+		next, ok := parent[current]
+		if !ok {
+			break // no parent — terminal unresolvable
+		}
+		if sysID, err := s.sdeRepo.GetSystemIDForLocation(ctx, next); err == nil {
+			return sysID, nil
+		}
+		current = next
+	}
+	return 0, fmt.Errorf("origin unresolvable after %d hops", maxDepth)
 }
 
 // buildOption computes net + route for one sell location. destSys is the system to route
