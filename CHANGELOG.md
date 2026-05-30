@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.3] - 2026-05-30
+
+### Fixed
+
+- **ROI: empfohlene Stückzahl wird jetzt vom Order-Book-Limit gecappt.** Der Optimizer extrapolierte den Cheapest-Tier-Preis über Mengen, die zu dem Preis gar nicht existierten — z.B. 154 Carbon zu 85 ISK, obwohl der EVE-Markt nur 2 zu diesem Preis hat (nächster Tier 332,51 ISK). `Candidate.MaxAvailableUnits` wird jetzt aus `TradingRoute.Quantity` (route_finder's `AvailableQuantity = min(cheapest-sell-VolumeRemain, highest-buy-VolumeRemain)`) befüllt und cappt `maxUnits` zusätzlich zu den bestehenden Liquiditäts- und Kapital-Caps. Regressionstest deckt den Fall ab.
+
 ## [0.15.2] - 2026-05-30
 
 ### Fixed
