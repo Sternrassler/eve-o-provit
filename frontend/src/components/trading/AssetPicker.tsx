@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownAZ, ArrowUpAZ, Loader2, Search } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, Loader2, RefreshCw, Search } from "lucide-react";
 import { AssetItem, SellOptionsRequest } from "@/types/trading";
 import { listAssets } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,7 @@ export function AssetPicker({
     data,
     isLoading,
     isError,
+    isFetching,
     error,
     refetch,
   } = useQuery({
@@ -90,7 +91,25 @@ export function AssetPicker({
   return (
     <div className="space-y-4 rounded-lg border p-4" data-testid="asset-picker">
       <div className="space-y-2">
-        <Label htmlFor="asset-filter">Asset suchen</Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="asset-filter">Asset suchen</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="asset-refresh"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            title="Asset-Liste aus EVE neu laden"
+            aria-label="Asset-Liste neu laden"
+          >
+            {isFetching ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <RefreshCw className="size-4" />
+            )}
+          </Button>
+        </div>
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
