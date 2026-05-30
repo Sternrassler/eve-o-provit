@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-05-30
+
+### Added
+
+- **ROI: Klick/Tap auf den Item-Namen öffnet das Markt-Fenster im EVE-Client.** Neuer Endpoint `POST /api/v1/esi/ui/openwindow/marketdetails` (analog zur Waypoint-API). Web + Flutter zeigen Toast/SnackBar bei Erfolg oder Fehler.
+
+### Changed
+
+- **SSO fragt zusätzlich `esi-ui.open_window.v1` an** (Web + Mobile). Der Scope muss in beiden EVE-App-Registrierungen aktiv sein (vom Owner vorab erledigt); bestehende Sessions müssen neu autorisieren.
+
 ## [0.14.1] - 2026-05-30
 
 ### Fixed
