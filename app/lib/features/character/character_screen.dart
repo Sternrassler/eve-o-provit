@@ -205,7 +205,10 @@ class _ActiveShipCard extends StatelessWidget {
             const SizedBox(height: 4),
             _InfoRow(
               label: 'Laderaum',
-              value: '${ship.cargoCapacity.toStringAsFixed(1)} m³',
+              value: (ship.effectiveCargoCapacity != null &&
+                      ship.effectiveCargoCapacity! > 0)
+                  ? '${ship.effectiveCargoCapacity!.toStringAsFixed(1)} m³'
+                  : '${ship.cargoCapacity.toStringAsFixed(1)} m³ (Basis)',
             ),
             const SizedBox(height: 4),
             _InfoRow(
