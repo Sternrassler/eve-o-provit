@@ -43,7 +43,16 @@ export function PortfolioResultTable({ result }: PortfolioResultTableProps) {
       <CardHeader>
         <CardTitle className="text-xl">Kapital-Allokation</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
+      <CardContent className="space-y-2 p-0">
+        <p
+          data-testid="portfolio-eve-ui-hint"
+          className="px-4 pt-2 text-xs text-muted-foreground"
+        >
+          Tipp: Klick auf einen Item-Namen sendet das Markt-Detail an deinen
+          EVE-Client. Das funktioniert nur, wenn das Markt-Fenster im Spiel
+          schon offen ist (Alt+R) — Photon-UI navigiert nur in geöffneten
+          Fenstern (ESI-Issue #1349).
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm" aria-label="Kapital-Allokation">
             <thead>
@@ -120,9 +129,13 @@ function PortfolioRowItem({ item }: { item: PortfolioItem }) {
     }
     try {
       await openMarketDetails(item.type_id);
+      // ESI returns 204 regardless of whether the EVE client actually opens
+      // anything — the Photon UI only navigates inside ALREADY-OPEN windows
+      // (esi-issues #1349). Wording reflects that so the user knows where
+      // to look or what to fix if nothing happens.
       toast({
-        title: "Markt geöffnet",
-        description: `${item.name} im EVE-Client geöffnet`,
+        title: "Markt-Detail an EVE gesendet",
+        description: `${item.name} — falls nichts passiert: Markt-Fenster im Spiel (Alt+R) öffnen und nochmal klicken.`,
       });
     } catch (err) {
       toast({
