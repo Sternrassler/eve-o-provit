@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-05-30
+
+### Added
+
+- **ROI zeigt + sortiert nach ISK/h.** `PortfolioItem.isk_per_hour` neu (= `daily_profit / (trips_per_day × trip_minutes / 60)`). Outcome wird nach ISK/h sortiert (Tiebreak Tagesgewinn); Allokation läuft weiterhin nach Capital-Efficiency, nur die Anzeige ändert sich. Web + Flutter zeigen neue Spalte „ISK/h".
+
+### Verified
+
+- **ROI cappt am Sell-Side-Limit.** Bereits seit v0.15.3 cappt `Candidate.MaxAvailableUnits` (= `route_finder`s `min(cheapest-sell-VolumeRemain, highest-buy-VolumeRemain)`) die empfohlene Stückzahl — das heißt die Allokation überschreitet nie das, was der höchste Buy-Order tatsächlich abnimmt. Neuer Regressionstest `TestOptimize_RespectsSellSideAvailability` prüft den Sell-Side-Fall isoliert.
+
 ## [0.16.2] - 2026-05-30
 
 ### Added
