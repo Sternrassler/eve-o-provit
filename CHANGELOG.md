@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-05-30
+
+### Added
+
+- **Schiff-Dropdown zeigt jetzt die effektive Cargo-Kapazität** — denselben Wert, mit dem der Optimizer seit v0.12.4 rechnet und den EVE in-game anzeigt (z.B. ~9,6k m³ für eine Nereus mit Cargo Expandern + Skills statt 2,7k Basis). `/character/ships` und `/character/ship` werden mit `effective_cargo_capacity` pro Schiff angereichert (`FittingService.GetShipFitting`, parallel mit Concurrency-Cap 4, 5 Min Redis-Cache). Erste Dropdown-Öffnung kostet ~2–5 s je Hangar-Größe, danach instant. Best-Effort: bei Fitting-Fehler weiter „Basis Xk m³" als Fallback.
+
 ## [0.13.3] - 2026-05-30
 
 ### Fixed
