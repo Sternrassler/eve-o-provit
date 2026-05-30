@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
-import { setWaypoint } from "@/lib/api-client";
+import { openMarketDetails, setWaypoint } from "@/lib/api-client";
 
 interface PortfolioResultTableProps {
   result: PortfolioResult;
@@ -109,6 +109,30 @@ function PortfolioRowItem({ item }: { item: PortfolioItem }) {
   const { toast } = useToast();
   const [isSettingRoute, setIsSettingRoute] = useState(false);
 
+  const handleOpenMarket = async () => {
+    if (!isAuthenticated) {
+      toast({
+        title: "Nicht eingeloggt",
+        description: "EVE SSO Login erforderlich",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await openMarketDetails(item.type_id);
+      toast({
+        title: "Markt geöffnet",
+        description: `${item.name} im EVE-Client geöffnet`,
+      });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSetRoute = async () => {
     if (!isAuthenticated) {
       toast({
@@ -145,7 +169,16 @@ function PortfolioRowItem({ item }: { item: PortfolioItem }) {
       data-type-id={item.type_id}
       className="border-b transition-colors hover:bg-muted/40"
     >
-      <td className="px-4 py-3 font-medium">{item.name}</td>
+      <td className="px-4 py-3 font-medium">
+        <button
+          type="button"
+          onClick={handleOpenMarket}
+          className="text-left hover:underline underline-offset-2 hover:text-primary transition-colors"
+          title="Marktdetails im EVE-Client öffnen"
+        >
+          {item.name}
+        </button>
+      </td>
       <td
         className="px-4 py-3 whitespace-nowrap text-muted-foreground"
         title={`${item.buy_station_name} → ${item.sell_station_name}`}

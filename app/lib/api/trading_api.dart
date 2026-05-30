@@ -162,4 +162,15 @@ class TradingApi {
       },
     );
   }
+
+  // ── POST /api/v1/esi/ui/openwindow/marketdetails ──────────────────────────
+
+  /// Opens the EVE client's market-details window for [typeId].
+  /// Requires scope `esi-ui.open_window.v1` and a running EVE client.
+  Future<void> openMarketDetails(int typeId) async {
+    await _dio.post<void>(
+      '/api/v1/esi/ui/openwindow/marketdetails',
+      data: {'type_id': typeId},
+    );
+  }
 }

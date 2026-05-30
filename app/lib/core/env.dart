@@ -13,5 +13,6 @@ class Env {
     'esi-assets.read_assets.v1',
     'esi-ui.write_waypoint.v1',
     'esi-wallet.read_character_wallet.v1',
+    'esi-ui.open_window.v1',
   ];
 }
