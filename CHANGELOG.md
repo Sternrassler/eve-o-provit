@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.4] - 2026-05-30
+
+### Fixed
+
+- **Sell-Assets erklärt jetzt, warum Citadel-Items keine Verkaufsorte ergeben.** Wenn der Bestand in einer Player-Structure liegt, kann das Backend keinen Origin-System auflösen (SDE kennt nur NPC-Stationen) → früh-Return mit leerer Optionsliste. Bisher zeigte das UI nur „Keine Verkaufsorte gefunden" — ununterscheidbar von „wirklich keine Käufer". Backend setzt jetzt `not_routable_reason: "origin_in_player_structure"`; Web + Flutter rendern eine konkrete Empfehlung („Items liegen in einer Player-Structure — verlagere den Bestand in eine NPC-Station").
+
 ## [0.15.3] - 2026-05-30
 
 ### Fixed
