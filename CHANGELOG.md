@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-05-30
+
+### Removed
+
+- **Flutter: alle Spiele-Aktions-Buttons entfernt.** Die Tablet-App ist Planungs-/Analyse-Client, keine Spiele-Fernbedienung. „Route an EVE übertragen" (ROI/Hauling/Route-Detail/Sell-Assets) und der ROI-Item-Tap → Marktdetails fliegen raus; die Scopes `esi-ui.write_waypoint.v1` und `esi-ui.open_window.v1` werden vom Flutter-Client nicht mehr angefragt. Backend-Endpoints + Web nutzen sie unverändert weiter.
+
 ## [0.15.0] - 2026-05-30
 
 ### Added
