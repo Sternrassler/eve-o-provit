@@ -85,6 +85,7 @@ function SellAssetsPageContent() {
               <SellOptionsResult
                 best={sellMutation.data.best}
                 options={sellMutation.data.options}
+                notRoutableReason={sellMutation.data.not_routable_reason}
               />
               <SkillsAppliedPanel skills={sellMutation.data.skills_applied} />
             </div>

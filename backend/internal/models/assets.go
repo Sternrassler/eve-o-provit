@@ -44,12 +44,19 @@ type SellOption struct {
 }
 
 // SellOptionsResponse is the ranked result for one selected item.
+//
+// NotRoutableReason is set when the result is empty for a *reason worth showing
+// to the user* (rather than just "no buyers"). Currently the only value is
+// "origin_in_player_structure" — the item sits in a citadel / Upwell structure,
+// which the SDE can't resolve to a system, so we can't compute any route. The
+// client should render an actionable message ("move to an NPC station").
 type SellOptionsResponse struct {
-	TypeID         int           `json:"type_id"`
-	Name           string        `json:"name"`
-	Quantity       int           `json:"quantity"`
-	OriginSystemID int           `json:"origin_system_id"`
-	Best           *SellOption   `json:"best"`
-	Options        []SellOption  `json:"options"`
-	SkillsApplied  SkillsApplied `json:"skills_applied"`
+	TypeID            int           `json:"type_id"`
+	Name              string        `json:"name"`
+	Quantity          int           `json:"quantity"`
+	OriginSystemID    int           `json:"origin_system_id"`
+	Best              *SellOption   `json:"best"`
+	Options           []SellOption  `json:"options"`
+	SkillsApplied     SkillsApplied `json:"skills_applied"`
+	NotRoutableReason string        `json:"not_routable_reason,omitempty"`
 }

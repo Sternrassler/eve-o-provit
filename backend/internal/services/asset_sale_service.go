@@ -154,7 +154,11 @@ func (s *AssetSaleService) SellOptions(ctx context.Context, req *models.SellOpti
 
 	originSys, err := s.sdeRepo.GetSystemIDForLocation(ctx, req.LocationID)
 	if err != nil {
-		return resp, nil // origin unresolvable -> empty options
+		// SDE only knows NPC stations — citadel/Upwell IDs (>=1e12) can't be
+		// resolved to a system, so we can't route from them. Tell the client
+		// explicitly so the UI can suggest moving the items to an NPC station.
+		resp.NotRoutableReason = "origin_in_player_structure"
+		return resp, nil
 	}
 	resp.OriginSystemID = int(originSys)
 	currentRegion, _ := s.sdeRepo.GetRegionIDForSystem(ctx, originSys)

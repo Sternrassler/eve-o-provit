@@ -14,6 +14,9 @@ import { setWaypoint } from "@/lib/api-client";
 interface SellOptionsResultProps {
   best: SellOption | null;
   options: SellOption[];
+  /** Set when the empty result has a known cause; UI shows an actionable hint
+   *  instead of the generic "no buyers" message. */
+  notRoutableReason?: string;
 }
 
 const SECURITY_BADGE: Record<
@@ -67,17 +70,38 @@ function ScopeBadge({ scope }: { scope: SellOptionScope }) {
  * pre-sorted by total_net. Each option can be pushed to the in-game autopilot.
  * Options without market data render muted. An empty list shows a hint.
  */
-export function SellOptionsResult({ best, options }: SellOptionsResultProps) {
+export function SellOptionsResult({
+  best,
+  options,
+  notRoutableReason,
+}: SellOptionsResultProps) {
   // Tolerate `null` from older backends / unresolvable origins (player structures
   // return an empty path that historically marshaled as JSON null).
   const safeOptions = options ?? [];
   if (safeOptions.length === 0) {
+    const isCitadelOrigin = notRoutableReason === "origin_in_player_structure";
     return (
       <div
         data-testid="sell-options-empty"
+        data-reason={notRoutableReason || undefined}
         className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
       >
-        Keine Verkaufsorte gefunden
+        {isCitadelOrigin ? (
+          <>
+            <p className="font-medium">
+              Items liegen in einer Player-Structure (Citadel/Upwell).
+            </p>
+            <p className="mt-1">
+              Routen können wir aus Player-Structures nicht berechnen — die
+              SDE kennt nur NPC-Stationen. Verlagere den Bestand in eine
+              NPC-Station; dann erscheinen hier die Verkaufsorte. (ROI/Trading
+              zeigen die Marktdaten weiterhin an, weil sie regionsweit
+              rechnen, nicht von deinem Standort.)
+            </p>
+          </>
+        ) : (
+          "Keine Verkaufsorte gefunden"
+        )}
       </div>
     );
   }

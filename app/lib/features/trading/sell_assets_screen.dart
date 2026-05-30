@@ -380,7 +380,7 @@ class _ResultPane extends ConsumerWidget {
           return const _IdleHint();
         }
         if (resp.isEmpty) {
-          return const _EmptyResult();
+          return _EmptyResult(reason: resp.notRoutableReason);
         }
         return _OptionList(response: resp, twoPane: twoPane);
       },
@@ -421,10 +421,16 @@ class _IdleHint extends StatelessWidget {
 }
 
 class _EmptyResult extends StatelessWidget {
-  const _EmptyResult();
+  const _EmptyResult({this.reason});
+
+  /// Backend `not_routable_reason`. When set, the UI shows an actionable
+  /// explanation instead of the generic "no buyers" message.
+  final String? reason;
 
   @override
   Widget build(BuildContext context) {
+    final isCitadel = reason == 'origin_in_player_structure';
+    final muted = Theme.of(context).colorScheme.onSurface.withAlpha(140);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -433,19 +439,28 @@ class _EmptyResult extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.sentiment_dissatisfied_rounded,
+              isCitadel
+                  ? Icons.info_outline_rounded
+                  : Icons.sentiment_dissatisfied_rounded,
               size: 56,
               color: Theme.of(context).colorScheme.onSurface.withAlpha(80),
             ),
             const SizedBox(height: 16),
             Text(
-              'Keine Verkaufsorte gefunden',
+              isCitadel
+                  ? 'Items liegen in einer Player-Structure'
+                  : 'Keine Verkaufsorte gefunden',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color:
-                        Theme.of(context).colorScheme.onSurface.withAlpha(140),
-                  ),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: muted),
             ),
+            if (isCitadel) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Routen aus Citadel/Upwell können wir nicht berechnen — die SDE kennt nur NPC-Stationen. Verlagere den Bestand in eine NPC-Station, dann erscheinen hier die Verkaufsorte.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
+              ),
+            ],
           ],
         ),
       ),

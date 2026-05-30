@@ -215,6 +215,11 @@ func TestAssetSaleService_SellOptions_UnresolvableOrigin_ReturnsEmptySlice(t *te
 	if !bytes.Contains(blob, []byte(`"options":[]`)) {
 		t.Fatalf("expected JSON to contain `\"options\":[]`, got: %s", string(blob))
 	}
+	// And we surface WHY there are no options so the UI can show an actionable
+	// message instead of the generic "no buyers found" empty state.
+	if res.NotRoutableReason != "origin_in_player_structure" {
+		t.Errorf("not_routable_reason = %q, want %q", res.NotRoutableReason, "origin_in_player_structure")
+	}
 }
 
 func TestAssetSaleService_SellOptions_RanksTakerNet(t *testing.T) {
