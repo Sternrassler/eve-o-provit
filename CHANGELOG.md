@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-05-30
+
+### Fixed
+
+- **Character-Screen (Flutter) zeigt für das aktive Schiff den effektiven Laderaum.** Folge-Patch zu v0.14.0: Die „Laderaum"-Zeile auf dem Character-Screen blieb auf der Basis-Hülle stehen, während die Dropdowns bereits den Effektiv-Wert aus dem Fitting nutzen. Jetzt konsistent — Effektiv wenn vorhanden, sonst Basis-Fallback („X m³ (Basis)").
+
 ## [0.14.0] - 2026-05-30
 
 ### Added
