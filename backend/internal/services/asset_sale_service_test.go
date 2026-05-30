@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"testing"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -17,10 +18,13 @@ import (
 
 // --- fakes for the service test ---
 
-type fakeAssetFetcher struct{ assets []RawAsset }
+type fakeAssetFetcher struct {
+	assets    []RawAsset
+	expiresAt time.Time
+}
 
-func (f fakeAssetFetcher) FetchCharacterAssets(_ context.Context, _ int, _ string) ([]RawAsset, error) {
-	return f.assets, nil
+func (f fakeAssetFetcher) FetchCharacterAssets(_ context.Context, _ int, _ string) ([]RawAsset, time.Time, error) {
+	return f.assets, f.expiresAt, nil
 }
 
 type fakeAssetSkills struct{}

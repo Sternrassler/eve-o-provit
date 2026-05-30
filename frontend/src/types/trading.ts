@@ -279,6 +279,10 @@ export interface AssetItem {
 export interface AssetsResponse {
   assets: AssetItem[];
   count: number;
+  /** ESI cache-expiry (RFC 3339). Until this point ESI serves the same
+   *  snapshot, so a refresh before then returns identical data. Absent when
+   *  ESI didn't return a parseable Expires header. */
+  cache_expires_at?: string;
 }
 
 export interface SellOptionsRequest {

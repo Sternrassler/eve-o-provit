@@ -79,6 +79,7 @@ class AssetsResponse {
   const AssetsResponse({
     required this.assets,
     required this.count,
+    this.cacheExpiresAt,
   });
 
   /// Backend: `assets`
@@ -86,6 +87,11 @@ class AssetsResponse {
 
   /// Backend: `count`
   final int count;
+
+  /// Backend: `cache_expires_at` — ESI serves the same snapshot until this
+  /// point; a refresh before then returns identical data. Null when ESI didn't
+  /// return a parseable `Expires` header.
+  final DateTime? cacheExpiresAt;
 
   /// True when the character owns no (marketable or otherwise) assets.
   bool get isEmpty => assets.isEmpty;
@@ -98,6 +104,9 @@ class AssetsResponse {
           .map(AssetItem.fromJson)
           .toList(),
       count: (json['count'] as num?)?.toInt() ?? 0,
+      cacheExpiresAt: DateTime.tryParse(
+        json['cache_expires_at'] as String? ?? '',
+      ),
     );
   }
 }

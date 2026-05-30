@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // AssetItem is one aggregated owned stack: a type at a location with a summed quantity.
 type AssetItem struct {
 	TypeID       int    `json:"type_id"`
@@ -13,9 +15,16 @@ type AssetItem struct {
 }
 
 // AssetsResponse is the GET /trading/assets payload.
+//
+// CacheExpiresAt is the ESI cache-expiry (UTC RFC 3339). ESI serves the same
+// snapshot until that point — a client-side refresh before then will return
+// identical data. The UI surfaces this so the user knows when a refresh can
+// actually pull fresh state. Omitted when ESI didn't return a parseable
+// `Expires` header (treated as "unknown").
 type AssetsResponse struct {
-	Assets []AssetItem `json:"assets"`
-	Count  int         `json:"count"`
+	Assets         []AssetItem `json:"assets"`
+	Count          int         `json:"count"`
+	CacheExpiresAt *time.Time  `json:"cache_expires_at,omitempty"`
 }
 
 // SellOptionsRequest is the POST /trading/assets/sell-options body.

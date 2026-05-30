@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownAZ, ArrowUpAZ, Loader2, RefreshCw, Search } from "lucide-react";
+import { ArrowDownAZ, ArrowUpAZ, Clock, Loader2, RefreshCw, Search } from "lucide-react";
 import { AssetItem, SellOptionsRequest } from "@/types/trading";
 import { listAssets } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
@@ -121,6 +121,9 @@ export function AssetPicker({
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
+        {data?.cache_expires_at && (
+          <CacheHint expiresAt={data.cache_expires_at} />
+        )}
       </div>
 
       {!isLoading && !isError && (data?.assets?.length ?? 0) > 0 && (
@@ -277,5 +280,48 @@ export function AssetPicker({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Surfaces the ESI cache-expiry so the user knows when a refresh can actually
+ * pull fresh state. ESI cached the asset list for ~1 h after CCP's last
+ * update; clicking refresh before [expiresAt] returns the same snapshot.
+ * Auto-updates the countdown every 30 seconds.
+ */
+function CacheHint({ expiresAt }: { expiresAt: string }) {
+  // `now` is state so the countdown re-renders on each tick; reading
+  // `Date.now()` during render would be an impure side-effect.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const expires = new Date(expiresAt);
+  const diffSec = Math.round((expires.getTime() - now) / 1000);
+  const time = expires.toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  let label: string;
+  if (diffSec <= 0) {
+    label = `ESI-Cache abgelaufen — Refresh holt jetzt frische Daten.`;
+  } else if (diffSec < 60) {
+    label = `ESI-Cache läuft gleich ab (${diffSec} s) — Refresh holt dann frische Daten.`;
+  } else {
+    const min = Math.round(diffSec / 60);
+    label = `ESI-Cache läuft bis ${time} (${min} min) — Refresh vorher zeigt denselben Stand.`;
+  }
+  return (
+    <p
+      data-testid="asset-cache-hint"
+      className="text-xs text-muted-foreground"
+      title={`Expires: ${expires.toISOString()}`}
+    >
+      <Clock className="mr-1 inline-block size-3 align-[-2px]" />
+      {label}
+    </p>
   );
 }

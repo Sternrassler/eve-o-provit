@@ -24,8 +24,13 @@ type RawAsset struct {
 }
 
 // assetFetcher fetches a character's full asset list (keeps AssetSaleService testable).
+//
+// expiresAt is the ESI cache-expiry time parsed from the `Expires` response
+// header. Until that point, ESI serves the same snapshot — a client refresh
+// won't see fresh data. Returns the zero value if the header was missing or
+// unparseable; callers must treat that as "expiry unknown".
 type assetFetcher interface {
-	FetchCharacterAssets(ctx context.Context, characterID int, accessToken string) ([]RawAsset, error)
+	FetchCharacterAssets(ctx context.Context, characterID int, accessToken string) (assets []RawAsset, expiresAt time.Time, err error)
 }
 
 // ESIAssetFetcher calls /characters/{id}/assets/ with pagination (X-Pages).
@@ -50,40 +55,41 @@ type esiAssetPage struct {
 	LocationFlag string `json:"location_flag"`
 }
 
-// FetchCharacterAssets pulls every page of the character's assets.
-func (f *ESIAssetFetcher) FetchCharacterAssets(ctx context.Context, characterID int, accessToken string) ([]RawAsset, error) {
+// FetchCharacterAssets pulls every page of the character's assets and returns
+// the ESI cache-expiry from the first page's `Expires` header.
+func (f *ESIAssetFetcher) FetchCharacterAssets(ctx context.Context, characterID int, accessToken string) ([]RawAsset, time.Time, error) {
 	base := fmt.Sprintf("%s/latest/characters/%d/assets/", f.baseURL, characterID)
-	first, pages, err := f.page(ctx, base, accessToken, 1)
+	first, pages, expiresAt, err := f.page(ctx, base, accessToken, 1)
 	if err != nil {
-		return nil, err
+		return nil, time.Time{}, err
 	}
 	all := first
 	for p := 2; p <= pages; p++ {
-		more, _, err := f.page(ctx, base, accessToken, p)
+		more, _, _, err := f.page(ctx, base, accessToken, p)
 		if err != nil {
-			return nil, err
+			return nil, time.Time{}, err
 		}
 		all = append(all, more...)
 	}
-	return all, nil
+	return all, expiresAt, nil
 }
 
-func (f *ESIAssetFetcher) page(ctx context.Context, base, token string, page int) ([]RawAsset, int, error) {
+func (f *ESIAssetFetcher) page(ctx context.Context, base, token string, page int) ([]RawAsset, int, time.Time, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"?page="+strconv.Itoa(page), nil)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, time.Time{}, err
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	resp, err := f.client.Do(req)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, time.Time{}, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, 0, fmt.Errorf("unauthorized")
+		return nil, 0, time.Time{}, fmt.Errorf("unauthorized")
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, 0, fmt.Errorf("ESI assets status %d", resp.StatusCode)
+		return nil, 0, time.Time{}, fmt.Errorf("ESI assets status %d", resp.StatusCode)
 	}
 	pages := 1
 	if x := resp.Header.Get("X-Pages"); x != "" {
@@ -91,9 +97,18 @@ func (f *ESIAssetFetcher) page(ctx context.Context, base, token string, page int
 			pages = v
 		}
 	}
+	// ESI's `Expires` header is RFC 1123 / http.TimeFormat. Best-effort: parse
+	// it; on failure leave expiresAt as zero so the caller treats it as
+	// "unknown" rather than crashing.
+	var expiresAt time.Time
+	if x := resp.Header.Get("Expires"); x != "" {
+		if t, err := http.ParseTime(x); err == nil {
+			expiresAt = t.UTC()
+		}
+	}
 	var raw []esiAssetPage
 	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
-		return nil, 0, err
+		return nil, 0, time.Time{}, err
 	}
 	out := make([]RawAsset, 0, len(raw))
 	for _, a := range raw {
@@ -105,5 +120,5 @@ func (f *ESIAssetFetcher) page(ctx context.Context, base, token string, page int
 			LocationFlag: a.LocationFlag,
 		})
 	}
-	return out, pages, nil
+	return out, pages, expiresAt, nil
 }
