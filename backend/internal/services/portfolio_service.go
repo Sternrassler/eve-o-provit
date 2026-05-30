@@ -50,19 +50,20 @@ func (s *PortfolioService) Optimize(ctx context.Context, req *models.PortfolioRe
 			dailyVol = r.VolumeMetrics.DailyVolumeAvg
 		}
 		cands = append(cands, Candidate{
-			TypeID:          r.ItemTypeID,
-			Name:            r.ItemName,
-			ProfitPerUnit:   r.ProfitPerUnit,
-			BuyPricePerUnit: r.BuyPrice,
-			UnitVolume:      r.ItemVolume,
-			DailyVolume:     dailyVol,
-			TripMinutes:     r.RoundTripSeconds / 60.0,
-			BuySystemName:   r.BuySystemName,
-			BuyStationName:  r.BuyStationName,
-			BuyStationID:    r.BuyStationID,
-			SellSystemName:  r.SellSystemName,
-			SellStationName: r.SellStationName,
-			SellStationID:   r.SellStationID,
+			TypeID:            r.ItemTypeID,
+			Name:              r.ItemName,
+			ProfitPerUnit:     r.ProfitPerUnit,
+			BuyPricePerUnit:   r.BuyPrice,
+			UnitVolume:        r.ItemVolume,
+			DailyVolume:       dailyVol,
+			TripMinutes:       r.RoundTripSeconds / 60.0,
+			MaxAvailableUnits: r.Quantity, // order-book limit at cheapest tier
+			BuySystemName:     r.BuySystemName,
+			BuyStationName:    r.BuyStationName,
+			BuyStationID:      r.BuyStationID,
+			SellSystemName:    r.SellSystemName,
+			SellStationName:   r.SellStationName,
+			SellStationID:     r.SellStationID,
 		})
 	}
 
@@ -142,6 +143,11 @@ type Candidate struct {
 	UnitVolume      float64 // m³ per unit
 	DailyVolume     float64 // market daily volume (for liquidity cap)
 	TripMinutes     float64 // round-trip minutes for this route
+	// MaxAvailableUnits is the order-book availability at the cheapest sell-order
+	// tier (i.e. how many units are buyable at BuyPricePerUnit). Caps the
+	// allocation so the optimizer doesn't extrapolate the cheapest price across
+	// hundreds of units when only a handful exist at that price.
+	MaxAvailableUnits int
 	// Execution location (buy at the buy station, sell at the sell station).
 	BuySystemName   string
 	BuyStationName  string
@@ -218,6 +224,13 @@ func (o *PortfolioOptimizer) Optimize(cands []Candidate, p OptimizeParams) Portf
 		maxUnits := int(c.DailyVolume * p.LiquidityCapPct / 100.0)
 		if capCap := int(perItemCapital / c.BuyPricePerUnit); capCap < maxUnits {
 			maxUnits = capCap
+		}
+		// Cap by order-book availability at the cheapest tier — otherwise the
+		// optimizer extrapolates the cheapest price across units that don't
+		// exist at that price (the next tier is usually much more expensive
+		// and would flip the ROI negative). See route_finder.AvailableQuantity.
+		if c.MaxAvailableUnits > 0 && c.MaxAvailableUnits < maxUnits {
+			maxUnits = c.MaxAvailableUnits
 		}
 		if maxUnits < 1 {
 			continue
