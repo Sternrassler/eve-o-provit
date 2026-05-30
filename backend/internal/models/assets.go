@@ -27,6 +27,10 @@ type SellOptionsRequest struct {
 }
 
 // SellOption is one ranked place to sell the item (taker / sell into a buy order).
+//
+// ISKPerHour rates the option by time-value: `TotalNet / (TravelTimeMin/60)`.
+// Local sales (TravelTimeMin == 0) get a sentinel "infinite" value so they
+// sort to the top. Options are pre-sorted by this metric (desc).
 type SellOption struct {
 	Scope         string  `json:"scope"` // "hub" | "current_region"
 	RegionID      int     `json:"region_id"`
@@ -37,6 +41,7 @@ type SellOption struct {
 	BuyPrice      float64 `json:"buy_price"`
 	UnitNet       float64 `json:"unit_net"`
 	TotalNet      float64 `json:"total_net"`
+	ISKPerHour    float64 `json:"isk_per_hour"`
 	Jumps         int     `json:"jumps"`
 	TravelTimeMin float64 `json:"travel_time_min"`
 	SecurityRisk  string  `json:"security_risk"` // "safe" | "caution" | "danger"

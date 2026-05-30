@@ -263,6 +263,43 @@ func TestAssetSaleService_SellOptions_ItemInContainerInNPCStation(t *testing.T) 
 	}
 }
 
+// TestRankSellOptions_PrefersISKPerHour: bei gleichem TotalNet gewinnt der
+// Hub mit weniger Reisezeit (mehr ISK/h). Owner-Beispiel: Carbon 17.129 ISK
+// netto an Jita (14 Sprünge, 4.3 min), Dodixie (6 Sprünge, 1.8 min) und
+// Amarr (37 Sprünge, 11.3 min) → Dodixie muss vor Jita vor Amarr stehen.
+func TestRankSellOptions_PrefersISKPerHour(t *testing.T) {
+	const net = 17129.21
+	opts := []models.SellOption{
+		{StationName: "Jita", TotalNet: net, TravelTimeMin: 4.3, ISKPerHour: iskPerHour(net, 4.3)},
+		{StationName: "Amarr", TotalNet: net, TravelTimeMin: 11.3, ISKPerHour: iskPerHour(net, 11.3)},
+		{StationName: "Dodixie", TotalNet: net, TravelTimeMin: 1.8, ISKPerHour: iskPerHour(net, 1.8)},
+		{StationName: "Rens", TotalNet: net, TravelTimeMin: 5.2, ISKPerHour: iskPerHour(net, 5.2)},
+	}
+	rankSellOptions(opts)
+	got := []string{opts[0].StationName, opts[1].StationName, opts[2].StationName, opts[3].StationName}
+	want := []string{"Dodixie", "Jita", "Rens", "Amarr"}
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("rank[%d] = %s, want %s (full order: %v)", i, got[i], w, got)
+		}
+	}
+}
+
+// TestRankSellOptions_LocalSaleBeatsAnyRemoteAtSameNet: TravelTimeMin == 0
+// (Verkauf direkt am Origin) ist instant — auch bei gleichem TotalNet
+// klar besser als jede Anfahrt.
+func TestRankSellOptions_LocalSaleBeatsAnyRemoteAtSameNet(t *testing.T) {
+	const net = 1000.0
+	opts := []models.SellOption{
+		{StationName: "Remote", TotalNet: net, TravelTimeMin: 5, ISKPerHour: iskPerHour(net, 5)},
+		{StationName: "Local", TotalNet: net, TravelTimeMin: 0, ISKPerHour: 0},
+	}
+	rankSellOptions(opts)
+	if opts[0].StationName != "Local" {
+		t.Errorf("local sale must rank first, got order: %s, %s", opts[0].StationName, opts[1].StationName)
+	}
+}
+
 func TestAssetSaleService_SellOptions_RanksTakerNet(t *testing.T) {
 	sde := newAssetTestSDE(t)
 	defer sde.Close()

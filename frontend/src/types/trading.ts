@@ -300,6 +300,9 @@ export interface SellOption {
   buy_price: number;
   unit_net: number;
   total_net: number;
+  /** Net ISK per hour of travel. 0 for local sales (no travel) — they rank
+   *  ahead of any remote sale by `total_net`. */
+  isk_per_hour: number;
   jumps: number;
   travel_time_min: number;
   security_risk: SecurityRisk;

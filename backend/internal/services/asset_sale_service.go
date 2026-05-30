@@ -208,7 +208,7 @@ func (s *AssetSaleService) SellOptions(ctx context.Context, req *models.SellOpti
 		}
 	}
 
-	sort.SliceStable(options, func(i, j int) bool { return options[i].TotalNet > options[j].TotalNet })
+	rankSellOptions(options)
 	resp.Options = options
 	for i := range options {
 		if options[i].HasData && options[i].TotalNet > 0 {
@@ -280,6 +280,7 @@ func (s *AssetSaleService) buildOption(ctx context.Context, scope string, region
 		opt.Jumps = 0
 		opt.TravelTimeMin = 0
 		opt.SecurityRisk = securityRisk(s.sdeRepo.MinRouteSecurityStatus(ctx, []int64{originSys}))
+		opt.ISKPerHour = iskPerHour(opt.TotalNet, opt.TravelTimeMin)
 		return opt
 	}
 	travel, err := navigation.CalculateTravelTime(s.sdeDB, originSys, destSys, shipNavParams(ship, req.AvoidLowSec), false)
@@ -290,5 +291,38 @@ func (s *AssetSaleService) buildOption(ctx context.Context, scope string, region
 	opt.Jumps = travel.Jumps
 	opt.TravelTimeMin = travel.TotalMinutes
 	opt.SecurityRisk = securityRisk(s.sdeRepo.MinRouteSecurityStatus(ctx, travel.Route))
+	opt.ISKPerHour = iskPerHour(opt.TotalNet, opt.TravelTimeMin)
 	return opt
+}
+
+// iskPerHour rates a sell option by time-value: net ISK per hour of travel.
+// Returns 0 for local sales (travelMin == 0) — they have no meaningful rate;
+// the sort function ranks them separately (local before remote at equal net).
+func iskPerHour(netTotal, travelMin float64) float64 {
+	if travelMin <= 0 {
+		return 0
+	}
+	return netTotal / (travelMin / 60.0)
+}
+
+// rankSellOptions sorts options descending by time-value. Local sales
+// (TravelTimeMin == 0) outrank any remote sale by their TotalNet; remote
+// sales are compared by ISKPerHour, with TotalNet as tiebreak.
+func rankSellOptions(opts []models.SellOption) {
+	isLocal := func(o models.SellOption) bool { return o.TravelTimeMin <= 0 }
+	sort.SliceStable(opts, func(i, j int) bool {
+		a, b := opts[i], opts[j]
+		switch {
+		case isLocal(a) && !isLocal(b):
+			return true
+		case !isLocal(a) && isLocal(b):
+			return false
+		case isLocal(a) && isLocal(b):
+			return a.TotalNet > b.TotalNet
+		}
+		if a.ISKPerHour != b.ISKPerHour {
+			return a.ISKPerHour > b.ISKPerHour
+		}
+		return a.TotalNet > b.TotalNet
+	})
 }
