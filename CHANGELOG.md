@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.3] - 2026-05-31
+
+### Changed
+
+- **golangci-lint-Config auf v2 migriert und alle Findings bereinigt (#151).** Die `backend/.golangci.yml` war v1-Format und lud unter golangci-lint v2 nie — der Linter lief faktisch nicht. Migration auf v2 + Behebung aller 20 aufgetauchten Findings: u. a. SA1029 (Context-Key-Kollision → geteilter typisierter `services.CtxKey…` statt doppelter String-Consts in handlers+services), errcheck (`tx.Rollback`), `math.Pow(x,2)`→`x*x` (numerisch identisch) und diverse Stil-/Simplify-Fixes. Verhaltensneutral; der Pre-Commit-Hook führt golangci-lint jetzt wieder aus.
+
 ## [0.17.2] - 2026-05-31
 
 ### Changed
