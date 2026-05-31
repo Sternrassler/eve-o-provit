@@ -83,6 +83,7 @@ export interface Region {
 }
 
 export interface Ship {
+  item_id: number;
   type_id: number;
   name: string;
   /** Base hull cargo (without skills/modules). */
