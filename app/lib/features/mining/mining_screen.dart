@@ -324,8 +324,11 @@ class _EmptyResult extends StatelessWidget {
 // Ore ranking table
 // ---------------------------------------------------------------------------
 
-/// Scrollable data table rendering the ranked ore rows.
-/// Extracted as a public widget so widget tests can import it directly.
+/// Scrollable list of ranked ore rows. Each ore is an [ExpansionTile]: the
+/// header shows the summary (name, ISK/h, verdict, tax, Δ); expanding reveals
+/// where to reprocess (best NPC station — system) and where to sell — a
+/// per-mineral breakdown for the refine path, or the raw ore location for the
+/// raw path. Extracted as a public widget so widget tests can import it.
 class OreRankingTable extends StatelessWidget {
   const OreRankingTable({super.key, required this.result});
 
@@ -348,22 +351,140 @@ class OreRankingTable extends StatelessWidget {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              key: const Key('mining-ore-table'),
-              columns: const [
-                DataColumn(label: Text('Erz')),
-                DataColumn(label: Text('m³/h'), numeric: true),
-                DataColumn(label: Text('ISK/h roh'), numeric: true),
-                DataColumn(label: Text('ISK/h raffiniert'), numeric: true),
-                DataColumn(label: Text('Verdict')),
-                DataColumn(label: Text('Steuer %'), numeric: true),
-                DataColumn(label: Text('Δ ISK/h'), numeric: true),
-              ],
-              rows: [
-                for (final row in result.rows) _buildRow(context, row),
-              ],
+          Column(
+            key: const Key('mining-ore-table'),
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final row in result.rows) _OreRankTile(row: row),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One expandable ore card: collapsed header + reprocess/sell detail panel.
+class _OreRankTile extends StatelessWidget {
+  const _OreRankTile({required this.row});
+
+  final OreRankRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final isRefine = row.best == 'refine';
+    final verdictColor = isRefine
+        ? const Color(0xFF66BB6A) // green — refining wins
+        : Theme.of(context).colorScheme.primary;
+    final verdictLabel = isRefine ? 'Raffinieren' : 'Roh verkaufen';
+
+    return Card(
+      key: ValueKey('mining-ore-row-${row.oreTypeId}'),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: ExpansionTile(
+        key: ValueKey('mining-ore-expand-${row.oreTypeId}'),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                row.oreName,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            _verdictChip(context, verdictColor, verdictLabel),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            'm³/h ${fmtVolume(row.miningM3PerHour)} · '
+            'roh ${fmtIsk(row.rawIskPerHour)} · '
+            'refine ${fmtIsk(row.refineIskPerHour)} · '
+            'Steuer ${(row.bestStationTax * 100).toStringAsFixed(1)}% · '
+            'Δ ${fmtIsk(row.deltaIskPerHour)}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+        children: [isRefine ? _refineDetail(context) : _rawDetail(context)],
+      ),
+    );
+  }
+
+  Widget _verdictChip(BuildContext context, Color color, String label) {
+    return Container(
+      key: Key('mining-verdict-${row.oreTypeId}'),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(40),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(150)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+
+  Widget _refineDetail(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _detailLine(
+          context,
+          'Aufbereiten bei',
+          _formatStation(row.bestStationName, row.bestStationSystem),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Raffinate verkaufen:',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 4),
+        for (final m in row.materials) _materialRow(context, m),
+      ],
+    );
+  }
+
+  Widget _materialRow(BuildContext context, RefineMaterial m) {
+    return Padding(
+      key: ValueKey('mining-material-${row.oreTypeId}-${m.materialTypeId}'),
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Text(
+              m.materialName.isEmpty ? 'Typ ${m.materialTypeId}' : m.materialName,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              fmtUnits(m.effectiveQty.toDouble()),
+              textAlign: TextAlign.right,
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(fmtIsk(m.buyPrice), textAlign: TextAlign.right),
+          ),
+          Expanded(
+            flex: 4,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Text(
+                _formatSell(m.sell),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ),
           ),
         ],
@@ -371,45 +492,29 @@ class OreRankingTable extends StatelessWidget {
     );
   }
 
-  DataRow _buildRow(BuildContext context, OreRankRow row) {
-    final isRefine = row.best == 'refine';
-    final verdictColor = isRefine
-        ? const Color(0xFF66BB6A) // green — refining wins
-        : Theme.of(context).colorScheme.primary;
-    final verdictLabel = isRefine ? 'Raffinieren' : 'Roh verkaufen';
+  Widget _rawDetail(BuildContext context) {
+    return _detailLine(context, 'Roh verkaufen bei', _formatSell(row.rawSell));
+  }
 
-    return DataRow(
-      key: ValueKey('mining-ore-row-${row.oreTypeId}'),
-      cells: [
-        DataCell(Text(row.oreName)),
-        DataCell(Text(fmtVolume(row.miningM3PerHour))),
-        DataCell(Text(fmtIsk(row.rawIskPerHour))),
-        DataCell(Text(fmtIsk(row.refineIskPerHour))),
-        DataCell(
-          Container(
-            key: Key('mining-verdict-${row.oreTypeId}'),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: verdictColor.withAlpha(40),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: verdictColor.withAlpha(150)),
-            ),
-            child: Text(
-              verdictLabel,
+  Widget _detailLine(BuildContext context, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: '$label: ',
               style: TextStyle(
-                color: verdictColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withAlpha(160),
               ),
             ),
-          ),
+            TextSpan(
+              text: value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ],
         ),
-        DataCell(
-          Text('${(row.bestStationTax * 100).toStringAsFixed(1)}%'),
-        ),
-        DataCell(Text(fmtIsk(row.deltaIskPerHour))),
-      ],
+      ),
     );
   }
 }
@@ -465,4 +570,25 @@ String _secBandLabel(String band) {
     default:
       return 'High-Sec';
   }
+}
+
+/// "Station — System", dropping empty parts; '—' when both are absent.
+String _formatStation(String? name, String? system) {
+  final parts = [name, system]
+      .where((s) => s != null && s.isNotEmpty)
+      .cast<String>()
+      .toList();
+  return parts.isEmpty ? '—' : parts.join(' — ');
+}
+
+/// Human label for a sell location. Citadels (SDE can't name them) render as
+/// "Player-Struktur"; otherwise "Station — System".
+String _formatSell(SellLocation? loc) {
+  if (loc == null) return '—';
+  if (loc.isStructure) return 'Player-Struktur';
+  final parts = [loc.stationName, loc.systemName]
+      .where((s) => s != null && s.isNotEmpty)
+      .cast<String>()
+      .toList();
+  return parts.isEmpty ? 'unbekannt' : parts.join(' — ');
 }
