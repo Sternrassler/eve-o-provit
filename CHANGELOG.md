@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-05-31
+
+### Added
+
+- **Mining-Rechner: Erz roh verkaufen vs. reprozessieren (#154).** Neue „Mining"-View (Web + Flutter), die Erze nach **ISK/Stunde** rankt und je Erz sagt, ob sich **roh verkaufen** oder **reprozessieren + Raffinate verkaufen** mehr lohnt. Berücksichtigt Reprocessing-, Mining-, Schiffs- und Trade/Broker-Skills: Reprocessing-Yield aus den Skills, beste NPC-Station der Region nach deinem Standing (neuer ESI-`/standings`-Call), Mining-Rate (m³/h) aus dem aktuellen Schiff + gefitteten Minern + Skills, Taker-Pricing (höchste Buy-Order, nur Sales Tax, Order-Book-Cap), Sicherheitszone wählbar. Endpoint `POST /api/v1/mining/ore-ranking`. Hinweis: ISK/h ist eine skills-basierte Untergrenze — Schiffs-Rollenboni (Mining Barge/Exhumer) und Erz-Crystals sind noch nicht eingerechnet (Verdict + Ranking sind davon unberührt; im UI vermerkt).
+
 ## [0.19.0] - 2026-05-31
 
 ### Changed
