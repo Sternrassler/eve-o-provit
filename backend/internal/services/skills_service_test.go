@@ -180,7 +180,11 @@ func TestSkillsService_GetCharacterSkills_CacheMiss(t *testing.T) {
 	assert.Equal(t, 5, cachedSkills.BrokerRelations)
 }
 
-// TestSkillsService_GetCharacterSkills_ESIError tests graceful fallback
+// TestSkillsService_GetCharacterSkills_ESIError verifies the fail-loud contract
+// (issue #147 A2): on an ESI failure GetCharacterSkills must RETURN AN ERROR so
+// callers can surface "skills unavailable" instead of silently computing fees with
+// all-zero skills. It still returns the default skills payload so a caller may
+// degrade if it explicitly chooses to.
 func TestSkillsService_GetCharacterSkills_ESIError(t *testing.T) {
 	// Setup miniredis
 	s := miniredis.RunT(t)
@@ -204,8 +208,11 @@ func TestSkillsService_GetCharacterSkills_ESIError(t *testing.T) {
 	// Execute
 	result, err := service.GetCharacterSkills(ctx, 12345, "test-token")
 
-	// Verify graceful degradation
-	require.NoError(t, err, "Should not return error on ESI failure")
+	// Fail-loud: the error MUST be surfaced.
+	require.Error(t, err, "ESI failure must propagate as an error (fail-loud)")
+	assert.Contains(t, err.Error(), "skills unavailable", "error should identify the cause")
+	// Defaults are still returned for callers that explicitly choose to degrade.
+	require.NotNil(t, result)
 	assert.Equal(t, 0, result.Accounting, "Default skills should be 0")
 	assert.Equal(t, 0, result.BrokerRelations)
 	assert.Equal(t, 0, result.Navigation)

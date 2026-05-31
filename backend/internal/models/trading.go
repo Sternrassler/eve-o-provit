@@ -127,12 +127,20 @@ type CharacterLocation struct {
 
 // CharacterShip represents character ship information
 type CharacterShip struct {
-	ShipTypeID             int64   `json:"ship_type_id"`
-	ShipName               string  `json:"ship_name"`
-	ShipItemID             int64   `json:"ship_item_id"`
-	ShipTypeName           string  `json:"ship_type_name"`
-	CargoCapacity          float64 `json:"cargo_capacity"`
+	ShipTypeID    int64   `json:"ship_type_id"`
+	ShipName      string  `json:"ship_name"`
+	ShipItemID    int64   `json:"ship_item_id"`
+	ShipTypeName  string  `json:"ship_type_name"`
+	CargoCapacity float64 `json:"cargo_capacity"`
+	// EffectiveCargoCapacity is hull + skills + fitted modules; 0 means either no
+	// fitting/cargo bonus OR the fitting fetch failed — distinguish via
+	// EffectiveCargoUnavailable.
 	EffectiveCargoCapacity float64 `json:"effective_cargo_capacity,omitempty"`
+	// EffectiveCargoUnavailable is set true when the per-ship effective-cargo
+	// enrichment failed with an ERROR (ESI/network/etc.). It is the explicit
+	// "unknown" signal so the client renders a visible degraded state instead of
+	// silently showing the base hull capacity as if it were effective.
+	EffectiveCargoUnavailable bool `json:"effective_cargo_unavailable,omitempty"`
 }
 
 // CharacterAssetShip represents a ship in character assets.
@@ -150,7 +158,13 @@ type CharacterAssetShip struct {
 	LocationFlag           string  `json:"location_flag"`
 	CargoCapacity          float64 `json:"cargo_capacity"`
 	EffectiveCargoCapacity float64 `json:"effective_cargo_capacity,omitempty"`
-	IsSingleton            bool    `json:"is_singleton"`
+	// EffectiveCargoUnavailable is set true when the per-ship effective-cargo
+	// enrichment failed with an ERROR (ESI/network/etc.) — the explicit "unknown"
+	// signal so the client shows a visible degraded state instead of silently
+	// rendering the base hull capacity. It is NOT set for the legitimate
+	// "no fitting / no cargo bonus" case (EffectiveCargoCapacity stays 0, flag false).
+	EffectiveCargoUnavailable bool `json:"effective_cargo_unavailable,omitempty"`
+	IsSingleton               bool `json:"is_singleton"`
 }
 
 // CharacterShipsResponse represents the response for character ships

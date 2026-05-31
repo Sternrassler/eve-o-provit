@@ -490,9 +490,13 @@ func (h *TradingHandler) fetchESICharacterLocation(ctx context.Context, characte
 		StructureID:   esiLoc.StructureID,
 	}
 
-	// Get system and region names from SDE
+	// Get system and region names from SDE.
+	// Fail-loud (issue #147 MED): log lookup errors instead of silently swallowing
+	// them; the names are secondary display data so we still return the location.
 	systemInfo, err := h.systemService.GetSystemInfo(ctx, esiLoc.SolarSystemID)
-	if err == nil {
+	if err != nil {
+		log.Printf("WARN: system info lookup failed for systemID=%d: %v", esiLoc.SolarSystemID, err)
+	} else {
 		location.SolarSystemName = systemInfo.SystemName
 		location.RegionID = systemInfo.RegionID
 		location.RegionName = systemInfo.RegionName
@@ -500,7 +504,9 @@ func (h *TradingHandler) fetchESICharacterLocation(ctx context.Context, characte
 
 	if esiLoc.StationID != nil {
 		stationName, err := h.systemService.GetStationName(ctx, *esiLoc.StationID)
-		if err == nil {
+		if err != nil {
+			log.Printf("WARN: station name lookup failed for stationID=%d: %v", *esiLoc.StationID, err)
+		} else {
 			location.StationName = &stationName
 		}
 	}
@@ -554,26 +560,66 @@ func (h *TradingHandler) fetchESICharacterShip(ctx context.Context, characterID 
 		ShipItemID: esiShip.ShipItemID,
 	}
 
-	// Get ship type name and cargo capacity
+	// Get ship type name and cargo capacity.
+	// Fail-loud (issue #147 A5): the cargo-capacity lookup is critical — returning
+	// CargoCapacity=0 would make the optimizer divide by zero volume and produce
+	// garbage routes that look real. Propagate the error so the endpoint fails
+	// clearly instead. (The type-name lookup is non-critical display data.)
 	typeInfo, err := h.sdeQuerier.GetTypeInfo(ctx, int(esiShip.ShipTypeID))
-	if err == nil {
+	if err != nil {
+		log.Printf("WARN: ship type name lookup failed for shipTypeID=%d: %v", esiShip.ShipTypeID, err)
+	} else {
 		ship.ShipTypeName = typeInfo.Name
 	}
 
 	capacities, err := h.shipService.GetShipCapacities(ctx, esiShip.ShipTypeID)
-	if err == nil {
-		ship.CargoCapacity = capacities.BaseCargoHold
+	if err != nil {
+		return nil, fmt.Errorf("critical: cargo capacity lookup failed for shipTypeID=%d: %w", esiShip.ShipTypeID, err)
 	}
+	ship.CargoCapacity = capacities.BaseCargoHold
 
-	// Effective cargo (hull + skills + fitted modules) for the dropdown label —
-	// best-effort; on failure the client falls back to the base with "Basis".
+	// Effective cargo (hull + skills + fitted modules) for the dropdown label.
+	// Fail-loud (issue #147 A3): a fitting FETCH ERROR is logged and surfaced via
+	// EffectiveCargoUnavailable so the client renders a visible degraded state
+	// instead of silently falling back to the base hull as if it were effective.
+	// "no fitting / no cargo bonus" (err==nil) is NOT an error and leaves the flag
+	// unset with EffectiveCargoCapacity==0.
 	if h.fittingService != nil {
-		if fit, ferr := h.fittingService.GetShipFitting(ctx, characterID, int(esiShip.ShipTypeID), accessToken); ferr == nil && fit != nil && fit.Bonuses.EffectiveCargo > 0 {
-			ship.EffectiveCargoCapacity = fit.Bonuses.EffectiveCargo
+		fit, ferr := h.fittingService.GetShipFitting(ctx, characterID, int(esiShip.ShipTypeID), accessToken)
+		applyEffectiveCargoToShip(ship, fit, ferr)
+		if ferr != nil {
+			log.Printf("WARN: effective-cargo enrichment failed for characterID=%d shipTypeID=%d: %v (marking effective_cargo_unavailable)", characterID, esiShip.ShipTypeID, ferr)
 		}
 	}
 
 	return ship, nil
+}
+
+// applyEffectiveCargoToShip applies a fitting-fetch result to a CharacterShip per
+// the issue #147 A3 contract:
+//   - err != nil               → EffectiveCargoUnavailable=true (explicit "unknown")
+//   - err == nil, fit/bonus ≤ 0 → leave EffectiveCargoCapacity=0, flag unset
+//   - err == nil, bonus > 0     → set EffectiveCargoCapacity
+func applyEffectiveCargoToShip(ship *models.CharacterShip, fit *services.FittingData, err error) {
+	if err != nil {
+		ship.EffectiveCargoUnavailable = true
+		return
+	}
+	if fit != nil && fit.Bonuses.EffectiveCargo > 0 {
+		ship.EffectiveCargoCapacity = fit.Bonuses.EffectiveCargo
+	}
+}
+
+// applyEffectiveCargoToAssetShip is the CharacterAssetShip variant of
+// applyEffectiveCargoToShip (same issue #147 A3 contract).
+func applyEffectiveCargoToAssetShip(ship *models.CharacterAssetShip, fit *services.FittingData, err error) {
+	if err != nil {
+		ship.EffectiveCargoUnavailable = true
+		return
+	}
+	if fit != nil && fit.Bonuses.EffectiveCargo > 0 {
+		ship.EffectiveCargoCapacity = fit.Bonuses.EffectiveCargo
+	}
 }
 
 type esiAssetResponse struct {
@@ -644,7 +690,12 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 
 		// Use base cargo capacity for ship list
 		// (effective capacity with fitting is shown when ship is selected)
-		locationName, _ := h.systemService.GetStationName(ctx, asset.LocationID)
+		locationName, lnErr := h.systemService.GetStationName(ctx, asset.LocationID)
+		if lnErr != nil {
+			// Fail-loud (issue #147 MED): log instead of silently discarding the
+			// error; location name is secondary display data so we still proceed.
+			log.Printf("WARN: station name lookup failed for locationID=%d: %v", asset.LocationID, lnErr)
+		}
 
 		ships = append(ships, models.CharacterAssetShip{
 			ItemID:        asset.ItemID,
@@ -692,10 +743,12 @@ func (h *TradingHandler) enrichShipsWithEffectiveCargo(ctx context.Context, ship
 			defer wg.Done()
 			defer func() { <-sem }()
 			fit, err := h.fittingService.GetShipFitting(ctx, characterID, int(ships[idx].TypeID), accessToken)
-			if err != nil || fit == nil || fit.Bonuses.EffectiveCargo <= 0 {
-				return
+			applyEffectiveCargoToAssetShip(&ships[idx], fit, err)
+			if err != nil {
+				// Fail-loud (issue #147 A3): log the fitting fetch error; the
+				// EffectiveCargoUnavailable flag set above signals it to the client.
+				log.Printf("WARN: effective-cargo enrichment failed for characterID=%d shipTypeID=%d itemID=%d: %v (marking effective_cargo_unavailable)", characterID, ships[idx].TypeID, ships[idx].ItemID, err)
 			}
-			ships[idx].EffectiveCargoCapacity = fit.Bonuses.EffectiveCargo
 		}(i)
 	}
 	wg.Wait()

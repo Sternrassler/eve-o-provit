@@ -223,8 +223,9 @@ func (h *CharacterHelper) GetWalletBalance(ctx context.Context, characterID int,
 func (h *CharacterHelper) CalculateTaxRate(ctx context.Context, characterID int, accessToken string) (float64, error) {
 	skills, err := h.GetCharacterSkills(ctx, characterID, accessToken)
 	if err != nil {
-		// Fallback to worst case (no skills)
-		return 0.055, nil // 5.5% (3% broker + 2.5% sales tax)
+		// Fail-loud (issue #147 B4): do not fabricate a 5.5% rate that looks real.
+		// Return the error so the caller decides how to surface "tax rate unknown".
+		return 0, fmt.Errorf("tax rate unavailable (skills fetch failed): %w", err)
 	}
 
 	// Find skill levels

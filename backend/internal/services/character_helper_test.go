@@ -40,10 +40,12 @@ func TestCalculateTaxRate_NoSkills(t *testing.T) {
 	helper := NewCharacterHelper(redisClient)
 	ctx := context.Background()
 
-	// Simulate ESI failure (no access token) - should return fallback rate
+	// Fail-loud (issue #147 B4): a skills fetch failure must NOT fabricate a 5.5%
+	// rate that looks real — it must return an error so the caller surfaces it.
 	taxRate, err := helper.CalculateTaxRate(ctx, 12345, "")
-	require.NoError(t, err)
-	assert.Equal(t, 0.055, taxRate, "Fallback tax rate should be 5.5%")
+	require.Error(t, err, "skills fetch failure must propagate (no fabricated rate)")
+	assert.Contains(t, err.Error(), "tax rate unavailable")
+	assert.Equal(t, 0.0, taxRate, "no fabricated rate on error")
 }
 
 // TestCalculateTaxRate_MaxSkills tests tax calculation with maxed skills

@@ -118,9 +118,13 @@ func (s *FittingService) GetShipFitting(
 
 	fitting, err := s.fetchFittingFromESI(ctx, characterID, shipTypeID, accessToken)
 	if err != nil {
-		// Graceful degradation: Return empty fitting on error
+		// Fail-loud (issue #147 B3): return the error too so callers can tell
+		// "ESI down" apart from the legitimate "ship has no modules fitted" case
+		// (which fetchFittingFromESI still returns as default fitting + nil). We
+		// still return the default fitting payload so a caller may degrade if it
+		// chooses, but the non-nil error is the explicit signal.
 		s.logger.Error("Failed to fetch fitting from ESI", "error", err, "characterID", characterID, "shipTypeID", shipTypeID)
-		return s.getDefaultFitting(shipTypeID), nil
+		return s.getDefaultFitting(shipTypeID), fmt.Errorf("fitting unavailable: %w", err)
 	}
 
 	// 3. Cache the result (5 minutes TTL, same as SkillsService)

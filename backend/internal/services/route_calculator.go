@@ -145,9 +145,17 @@ func (ro *RouteCalculator) CalculateRouteWithCapacityInfo(ctx context.Context, i
 	buySystemName, buyStationName := ro.getLocationNames(ctx, item.BuySystemID, item.BuyStationID)
 	sellSystemName, sellStationName := ro.getLocationNames(ctx, item.SellSystemID, item.SellStationID)
 
-	// Get security status for both systems
-	buySecurityStatus := ro.getSystemSecurityStatus(ctx, item.BuySystemID)
-	sellSecurityStatus := ro.getSystemSecurityStatus(ctx, item.SellSystemID)
+	// Get security status for both systems.
+	// Fail-loud (issue #147 A4): on a lookup failure we return the error so the
+	// worker pool skips this route — never fabricate a high-sec 1.0.
+	buySecurityStatus, err := ro.getSystemSecurityStatus(ctx, item.BuySystemID)
+	if err != nil {
+		return route, fmt.Errorf("buy-system security lookup failed: %w", err)
+	}
+	sellSecurityStatus, err := ro.getSystemSecurityStatus(ctx, item.SellSystemID)
+	if err != nil {
+		return route, fmt.Errorf("sell-system security lookup failed: %w", err)
+	}
 
 	// Calculate minimum security status across entire route
 	minRouteSecurity := ro.getMinRouteSecurityStatus(ctx, travelResult.Route)
@@ -290,14 +298,20 @@ func (ro *RouteCalculator) getLocationNames(ctx context.Context, systemID, stati
 	return systemName, stationName
 }
 
-// getSystemSecurityStatus retrieves the security status of a solar system from SDE
-func (ro *RouteCalculator) getSystemSecurityStatus(ctx context.Context, systemID int64) float64 {
+// getSystemSecurityStatus retrieves the security status of a solar system from SDE.
+//
+// Fail-loud (issue #147 A4): a lookup failure MUST NOT default to 1.0 (high-sec).
+// Doing so would let a null-/low-sec route be classified as safe and slip through
+// the security filter — exactly the failure mode of the old securityStatus COALESCE
+// bug. We return the error so the caller skips the route entirely; a route must
+// never be classified high-sec because a lookup failed.
+func (ro *RouteCalculator) getSystemSecurityStatus(ctx context.Context, systemID int64) (float64, error) {
 	secStatus, err := ro.sdeRepo.GetSystemSecurityStatus(ctx, systemID)
 	if err != nil {
-		log.Printf("Warning: failed to get security status for system %d: %v", systemID, err)
-		return 1.0 // Default to high-sec if lookup fails
+		log.Printf("ERROR: failed to get security status for system %d: %v (route will be skipped)", systemID, err)
+		return 0, fmt.Errorf("security status lookup failed for system %d: %w", systemID, err)
 	}
-	return secStatus
+	return secStatus, nil
 }
 
 // getMinRouteSecurityStatus finds the minimum security status across all systems
