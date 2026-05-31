@@ -5,18 +5,18 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RegionSelect } from "@/components/trading/RegionSelect";
-import { ShipSelect } from "@/components/trading/ShipSelect";
+import { CurrentShipCard } from "@/components/trading/CurrentShipCard";
 import { ShipFittingCard } from "@/components/trading/ShipFittingCard";
 import { TradingRouteList } from "@/components/trading/TradingRouteList";
 import { TradingFilters } from "@/components/trading/TradingFilters";
 import { Button } from "@/components/ui/button";
 import { TradingFilters as TradingFiltersType, TradingRoute } from "@/types/trading";
-import { fetchCharacterLocation, fetchCharacterShip } from "@/lib/api-client";
+import { fetchCharacterLocation } from "@/lib/api-client";
+import { useCurrentShip } from "@/lib/use-current-ship";
 import { Loader2 } from "lucide-react";
 
 const MAX_DISPLAYED_ROUTES = 50;
 const DEFAULT_REGION = "10000002"; // The Forge
-const DEFAULT_SHIP = "648";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 
 const defaultFilters: TradingFiltersType = {
@@ -28,12 +28,20 @@ const defaultFilters: TradingFiltersType = {
   allowNullSec: false,
 };
 
-async function calculateRoutes(regionId: number, shipTypeId: number): Promise<TradingRoute[]> {
+async function calculateRoutes(
+  regionId: number,
+  shipTypeId: number,
+  cargoCapacity?: number
+): Promise<TradingRoute[]> {
   const response = await fetch(`${API_BASE_URL}/api/v1/trading/routes/calculate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
-    body: JSON.stringify({ region_id: regionId, ship_type_id: shipTypeId }),
+    body: JSON.stringify({
+      region_id: regionId,
+      ship_type_id: shipTypeId,
+      ...(cargoCapacity && cargoCapacity > 0 ? { cargo_capacity: cargoCapacity } : {}),
+    }),
   });
 
   if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
@@ -48,38 +56,45 @@ function TradingPageContent() {
   const { isAuthenticated } = useAuth();
   // null = keine manuelle Auswahl; effektiver Wert wird unten aus Character-Daten abgeleitet
   const [regionOverride, setRegionOverride] = useState<string | null>(null);
-  const [shipOverride, setShipOverride] = useState<string | null>(null);
   const [filters, setFilters] = useState<TradingFiltersType>(defaultFilters);
   const [displayedRoutes, setDisplayedRoutes] = useState(10);
   const [isRefreshingMarketData, setIsRefreshingMarketData] = useState(false);
 
-  // Load character location + ship when authenticated
+  // Das aktuelle Schiff steuert ship_type_id + Cargo-Override (kein Dropdown mehr).
+  const { ship: currentShip } = useCurrentShip();
+
+  // Load character location when authenticated (für Region-Prefill + ShipFittingCard).
   const { data: characterData, isPending: characterDataLoading } = useQuery({
     queryKey: ["characterData", isAuthenticated],
     queryFn: async () => {
-      const [location, ship] = await Promise.all([
-        fetchCharacterLocation(),
-        fetchCharacterShip(),
-      ]);
-      return { location, ship };
+      const location = await fetchCharacterLocation();
+      return { location };
     },
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
   });
 
-  // Effektive Auswahl: manuelle Override > Character-Daten > Default. Rein abgeleitet,
+  // Effektive Region: manuelle Override > Character-Daten > Default. Rein abgeleitet,
   // kein Effect/Ref — die User-Auswahl (Override) bleibt sticky.
   const selectedRegion =
     regionOverride ?? characterData?.location.region_id?.toString() ?? DEFAULT_REGION;
-  const selectedShip =
-    shipOverride ?? characterData?.ship.ship_type_id?.toString() ?? DEFAULT_SHIP;
 
   const characterId = characterData?.location.character_id ?? null;
+
+  // Cargo-Override aus dem aktuellen Schiff: nur die effektive (fitted) Kapazität,
+  // wenn verfügbar und > 0 — sonst überlässt das Backend dem ship_type_id die Basis.
+  const cargoOverride =
+    currentShip &&
+    !currentShip.effective_cargo_unavailable &&
+    currentShip.effective_cargo_capacity != null &&
+    currentShip.effective_cargo_capacity > 0
+      ? currentShip.effective_cargo_capacity
+      : undefined;
 
   // Route calculation mutation (triggered by button click)
   const routeMutation = useMutation({
     mutationFn: () =>
-      calculateRoutes(parseInt(selectedRegion), parseInt(selectedShip)),
+      calculateRoutes(parseInt(selectedRegion), currentShip!.ship_type_id, cargoOverride),
     onSuccess: () => setDisplayedRoutes(10),
   });
 
@@ -119,7 +134,7 @@ function TradingPageContent() {
 
   const isCalculateDisabled =
     !selectedRegion ||
-    !selectedShip ||
+    !currentShip ||
     routeMutation.isPending ||
     characterDataLoading ||
     isRefreshingMarketData;
@@ -149,12 +164,7 @@ function TradingPageContent() {
               disabled={routeMutation.isPending || characterDataLoading}
               onRefreshStateChange={setIsRefreshingMarketData}
             />
-            <ShipSelect
-              value={selectedShip}
-              onChange={setShipOverride}
-              disabled={routeMutation.isPending || characterDataLoading}
-              authenticated={isAuthenticated}
-            />
+            <CurrentShipCard />
             <Button
               className="w-full"
               onClick={() => routeMutation.mutate()}
@@ -171,10 +181,10 @@ function TradingPageContent() {
             </Button>
           </div>
 
-          {isAuthenticated && characterId && selectedShip && (
+          {isAuthenticated && characterId && currentShip && (
             <ShipFittingCard
               characterId={characterId}
-              shipTypeId={parseInt(selectedShip)}
+              shipTypeId={currentShip.ship_type_id}
             />
           )}
 
