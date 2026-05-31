@@ -9,7 +9,7 @@ interface CurrentShipCardProps {
 }
 
 export function CurrentShipCard({ className }: CurrentShipCardProps) {
-  const { ship, isLoading, refresh } = useCurrentShip();
+  const { ship, isLoading, error, refresh } = useCurrentShip();
 
   const cargoDisplay = (() => {
     if (!ship) return null;
@@ -42,13 +42,19 @@ export function CurrentShipCard({ className }: CurrentShipCardProps) {
           <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground">
-        {!ship
-          ? isLoading
-            ? "Lade aktuelles Schiff…"
-            : "Kein aktives Schiff"
-          : `${ship.ship_name} (${cargoDisplay})`}
-      </p>
+      {error ? (
+        <p role="alert" className="text-sm text-destructive">
+          Aktuelles Schiff konnte nicht geladen werden
+        </p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {!ship
+            ? isLoading
+              ? "Lade aktuelles Schiff…"
+              : "Kein aktives Schiff"
+            : `${ship.ship_name} (${cargoDisplay})`}
+        </p>
+      )}
     </div>
   );
 }

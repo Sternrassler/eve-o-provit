@@ -766,8 +766,11 @@ func chunkInt64(ids []int64, size int) [][]int64 {
 }
 
 // FetchAssetNames resolves custom names for the given item_ids (best-effort: on any
-// error returns an empty map so labels fall back to the type name — never blocks the list).
-// Results are cached in Redis (1 h TTL) keyed by characterID + sorted item-id set.
+// error returns whatever partial names were resolved so labels fall back to the type
+// name — never blocks the list).
+// Results are cached in Redis (1 h TTL) keyed by characterID + sorted item-id set,
+// but ONLY when every ESI batch succeeded. A transient ESI error must NOT poison the
+// cache for the full TTL.
 // On a Redis error the function falls through to ESI transparently.
 func (s *FittingService) FetchAssetNames(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
 	if len(itemIDs) == 0 {
@@ -788,13 +791,15 @@ func (s *FittingService) FetchAssetNames(ctx context.Context, characterID int, i
 	}
 
 	// 2. Cache miss (or Redis error) — fetch from ESI.
-	names := s.fetchAssetNamesFromESI(ctx, characterID, itemIDs, accessToken)
+	names, ok := s.fetchAssetNamesFromESI(ctx, characterID, itemIDs, accessToken)
 
-	// 3. Store to Redis best-effort (ignore errors).
-	if data, err := json.Marshal(names); err == nil {
-		if err := s.redisClient.Set(ctx, cacheKey, data, assetNamesCacheTTL).Err(); err != nil {
-			if s.logger != nil {
-				s.logger.Warn("asset names: failed to cache in Redis", "key", cacheKey, "error", err)
+	// 3. Store to Redis only when all batches succeeded (fail-loud: don't cache ESI errors).
+	if ok {
+		if data, err := json.Marshal(names); err == nil {
+			if err := s.redisClient.Set(ctx, cacheKey, data, assetNamesCacheTTL).Err(); err != nil {
+				if s.logger != nil {
+					s.logger.Warn("asset names: failed to cache in Redis", "key", cacheKey, "error", err)
+				}
 			}
 		}
 	}
@@ -803,20 +808,30 @@ func (s *FittingService) FetchAssetNames(ctx context.Context, characterID int, i
 }
 
 // fetchAssetNamesFromESI resolves custom names via ESI /assets/names/ (chunk-and-merge).
-// Best-effort: on any error returns an empty map.
-func (s *FittingService) fetchAssetNamesFromESI(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
+// Returns (names, ok): ok is true only when every batch fetch succeeded (no ESI/build/parse
+// error). A genuinely-empty success (all ships unnamed) returns (empty map, true).
+// On any batch failure the partial names collected so far are returned with ok=false so
+// the caller can decide not to cache the result.
+func (s *FittingService) fetchAssetNamesFromESI(ctx context.Context, characterID int, itemIDs []int64, accessToken string) (map[int64]string, bool) {
 	out := make(map[int64]string, len(itemIDs))
+	allOK := true
 	for _, batch := range chunkInt64(itemIDs, assetNamesMaxIDs) {
-		for id, name := range s.fetchAssetNamesBatch(ctx, characterID, batch, accessToken) {
+		names, batchOK := s.fetchAssetNamesBatch(ctx, characterID, batch, accessToken)
+		if !batchOK {
+			allOK = false
+		}
+		for id, name := range names {
 			out[id] = name
 		}
 	}
-	return out
+	return out, allOK
 }
 
 // fetchAssetNamesBatch POSTs a single batch of ≤1000 ids to ESI /assets/names/.
-// Best-effort: returns an empty map on any error.
-func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
+// Returns (names, ok): ok is false whenever a request-build, network, HTTP-status, or
+// parse error occurs so the caller can propagate a "partial result" signal without
+// caching the incomplete response.
+func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID int, itemIDs []int64, accessToken string) (map[int64]string, bool) {
 	bodyBytes, _ := json.Marshal(itemIDs)
 	endpoint := fmt.Sprintf("/latest/characters/%d/assets/names/", characterID)
 	req, err := http.NewRequestWithContext(ctx, "POST", esiconfig.BaseURL+endpoint, bytes.NewReader(bodyBytes))
@@ -824,7 +839,7 @@ func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID i
 		if s.logger != nil {
 			s.logger.Warn("asset names: build request failed", "error", err)
 		}
-		return map[int64]string{}
+		return map[int64]string{}, false
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Content-Type", "application/json")
@@ -833,14 +848,14 @@ func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID i
 		if s.logger != nil {
 			s.logger.Warn("asset names: esi request failed", "error", err)
 		}
-		return map[int64]string{}
+		return map[int64]string{}, false
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != 200 {
 		if s.logger != nil {
 			s.logger.Warn("asset names: non-200", "status", resp.StatusCode)
 		}
-		return map[int64]string{}
+		return map[int64]string{}, false
 	}
 	raw, _ := io.ReadAll(resp.Body)
 	names, err := parseAssetNames(raw)
@@ -848,9 +863,9 @@ func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID i
 		if s.logger != nil {
 			s.logger.Warn("asset names: parse failed", "error", err)
 		}
-		return map[int64]string{}
+		return map[int64]string{}, false
 	}
-	return names
+	return names, true
 }
 
 // isFittedSlot checks if a location_flag represents a fitted module slot

@@ -134,4 +134,25 @@ describe("CurrentShipCard", () => {
 
     expect(screen.getByText("Kein aktives Schiff")).toBeInTheDocument();
   });
+
+  it("shows error alert (not 'Kein aktives Schiff') when fetch failed", () => {
+    mockedUseCurrentShip.mockReturnValue({
+      ship: null,
+      isLoading: false,
+      error: true,
+      refresh: mockRefresh,
+    });
+
+    render(<CurrentShipCard />);
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Aktuelles Schiff konnte nicht geladen werden",
+    );
+    expect(screen.queryByText("Kein aktives Schiff")).not.toBeInTheDocument();
+    // Refresh button must remain available for retry.
+    expect(
+      screen.getByTitle("Aktuelles Schiff neu laden"),
+    ).toBeInTheDocument();
+  });
 });
