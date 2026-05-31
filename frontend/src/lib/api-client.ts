@@ -31,6 +31,11 @@ interface BackendShipsResponse {
     type_id: number;
     type_name: string;
     cargo_capacity: number;
+    effective_cargo_capacity?: number;
+    // Set by the backend when fitting enrichment ERRORED (vs. a ship that
+    // simply has no cargo-expander). The UI surfaces this instead of silently
+    // showing the base hull as if it were the real fitted value.
+    effective_cargo_unavailable?: boolean;
   }>;
   count: number;
 }
@@ -46,7 +51,10 @@ export async function fetchRegions(): Promise<Region[]> {
   }
 
   const data: BackendRegionsResponse = await response.json();
-  return data.regions || [];
+  if (!Array.isArray(data.regions)) {
+    throw new Error("Invalid regions response: 'regions' missing or not an array");
+  }
+  return data.regions;
 }
 
 /**
@@ -109,12 +117,21 @@ export async function fetchCharacterShips(): Promise<Ship[]> {
 
   const data: BackendShipsResponse = await response.json();
 
-  // Convert backend format to Ship format
-  return data.ships?.map((ship) => ({
+  if (!Array.isArray(data.ships)) {
+    throw new Error("Invalid ships response: 'ships' missing or not an array");
+  }
+
+  // Convert backend format to Ship format. effective_cargo_capacity and the
+  // enrichment-error flag are carried through so the dropdown can show the
+  // fitted volume (or a visible "unknown" marker) instead of falling back to
+  // the base hull silently.
+  return data.ships.map((ship) => ({
     type_id: ship.type_id,
     name: ship.type_name,
     cargo_capacity: ship.cargo_capacity,
-  })) || [];
+    effective_cargo_capacity: ship.effective_cargo_capacity,
+    effective_cargo_unavailable: ship.effective_cargo_unavailable,
+  }));
 }
 
 /**
@@ -164,7 +181,10 @@ export async function searchItems(
   }
 
   const data: BackendItemSearchResponse = await response.json();
-  return data.items || [];
+  if (!Array.isArray(data.items)) {
+    throw new Error("Invalid item search response: 'items' missing or not an array");
+  }
+  return data.items;
 }
 
 /**

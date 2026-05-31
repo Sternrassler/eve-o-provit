@@ -67,9 +67,11 @@ export function TradingSkillsProvider({ children }: { children: React.ReactNode 
     } catch (err) {
       console.error("[TradingSkillsContext] Failed to fetch skills:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch skills");
-      
-      // Fallback to default skills on error
-      setSkills(getDefaultSkills());
+
+      // Do NOT substitute zeroed default skills here — that would silently feed
+      // wrong (worst-case) fee/cargo numbers into the UI as if they were real.
+      // Leave skills null so consumers surface the error instead.
+      setSkills(null);
     } finally {
       setLoading(false);
     }

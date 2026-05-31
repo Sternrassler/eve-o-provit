@@ -70,14 +70,28 @@ function ROICalculatorContent() {
         fetchCharacterLocation(),
         fetchCharacterShip(),
         // Wallet needs the (newer) wallet scope; tolerate its absence so a
-        // character authorized before the scope was added still works.
-        fetchCharacterWallet().catch(() => null),
+        // character authorized before the scope was added still works — but
+        // capture the failure so the UI can say the capital is a placeholder
+        // rather than silently presenting the default as the real balance.
+        fetchCharacterWallet().then(
+          (value) => ({ value }),
+          (err): { error: string } => ({
+            error:
+              err instanceof Error
+                ? err.message
+                : "Wallet konnte nicht geladen werden",
+          }),
+        ),
       ]);
       return { location, ship, wallet };
     },
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
   });
+
+  const wallet = characterData?.wallet;
+  const walletValue = wallet && "value" in wallet ? wallet.value : null;
+  const walletError = wallet && "error" in wallet ? wallet.error : null;
 
   // Effective values: manual override > current character data > default.
   // Purely derived (no effect), so the user's choice stays sticky.
@@ -93,10 +107,13 @@ function ROICalculatorContent() {
       DEFAULT_SHIP,
     capital:
       capitalOverride ??
-      (characterData?.wallet != null
-        ? Math.floor(characterData.wallet)
-        : form.capital),
+      (walletValue != null ? Math.floor(walletValue) : form.capital),
   };
+
+  // The capital is the default placeholder ONLY because the wallet fetch failed
+  // and the user hasn't entered a value — surface that so it's not mistaken for
+  // the real balance.
+  const showWalletWarning = walletError != null && capitalOverride == null;
 
   const handleFormChange = (next: PortfolioFormState) => {
     if (next.region !== effectiveForm.region) setRegionOverride(next.region);
@@ -138,6 +155,17 @@ function ROICalculatorContent() {
           <AlertDescription>
             Melde dich per EVE SSO an, um eine skill-bereinigte
             Kapital-Allokation zu berechnen.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {showWalletWarning && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Wallet-Guthaben nicht geladen</AlertTitle>
+          <AlertDescription>
+            {walletError} — es wird das Standardkapital verwendet. Bitte das
+            Kapital manuell setzen; der Wert ist <strong>nicht</strong> dein
+            echtes Guthaben.
           </AlertDescription>
         </Alert>
       )}

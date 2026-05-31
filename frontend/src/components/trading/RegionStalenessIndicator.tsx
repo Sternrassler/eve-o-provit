@@ -68,7 +68,14 @@ export function RegionStalenessIndicator({
   }
 
   if (error) {
-    return null; // Silent failure
+    // Don't hide the failure — show that the data age is unknown rather than
+    // rendering nothing (which reads as "data is fresh").
+    return (
+      <div className={cn("flex items-center gap-1.5 text-xs text-destructive", className)}>
+        <Clock className="h-3 w-3" />
+        <span>Datenalter unbekannt</span>
+      </div>
+    );
   }
 
   const { age_minutes } = dataAge;

@@ -6,8 +6,11 @@ set -euo pipefail
 ADR_DIR="docs/adr"
 
 if [ ! -d "$ADR_DIR" ]; then
-    echo "[check-adr] ERROR: $ADR_DIR Verzeichnis nicht gefunden" >&2
-    exit 1
+    # ADRs were intentionally removed (commit 65fe910). A missing directory is
+    # not an error — there is simply nothing to validate. Skip gracefully so the
+    # pre-commit hook doesn't hard-fail every commit in a repo without ADRs.
+    echo "[check-adr] Kein $ADR_DIR Verzeichnis — überspringe ADR-Konsistenzprüfung."
+    exit 0
 fi
 
 echo "[check-adr] Prüfe ADR-Konsistenz in $ADR_DIR..."

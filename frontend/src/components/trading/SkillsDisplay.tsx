@@ -140,6 +140,32 @@ export function SkillsDisplay() {
     );
   }
 
+  // Skills failed to load (and were not silently replaced by zeroed defaults).
+  // Surface the error loudly rather than rendering nothing or fake values.
+  if (!skills && error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Character Skills</CardTitle>
+          <CardDescription className="text-destructive">
+            Skills konnten nicht geladen werden: {error}
+          </CardDescription>
+          <CardAction>
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              title="Refresh skills"
+            >
+              <RefreshCw className={isRefreshing ? "animate-spin" : ""} />
+            </Button>
+          </CardAction>
+        </CardHeader>
+      </Card>
+    );
+  }
+
   if (!skills) {
     return null;
   }

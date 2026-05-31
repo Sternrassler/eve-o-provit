@@ -67,7 +67,9 @@ export default function CharacterPage() {
       setLocation(data);
     } catch (err) {
       console.error("Failed to fetch character location:", err);
-      setLocationError("Keine Daten verfügbar");
+      setLocationError(
+        err instanceof Error ? err.message : "Standort konnte nicht geladen werden",
+      );
     }
   }, []);
 
@@ -87,7 +89,9 @@ export default function CharacterPage() {
       setShip(data);
     } catch (err) {
       console.error("Failed to fetch character ship:", err);
-      setShipError("Keine Daten verfügbar");
+      setShipError(
+        err instanceof Error ? err.message : "Schiff konnte nicht geladen werden",
+      );
     }
   }, []);
 
