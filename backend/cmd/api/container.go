@@ -177,7 +177,7 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	if !ok {
 		return nil, fmt.Errorf("skills service does not implement MiningSkillsProvider")
 	}
-	miningService := services.NewMiningService(c.DB.SDE, c.SDERepo, c.MarketRepo, miningSkillsProvider, fittingService, characterHelper, c.SDERepo, c.AppLogger)
+	miningService := services.NewMiningService(c.DB.SDE, c.SDERepo, c.MarketRepo, miningSkillsProvider, fittingService, characterHelper, c.SDERepo, c.SDERepo, c.AppLogger)
 	c.MiningHandler = handlers.NewMiningHandler(miningService)
 
 	// Start the competition collector in the background (lazy-tracked pairs).

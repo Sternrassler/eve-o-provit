@@ -8,6 +8,25 @@ type OreRankingRequest struct {
 	SecBand  string `json:"sec_band"`
 }
 
+// SellLocation describes where a market order sits. NPC stations resolve to a name +
+// system; citadels (not in the SDE) carry only IsStructure (UI shows "Player-Structure",
+// the region is already known since the ranking is region-scoped).
+type SellLocation struct {
+	StationName string `json:"station_name,omitempty"`
+	SystemName  string `json:"system_name,omitempty"`
+	IsStructure bool   `json:"is_structure"`
+}
+
+// RefineMaterial is one reprocessing output mineral with where to sell it.
+// EffectiveQty is the amount you actually get per portionSize batch (qty × net yield).
+type RefineMaterial struct {
+	MaterialTypeID int64        `json:"material_type_id"`
+	MaterialName   string       `json:"material_name"`
+	EffectiveQty   int64        `json:"effective_qty"`
+	BuyPrice       float64      `json:"buy_price"`
+	Sell           SellLocation `json:"sell"`
+}
+
 // OreRankRow is one ore's raw-vs-refine ranking row. Per-m³ and isk/h figures are
 // internal (used for sorting); only the user-facing fields are serialized.
 type OreRankRow struct {
@@ -22,6 +41,11 @@ type OreRankRow struct {
 	DeltaISKPerHour  float64 `json:"delta_isk_per_hour"`
 	BestStationID    int64   `json:"best_station_id,omitempty"`
 	BestStationTax   float64 `json:"best_station_tax"`
+	// Where to act:
+	BestStationName   string           `json:"best_station_name,omitempty"`   // reprocess station (NPC type name)
+	BestStationSystem string           `json:"best_station_system,omitempty"` // reprocess station system
+	RawSell           *SellLocation    `json:"raw_sell,omitempty"`            // where to sell the raw ore
+	Materials         []RefineMaterial `json:"materials,omitempty"`           // per-mineral sell breakdown
 }
 
 // OreRankingResponse is the ore-ranking result for a region + security band.

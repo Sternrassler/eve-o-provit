@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"database/sql"
+	"math"
 	"sort"
+	"strings"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
@@ -46,6 +48,16 @@ type MiningRegionProvider interface {
 	GetRegionIDForSystem(ctx context.Context, systemID int64) (int, error)
 }
 
+// MiningNameProvider resolves NPC station/system/type names for the sell + reprocess
+// locations. Implemented by *database.SDERepository; kept narrow for fakeability. Includes
+// the locSDE methods (used by locResolver) plus GetTypeInfo for mineral names.
+type MiningNameProvider interface {
+	GetStationName(ctx context.Context, stationID int64) (string, error)
+	GetSystemName(ctx context.Context, systemID int64) (string, error)
+	GetSystemIDForLocation(ctx context.Context, locationID int64) (int64, error)
+	GetTypeInfo(ctx context.Context, typeID int) (*database.TypeInfo, error)
+}
+
 // MiningService ranks asteroid ores for a region + security band by raw-vs-refine
 // net ISK (per m³ and, with a mining fit, per hour). It reuses the reprocessing/mining
 // evedb building blocks + the ore-compare service helpers.
@@ -57,6 +69,7 @@ type MiningService struct {
 	fitting    MiningModulesProvider
 	location   MiningLocationProvider
 	region     MiningRegionProvider
+	names      MiningNameProvider
 	logger     *logger.Logger
 }
 
@@ -69,6 +82,7 @@ func NewMiningService(
 	fitting MiningModulesProvider,
 	location MiningLocationProvider,
 	region MiningRegionProvider,
+	names MiningNameProvider,
 	logger *logger.Logger,
 ) *MiningService {
 	return &MiningService{
@@ -79,6 +93,7 @@ func NewMiningService(
 		fitting:    fitting,
 		location:   location,
 		region:     region,
+		names:      names,
 		logger:     logger,
 	}
 }
@@ -178,6 +193,21 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	}
 	stationTax := ReprocessTax(baseTake, bestStanding)
 
+	// Resolve the chosen reprocess station's name + system, and a request-scoped
+	// sell-location resolver (memoizes hub stations across ores).
+	loc := newLocResolver(s.names)
+	var bestStationName, bestStationSystem string
+	if bestStationID != 0 {
+		if n, e := s.names.GetStationName(ctx, bestStationID); e == nil && !strings.HasPrefix(n, "Station-") {
+			bestStationName = n
+		}
+		if sysID, e := s.names.GetSystemIDForLocation(ctx, bestStationID); e == nil {
+			if sn, e2 := s.names.GetSystemName(ctx, sysID); e2 == nil {
+				bestStationSystem = sn
+			}
+		}
+	}
+
 	// 5. Per ore.
 	for i := range allOres {
 		if !bandGroups[allOres[i].GroupID] {
@@ -194,36 +224,46 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 			continue
 		}
 
-		oreBuy := s.highestBuyPrice(ctx, regionID, int(o.TypeID))
-
-		// Materials: each material's highest buy price. Missing material price → 0
-		// (that material contributes nothing to the refine value).
-		mats := make([]MaterialValue, 0, len(o.Materials))
-		anyMatPrice := false
-		for _, m := range o.Materials {
-			bp := s.highestBuyPrice(ctx, regionID, int(m.MaterialTypeID))
-			if bp > 0 {
-				anyMatPrice = true
-			}
-			mats = append(mats, MaterialValue{Qty: m.Quantity, BuyPrice: bp})
-		}
-
-		// Skip the ore entirely if NEITHER raw nor refine has any buy-order value.
-		if oreBuy <= 0 && !anyMatPrice {
-			continue
-		}
-
-		oreProc := skills.OreProcessing[o.GroupID]
+		// Net reprocessing yield for this ore (also drives each mineral's effective qty).
 		net := reprocessing.NetYield(baseRate, reprocessing.ReprocessingSkills{
 			Reprocessing:           skills.Reprocessing,
 			ReprocessingEfficiency: skills.ReprocessingEfficiency,
-			OreProcessing:          oreProc,
+			OreProcessing:          skills.OreProcessing[o.GroupID],
 		})
+
+		orePrice, oreLoc, oreOK := s.highestBuyOrder(ctx, regionID, int(o.TypeID))
+
+		// Materials: each material's highest buy order → CompareOre input + per-mineral breakdown.
+		mats := make([]MaterialValue, 0, len(o.Materials))
+		breakdown := make([]models.RefineMaterial, 0, len(o.Materials))
+		anyMatPrice := false
+		for _, m := range o.Materials {
+			mp, mLoc, mOK := s.highestBuyOrder(ctx, regionID, int(m.MaterialTypeID))
+			if mOK && mp > 0 {
+				anyMatPrice = true
+			}
+			mats = append(mats, MaterialValue{Qty: m.Quantity, BuyPrice: mp})
+			rm := models.RefineMaterial{
+				MaterialTypeID: m.MaterialTypeID,
+				MaterialName:   s.typeName(ctx, int(m.MaterialTypeID)),
+				EffectiveQty:   int64(math.Floor(float64(m.Quantity) * net)),
+				BuyPrice:       mp,
+			}
+			if mOK {
+				rm.Sell = loc.resolve(ctx, mLoc)
+			}
+			breakdown = append(breakdown, rm)
+		}
+
+		// Skip the ore entirely if NEITHER raw nor refine has any buy-order value.
+		if !oreOK && !anyMatPrice {
+			continue
+		}
 
 		cmp := CompareOre(OreCompareInput{
 			PortionSize:  o.PortionSize,
 			OreVolumeM3:  o.VolumeM3,
-			OreBuyPrice:  oreBuy,
+			OreBuyPrice:  orePrice,
 			Materials:    mats,
 			NetYield:     net,
 			StationTake:  stationTax,
@@ -231,17 +271,24 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 		})
 
 		row := models.OreRankRow{
-			OreTypeID:        o.TypeID,
-			OreName:          o.Name,
-			MiningM3PerHour:  m3h,
-			RawNetPerM3:      cmp.RawNetPerM3,
-			RefineNetPerM3:   cmp.RefineNetPerM3,
-			Best:             cmp.Best,
-			RawISKPerHour:    m3h * cmp.RawNetPerM3,
-			RefineISKPerHour: m3h * cmp.RefineNetPerM3,
-			DeltaISKPerHour:  m3h * cmp.DeltaPerM3,
-			BestStationID:    bestStationID,
-			BestStationTax:   stationTax,
+			OreTypeID:         o.TypeID,
+			OreName:           o.Name,
+			MiningM3PerHour:   m3h,
+			RawNetPerM3:       cmp.RawNetPerM3,
+			RefineNetPerM3:    cmp.RefineNetPerM3,
+			Best:              cmp.Best,
+			RawISKPerHour:     m3h * cmp.RawNetPerM3,
+			RefineISKPerHour:  m3h * cmp.RefineNetPerM3,
+			DeltaISKPerHour:   m3h * cmp.DeltaPerM3,
+			BestStationID:     bestStationID,
+			BestStationTax:    stationTax,
+			BestStationName:   bestStationName,
+			BestStationSystem: bestStationSystem,
+			Materials:         breakdown,
+		}
+		if oreOK {
+			rs := loc.resolve(ctx, oreLoc)
+			row.RawSell = &rs
 		}
 		resp.Rows = append(resp.Rows, row)
 	}
@@ -260,21 +307,30 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 }
 
 // highestBuyPrice returns the highest buy-order price for (region, type), or 0 if none.
-func (s *MiningService) highestBuyPrice(ctx context.Context, regionID, typeID int) float64 {
+// highestBuyOrder returns the highest buy-order price and its location for (region, type).
+// ok=false when there is no buy order.
+func (s *MiningService) highestBuyOrder(ctx context.Context, regionID, typeID int) (price float64, locationID int64, ok bool) {
 	orders, err := s.marketRepo.GetMarketOrders(ctx, regionID, typeID)
 	if err != nil {
 		if s.logger != nil {
 			s.logger.Warn("ore ranking: market orders fetch failed", "typeID", typeID, "error", err)
 		}
-		return 0
+		return 0, 0, false
 	}
-	best := 0.0
 	for _, o := range orders {
-		if o.IsBuyOrder && o.Price > best {
-			best = o.Price
+		if o.IsBuyOrder && (!ok || o.Price > price) {
+			price, locationID, ok = o.Price, o.LocationID, true
 		}
 	}
-	return best
+	return price, locationID, ok
+}
+
+// typeName resolves a type's name (e.g. for a refined mineral), "" on failure.
+func (s *MiningService) typeName(ctx context.Context, typeID int) string {
+	if ti, err := s.names.GetTypeInfo(ctx, typeID); err == nil && ti != nil {
+		return ti.Name
+	}
+	return ""
 }
 
 func maxFloat(a, b float64) float64 {
