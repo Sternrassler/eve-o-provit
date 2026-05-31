@@ -68,14 +68,7 @@ func (s *HaulingService) FindRoutes(ctx context.Context, req *models.HaulingRequ
 
 	// 3. Skills (fees) + ship cargo.
 	salesTaxRate, _, skillsApplied := resolveTradingRates(ctx, s.skills, characterID, accessToken)
-	cargoM3 := 0.0
-	var ship shipSpeed
-	if fit, err := s.fitting.GetShipFitting(ctx, characterID, req.ShipTypeID, accessToken); err == nil && fit != nil {
-		cargoM3 = fit.Bonuses.EffectiveCargo
-		ship = shipSpeed{warpAUS: fit.Bonuses.WarpSpeedAUS, alignTime: fit.Bonuses.AlignTime}
-	} else if err != nil {
-		s.logger.Warn("hauling: ship fitting fetch failed", "error", err, "ship", req.ShipTypeID)
-	}
+	cargoM3, ship := s.resolveCargoAndSpeed(ctx, req, characterID, accessToken)
 
 	// 4. Load orders for the region set.
 	var orders []matchOrder
@@ -119,6 +112,26 @@ func (s *HaulingService) FindRoutes(ctx context.Context, req *models.HaulingRequ
 		Routes:         routes,
 		SkillsApplied:  skillsApplied,
 	}, nil
+}
+
+// resolveCargoAndSpeed determines the effective cargo (m³) and ship speed for the
+// request. When req.CargoCapacity > 0 the selected ship instance's exact effective
+// cargo overrides the per-type recompute, so the fitting service is not consulted for
+// cargo. Ship warp/align speed still comes from the per-type fitting when available.
+func (s *HaulingService) resolveCargoAndSpeed(ctx context.Context, req *models.HaulingRequest, characterID int, accessToken string) (float64, shipSpeed) {
+	cargoM3 := 0.0
+	var ship shipSpeed
+	if req.CargoCapacity > 0 {
+		cargoM3 = req.CargoCapacity
+		return cargoM3, ship
+	}
+	if fit, err := s.fitting.GetShipFitting(ctx, characterID, req.ShipTypeID, accessToken); err == nil && fit != nil {
+		cargoM3 = fit.Bonuses.EffectiveCargo
+		ship = shipSpeed{warpAUS: fit.Bonuses.WarpSpeedAUS, alignTime: fit.Bonuses.AlignTime}
+	} else if err != nil {
+		s.logger.Warn("hauling: ship fitting fetch failed", "error", err, "ship", req.ShipTypeID)
+	}
+	return cargoM3, ship
 }
 
 // buildRoute enriches a candidate with volumes, packs the cargo, resolves the route

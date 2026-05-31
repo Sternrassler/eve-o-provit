@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -9,62 +9,65 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShipSelect } from "@/components/trading/ShipSelect";
+import { CurrentShipCard } from "@/components/trading/CurrentShipCard";
 import { HaulingRouteList } from "@/components/trading/HaulingRouteList";
 import { SkillsAppliedPanel } from "@/components/trading/SkillsAppliedPanel";
-import { fetchCharacterShip, findHaulingRoutes } from "@/lib/api-client";
+import { findHaulingRoutes } from "@/lib/api-client";
 import { HaulingRequest } from "@/types/trading";
+import { useCurrentShip } from "@/lib/use-current-ship";
+import { CharacterShip } from "@/types/character";
 import { Loader2 } from "lucide-react";
 
-const DEFAULT_SHIP = "649";
 const DEFAULT_CAPITAL = 500_000_000;
 const DEFAULT_MAX_ROUTES = 15;
 
 interface HaulingFormState {
-  ship: string;
   capital: number;
   avoidLowSec: boolean;
 }
 
 const defaultForm: HaulingFormState = {
-  ship: DEFAULT_SHIP,
   capital: DEFAULT_CAPITAL,
   avoidLowSec: true,
 };
 
-function buildRequest(form: HaulingFormState): HaulingRequest {
+function buildRequest(
+  form: HaulingFormState,
+  ship: CharacterShip,
+): HaulingRequest {
+  // Pass the instance's exact effective cargo only when known, positive and not
+  // flagged unavailable — otherwise omit it and let the backend recompute.
+  const cargoCapacity =
+    !ship.effective_cargo_unavailable &&
+    ship.effective_cargo_capacity != null &&
+    ship.effective_cargo_capacity > 0
+      ? ship.effective_cargo_capacity
+      : undefined;
+
   return {
     origin_region_id: 0, // backend uses the character's current region
-    ship_type_id: parseInt(form.ship, 10),
+    ship_type_id: ship.ship_type_id,
     capital: form.capital,
     avoid_low_sec: form.avoidLowSec,
     max_routes: DEFAULT_MAX_ROUTES,
+    cargo_capacity: cargoCapacity,
   };
 }
 
 function HaulingPageContent() {
   const { isAuthenticated } = useAuth();
   const [form, setForm] = useState<HaulingFormState>(defaultForm);
-  const [shipOverride, setShipOverride] = useState<string | null>(null);
 
-  // Pre-fill the ship with the character's current ship.
-  const { data: currentShip } = useQuery({
-    queryKey: ["characterShip", isAuthenticated],
-    queryFn: fetchCharacterShip,
-    enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Effective ship: manual override > current ship > default (purely derived).
-  const selectedShip =
-    shipOverride ?? currentShip?.ship_type_id?.toString() ?? DEFAULT_SHIP;
+  // The ship is always the character's current ship — no longer user-selectable.
+  const { ship: currentShip } = useCurrentShip();
 
   const haulingMutation = useMutation({
     mutationFn: (req: HaulingRequest) => findHaulingRoutes(req),
   });
 
   const handleSubmit = () => {
-    haulingMutation.mutate(buildRequest({ ...form, ship: selectedShip }));
+    if (!currentShip) return; // gated by the submit button; guard for safety
+    haulingMutation.mutate(buildRequest(form, currentShip));
   };
 
   const apiError = haulingMutation.isError
@@ -104,12 +107,7 @@ function HaulingPageContent() {
             handleSubmit();
           }}
         >
-          <ShipSelect
-            value={selectedShip}
-            onChange={setShipOverride}
-            disabled={disabled}
-            authenticated={isAuthenticated}
-          />
+          <CurrentShipCard />
 
           <div className="space-y-2">
             <Label htmlFor="capital">Kapital (ISK)</Label>
@@ -142,7 +140,9 @@ function HaulingPageContent() {
           <Button
             type="submit"
             className="w-full"
-            disabled={disabled || !form.ship}
+            // Block submission until the current ship is loaded — otherwise the
+            // request would carry ship_type_id: 0.
+            disabled={disabled || !currentShip}
           >
             {haulingMutation.isPending && (
               <Loader2 className="mr-2 size-4 animate-spin" />
