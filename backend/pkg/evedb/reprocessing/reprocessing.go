@@ -53,6 +53,9 @@ func ListOres(db *sql.DB) ([]Ore, error) {
 		JOIN groups g ON t.groupID = g._key
 		JOIN categories c ON g.categoryID = c._key
 		WHERE json_extract(c.name,'$.en') = 'Asteroid' AND t.published = 1
+		  -- Exclude compressed forms ("Compressed X", "Batch Compressed X"): they are
+		  -- not mined (raw ore is compressed afterwards) and their tiny volume skews ISK/m³.
+		  AND COALESCE(json_extract(t.name,'$.en'),'') NOT LIKE '%Compressed%'
 		ORDER BY t._key`)
 	if err != nil {
 		return nil, fmt.Errorf("list ores: %w", err)
