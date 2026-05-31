@@ -1,6 +1,7 @@
 package reprocessing
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/testutil"
@@ -47,5 +48,26 @@ func TestNetYield(t *testing.T) {
 	want := 0.50 * 1.15 * 1.10 * 1.08
 	if diff := got - want; diff > 1e-9 || diff < -1e-9 {
 		t.Fatalf("want %.6f got %.6f", want, got)
+	}
+}
+
+func TestListOres_ExcludesCompressedVariants(t *testing.T) {
+	db := testutil.OpenTestDB(t)
+	ores, err := ListOres(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := map[int64]bool{}
+	for _, o := range ores {
+		in[o.TypeID] = true
+		if strings.Contains(o.Name, "Compressed") {
+			t.Fatalf("compressed variant leaked into ore list: %d %q", o.TypeID, o.Name)
+		}
+	}
+	if !in[1230] || !in[17470] { // base Veldspar + Veldspar II-Grade (raw, mineable) stay
+		t.Fatal("raw Veldspar variants must remain in the list")
+	}
+	if in[62516] || in[28430] { // Compressed Veldspar + Batch Compressed Veldspar II-Grade gone
+		t.Fatal("compressed/batch-compressed variants must be excluded")
 	}
 }
