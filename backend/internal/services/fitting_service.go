@@ -7,8 +7,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
@@ -724,6 +726,28 @@ func parseAssetNames(body []byte) (map[int64]string, error) {
 // assetNamesMaxIDs is ESI's per-request id cap for /assets/names/ (max 1000 ids).
 const assetNamesMaxIDs = 1000
 
+// assetNamesCacheTTL is the Redis TTL for cached asset-name results (1 h, matching the assets cache window).
+const assetNamesCacheTTL = time.Hour
+
+// assetNamesCacheKey returns a stable Redis key for the given characterID and item-id set.
+// The key is independent of input order: the ids are sorted before hashing.
+func assetNamesCacheKey(characterID int, itemIDs []int64) string {
+	sorted := make([]int64, len(itemIDs))
+	copy(sorted, itemIDs)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+
+	h := fnv.New32a()
+	for _, id := range sorted {
+		// Write each id as 8 bytes (big-endian equivalent via repeated shifts).
+		b := [8]byte{
+			byte(id >> 56), byte(id >> 48), byte(id >> 40), byte(id >> 32),
+			byte(id >> 24), byte(id >> 16), byte(id >> 8), byte(id),
+		}
+		_, _ = h.Write(b[:])
+	}
+	return fmt.Sprintf("assetnames:%d:%x", characterID, h.Sum32())
+}
+
 // chunkInt64 splits ids into consecutive slices of at most size elements.
 // A size <= 0 yields a single chunk with all ids.
 func chunkInt64(ids []int64, size int) [][]int64 {
@@ -743,11 +767,44 @@ func chunkInt64(ids []int64, size int) [][]int64 {
 
 // FetchAssetNames resolves custom names for the given item_ids (best-effort: on any
 // error returns an empty map so labels fall back to the type name — never blocks the list).
-// Requests are chunked to ESI's 1000-id limit; a failed batch contributes nothing.
+// Results are cached in Redis (1 h TTL) keyed by characterID + sorted item-id set.
+// On a Redis error the function falls through to ESI transparently.
 func (s *FittingService) FetchAssetNames(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
 	if len(itemIDs) == 0 {
 		return map[int64]string{}
 	}
+
+	cacheKey := assetNamesCacheKey(characterID, itemIDs)
+
+	// 1. Try Redis cache.
+	if cachedBytes, err := s.redisClient.Get(ctx, cacheKey).Bytes(); err == nil {
+		var names map[int64]string
+		if err := json.Unmarshal(cachedBytes, &names); err == nil {
+			return names
+		}
+		if s.logger != nil {
+			s.logger.Warn("asset names: failed to unmarshal cached entry", "key", cacheKey)
+		}
+	}
+
+	// 2. Cache miss (or Redis error) — fetch from ESI.
+	names := s.fetchAssetNamesFromESI(ctx, characterID, itemIDs, accessToken)
+
+	// 3. Store to Redis best-effort (ignore errors).
+	if data, err := json.Marshal(names); err == nil {
+		if err := s.redisClient.Set(ctx, cacheKey, data, assetNamesCacheTTL).Err(); err != nil {
+			if s.logger != nil {
+				s.logger.Warn("asset names: failed to cache in Redis", "key", cacheKey, "error", err)
+			}
+		}
+	}
+
+	return names
+}
+
+// fetchAssetNamesFromESI resolves custom names via ESI /assets/names/ (chunk-and-merge).
+// Best-effort: on any error returns an empty map.
+func (s *FittingService) fetchAssetNamesFromESI(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
 	out := make(map[int64]string, len(itemIDs))
 	for _, batch := range chunkInt64(itemIDs, assetNamesMaxIDs) {
 		for id, name := range s.fetchAssetNamesBatch(ctx, characterID, batch, accessToken) {
