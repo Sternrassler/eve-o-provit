@@ -17,6 +17,10 @@ interface ShipSelectProps {
   onChange: (value: string) => void;
   disabled?: boolean;
   authenticated?: boolean;
+  /** Called with the resolved Ship whose item_id matches `value` (or null when
+   *  no option matches). Lets the parent read the selected instance's effective
+   *  cargo for the optimizer override. */
+  onSelect?: (ship: Ship | null) => void;
 }
 
 export function ShipSelect({
@@ -24,6 +28,7 @@ export function ShipSelect({
   onChange,
   disabled,
   authenticated = false,
+  onSelect,
 }: ShipSelectProps) {
   // Unauthenticated users get a generic example list (a legitimate default —
   // there is no character to load). Authenticated users get their real hangar;
@@ -98,6 +103,18 @@ export function ShipSelect({
       seen.add(s.item_id);
     }
   }
+
+  // Surface the currently selected instance to the parent. Keyed on `value` and
+  // the inputs that determine the option list (`ships` + `activeShip`), so the
+  // parent always has the up-to-date selection even as the hangar loads.
+  useEffect(() => {
+    if (!onSelect) return;
+    const selected =
+      options.find((s) => s.item_id.toString() === value) ?? null;
+    onSelect(selected);
+    // `options` is rebuilt every render; depend on its inputs instead.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, ships, activeShip, onSelect]);
 
   return (
     <div className="space-y-2">

@@ -19,7 +19,8 @@ import {
   fetchCharacterWallet,
   optimizePortfolio,
 } from "@/lib/api-client";
-import { PortfolioRequest } from "@/types/trading";
+import { PortfolioRequest, Ship } from "@/types/trading";
+import { buildPortfolioRequest } from "@/lib/portfolio-request";
 import { Loader2 } from "lucide-react";
 
 const DEFAULT_REGION = "10000002"; // The Forge
@@ -37,23 +38,6 @@ const defaultForm: PortfolioFormState = {
   allowNullSec: false,
 };
 
-function buildRequest(form: PortfolioFormState): PortfolioRequest {
-  const secZones: string[] = [];
-  if (form.allowHighSec) secZones.push("high");
-  if (form.allowLowSec) secZones.push("low");
-  if (form.allowNullSec) secZones.push("null");
-
-  return {
-    region_id: parseInt(form.region, 10),
-    ship_type_id: parseInt(form.ship, 10),
-    capital: form.capital,
-    time_budget_min: form.timeBudgetMin,
-    liquidity_cap_pct: form.liquidityCapPct,
-    max_item_pct: form.maxItemPct,
-    sec_zones: secZones,
-  };
-}
-
 function ROICalculatorContent() {
   const { isAuthenticated } = useAuth();
   const [form, setForm] = useState<PortfolioFormState>(defaultForm);
@@ -61,6 +45,9 @@ function ROICalculatorContent() {
   const [regionOverride, setRegionOverride] = useState<string | null>(null);
   const [shipOverride, setShipOverride] = useState<string | null>(null);
   const [capitalOverride, setCapitalOverride] = useState<number | null>(null);
+  // The ship instance currently picked in the dropdown (reported by ShipSelect).
+  // Its effective cargo is sent as the optimizer override.
+  const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
 
   // Load the character's current location + ship + wallet to pre-fill the form.
   const { data: characterData } = useQuery({
@@ -101,9 +88,11 @@ function ROICalculatorContent() {
       regionOverride ??
       characterData?.location.region_id?.toString() ??
       DEFAULT_REGION,
+    // The dropdown value is a ship instance's item_id, so the prefill must be
+    // the active ship's item_id (not its type_id) to select the right option.
     ship:
       shipOverride ??
-      characterData?.ship.ship_type_id?.toString() ??
+      characterData?.ship.ship_item_id?.toString() ??
       DEFAULT_SHIP,
     capital:
       capitalOverride ??
@@ -128,7 +117,7 @@ function ROICalculatorContent() {
   });
 
   const handleSubmit = () => {
-    optimizeMutation.mutate(buildRequest(effectiveForm));
+    optimizeMutation.mutate(buildPortfolioRequest(effectiveForm, selectedShip));
   };
 
   const apiError = optimizeMutation.isError
@@ -179,6 +168,7 @@ function ROICalculatorContent() {
           disabled={!isAuthenticated || optimizeMutation.isPending}
           loading={optimizeMutation.isPending}
           authenticated={isAuthenticated}
+          onShipSelect={setSelectedShip}
         />
 
         {/* Results */}

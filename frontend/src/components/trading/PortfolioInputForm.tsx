@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
+import { Ship } from "@/types/trading";
 
 export interface PortfolioFormState {
   region: string;
@@ -27,6 +28,9 @@ interface PortfolioInputFormProps {
   disabled?: boolean;
   loading?: boolean;
   authenticated?: boolean;
+  /** Forwarded to ShipSelect — reports the selected ship instance so the page
+   *  can send its effective cargo as the optimizer override. */
+  onShipSelect?: (ship: Ship | null) => void;
 }
 
 /**
@@ -41,6 +45,7 @@ export function PortfolioInputForm({
   disabled,
   loading,
   authenticated = false,
+  onShipSelect,
 }: PortfolioInputFormProps) {
   const update = <K extends keyof PortfolioFormState>(
     key: K,
@@ -68,6 +73,7 @@ export function PortfolioInputForm({
         onChange={(v) => update("ship", v)}
         disabled={disabled}
         authenticated={authenticated}
+        onSelect={onShipSelect}
       />
 
       <div className="space-y-2">

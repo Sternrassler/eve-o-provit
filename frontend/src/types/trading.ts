@@ -167,6 +167,11 @@ export interface PortfolioRequest {
   liquidity_cap_pct: number;
   max_item_pct: number;
   sec_zones: string[]; // e.g. ["high", "low", "null"]
+  /** Selected ship instance's effective cargo (m³). When set, the optimizer
+   *  uses this exact value instead of recomputing per ship type. Omitted when
+   *  the instance's effective cargo is unavailable/unknown (backend falls back
+   *  to the per-type recompute). */
+  cargo_capacity?: number;
 }
 
 export interface PortfolioItem {
