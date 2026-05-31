@@ -38,6 +38,7 @@ type AppContainer struct {
 	PortfolioHandler   *handlers.PortfolioHandler
 	HaulingHandler     *handlers.HaulingHandler
 	AssetsHandler      *handlers.AssetsHandler
+	MiningHandler      *handlers.MiningHandler
 
 	// Background workers
 	CompetitionCollector *services.CompetitionCollector
@@ -167,6 +168,17 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	// Sell-from-assets (#107) — reuses hub price fetch + skills + navigation + fitting.
 	assetSaleService := services.NewAssetSaleService(skillsService, c.ESIClient, c.SDERepo, services.NewESIAssetFetcher(), fittingService, characterHelper, c.SDERepo, c.DB.SDE, c.AppLogger)
 	c.AssetsHandler = handlers.NewAssetsHandler(assetSaleService)
+
+	// Mining ore-ranking (raw-vs-refine per region+sec-band). Reuses skills/standings,
+	// fitted mining modules, region reprocessing stations, and market buy prices.
+	// skillsService is a *SkillsService; its mining/standings methods are not on the
+	// narrow SkillsServicer interface, so resolve the concrete type for the provider.
+	miningSkillsProvider, ok := skillsService.(services.MiningSkillsProvider)
+	if !ok {
+		return nil, fmt.Errorf("skills service does not implement MiningSkillsProvider")
+	}
+	miningService := services.NewMiningService(c.DB.SDE, c.SDERepo, c.MarketRepo, miningSkillsProvider, fittingService, characterHelper, c.SDERepo, c.AppLogger)
+	c.MiningHandler = handlers.NewMiningHandler(miningService)
 
 	// Start the competition collector in the background (lazy-tracked pairs).
 	go c.CompetitionCollector.Start(ctx)

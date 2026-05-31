@@ -50,6 +50,9 @@ func (fakeFitting) EnrichShipsEffectiveCargo(_ context.Context, _ int, _ []model
 func (fakeFitting) EffectiveCargoForActiveShip(_ context.Context, _, _ int, _ int64, _ string) (float64, bool) {
 	return 0, false
 }
+func (fakeFitting) ActiveShipFittedModuleTypeIDs(_ context.Context, _ int, _ string) ([]int64, error) {
+	return nil, nil
+}
 
 type fakeActiveShip struct{ typeID int }
 

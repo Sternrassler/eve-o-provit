@@ -343,3 +343,31 @@ export interface SellOptionsResponse {
    *  resolve its system, so no route is possible. */
   not_routable_reason?: string;
 }
+
+// Mining Ore Ranking (ore ISK/hour calculator)
+
+export interface OreRankingRequest {
+  region_id: number;
+  sec_band: string; // "high" | "low" | "null"
+}
+
+export interface OreRankRow {
+  ore_type_id: number;
+  ore_name: string;
+  mining_m3_per_hour: number;
+  raw_isk_per_hour: number;
+  refine_isk_per_hour: number;
+  raw_net_per_m3: number;
+  refine_net_per_m3: number;
+  best: string; // "raw" | "refine"
+  delta_isk_per_hour: number;
+  best_station_id?: number;
+  best_station_tax: number;
+}
+
+export interface OreRankingResponse {
+  region_id: number;
+  sec_band: string;
+  no_mining_setup: boolean;
+  rows: OreRankRow[];
+}

@@ -66,6 +66,11 @@ type FittingServicer interface {
 	// instance by item_id (the flown/active ship). Returns (effective, unavailable);
 	// (0, true) on an assets/calc error so the caller fails loud.
 	EffectiveCargoForActiveShip(ctx context.Context, characterID, shipTypeID int, shipItemID int64, accessToken string) (float64, bool)
+
+	// ActiveShipFittedModuleTypeIDs returns the TYPE IDs of the modules fitted to the
+	// character's current/active ship (used for mining yield). Empty slice when no
+	// modules are fitted; error only on an ESI assets/ship failure.
+	ActiveShipFittedModuleTypeIDs(ctx context.Context, characterID int, accessToken string) ([]int64, error)
 }
 
 // FeeServicer defines the interface for trading fee calculations

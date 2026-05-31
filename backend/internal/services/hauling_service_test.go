@@ -31,6 +31,9 @@ func (f *recordingFitting) EnrichShipsEffectiveCargo(_ context.Context, _ int, _
 func (f *recordingFitting) EffectiveCargoForActiveShip(_ context.Context, _, _ int, _ int64, _ string) (float64, bool) {
 	return 0, false
 }
+func (f *recordingFitting) ActiveShipFittedModuleTypeIDs(_ context.Context, _ int, _ string) ([]int64, error) {
+	return nil, nil
+}
 
 // When CargoCapacity > 0 the override replaces ONLY the cargo m³; the fitting is
 // still fetched so the warp/align SPEED reflects the actual fitted ship.

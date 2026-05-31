@@ -15,6 +15,8 @@ import {
   AssetsResponse,
   SellOptionsRequest,
   SellOptionsResponse,
+  OreRankingRequest,
+  OreRankingResponse,
 } from "@/types/trading";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
@@ -264,6 +266,36 @@ export async function findSellOptions(
   }
 
   return response.json();
+}
+
+/**
+ * Rank ores by ISK/hour (raw sell vs reprocess) for the character's current
+ * region and the given security band (requires authentication). Rows are
+ * returned pre-sorted by best_isk_per_hour descending.
+ * @param req - region_id (0 = character's current region) + sec_band
+ */
+export async function fetchOreRanking(
+  req: OreRankingRequest
+): Promise<OreRankingResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/v1/mining/ore-ranking`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(req),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ore ranking: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  if (!Array.isArray(data.rows)) {
+    throw new Error("Invalid ore ranking response: 'rows' missing or not an array");
+  }
+  return data as OreRankingResponse;
 }
 
 export interface SetWaypointOptions {

@@ -40,6 +40,19 @@ func (m *mockFittingService) EffectiveCargoForActiveShip(ctx context.Context, ch
 	}
 	return 0, false
 }
+func (m *mockFittingService) ActiveShipFittedModuleTypeIDs(ctx context.Context, characterID int, accessToken string) ([]int64, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	if m.fitting != nil {
+		ids := make([]int64, 0, len(m.fitting.FittedModules))
+		for _, mod := range m.fitting.FittedModules {
+			ids = append(ids, int64(mod.TypeID))
+		}
+		return ids, nil
+	}
+	return nil, nil
+}
 
 // TestGetCharacterFitting_Success tests successful fitting retrieval
 func TestGetCharacterFitting_Success(t *testing.T) {
