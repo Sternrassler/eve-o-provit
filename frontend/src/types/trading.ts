@@ -351,6 +351,20 @@ export interface OreRankingRequest {
   sec_band: string; // "high" | "low" | "null"
 }
 
+export interface SellLocation {
+  station_name?: string;
+  system_name?: string;
+  is_structure: boolean;
+}
+
+export interface RefineMaterial {
+  material_type_id: number;
+  material_name: string;
+  effective_qty: number;
+  buy_price: number;
+  sell: SellLocation;
+}
+
 export interface OreRankRow {
   ore_type_id: number;
   ore_name: string;
@@ -363,6 +377,10 @@ export interface OreRankRow {
   delta_isk_per_hour: number;
   best_station_id?: number;
   best_station_tax: number;
+  best_station_name?: string;
+  best_station_system?: string;
+  raw_sell?: SellLocation;
+  materials?: RefineMaterial[];
 }
 
 export interface OreRankingResponse {

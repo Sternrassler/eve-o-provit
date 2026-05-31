@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { OreRankingTable } from "@/components/trading/OreRankingTable";
 import { OreRankRow } from "@/types/trading";
 
@@ -84,5 +84,89 @@ describe("OreRankingTable", () => {
 
     expect(screen.getByTestId("ore-ranking-empty")).toBeInTheDocument();
     expect(screen.queryByTestId("ore-ranking-row")).not.toBeInTheDocument();
+  });
+
+  it("hides the detail panel until a row is clicked", () => {
+    render(<OreRankingTable rows={rows} />);
+
+    expect(screen.queryByTestId("ore-ranking-detail")).not.toBeInTheDocument();
+  });
+
+  it("expands a refine row to show the reprocess station and per-mineral sell breakdown", () => {
+    const refineRows: OreRankRow[] = [
+      makeRow({
+        ore_type_id: 1230,
+        ore_name: "Veldspar",
+        best: "refine",
+        best_station_name: "Jita IV - Moon 4 - Caldari Navy Assembly Plant",
+        best_station_system: "Jita",
+        materials: [
+          {
+            material_type_id: 34,
+            material_name: "Tritanium",
+            effective_qty: 12345,
+            buy_price: 5.5,
+            sell: {
+              station_name: "Amarr VIII - Emperor Family Academy",
+              system_name: "Amarr",
+              is_structure: false,
+            },
+          },
+        ],
+      }),
+    ];
+    render(<OreRankingTable rows={refineRows} />);
+
+    fireEvent.click(screen.getByTestId("ore-ranking-row"));
+
+    const detail = screen.getByTestId("ore-ranking-detail");
+    expect(
+      within(detail).getByText(/Caldari Navy Assembly Plant — Jita/),
+    ).toBeInTheDocument();
+    expect(within(detail).getByText("Tritanium")).toBeInTheDocument();
+    expect(within(detail).getByText("12.345")).toBeInTheDocument(); // de-DE grouping
+    expect(
+      within(detail).getByText(/Emperor Family Academy — Amarr/),
+    ).toBeInTheDocument();
+  });
+
+  it("expands a raw row to show the raw ore sell location", () => {
+    const rawRows: OreRankRow[] = [
+      makeRow({
+        ore_type_id: 1228,
+        ore_name: "Scordite",
+        best: "raw",
+        raw_sell: {
+          station_name: "Dodixie IX - Moon 20 - Federation Navy Assembly Plant",
+          system_name: "Dodixie",
+          is_structure: false,
+        },
+      }),
+    ];
+    render(<OreRankingTable rows={rawRows} />);
+
+    fireEvent.click(screen.getByTestId("ore-ranking-row"));
+
+    const detail = screen.getByTestId("ore-ranking-detail");
+    expect(
+      within(detail).getByText(/Federation Navy Assembly Plant — Dodixie/),
+    ).toBeInTheDocument();
+  });
+
+  it("renders 'Player-Structure' for a sell location inside a citadel", () => {
+    const structureRows: OreRankRow[] = [
+      makeRow({
+        ore_type_id: 1228,
+        ore_name: "Scordite",
+        best: "raw",
+        raw_sell: { is_structure: true },
+      }),
+    ];
+    render(<OreRankingTable rows={structureRows} />);
+
+    fireEvent.click(screen.getByTestId("ore-ranking-row"));
+
+    const detail = screen.getByTestId("ore-ranking-detail");
+    expect(within(detail).getByText("Player-Structure")).toBeInTheDocument();
   });
 });
