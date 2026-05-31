@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-05-31
+
+### Changed
+
+- **eve-esi-client auf v0.5.0 angehoben (#150).** Backend-Dependency von der alten gepinnten Pseudo-Version (`v0.2.1-…df66ffe`, Nov 2025) auf den getaggten Release v0.5.0 — bringt fail-loud Fehlerbehandlung in der ESI-Lib (GetBody-Retry, Cache-TTL-Parse, Ratelimit-Teilread, Close-Errors; eve-esi-client #27) sowie die Entfernung des Prometheus-Metrics-Features und des esi-proxy-cmd.
+
+### Fixed
+
+- **Pre-Commit-Hook blockierte nicht mehr jeden Backend-Commit.** `golangci-lint` v2 konnte die v1-formatige `backend/.golangci.yml` (ohne `version:`-Key) nicht laden und hard-failte; der Schritt wird jetzt via `golangci-lint config verify` sauber übersprungen (go vet läuft weiter; CI lintet über gofmt+vet). Self-healing nach einer v2-Migration der Config.
+
 ## [0.17.1] - 2026-05-31
 
 ### Fixed
