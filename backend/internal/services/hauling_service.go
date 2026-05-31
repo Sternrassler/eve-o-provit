@@ -115,21 +115,24 @@ func (s *HaulingService) FindRoutes(ctx context.Context, req *models.HaulingRequ
 }
 
 // resolveCargoAndSpeed determines the effective cargo (m³) and ship speed for the
-// request. When req.CargoCapacity > 0 the selected ship instance's exact effective
-// cargo overrides the per-type recompute, so the fitting service is not consulted for
-// cargo. Ship warp/align speed still comes from the per-type fitting when available.
+// request. The fitting is always fetched so the warp/align SPEED reflects the actual
+// fitted ship (it drives the ISK/hour ranking). When req.CargoCapacity > 0 the selected
+// ship instance's exact effective cargo overrides the per-type cargo m³ — but only the
+// cargo number; the speed still comes from the fitting.
 func (s *HaulingService) resolveCargoAndSpeed(ctx context.Context, req *models.HaulingRequest, characterID int, accessToken string) (float64, shipSpeed) {
 	cargoM3 := 0.0
 	var ship shipSpeed
-	if req.CargoCapacity > 0 {
-		cargoM3 = req.CargoCapacity
-		return cargoM3, ship
-	}
+	// Always fetch the fitting for the warp/align SPEED (a fast, agile ship does
+	// more trips per time budget — it drives the ISK/hour ranking). The cargo
+	// override only replaces the cargo m³, not the speed.
 	if fit, err := s.fitting.GetShipFitting(ctx, characterID, req.ShipTypeID, accessToken); err == nil && fit != nil {
 		cargoM3 = fit.Bonuses.EffectiveCargo
 		ship = shipSpeed{warpAUS: fit.Bonuses.WarpSpeedAUS, alignTime: fit.Bonuses.AlignTime}
 	} else if err != nil {
 		s.logger.Warn("hauling: ship fitting fetch failed", "error", err, "ship", req.ShipTypeID)
+	}
+	if req.CargoCapacity > 0 {
+		cargoM3 = req.CargoCapacity
 	}
 	return cargoM3, ship
 }
