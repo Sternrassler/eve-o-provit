@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-05-31
+
+### Added
+
+- **Instanz-genaues Schiff-Dropdown im ROI-Rechner (#152).** Das Dropdown listet jetzt jedes besessene Schiff **einzeln** (nicht mehr nach Typ dedupliziert), mit eigenem Schiffsnamen (ESI `/assets/names`) und dem effektiven Frachtraum **seines** tatsächlichen Fittings (pro `item_id`). Die Auswahl trägt das exakte Cargo der Instanz als `cargo_capacity`-Override in den Optimizer.
+
+### Fixed
+
+- **Falscher Effektiv-Frachtraum bei mehreren gleichartigen Schiffen (#152).** Bisher wurde der Effektivwert eines Schiffstyps aus dem *ersten* Exemplar dieses Typs berechnet — bei mehreren gleichartigen Schiffen mit unterschiedlichem Fitting also ein beliebiges; ein frachtraum-reduzierendes Modul (z. B. Reinforced Bulkheads) ergab so einen Wert *unter* der Basis (gemeldet: Iteron Mark V 4.9k statt in-game 6.09k). Jetzt rechnet jede Instanz — inklusive des geflogenen Schiffs (ROI-Default) — mit ihrem eigenen Fitting. Die deterministische Cargo-Rechnung selbst war korrekt; nur die Instanz-Auswahl war es nicht.
+
 ## [0.17.3] - 2026-05-31
 
 ### Changed
