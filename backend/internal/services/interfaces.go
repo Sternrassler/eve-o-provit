@@ -61,6 +61,11 @@ type FittingServicer interface {
 	// (from its OWN fitting by item_id), EffectiveCargoUnavailable, and Name
 	// (custom ESI name, falling back to TypeName). Best-effort: enriches in place.
 	EnrichShipsEffectiveCargo(ctx context.Context, characterID int, ships []models.CharacterAssetShip, accessToken string)
+
+	// EffectiveCargoForActiveShip computes the effective cargo for a single ship
+	// instance by item_id (the flown/active ship). Returns (effective, unavailable);
+	// (0, true) on an assets/calc error so the caller fails loud.
+	EffectiveCargoForActiveShip(ctx context.Context, characterID, shipTypeID int, shipItemID int64, accessToken string) (float64, bool)
 }
 
 // FeeServicer defines the interface for trading fee calculations

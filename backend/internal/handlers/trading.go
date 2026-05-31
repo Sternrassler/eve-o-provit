@@ -572,35 +572,26 @@ func (h *TradingHandler) fetchESICharacterShip(ctx context.Context, characterID 
 	ship.CargoCapacity = capacities.BaseCargoHold
 
 	// Effective cargo (hull + skills + fitted modules) for the dropdown label.
-	// Fail-loud (issue #147 A3): a fitting FETCH ERROR is logged and surfaced via
-	// EffectiveCargoUnavailable so the client renders a visible degraded state
-	// instead of silently falling back to the base hull as if it were effective.
-	// "no fitting / no cargo bonus" (err==nil) is NOT an error and leaves the flag
-	// unset with EffectiveCargoCapacity==0.
+	// Instance-accurate (issue #147 + dropdown follow-up): the active/flown ship is the
+	// DEFAULT prefill in the ROI dropdown, so it must be computed for THIS exact instance
+	// by ship_item_id — not per type / first-instance. A pilot flying one of two same-type
+	// ships otherwise sees the wrong instance's cargo.
+	// Fail-loud (issue #147 A3): on an assets/calc error EffectiveCargoForActiveShip returns
+	// unavailable=true so the client renders a visible degraded state instead of silently
+	// showing the base hull as if it were effective. "no fitting / no cargo bonus" yields
+	// (0, false) and leaves the flag unset with EffectiveCargoCapacity==0.
 	if h.fittingService != nil {
-		fit, ferr := h.fittingService.GetShipFitting(ctx, characterID, int(esiShip.ShipTypeID), accessToken)
-		applyEffectiveCargoToShip(ship, fit, ferr)
-		if ferr != nil {
-			log.Printf("WARN: effective-cargo enrichment failed for characterID=%d shipTypeID=%d: %v (marking effective_cargo_unavailable)", characterID, esiShip.ShipTypeID, ferr)
+		eff, unavail := h.fittingService.EffectiveCargoForActiveShip(ctx, characterID, int(esiShip.ShipTypeID), esiShip.ShipItemID, accessToken)
+		if eff > 0 {
+			ship.EffectiveCargoCapacity = eff
+		}
+		ship.EffectiveCargoUnavailable = unavail
+		if unavail {
+			log.Printf("WARN: effective-cargo enrichment failed for characterID=%d shipTypeID=%d shipItemID=%d (marking effective_cargo_unavailable)", characterID, esiShip.ShipTypeID, esiShip.ShipItemID)
 		}
 	}
 
 	return ship, nil
-}
-
-// applyEffectiveCargoToShip applies a fitting-fetch result to a CharacterShip per
-// the issue #147 A3 contract:
-//   - err != nil               → EffectiveCargoUnavailable=true (explicit "unknown")
-//   - err == nil, fit/bonus ≤ 0 → leave EffectiveCargoCapacity=0, flag unset
-//   - err == nil, bonus > 0     → set EffectiveCargoCapacity
-func applyEffectiveCargoToShip(ship *models.CharacterShip, fit *services.FittingData, err error) {
-	if err != nil {
-		ship.EffectiveCargoUnavailable = true
-		return
-	}
-	if fit != nil && fit.Bonuses.EffectiveCargo > 0 {
-		ship.EffectiveCargoCapacity = fit.Bonuses.EffectiveCargo
-	}
 }
 
 type esiAssetResponse struct {

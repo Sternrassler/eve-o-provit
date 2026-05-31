@@ -462,6 +462,21 @@ func (s *FittingService) EnrichShipsEffectiveCargo(ctx context.Context, characte
 	}
 }
 
+// EffectiveCargoForActiveShip computes the effective cargo for a single ship instance by
+// item_id (used for the flown/active ship). Returns (effective, unavailable). On an
+// assets/calc error returns (0, true) so the caller fails loud (falls back to base + flag).
+func (s *FittingService) EffectiveCargoForActiveShip(ctx context.Context, characterID, shipTypeID int, shipItemID int64, accessToken string) (float64, bool) {
+	assets, err := s.fetchESIAssets(ctx, characterID, accessToken)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("active ship effective cargo: assets fetch failed", "error", err)
+		}
+		return 0, true
+	}
+	charSkills := s.characterCargoSkills(ctx, characterID, accessToken)
+	return s.EffectiveCargoForShipItem(ctx, shipTypeID, shipItemID, assets, charSkills)
+}
+
 // fetchESIAssets fetches character assets from ESI /v5/characters/{id}/assets/
 func (s *FittingService) fetchESIAssets(
 	ctx context.Context,
@@ -706,12 +721,45 @@ func parseAssetNames(body []byte) (map[int64]string, error) {
 	return out, nil
 }
 
+// assetNamesMaxIDs is ESI's per-request id cap for /assets/names/ (max 1000 ids).
+const assetNamesMaxIDs = 1000
+
+// chunkInt64 splits ids into consecutive slices of at most size elements.
+// A size <= 0 yields a single chunk with all ids.
+func chunkInt64(ids []int64, size int) [][]int64 {
+	if size <= 0 || len(ids) <= size {
+		return [][]int64{ids}
+	}
+	chunks := make([][]int64, 0, (len(ids)+size-1)/size)
+	for start := 0; start < len(ids); start += size {
+		end := start + size
+		if end > len(ids) {
+			end = len(ids)
+		}
+		chunks = append(chunks, ids[start:end])
+	}
+	return chunks
+}
+
 // FetchAssetNames resolves custom names for the given item_ids (best-effort: on any
 // error returns an empty map so labels fall back to the type name — never blocks the list).
+// Requests are chunked to ESI's 1000-id limit; a failed batch contributes nothing.
 func (s *FittingService) FetchAssetNames(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
 	if len(itemIDs) == 0 {
 		return map[int64]string{}
 	}
+	out := make(map[int64]string, len(itemIDs))
+	for _, batch := range chunkInt64(itemIDs, assetNamesMaxIDs) {
+		for id, name := range s.fetchAssetNamesBatch(ctx, characterID, batch, accessToken) {
+			out[id] = name
+		}
+	}
+	return out
+}
+
+// fetchAssetNamesBatch POSTs a single batch of ≤1000 ids to ESI /assets/names/.
+// Best-effort: returns an empty map on any error.
+func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
 	bodyBytes, _ := json.Marshal(itemIDs)
 	endpoint := fmt.Sprintf("/latest/characters/%d/assets/names/", characterID)
 	req, err := http.NewRequestWithContext(ctx, "POST", esiconfig.BaseURL+endpoint, bytes.NewReader(bodyBytes))

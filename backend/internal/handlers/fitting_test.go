@@ -31,6 +31,15 @@ func (m *mockFittingService) InvalidateFittingCache(ctx context.Context, charact
 func (m *mockFittingService) EnrichShipsEffectiveCargo(ctx context.Context, characterID int, ships []models.CharacterAssetShip, accessToken string) {
 	// No-op for mock
 }
+func (m *mockFittingService) EffectiveCargoForActiveShip(ctx context.Context, characterID, shipTypeID int, shipItemID int64, accessToken string) (float64, bool) {
+	if m.err != nil {
+		return 0, true
+	}
+	if m.fitting != nil {
+		return m.fitting.Bonuses.EffectiveCargo, false
+	}
+	return 0, false
+}
 
 // TestGetCharacterFitting_Success tests successful fitting retrieval
 func TestGetCharacterFitting_Success(t *testing.T) {
