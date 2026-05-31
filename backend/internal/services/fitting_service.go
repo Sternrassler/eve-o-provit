@@ -479,6 +479,57 @@ func (s *FittingService) EffectiveCargoForActiveShip(ctx context.Context, charac
 	return s.EffectiveCargoForShipItem(ctx, shipTypeID, shipItemID, assets, charSkills)
 }
 
+// ActiveShipFittedModuleTypeIDs returns the TYPE IDs of the modules fitted to the
+// character's current/active ship (ESI /characters/{id}/ship/). It resolves the active
+// ship's item id, then collects every fitted module's TypeID from the asset list (via
+// the same fitted-slot filter used for effective-cargo). Returns an empty slice (no error)
+// when the active ship has no fitted modules; an error only on an ESI assets/ship failure.
+func (s *FittingService) ActiveShipFittedModuleTypeIDs(ctx context.Context, characterID int, accessToken string) ([]int64, error) {
+	shipItemID, err := s.fetchActiveShipItemID(ctx, characterID, accessToken)
+	if err != nil {
+		return nil, fmt.Errorf("active ship lookup failed: %w", err)
+	}
+	assets, err := s.fetchESIAssets(ctx, characterID, accessToken)
+	if err != nil {
+		return nil, fmt.Errorf("active ship modules: assets fetch failed: %w", err)
+	}
+	items := s.fittedItemsForShip(ctx, assets, shipItemID)
+	out := make([]int64, 0, len(items))
+	for _, it := range items {
+		out = append(out, it.TypeID)
+	}
+	return out, nil
+}
+
+// fetchActiveShipItemID resolves the item id of the ship the character is currently
+// flying (ESI /characters/{id}/ship/ → ship_item_id).
+func (s *FittingService) fetchActiveShipItemID(ctx context.Context, characterID int, accessToken string) (int64, error) {
+	endpoint := fmt.Sprintf("/latest/characters/%d/ship/", characterID)
+	req, err := http.NewRequestWithContext(ctx, "GET", esiconfig.BaseURL+endpoint, nil)
+	if err != nil {
+		return 0, fmt.Errorf("create ship request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := s.esiClient.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("esi ship request failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return 0, fmt.Errorf("ESI ship returned status %d: %s", resp.StatusCode, string(body))
+	}
+	var ship struct {
+		ShipItemID int64 `json:"ship_item_id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&ship); err != nil {
+		return 0, fmt.Errorf("decode ship response: %w", err)
+	}
+	return ship.ShipItemID, nil
+}
+
 // fetchESIAssets fetches character assets from ESI /v5/characters/{id}/assets/
 func (s *FittingService) fetchESIAssets(
 	ctx context.Context,
