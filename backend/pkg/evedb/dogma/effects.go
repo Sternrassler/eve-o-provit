@@ -272,7 +272,7 @@ func calculateStackingPenalty(n int) float64 {
 	}
 
 	// EVE's stacking formula
-	exponent := -math.Pow(float64(n), 2) / math.Pow(2.67, 2)
+	exponent := -(float64(n) * float64(n)) / (2.67 * 2.67)
 	return math.Exp(exponent)
 }
 

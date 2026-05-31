@@ -89,7 +89,7 @@ func (r *MarketRepository) upsertBatch(ctx context.Context, orders []MarketOrder
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Prepare batch
 	batch := &pgx.Batch{}
@@ -267,7 +267,7 @@ func (r *MarketRepository) UpsertPriceHistory(ctx context.Context, history []Pri
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	query := `
 		INSERT INTO price_history (

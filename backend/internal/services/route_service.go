@@ -44,10 +44,14 @@ func DefaultConfig() Config {
 	}
 }
 
-// Context keys for character information (must match handler keys)
+// contextKey is a dedicated type for context keys so values set in one package
+// can't collide with string keys from another (staticcheck SA1029). The
+// constants are exported so the handlers package shares the exact same keys.
+type contextKey string
+
 const (
-	contextKeyCharacterID = "character_id"
-	contextKeyAccessToken = "access_token"
+	CtxKeyCharacterID contextKey = "character_id"
+	CtxKeyAccessToken contextKey = "access_token"
 )
 
 // RouteService orchestrates route calculation workflow
@@ -131,8 +135,8 @@ func (rs *RouteService) Calculate(ctx context.Context, regionID, shipTypeID int,
 	// trading features); falls back to level 0 (5%, worst case) when no character
 	// context is present (e.g. anonymous explicit-capacity calls).
 	accountingLevel := 0
-	if cid, ok := calcCtx.Value(contextKeyCharacterID).(int); ok {
-		if token, ok := calcCtx.Value(contextKeyAccessToken).(string); ok && cid > 0 && token != "" {
+	if cid, ok := calcCtx.Value(CtxKeyCharacterID).(int); ok {
+		if token, ok := calcCtx.Value(CtxKeyAccessToken).(string); ok && cid > 0 && token != "" {
 			if sk, err := rs.skillsService.GetCharacterSkills(calcCtx, cid, token); err == nil && sk != nil {
 				accountingLevel = sk.Accounting
 			}
@@ -354,8 +358,8 @@ func (rs *RouteService) getRegionName(ctx context.Context, regionID int) (string
 // Requires character authentication in context.
 func (rs *RouteService) applyCharacterSkills(ctx context.Context, baseCapacity float64, shipTypeID int) (float64, float64, float64, float64, float64) {
 	// Extract character_id (required - no fallback)
-	characterID := ctx.Value(contextKeyCharacterID)
-	accessToken := ctx.Value(contextKeyAccessToken)
+	characterID := ctx.Value(CtxKeyCharacterID)
+	accessToken := ctx.Value(CtxKeyAccessToken)
 
 	if characterID == nil || accessToken == nil {
 		// This should never happen if AuthMiddleware is properly configured

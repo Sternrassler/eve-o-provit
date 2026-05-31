@@ -51,12 +51,6 @@ func NewTradingHandler(
 	}
 }
 
-// Context keys for character information (must match keys in services)
-const (
-	contextKeyCharacterID = "character_id"
-	contextKeyAccessToken = "access_token"
-)
-
 // CalculateRoutes handles POST /api/v1/trading/routes/calculate
 // Supports optional authentication for skill-aware cargo calculations
 // Supports optional volume filtering for liquidity-based route selection
@@ -112,8 +106,8 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	}
 
 	// Add character context for skill-aware cargo calculations
-	ctx = context.WithValue(ctx, contextKeyCharacterID, characterID)
-	ctx = context.WithValue(ctx, contextKeyAccessToken, accessToken)
+	ctx = context.WithValue(ctx, services.CtxKeyCharacterID, characterID)
+	ctx = context.WithValue(ctx, services.CtxKeyAccessToken, accessToken)
 
 	// Extract deterministic navigation parameters from request
 	var warpSpeed, alignTime *float64
