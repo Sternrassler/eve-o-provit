@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-05-31
+
+### Changed
+
+- **Nur noch das aktuelle Schiff — keine Schiffsauswahl mehr (#153).** ROI, Trading und Hauling zeigen und verwenden jetzt ausschließlich das **aktuell geflogene** Schiff (read-only Karte mit **Refresh**) statt eines Auswahl-Dropdowns — im **Web und in der Flutter-App**. Jede Berechnung schickt das exakte Effektiv-Cargo des aktuellen Schiffs als `cargo_capacity`-Override (Hauling bekam den Override neu; das Fitting wird weiterhin für Warp-/Align-Speed geholt, kein ISK/h-Regress). Das alte `ShipSelect`-Dropdown + Mock-Schiffsliste sind entfernt.
+
+### Added
+
+- **ESI-Asset-Namen werden in Redis gecacht (#153).** Der ungecachte ESI-Endpoint `/characters/{id}/assets/names/` wird jetzt pro Character (TTL 1 h) zwischengespeichert. Fail-loud: ein ESI-Fehler wird **nicht** gecacht (kein 1-h-Verschleiern fehlender Namen).
+
 ## [0.18.0] - 2026-05-31
 
 ### Added
