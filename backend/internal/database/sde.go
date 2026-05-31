@@ -424,3 +424,36 @@ func (r *SDERepository) MinRouteSecurityStatus(ctx context.Context, route []int6
 	}
 	return minSec
 }
+
+// ReprocessStation is an NPC station offering reprocessing, with its base rate + take.
+type ReprocessStation struct {
+	StationID   int64
+	OwnerCorpID int64
+	BaseRate    float64 // reprocessingEfficiency (0.50)
+	BaseTake    float64 // reprocessingStationsTake (0.05)
+}
+
+// GetRegionReprocessStations lists NPC stations with reprocessing (reprocessingEfficiency > 0)
+// in a region, with their owner corp + base rate/take.
+func (r *SDERepository) GetRegionReprocessStations(ctx context.Context, regionID int) ([]ReprocessStation, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT n._key, COALESCE(n.ownerID,0),
+		       COALESCE(n.reprocessingEfficiency,0), COALESCE(n.reprocessingStationsTake,0)
+		FROM npcStations n
+		JOIN mapSolarSystems s ON n.solarSystemID = s._key
+		JOIN mapConstellations c ON s.constellationID = c._key
+		WHERE c.regionID = ? AND COALESCE(n.reprocessingEfficiency,0) > 0`, regionID)
+	if err != nil {
+		return nil, fmt.Errorf("region reprocess stations for %d: %w", regionID, err)
+	}
+	defer func() { _ = rows.Close() }()
+	var out []ReprocessStation
+	for rows.Next() {
+		var s ReprocessStation
+		if err := rows.Scan(&s.StationID, &s.OwnerCorpID, &s.BaseRate, &s.BaseTake); err != nil {
+			return nil, err
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
