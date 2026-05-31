@@ -25,14 +25,18 @@ export function ShipSelect({
   disabled,
   authenticated = false,
 }: ShipSelectProps) {
-  const [ships, setShips] = useState<Ship[]>(fallbackShips);
+  // Unauthenticated users get a generic example list (a legitimate default —
+  // there is no character to load). Authenticated users get their real hangar;
+  // on a fetch failure we show NO ships and a loud error instead of passing off
+  // the generic list as their fleet.
+  const [ships, setShips] = useState<Ship[]>(authenticated ? [] : fallbackShips);
   // The active ship (the one being flown) — not necessarily in the hangar list,
   // so it's merged into the options separately to keep the current-ship default
   // selectable.
   const [activeShip, setActiveShip] = useState<Ship | null>(null);
   const [loading, setLoading] = useState(false);
-  // True when the ship fetch failed (network/auth) and we fell back to the
-  // generic hauler list — surfaced so the user isn't silently shown wrong ships.
+  // True when loading the authenticated character's ships failed — surfaced as a
+  // prominent error so wrong/empty data is never read as the real fleet.
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
@@ -57,18 +61,19 @@ export function ShipSelect({
             return null;
           }),
         ]);
-        if (characterShips && characterShips.length > 0) {
-          setShips(characterShips);
-        } else {
-          setShips(fallbackShips);
-        }
+        // On failure show NO ships (never the generic mock list as if it were
+        // the character's). An empty-but-successful hangar is also just empty.
+        setShips(characterShips ?? []);
         if (active?.ship_type_id) {
           setActiveShip({
             type_id: active.ship_type_id,
             name: active.ship_type_name || active.ship_name,
             cargo_capacity: active.cargo_capacity,
             effective_cargo_capacity: active.effective_cargo_capacity,
+            effective_cargo_unavailable: active.effective_cargo_unavailable,
           });
+        } else {
+          setActiveShip(null);
         }
       } finally {
         setLoadError(failed);
@@ -103,8 +108,10 @@ export function ShipSelect({
         <SelectContent>
           {options.map((ship) => {
             // Prefer the effective cargo (matches what the optimizer uses and
-            // what EVE shows in-game). Fall back to the base hull cargo with a
-            // "Basis" prefix when the backend couldn't enrich the entry.
+            // what EVE shows in-game). When the backend's fitting enrichment
+            // ERRORED, the effective volume is genuinely unknown — say so
+            // instead of passing off the base hull as the fitted value. Only a
+            // ship that truly has no cargo-expander shows the bare "Basis" hull.
             const effective = ship.effective_cargo_capacity;
             const useEffective = effective != null && effective > 0;
             const value = useEffective ? effective : ship.cargo_capacity;
@@ -112,7 +119,11 @@ export function ShipSelect({
               value >= 1000
                 ? `${(value / 1000).toFixed(1)}k m³`
                 : `${Math.round(value)} m³`;
-            const cargoDisplay = useEffective ? cargoFmt : `Basis ${cargoFmt}`;
+            const cargoDisplay = ship.effective_cargo_unavailable
+              ? `Basis ${cargoFmt} — fitted unbekannt`
+              : useEffective
+                ? cargoFmt
+                : `Basis ${cargoFmt}`;
 
             return (
               <SelectItem key={ship.type_id} value={ship.type_id.toString()}>
@@ -123,8 +134,9 @@ export function ShipSelect({
         </SelectContent>
       </Select>
       {loadError && (
-        <p className="text-xs text-amber-600 dark:text-amber-500" role="status">
-          Deine Schiffe konnten nicht geladen werden — Standardliste angezeigt.
+        <p className="text-xs text-destructive" role="alert">
+          Deine Schiffe konnten nicht geladen werden. Bitte neu laden — es wird
+          keine Ersatzliste angezeigt, um falsche Schiffsdaten zu vermeiden.
         </p>
       )}
     </div>

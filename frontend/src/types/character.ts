@@ -16,8 +16,11 @@ export interface CharacterShip {
   ship_item_id: number;
   ship_type_name: string;
   cargo_capacity: number;
-  /** Effective cargo (hull + skills + fitted modules). Absent if enrichment failed. */
+  /** Effective cargo (hull + skills + fitted modules). Absent when the ship has
+   *  no cargo-expander fitting (base hull is then correct). */
   effective_cargo_capacity?: number;
+  /** True when fitting enrichment ERRORED — effective volume is unknown. */
+  effective_cargo_unavailable?: boolean;
 }
 
 /**

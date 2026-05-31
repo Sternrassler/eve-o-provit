@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/select";
 import { fetchRegions } from "@/lib/api-client";
 import { Region } from "@/types/trading";
-import { regions as fallbackRegions } from "@/lib/mock-data/regions";
 import { RegionStalenessIndicator } from "./RegionStalenessIndicator";
 import { RegionRefreshButton } from "./RegionRefreshButton";
 
@@ -33,20 +32,23 @@ export function RegionSelect({
   onRefreshComplete,
   onRefreshStateChange,
 }: RegionSelectProps) {
-  const [regions, setRegions] = useState<Region[]>(fallbackRegions);
+  const [regions, setRegions] = useState<Region[]>([]);
   const [loading, setLoading] = useState(true);
+  // True when the region list couldn't be loaded — shown loudly instead of
+  // silently substituting a hardcoded mock list as if it were real.
+  const [loadError, setLoadError] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const loadRegions = async () => {
+      setLoadError(false);
       try {
         const data = await fetchRegions();
-        if (data && data.length > 0) {
-          setRegions(data);
-        }
+        setRegions(data);
       } catch (error) {
-        console.error("Failed to fetch regions, using fallback:", error);
-        // Keep fallback regions on error
+        console.error("Failed to fetch regions:", error);
+        setRegions([]);
+        setLoadError(true);
       } finally {
         setLoading(false);
       }
@@ -64,9 +66,17 @@ export function RegionSelect({
     <div className="space-y-2">
       <label className="text-sm font-medium">Region</label>
       <div className="flex items-center gap-2">
-        <Select value={value} onValueChange={onChange} disabled={disabled || loading}>
+        <Select value={value} onValueChange={onChange} disabled={disabled || loading || loadError}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder={loading ? "Lade Regionen..." : "Region wählen..."} />
+            <SelectValue
+              placeholder={
+                loading
+                  ? "Lade Regionen..."
+                  : loadError
+                    ? "Regionen nicht verfügbar"
+                    : "Region wählen..."
+              }
+            />
           </SelectTrigger>
           <SelectContent>
             {regions.map((region) => (
@@ -85,10 +95,15 @@ export function RegionSelect({
           />
         )}
       </div>
+      {loadError && (
+        <p className="text-xs text-destructive" role="alert">
+          Regionen konnten nicht geladen werden. Bitte Seite neu laden.
+        </p>
+      )}
       {showStaleness && value && (
-        <RegionStalenessIndicator 
-          key={refreshKey} 
-          regionId={value} 
+        <RegionStalenessIndicator
+          key={refreshKey}
+          regionId={value}
         />
       )}
     </div>

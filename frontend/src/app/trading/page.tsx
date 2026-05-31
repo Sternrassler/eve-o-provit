@@ -38,7 +38,10 @@ async function calculateRoutes(regionId: number, shipTypeId: number): Promise<Tr
 
   if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
   const data = await response.json();
-  return data.routes || [];
+  if (!Array.isArray(data.routes)) {
+    throw new Error("Invalid routes response: 'routes' missing or not an array");
+  }
+  return data.routes;
 }
 
 function TradingPageContent() {

@@ -88,9 +88,13 @@ export interface Ship {
   /** Base hull cargo (without skills/modules). */
   cargo_capacity: number;
   /** Effective cargo (hull + skills + fitted modules); same value the optimizer
-   *  uses. Absent when the backend couldn't enrich the entry — fall back to
-   *  `cargo_capacity` with a "Basis" label. */
+   *  uses. Absent when the ship has no cargo-expander fitting — then the base
+   *  `cargo_capacity` ("Basis") is the correct value. */
   effective_cargo_capacity?: number;
+  /** True when the backend's fitting enrichment ERRORED for this ship (ESI/
+   *  network), so the effective volume is genuinely unknown. The UI shows a
+   *  visible "unknown" marker rather than passing off the base hull as fitted. */
+  effective_cargo_unavailable?: boolean;
 }
 
 export interface TradingFilters {
