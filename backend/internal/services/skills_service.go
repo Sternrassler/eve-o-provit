@@ -107,13 +107,21 @@ func (s *SkillsService) GetCharacterSkills(ctx context.Context, characterID int,
 	s.logger.Debug("Skills cache miss - fetching from ESI", "characterID", characterID)
 	esiSkills, err := s.fetchSkillsFromESI(ctx, characterID, accessToken)
 	if err != nil {
-		s.logger.Error("ESI skills fetch failed - using defaults", "error", err, "characterID", characterID)
-		// Graceful degradation: return default skills (worst-case fees/cargo)
-		return s.getDefaultSkills(), nil
+		s.logger.Error("ESI skills fetch failed - returning defaults WITH error", "error", err, "characterID", characterID)
+		// Fail-loud (issue #147 A2): still return default skills so a caller that
+		// chooses to degrade can, but ALSO return the error so callers (and the
+		// skills endpoint) can surface "skills unavailable" instead of silently
+		// computing fees/cargo with all-zero skills as if they were real.
+		return s.getDefaultSkills(), fmt.Errorf("skills unavailable: %w", err)
 	}
 
 	// 3. Fetch standings from ESI (separate endpoint, best-effort)
-	factionStanding, corpStanding := s.fetchStandingsFromESI(ctx, characterID, accessToken)
+	factionStanding, corpStanding, standingsErr := s.fetchStandingsFromESI(ctx, characterID, accessToken)
+	if standingsErr != nil {
+		// Standings affect broker fees only; degrade to neutral but log loudly so
+		// the failure is not silent (issue #147 A2).
+		s.logger.Warn("ESI standings fetch failed - using neutral standings", "error", standingsErr, "characterID", characterID)
+	}
 
 	// 4. Extract trading skills
 	skills := s.extractTradingSkills(esiSkills)
@@ -178,17 +186,20 @@ func (s *SkillsService) fetchSkillsFromESI(ctx context.Context, characterID int,
 	return &skillsResp, nil
 }
 
-// fetchStandingsFromESI fetches character standings from ESI API
-// Returns (factionStanding, corpStanding) - uses max standing per category
-// Gracefully degrades to (0.0, 0.0) on error (no impact on fee calculation)
-func (s *SkillsService) fetchStandingsFromESI(ctx context.Context, characterID int, accessToken string) (float64, float64) {
+// fetchStandingsFromESI fetches character standings from ESI API.
+// Returns (factionStanding, corpStanding, error) - uses max standing per category.
+//
+// Fail-loud (issue #147 A2): real fetch/parse failures now return an error so the
+// caller can log/surface them instead of silently treating them as neutral
+// standings. The legitimate 401/403 ("character simply has no standings") stays a
+// non-error neutral result.
+func (s *SkillsService) fetchStandingsFromESI(ctx context.Context, characterID int, accessToken string) (float64, float64, error) {
 	endpoint := fmt.Sprintf("/v2/characters/%d/standings/", characterID)
 
 	// Create HTTP request with context
 	req, err := http.NewRequestWithContext(ctx, "GET", esiconfig.BaseURL+endpoint, nil)
 	if err != nil {
-		s.logger.Warn("Failed to create standings request", "error", err)
-		return 0.0, 0.0
+		return 0.0, 0.0, fmt.Errorf("create standings request: %w", err)
 	}
 
 	// Add authorization header
@@ -197,31 +208,29 @@ func (s *SkillsService) fetchStandingsFromESI(ctx context.Context, characterID i
 	// Execute request through ESI client
 	resp, err := s.esiClient.Do(req)
 	if err != nil {
-		s.logger.Warn("ESI standings request failed - using neutral standings", "error", err)
-		return 0.0, 0.0
+		return 0.0, 0.0, fmt.Errorf("standings request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Handle HTTP errors (401/403 = no standings, treat as neutral)
+	// Handle HTTP errors (401/403 = no standings, treat as neutral — not an error)
 	if resp.StatusCode == 401 || resp.StatusCode == 403 {
 		s.logger.Debug("Standings unauthorized - using neutral", "status", resp.StatusCode)
-		return 0.0, 0.0
+		return 0.0, 0.0, nil
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		s.logger.Warn("ESI standings returned error", "status", resp.StatusCode)
-		return 0.0, 0.0
+		return 0.0, 0.0, fmt.Errorf("ESI standings returned status %d", resp.StatusCode)
 	}
 
 	// Parse JSON response
 	var standings []esiStanding
 	if err := json.NewDecoder(resp.Body).Decode(&standings); err != nil {
-		s.logger.Warn("Failed to parse standings response", "error", err)
-		return 0.0, 0.0
+		return 0.0, 0.0, fmt.Errorf("parse standings response: %w", err)
 	}
 
 	// Extract highest standings per category
-	return s.extractHighestStandings(standings)
+	faction, corp := s.extractHighestStandings(standings)
+	return faction, corp, nil
 }
 
 // extractHighestStandings finds the highest standing per category (faction, npc_corp)
