@@ -173,7 +173,10 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	// fitted mining modules, region reprocessing stations, and market buy prices.
 	// skillsService is a *SkillsService; its mining/standings methods are not on the
 	// narrow SkillsServicer interface, so resolve the concrete type for the provider.
-	miningSkillsProvider, _ := skillsService.(services.MiningSkillsProvider)
+	miningSkillsProvider, ok := skillsService.(services.MiningSkillsProvider)
+	if !ok {
+		return nil, fmt.Errorf("skills service does not implement MiningSkillsProvider")
+	}
 	miningService := services.NewMiningService(c.DB.SDE, c.SDERepo, c.MarketRepo, miningSkillsProvider, fittingService, characterHelper, c.SDERepo, c.AppLogger)
 	c.MiningHandler = handlers.NewMiningHandler(miningService)
 

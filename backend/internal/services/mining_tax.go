@@ -17,13 +17,16 @@ type StationStanding struct {
 	Standing  float64
 }
 
-// BestStation returns the station with the lowest reprocessing tax, or nil if none.
+// BestStation returns the station that yields the most refined material, i.e. the one
+// maximizing baseRate × (1 − tax), or nil if none. (Picking lowest tax alone is wrong when
+// stations in the same region differ in reprocessingEfficiency.)
 func BestStation(s []StationStanding) *StationStanding {
 	var best *StationStanding
-	bestTax := math.Inf(1)
+	bestScore := math.Inf(-1)
 	for i := range s {
-		if tax := ReprocessTax(s[i].BaseTake, s[i].Standing); tax < bestTax {
-			bestTax, best = tax, &s[i]
+		score := s[i].BaseRate * (1 - ReprocessTax(s[i].BaseTake, s[i].Standing))
+		if score > bestScore {
+			bestScore, best = score, &s[i]
 		}
 	}
 	return best

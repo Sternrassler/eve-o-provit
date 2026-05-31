@@ -193,7 +193,21 @@ class _ResultPane extends ConsumerWidget {
         if (result.isEmpty) {
           return const _EmptyResult();
         }
-        return OreRankingTable(result: result);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: OreRankingTable(result: result)),
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Hinweis: ISK/h ist eine skills-basierte Untergrenze — Schiffs-Rollenboni '
+                '(Mining Barge/Exhumer) und Erz-Crystals fehlen noch. '
+                'Roh-vs-Refine-Verdict und Ranking sind unberührt.',
+                style: TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ),
+          ],
+        );
       },
     );
   }
