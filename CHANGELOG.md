@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-05-31
+
+### Fixed
+
+- **Keine stillen Fallbacks mehr, die echte Fehler verschleiern (#147).** Audit über Frontend + Backend: degradierte Ersatzwerte, die einen Fehler überdeckten, werden jetzt sichtbar gemacht (fail-loud) statt als korrekt ausgegeben.
+  - **Ship-Dropdown:** zeigt wieder das gefittete (effektive) Volumen statt „Basis" für alle Schiffe; der Client hatte `effective_cargo_capacity` verworfen. Schlägt die Fitting-Anreicherung mit einem Fehler fehl, steht jetzt „fitted unbekannt" statt stillschweigend das Basis-Volumen.
+  - **Sicherheitsstatus:** ein fehlgeschlagener Sec-Status-Lookup klassifiziert eine Route nicht mehr fälschlich als High-Sec (Default 1.0) — die Route wird übersprungen statt als sicher angezeigt.
+  - **Wallet/Skills:** ein fehlgeschlagener Wallet-Fetch zeigt eine sichtbare Warnung (Kapital ist Platzhalter, nicht das echte Guthaben) statt still 500M anzunehmen; der Skills-Endpoint liefert bei ESI-Fehler HTTP 500 statt 200 mit Null-Skills, das UI meldet den Fehler.
+  - **Regionen/Schiffe:** bei Ladefehler keine Mock-Liste mehr als echte Daten — sichtbarer Fehlerzustand.
+  - **Backend:** Cargo-Capacity-, Fitting-, Skills- und Tax-Rate-Fehler werden propagiert statt fabrizierter Werte (0, Default-Fitting, 5,5 %); malformte API-Antworten (`regions`/`ships`/`items`/`routes`) werfen jetzt statt leerer Listen.
+
 ## [0.17.0] - 2026-05-30
 
 ### Added
