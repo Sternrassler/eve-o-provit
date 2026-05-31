@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-06-01
+
 ### Added
 
 - **Mining-Rechner: Wo aufbereiten & wo verkaufen (#156).** Jede Erz-Zeile der Mining-Rangliste ist jetzt aufklappbar (Web + Flutter) und zeigt die Verkaufs-/Aufbereitungs-Orte: beim **Reprozessieren** die beste NPC-Aufbereitungs-Station (Name — System) plus eine **pro-Mineral-Aufschlüsselung** (Mineral · effektive Menge nach Net-Yield · Buy-Preis · Verkaufsort des besten Buy-Orders); beim **Roh-Verkauf** den Verkaufsort des Roherzes. Der Verkaufsort ist jeweils das beste Buy-Order **egal wo** (inkl. Citadels — diese erscheinen als „Player-Structure", da die SDE sie nicht benennen kann).
