@@ -3,7 +3,7 @@ module github.com/Sternrassler/eve-o-provit/backend
 go 1.25.0
 
 require (
-	github.com/Sternrassler/eve-esi-client v0.2.1-0.20251104015143-df66ffe69393
+	github.com/Sternrassler/eve-esi-client v0.5.0
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/jackc/pgx/v5 v5.7.6
@@ -16,7 +16,7 @@ require (
 	github.com/swaggo/swag v1.16.6
 	github.com/testcontainers/testcontainers-go v0.39.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.39.0
-	golang.org/x/time v0.14.0
+	golang.org/x/time v0.15.0
 )
 
 require (
