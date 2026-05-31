@@ -12,6 +12,7 @@ import (
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services/esiconfig"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
@@ -199,96 +200,8 @@ func (s *FittingService) fetchFittingFromESI(
 		}
 	}
 
-	// 4. Fetch character skills
-	skills, err := s.skillsService.GetCharacterSkills(ctx, characterID, accessToken)
-	if err != nil {
-		s.logger.Warn("Failed to fetch character skills, using default", "error", err)
-		skills = nil // Will use graceful degradation in deterministic calculation
-	}
-
-	// 5. Convert to cargo.CharacterSkills format (array-based)
-	var charSkills *cargo.CharacterSkills
-	if skills != nil {
-		// Map TradingSkills to ESI CharacterSkills format
-		skillsList := []struct {
-			SkillID           int64 `json:"skill_id"`
-			ActiveSkillLevel  int   `json:"active_skill_level"`
-			TrainedSkillLevel int   `json:"trained_skill_level"`
-		}{}
-
-		// Add Spaceship Command if present
-		if skills.SpaceshipCommand > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3327, ActiveSkillLevel: skills.SpaceshipCommand, TrainedSkillLevel: skills.SpaceshipCommand})
-		}
-
-		// Add Racial Industrial Skills
-		if skills.GallenteIndustrial > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3348, ActiveSkillLevel: skills.GallenteIndustrial, TrainedSkillLevel: skills.GallenteIndustrial})
-		}
-		if skills.CaldariIndustrial > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3346, ActiveSkillLevel: skills.CaldariIndustrial, TrainedSkillLevel: skills.CaldariIndustrial})
-		}
-		if skills.AmarrIndustrial > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3347, ActiveSkillLevel: skills.AmarrIndustrial, TrainedSkillLevel: skills.AmarrIndustrial})
-		}
-		if skills.MinmatarIndustrial > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3349, ActiveSkillLevel: skills.MinmatarIndustrial, TrainedSkillLevel: skills.MinmatarIndustrial})
-		}
-
-		// Add Racial Hauler Skills (Issue #77 - deterministic)
-		if skills.GallenteHauler > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3340, ActiveSkillLevel: skills.GallenteHauler, TrainedSkillLevel: skills.GallenteHauler})
-		}
-		if skills.CaldariHauler > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3341, ActiveSkillLevel: skills.CaldariHauler, TrainedSkillLevel: skills.CaldariHauler})
-		}
-		if skills.AmarrHauler > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3342, ActiveSkillLevel: skills.AmarrHauler, TrainedSkillLevel: skills.AmarrHauler})
-		}
-		if skills.MinmatarHauler > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3343, ActiveSkillLevel: skills.MinmatarHauler, TrainedSkillLevel: skills.MinmatarHauler})
-		}
-
-		charSkills = &cargo.CharacterSkills{
-			Skills: skillsList,
-		}
-	}
+	// 4. + 5. Fetch character skills and convert to cargo.CharacterSkills format
+	charSkills := s.characterCargoSkills(ctx, characterID, accessToken)
 
 	// 6. Convert fitted modules to cargo.FittedItem format
 	fittedItems := make([]cargo.FittedItem, 0, len(fittedModules))
@@ -417,6 +330,136 @@ func (s *FittingService) fetchFittingFromESI(
 			WarpSpeedAUS:  effectiveWarpSpeed, // Final warp speed in AU/s (for route calculation)
 		},
 	}, nil
+}
+
+// characterCargoSkills fetches the character's skills via SkillsServicer and converts
+// the cargo-relevant ones (Spaceship Command, racial Industrial + Hauler skills) into
+// the array-based cargo.CharacterSkills format used by the deterministic calculators.
+// Returns nil on a skills-fetch failure (the calculators degrade gracefully on nil).
+func (s *FittingService) characterCargoSkills(ctx context.Context, characterID int, accessToken string) *cargo.CharacterSkills {
+	skills, err := s.skillsService.GetCharacterSkills(ctx, characterID, accessToken)
+	if err != nil {
+		s.logger.Warn("Failed to fetch character skills, using default", "error", err)
+		return nil
+	}
+	if skills == nil {
+		return nil
+	}
+
+	// Map TradingSkills to ESI CharacterSkills format
+	skillsList := []struct {
+		SkillID           int64 `json:"skill_id"`
+		ActiveSkillLevel  int   `json:"active_skill_level"`
+		TrainedSkillLevel int   `json:"trained_skill_level"`
+	}{}
+
+	// Add Spaceship Command if present
+	if skills.SpaceshipCommand > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3327, ActiveSkillLevel: skills.SpaceshipCommand, TrainedSkillLevel: skills.SpaceshipCommand})
+	}
+
+	// Add Racial Industrial Skills
+	if skills.GallenteIndustrial > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3348, ActiveSkillLevel: skills.GallenteIndustrial, TrainedSkillLevel: skills.GallenteIndustrial})
+	}
+	if skills.CaldariIndustrial > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3346, ActiveSkillLevel: skills.CaldariIndustrial, TrainedSkillLevel: skills.CaldariIndustrial})
+	}
+	if skills.AmarrIndustrial > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3347, ActiveSkillLevel: skills.AmarrIndustrial, TrainedSkillLevel: skills.AmarrIndustrial})
+	}
+	if skills.MinmatarIndustrial > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3349, ActiveSkillLevel: skills.MinmatarIndustrial, TrainedSkillLevel: skills.MinmatarIndustrial})
+	}
+
+	// Add Racial Hauler Skills (Issue #77 - deterministic)
+	if skills.GallenteHauler > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3340, ActiveSkillLevel: skills.GallenteHauler, TrainedSkillLevel: skills.GallenteHauler})
+	}
+	if skills.CaldariHauler > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3341, ActiveSkillLevel: skills.CaldariHauler, TrainedSkillLevel: skills.CaldariHauler})
+	}
+	if skills.AmarrHauler > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3342, ActiveSkillLevel: skills.AmarrHauler, TrainedSkillLevel: skills.AmarrHauler})
+	}
+	if skills.MinmatarHauler > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3343, ActiveSkillLevel: skills.MinmatarHauler, TrainedSkillLevel: skills.MinmatarHauler})
+	}
+
+	return &cargo.CharacterSkills{Skills: skillsList}
+}
+
+// EnrichShipsEffectiveCargo fills each singleton ship's EffectiveCargoCapacity (from its
+// OWN fitting by item_id), EffectiveCargoUnavailable (true on a calc error → fail-loud),
+// and Name (custom ESI name, falling back to TypeName). Best-effort: an assets-fetch error
+// leaves the ships unenriched rather than failing the whole list.
+func (s *FittingService) EnrichShipsEffectiveCargo(ctx context.Context, characterID int, ships []models.CharacterAssetShip, accessToken string) {
+	assets, err := s.fetchESIAssets(ctx, characterID, accessToken)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("enrich ships: assets fetch failed", "characterID", characterID, "error", err)
+		}
+		return
+	}
+	charSkills := s.characterCargoSkills(ctx, characterID, accessToken)
+
+	itemIDs := make([]int64, 0, len(ships))
+	for i := range ships {
+		itemIDs = append(itemIDs, ships[i].ItemID)
+	}
+	names := s.FetchAssetNames(ctx, characterID, itemIDs, accessToken)
+
+	for i := range ships {
+		if n := names[ships[i].ItemID]; n != "" {
+			ships[i].Name = n
+		} else {
+			ships[i].Name = ships[i].TypeName
+		}
+		if !ships[i].IsSingleton {
+			continue
+		}
+		eff, unavail := s.EffectiveCargoForShipItem(ctx, int(ships[i].TypeID), ships[i].ItemID, assets, charSkills)
+		if eff > 0 {
+			ships[i].EffectiveCargoCapacity = eff
+		}
+		ships[i].EffectiveCargoUnavailable = unavail
+	}
 }
 
 // fetchESIAssets fetches character assets from ESI /v5/characters/{id}/assets/

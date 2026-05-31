@@ -56,6 +56,11 @@ type FittingServicer interface {
 
 	// InvalidateFittingCache removes fitting data from Redis cache
 	InvalidateFittingCache(ctx context.Context, characterID int, shipTypeID int)
+
+	// EnrichShipsEffectiveCargo fills each singleton ship's EffectiveCargoCapacity
+	// (from its OWN fitting by item_id), EffectiveCargoUnavailable, and Name
+	// (custom ESI name, falling back to TypeName). Best-effort: enriches in place.
+	EnrichShipsEffectiveCargo(ctx context.Context, characterID int, ships []models.CharacterAssetShip, accessToken string)
 }
 
 // FeeServicer defines the interface for trading fee calculations

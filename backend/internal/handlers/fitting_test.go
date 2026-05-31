@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
 	"github.com/gofiber/fiber/v2"
 )
@@ -25,6 +26,9 @@ func (m *mockFittingService) GetShipFitting(ctx context.Context, characterID int
 	return m.fitting, nil
 }
 func (m *mockFittingService) InvalidateFittingCache(ctx context.Context, characterID int, shipTypeID int) {
+	// No-op for mock
+}
+func (m *mockFittingService) EnrichShipsEffectiveCargo(ctx context.Context, characterID int, ships []models.CharacterAssetShip, accessToken string) {
 	// No-op for mock
 }
 

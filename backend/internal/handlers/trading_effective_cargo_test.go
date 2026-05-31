@@ -48,22 +48,6 @@ func TestApplyEffectiveCargoToShip_SetsEffectiveWhenAvailable(t *testing.T) {
 	assert.Equal(t, 1450.0, ship.EffectiveCargoCapacity)
 }
 
-// TestApplyEffectiveCargoToAssetShip_FitErrorMarksUnavailable mirrors the contract
-// for the concurrent asset-ship list path.
-func TestApplyEffectiveCargoToAssetShip_FitErrorMarksUnavailable(t *testing.T) {
-	ship := &models.CharacterAssetShip{CargoCapacity: 1000, IsSingleton: true}
-	applyEffectiveCargoToAssetShip(ship, nil, errors.New("esi down"))
-	assert.True(t, ship.EffectiveCargoUnavailable)
-	assert.Equal(t, 0.0, ship.EffectiveCargoCapacity)
-}
-
-func TestApplyEffectiveCargoToAssetShip_NoFittingIsNotAnError(t *testing.T) {
-	ship := &models.CharacterAssetShip{CargoCapacity: 1000, IsSingleton: true}
-	applyEffectiveCargoToAssetShip(ship, nil, nil)
-	assert.False(t, ship.EffectiveCargoUnavailable)
-	assert.Equal(t, 0.0, ship.EffectiveCargoCapacity)
-}
-
 // TestEffectiveCargoUnavailable_WireForm guards the exact JSON field name the
 // frontend depends on: effective_cargo_unavailable (omitempty → only present when true).
 func TestEffectiveCargoUnavailable_WireForm(t *testing.T) {

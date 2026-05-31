@@ -45,6 +45,8 @@ func (fakeFitting) GetShipFitting(_ context.Context, _, _ int, _ string) (*Fitti
 	return nil, nil
 }
 func (fakeFitting) InvalidateFittingCache(_ context.Context, _, _ int) {}
+func (fakeFitting) EnrichShipsEffectiveCargo(_ context.Context, _ int, _ []models.CharacterAssetShip, _ string) {
+}
 
 type fakeActiveShip struct{ typeID int }
 
