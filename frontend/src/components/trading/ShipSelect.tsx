@@ -66,6 +66,7 @@ export function ShipSelect({
         setShips(characterShips ?? []);
         if (active?.ship_type_id) {
           setActiveShip({
+            item_id: active.ship_item_id,
             type_id: active.ship_type_id,
             name: active.ship_type_name || active.ship_name,
             cargo_capacity: active.cargo_capacity,
@@ -89,12 +90,12 @@ export function ShipSelect({
   const seen = new Set<number>();
   if (activeShip) {
     options.push(activeShip);
-    seen.add(activeShip.type_id);
+    seen.add(activeShip.item_id);
   }
   for (const s of ships) {
-    if (!seen.has(s.type_id)) {
+    if (!seen.has(s.item_id)) {
       options.push(s);
-      seen.add(s.type_id);
+      seen.add(s.item_id);
     }
   }
 
@@ -126,7 +127,7 @@ export function ShipSelect({
                 : `Basis ${cargoFmt}`;
 
             return (
-              <SelectItem key={ship.type_id} value={ship.type_id.toString()}>
+              <SelectItem key={ship.item_id.toString()} value={ship.item_id.toString()}>
                 {ship.name} ({cargoDisplay})
               </SelectItem>
             );
