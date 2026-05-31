@@ -20,6 +20,7 @@ import 'package:go_router/go_router.dart';
 import '../auth/auth_controller.dart';
 import '../auth/login_screen.dart';
 import '../features/character/character_screen.dart';
+import '../features/mining/mining_screen.dart';
 import '../features/trading/hauling_screen.dart';
 import '../features/trading/hub_comparison_screen.dart';
 import '../features/trading/roi_calculator_screen.dart';
@@ -111,6 +112,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SellAssetsScreen(),
           ),
           GoRoute(
+            path: '/mining',
+            builder: (context, state) => const MiningScreen(),
+          ),
+          GoRoute(
             path: '/character',
             builder: (context, state) => const CharacterScreen(),
           ),
@@ -155,6 +160,10 @@ class _AppShell extends ConsumerWidget {
       label: 'Verkaufen',
     ),
     NavigationDestination(
+      icon: Icon(Icons.diamond_rounded),
+      label: 'Mining',
+    ),
+    NavigationDestination(
       icon: Icon(Icons.person_outline_rounded),
       selectedIcon: Icon(Icons.person_rounded),
       label: 'Character',
@@ -170,7 +179,8 @@ class _AppShell extends ConsumerWidget {
     if (location.startsWith('/roi-calculator')) return 2;
     if (location.startsWith('/hauling')) return 3;
     if (location.startsWith('/sell-assets')) return 4;
-    if (location.startsWith('/character')) return 5;
+    if (location.startsWith('/mining')) return 5;
+    if (location.startsWith('/character')) return 6;
     return 0; // /trading is default; "Abmelden" is never a selected state
   }
 
@@ -193,8 +203,10 @@ class _AppShell extends ConsumerWidget {
             case 4:
               context.go('/sell-assets');
             case 5:
-              context.go('/character');
+              context.go('/mining');
             case 6:
+              context.go('/character');
+            case 7:
               _confirmLogout(context, ref);
           }
         },
