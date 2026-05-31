@@ -153,6 +153,7 @@ type CharacterAssetShip struct {
 	ItemID                 int64   `json:"item_id"`
 	TypeID                 int64   `json:"type_id"`
 	TypeName               string  `json:"type_name"`
+	Name                   string  `json:"name,omitempty"` // Custom ship name from ESI /assets/names; falls back to TypeName
 	LocationID             int64   `json:"location_id"`
 	LocationName           string  `json:"location_name"`
 	LocationFlag           string  `json:"location_flag"`

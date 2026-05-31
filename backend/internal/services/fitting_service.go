@@ -2,6 +2,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -639,6 +640,69 @@ func (s *FittingService) EffectiveCargoForShipItem(
 		return 0, true
 	}
 	return caps.EffectiveCargoHold, false
+}
+
+// parseAssetNames parses the JSON body from ESI /assets/names/ into a map
+// of item_id → name. Entries with empty name or the sentinel "None" are
+// dropped so callers can fall back to the type name.
+func parseAssetNames(body []byte) (map[int64]string, error) {
+	var rows []struct {
+		ItemID int64  `json:"item_id"`
+		Name   string `json:"name"`
+	}
+	if err := json.Unmarshal(body, &rows); err != nil {
+		return nil, fmt.Errorf("decode asset names: %w", err)
+	}
+	out := make(map[int64]string, len(rows))
+	for _, r := range rows {
+		if r.Name == "" || r.Name == "None" {
+			continue
+		}
+		out[r.ItemID] = r.Name
+	}
+	return out, nil
+}
+
+// FetchAssetNames resolves custom names for the given item_ids (best-effort: on any
+// error returns an empty map so labels fall back to the type name — never blocks the list).
+func (s *FittingService) FetchAssetNames(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
+	if len(itemIDs) == 0 {
+		return map[int64]string{}
+	}
+	bodyBytes, _ := json.Marshal(itemIDs)
+	endpoint := fmt.Sprintf("/latest/characters/%d/assets/names/", characterID)
+	req, err := http.NewRequestWithContext(ctx, "POST", esiconfig.BaseURL+endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("asset names: build request failed", "error", err)
+		}
+		return map[int64]string{}
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := s.esiClient.Do(req)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("asset names: esi request failed", "error", err)
+		}
+		return map[int64]string{}
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != 200 {
+		if s.logger != nil {
+			s.logger.Warn("asset names: non-200", "status", resp.StatusCode)
+		}
+		return map[int64]string{}
+	}
+	raw, _ := io.ReadAll(resp.Body)
+	names, err := parseAssetNames(raw)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("asset names: parse failed", "error", err)
+		}
+		return map[int64]string{}
+	}
+	return names
 }
 
 // isFittedSlot checks if a location_flag represents a fitted module slot
