@@ -19,6 +19,7 @@ const navItems = [
   { href: "/sell-assets", label: "Sell Assets" },
   { href: "/trends", label: "Trends" },
   { href: "/watchlist", label: "Watchlist" },
+  { href: "/mining", label: "Mining" },
 ];
 
 export function Navigation() {
