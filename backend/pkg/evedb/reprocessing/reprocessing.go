@@ -68,3 +68,19 @@ func ListOres(db *sql.DB) ([]Ore, error) {
 	}
 	return out, rows.Err()
 }
+
+// ReprocessingSkills holds the character's reprocessing-relevant skill levels.
+type ReprocessingSkills struct {
+	Reprocessing           int // +3%/level
+	ReprocessingEfficiency int // +2%/level
+	OreProcessing          int // ore-specific "<Ore> Processing", +2%/level
+}
+
+// NetYield = baseRate × (1+0.03·R) × (1+0.02·RE) × (1+0.02·OP).
+// baseRate is the station's reprocessingEfficiency (0.50 for NPC stations).
+func NetYield(baseRate float64, s ReprocessingSkills) float64 {
+	return baseRate *
+		(1 + 0.03*float64(s.Reprocessing)) *
+		(1 + 0.02*float64(s.ReprocessingEfficiency)) *
+		(1 + 0.02*float64(s.OreProcessing))
+}

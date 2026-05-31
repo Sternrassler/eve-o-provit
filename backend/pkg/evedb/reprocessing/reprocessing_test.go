@@ -40,3 +40,12 @@ func TestListOres_IncludesVeldsparAndExcludesNonOre(t *testing.T) {
 		t.Fatalf("expected many ores, got %d", len(ores))
 	}
 }
+
+func TestNetYield(t *testing.T) {
+	// base 0.50, Reprocessing 5 (+15%), Reprocessing Efficiency 5 (+10%), ore skill 4 (+8%)
+	got := NetYield(0.50, ReprocessingSkills{Reprocessing: 5, ReprocessingEfficiency: 5, OreProcessing: 4})
+	want := 0.50 * 1.15 * 1.10 * 1.08
+	if diff := got - want; diff > 1e-9 || diff < -1e-9 {
+		t.Fatalf("want %.6f got %.6f", want, got)
+	}
+}
