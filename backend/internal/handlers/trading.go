@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
@@ -573,47 +572,26 @@ func (h *TradingHandler) fetchESICharacterShip(ctx context.Context, characterID 
 	ship.CargoCapacity = capacities.BaseCargoHold
 
 	// Effective cargo (hull + skills + fitted modules) for the dropdown label.
-	// Fail-loud (issue #147 A3): a fitting FETCH ERROR is logged and surfaced via
-	// EffectiveCargoUnavailable so the client renders a visible degraded state
-	// instead of silently falling back to the base hull as if it were effective.
-	// "no fitting / no cargo bonus" (err==nil) is NOT an error and leaves the flag
-	// unset with EffectiveCargoCapacity==0.
+	// Instance-accurate (issue #147 + dropdown follow-up): the active/flown ship is the
+	// DEFAULT prefill in the ROI dropdown, so it must be computed for THIS exact instance
+	// by ship_item_id — not per type / first-instance. A pilot flying one of two same-type
+	// ships otherwise sees the wrong instance's cargo.
+	// Fail-loud (issue #147 A3): on an assets/calc error EffectiveCargoForActiveShip returns
+	// unavailable=true so the client renders a visible degraded state instead of silently
+	// showing the base hull as if it were effective. "no fitting / no cargo bonus" yields
+	// (0, false) and leaves the flag unset with EffectiveCargoCapacity==0.
 	if h.fittingService != nil {
-		fit, ferr := h.fittingService.GetShipFitting(ctx, characterID, int(esiShip.ShipTypeID), accessToken)
-		applyEffectiveCargoToShip(ship, fit, ferr)
-		if ferr != nil {
-			log.Printf("WARN: effective-cargo enrichment failed for characterID=%d shipTypeID=%d: %v (marking effective_cargo_unavailable)", characterID, esiShip.ShipTypeID, ferr)
+		eff, unavail := h.fittingService.EffectiveCargoForActiveShip(ctx, characterID, int(esiShip.ShipTypeID), esiShip.ShipItemID, accessToken)
+		if eff > 0 {
+			ship.EffectiveCargoCapacity = eff
+		}
+		ship.EffectiveCargoUnavailable = unavail
+		if unavail {
+			log.Printf("WARN: effective-cargo enrichment failed for characterID=%d shipTypeID=%d shipItemID=%d (marking effective_cargo_unavailable)", characterID, esiShip.ShipTypeID, esiShip.ShipItemID)
 		}
 	}
 
 	return ship, nil
-}
-
-// applyEffectiveCargoToShip applies a fitting-fetch result to a CharacterShip per
-// the issue #147 A3 contract:
-//   - err != nil               → EffectiveCargoUnavailable=true (explicit "unknown")
-//   - err == nil, fit/bonus ≤ 0 → leave EffectiveCargoCapacity=0, flag unset
-//   - err == nil, bonus > 0     → set EffectiveCargoCapacity
-func applyEffectiveCargoToShip(ship *models.CharacterShip, fit *services.FittingData, err error) {
-	if err != nil {
-		ship.EffectiveCargoUnavailable = true
-		return
-	}
-	if fit != nil && fit.Bonuses.EffectiveCargo > 0 {
-		ship.EffectiveCargoCapacity = fit.Bonuses.EffectiveCargo
-	}
-}
-
-// applyEffectiveCargoToAssetShip is the CharacterAssetShip variant of
-// applyEffectiveCargoToShip (same issue #147 A3 contract).
-func applyEffectiveCargoToAssetShip(ship *models.CharacterAssetShip, fit *services.FittingData, err error) {
-	if err != nil {
-		ship.EffectiveCargoUnavailable = true
-		return
-	}
-	if fit != nil && fit.Bonuses.EffectiveCargo > 0 {
-		ship.EffectiveCargoCapacity = fit.Bonuses.EffectiveCargo
-	}
 }
 
 type esiAssetResponse struct {
@@ -717,35 +695,14 @@ func (h *TradingHandler) fetchESICharacterShips(ctx context.Context, characterID
 	}, nil
 }
 
-// enrichShipsWithEffectiveCargo fills EffectiveCargoCapacity for each singleton
-// ship in-place. Caps concurrency at 4 to avoid hammering ESI; non-singletons
-// (packaged) and ships with no resolvable fitting keep EffectiveCargoCapacity=0.
+// enrichShipsWithEffectiveCargo fills EffectiveCargoCapacity, EffectiveCargoUnavailable
+// and Name for each ship in-place by delegating to the FittingService, which resolves
+// each singleton's OWN fitting by item_id (not the first instance of the type).
 func (h *TradingHandler) enrichShipsWithEffectiveCargo(ctx context.Context, ships []models.CharacterAssetShip, characterID int, accessToken string) {
 	if h.fittingService == nil {
 		return
 	}
-	const maxConcurrent = 4
-	sem := make(chan struct{}, maxConcurrent)
-	var wg sync.WaitGroup
-	for i := range ships {
-		if !ships[i].IsSingleton {
-			continue
-		}
-		wg.Add(1)
-		sem <- struct{}{}
-		go func(idx int) {
-			defer wg.Done()
-			defer func() { <-sem }()
-			fit, err := h.fittingService.GetShipFitting(ctx, characterID, int(ships[idx].TypeID), accessToken)
-			applyEffectiveCargoToAssetShip(&ships[idx], fit, err)
-			if err != nil {
-				// Fail-loud (issue #147 A3): log the fitting fetch error; the
-				// EffectiveCargoUnavailable flag set above signals it to the client.
-				log.Printf("WARN: effective-cargo enrichment failed for characterID=%d shipTypeID=%d itemID=%d: %v (marking effective_cargo_unavailable)", characterID, ships[idx].TypeID, ships[idx].ItemID, err)
-			}
-		}(i)
-	}
-	wg.Wait()
+	h.fittingService.EnrichShipsEffectiveCargo(ctx, characterID, ships, accessToken)
 }
 
 // setESIAutopilotWaypoint sets a waypoint in the EVE client via ESI UI API

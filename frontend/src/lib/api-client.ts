@@ -28,8 +28,11 @@ interface BackendRegionsResponse {
 
 interface BackendShipsResponse {
   ships: Array<{
+    item_id: number;
     type_id: number;
     type_name: string;
+    /** Instance name (custom ship name set by pilot), absent on older responses. */
+    name?: string;
     cargo_capacity: number;
     effective_cargo_capacity?: number;
     // Set by the backend when fitting enrichment ERRORED (vs. a ship that
@@ -126,8 +129,9 @@ export async function fetchCharacterShips(): Promise<Ship[]> {
   // fitted volume (or a visible "unknown" marker) instead of falling back to
   // the base hull silently.
   return data.ships.map((ship) => ({
+    item_id: ship.item_id,
     type_id: ship.type_id,
-    name: ship.type_name,
+    name: ship.name ?? ship.type_name,
     cargo_capacity: ship.cargo_capacity,
     effective_cargo_capacity: ship.effective_cargo_capacity,
     effective_cargo_unavailable: ship.effective_cargo_unavailable,

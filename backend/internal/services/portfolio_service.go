@@ -33,6 +33,7 @@ func (s *PortfolioService) Optimize(ctx context.Context, req *models.PortfolioRe
 	resp, err := s.routes.CalculateWithFilters(ctx, &models.RouteCalculationRequest{
 		RegionID:             req.RegionID,
 		ShipTypeID:           req.ShipTypeID,
+		CargoCapacity:        req.CargoCapacity,
 		IncludeVolumeMetrics: true,
 	})
 	if err != nil {

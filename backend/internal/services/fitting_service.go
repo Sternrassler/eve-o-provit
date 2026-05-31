@@ -2,6 +2,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
+	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services/esiconfig"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/cargo"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
@@ -198,96 +200,8 @@ func (s *FittingService) fetchFittingFromESI(
 		}
 	}
 
-	// 4. Fetch character skills
-	skills, err := s.skillsService.GetCharacterSkills(ctx, characterID, accessToken)
-	if err != nil {
-		s.logger.Warn("Failed to fetch character skills, using default", "error", err)
-		skills = nil // Will use graceful degradation in deterministic calculation
-	}
-
-	// 5. Convert to cargo.CharacterSkills format (array-based)
-	var charSkills *cargo.CharacterSkills
-	if skills != nil {
-		// Map TradingSkills to ESI CharacterSkills format
-		skillsList := []struct {
-			SkillID           int64 `json:"skill_id"`
-			ActiveSkillLevel  int   `json:"active_skill_level"`
-			TrainedSkillLevel int   `json:"trained_skill_level"`
-		}{}
-
-		// Add Spaceship Command if present
-		if skills.SpaceshipCommand > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3327, ActiveSkillLevel: skills.SpaceshipCommand, TrainedSkillLevel: skills.SpaceshipCommand})
-		}
-
-		// Add Racial Industrial Skills
-		if skills.GallenteIndustrial > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3348, ActiveSkillLevel: skills.GallenteIndustrial, TrainedSkillLevel: skills.GallenteIndustrial})
-		}
-		if skills.CaldariIndustrial > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3346, ActiveSkillLevel: skills.CaldariIndustrial, TrainedSkillLevel: skills.CaldariIndustrial})
-		}
-		if skills.AmarrIndustrial > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3347, ActiveSkillLevel: skills.AmarrIndustrial, TrainedSkillLevel: skills.AmarrIndustrial})
-		}
-		if skills.MinmatarIndustrial > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3349, ActiveSkillLevel: skills.MinmatarIndustrial, TrainedSkillLevel: skills.MinmatarIndustrial})
-		}
-
-		// Add Racial Hauler Skills (Issue #77 - deterministic)
-		if skills.GallenteHauler > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3340, ActiveSkillLevel: skills.GallenteHauler, TrainedSkillLevel: skills.GallenteHauler})
-		}
-		if skills.CaldariHauler > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3341, ActiveSkillLevel: skills.CaldariHauler, TrainedSkillLevel: skills.CaldariHauler})
-		}
-		if skills.AmarrHauler > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3342, ActiveSkillLevel: skills.AmarrHauler, TrainedSkillLevel: skills.AmarrHauler})
-		}
-		if skills.MinmatarHauler > 0 {
-			skillsList = append(skillsList, struct {
-				SkillID           int64 `json:"skill_id"`
-				ActiveSkillLevel  int   `json:"active_skill_level"`
-				TrainedSkillLevel int   `json:"trained_skill_level"`
-			}{SkillID: 3343, ActiveSkillLevel: skills.MinmatarHauler, TrainedSkillLevel: skills.MinmatarHauler})
-		}
-
-		charSkills = &cargo.CharacterSkills{
-			Skills: skillsList,
-		}
-	}
+	// 4. + 5. Fetch character skills and convert to cargo.CharacterSkills format
+	charSkills := s.characterCargoSkills(ctx, characterID, accessToken)
 
 	// 6. Convert fitted modules to cargo.FittedItem format
 	fittedItems := make([]cargo.FittedItem, 0, len(fittedModules))
@@ -416,6 +330,151 @@ func (s *FittingService) fetchFittingFromESI(
 			WarpSpeedAUS:  effectiveWarpSpeed, // Final warp speed in AU/s (for route calculation)
 		},
 	}, nil
+}
+
+// characterCargoSkills fetches the character's skills via SkillsServicer and converts
+// the cargo-relevant ones (Spaceship Command, racial Industrial + Hauler skills) into
+// the array-based cargo.CharacterSkills format used by the deterministic calculators.
+// Returns nil on a skills-fetch failure (the calculators degrade gracefully on nil).
+func (s *FittingService) characterCargoSkills(ctx context.Context, characterID int, accessToken string) *cargo.CharacterSkills {
+	skills, err := s.skillsService.GetCharacterSkills(ctx, characterID, accessToken)
+	if err != nil {
+		s.logger.Warn("Failed to fetch character skills, using default", "error", err)
+		return nil
+	}
+	if skills == nil {
+		return nil
+	}
+
+	// Map TradingSkills to ESI CharacterSkills format
+	skillsList := []struct {
+		SkillID           int64 `json:"skill_id"`
+		ActiveSkillLevel  int   `json:"active_skill_level"`
+		TrainedSkillLevel int   `json:"trained_skill_level"`
+	}{}
+
+	// Add Spaceship Command if present
+	if skills.SpaceshipCommand > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3327, ActiveSkillLevel: skills.SpaceshipCommand, TrainedSkillLevel: skills.SpaceshipCommand})
+	}
+
+	// Add Racial Industrial Skills
+	if skills.GallenteIndustrial > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3348, ActiveSkillLevel: skills.GallenteIndustrial, TrainedSkillLevel: skills.GallenteIndustrial})
+	}
+	if skills.CaldariIndustrial > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3346, ActiveSkillLevel: skills.CaldariIndustrial, TrainedSkillLevel: skills.CaldariIndustrial})
+	}
+	if skills.AmarrIndustrial > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3347, ActiveSkillLevel: skills.AmarrIndustrial, TrainedSkillLevel: skills.AmarrIndustrial})
+	}
+	if skills.MinmatarIndustrial > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3349, ActiveSkillLevel: skills.MinmatarIndustrial, TrainedSkillLevel: skills.MinmatarIndustrial})
+	}
+
+	// Add Racial Hauler Skills (Issue #77 - deterministic)
+	if skills.GallenteHauler > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3340, ActiveSkillLevel: skills.GallenteHauler, TrainedSkillLevel: skills.GallenteHauler})
+	}
+	if skills.CaldariHauler > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3341, ActiveSkillLevel: skills.CaldariHauler, TrainedSkillLevel: skills.CaldariHauler})
+	}
+	if skills.AmarrHauler > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3342, ActiveSkillLevel: skills.AmarrHauler, TrainedSkillLevel: skills.AmarrHauler})
+	}
+	if skills.MinmatarHauler > 0 {
+		skillsList = append(skillsList, struct {
+			SkillID           int64 `json:"skill_id"`
+			ActiveSkillLevel  int   `json:"active_skill_level"`
+			TrainedSkillLevel int   `json:"trained_skill_level"`
+		}{SkillID: 3343, ActiveSkillLevel: skills.MinmatarHauler, TrainedSkillLevel: skills.MinmatarHauler})
+	}
+
+	return &cargo.CharacterSkills{Skills: skillsList}
+}
+
+// EnrichShipsEffectiveCargo fills each singleton ship's EffectiveCargoCapacity (from its
+// OWN fitting by item_id), EffectiveCargoUnavailable (true on a calc error → fail-loud),
+// and Name (custom ESI name, falling back to TypeName). Best-effort: an assets-fetch error
+// leaves the ships unenriched rather than failing the whole list.
+func (s *FittingService) EnrichShipsEffectiveCargo(ctx context.Context, characterID int, ships []models.CharacterAssetShip, accessToken string) {
+	assets, err := s.fetchESIAssets(ctx, characterID, accessToken)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("enrich ships: assets fetch failed", "characterID", characterID, "error", err)
+		}
+		return
+	}
+	charSkills := s.characterCargoSkills(ctx, characterID, accessToken)
+
+	itemIDs := make([]int64, 0, len(ships))
+	for i := range ships {
+		itemIDs = append(itemIDs, ships[i].ItemID)
+	}
+	names := s.FetchAssetNames(ctx, characterID, itemIDs, accessToken)
+
+	for i := range ships {
+		if n := names[ships[i].ItemID]; n != "" {
+			ships[i].Name = n
+		} else {
+			ships[i].Name = ships[i].TypeName
+		}
+		if !ships[i].IsSingleton {
+			continue
+		}
+		eff, unavail := s.EffectiveCargoForShipItem(ctx, int(ships[i].TypeID), ships[i].ItemID, assets, charSkills)
+		if eff > 0 {
+			ships[i].EffectiveCargoCapacity = eff
+		}
+		ships[i].EffectiveCargoUnavailable = unavail
+	}
+}
+
+// EffectiveCargoForActiveShip computes the effective cargo for a single ship instance by
+// item_id (used for the flown/active ship). Returns (effective, unavailable). On an
+// assets/calc error returns (0, true) so the caller fails loud (falls back to base + flag).
+func (s *FittingService) EffectiveCargoForActiveShip(ctx context.Context, characterID, shipTypeID int, shipItemID int64, accessToken string) (float64, bool) {
+	assets, err := s.fetchESIAssets(ctx, characterID, accessToken)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("active ship effective cargo: assets fetch failed", "error", err)
+		}
+		return 0, true
+	}
+	charSkills := s.characterCargoSkills(ctx, characterID, accessToken)
+	return s.EffectiveCargoForShipItem(ctx, shipTypeID, shipItemID, assets, charSkills)
 }
 
 // fetchESIAssets fetches character assets from ESI /v5/characters/{id}/assets/
@@ -609,6 +668,132 @@ func (s *FittingService) getDefaultFitting(shipTypeID int) *FittingData {
 			WarpSpeedAUS:        warpAUS,
 		},
 	}
+}
+
+// fittedItemsForShip collects cargo.FittedItem entries for all modules fitted to a specific
+// ship item. It uses only the asset list (no ESI dogma lookups), making it suitable for
+// lightweight per-instance effective-cargo calculations.
+func (s *FittingService) fittedItemsForShip(ctx context.Context, assets []esiAsset, shipItemID int64) []cargo.FittedItem {
+	items := make([]cargo.FittedItem, 0)
+	for _, asset := range assets {
+		if asset.LocationID == shipItemID && isFittedSlot(asset.LocationFlag) {
+			items = append(items, cargo.FittedItem{TypeID: int64(asset.TypeID), Slot: asset.LocationFlag})
+		}
+	}
+	return items
+}
+
+// EffectiveCargoForShipItem computes the effective cargo hold for a specific ship instance
+// (identified by shipItemID) using the supplied asset list and character skills.
+// Returns (effectiveCargo, unavailable): unavailable is true when the SDE lookup fails.
+func (s *FittingService) EffectiveCargoForShipItem(
+	ctx context.Context, shipTypeID int, shipItemID int64, assets []esiAsset, charSkills *cargo.CharacterSkills,
+) (float64, bool) {
+	items := s.fittedItemsForShip(ctx, assets, shipItemID)
+	caps, err := cargo.GetShipCapacitiesDeterministic(ctx, s.sdeDB, int64(shipTypeID), charSkills, items)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("effective cargo per-item calc failed", "shipTypeID", shipTypeID, "itemID", shipItemID, "error", err)
+		}
+		return 0, true
+	}
+	return caps.EffectiveCargoHold, false
+}
+
+// parseAssetNames parses the JSON body from ESI /assets/names/ into a map
+// of item_id → name. Entries with empty name or the sentinel "None" are
+// dropped so callers can fall back to the type name.
+func parseAssetNames(body []byte) (map[int64]string, error) {
+	var rows []struct {
+		ItemID int64  `json:"item_id"`
+		Name   string `json:"name"`
+	}
+	if err := json.Unmarshal(body, &rows); err != nil {
+		return nil, fmt.Errorf("decode asset names: %w", err)
+	}
+	out := make(map[int64]string, len(rows))
+	for _, r := range rows {
+		if r.Name == "" || r.Name == "None" {
+			continue
+		}
+		out[r.ItemID] = r.Name
+	}
+	return out, nil
+}
+
+// assetNamesMaxIDs is ESI's per-request id cap for /assets/names/ (max 1000 ids).
+const assetNamesMaxIDs = 1000
+
+// chunkInt64 splits ids into consecutive slices of at most size elements.
+// A size <= 0 yields a single chunk with all ids.
+func chunkInt64(ids []int64, size int) [][]int64 {
+	if size <= 0 || len(ids) <= size {
+		return [][]int64{ids}
+	}
+	chunks := make([][]int64, 0, (len(ids)+size-1)/size)
+	for start := 0; start < len(ids); start += size {
+		end := start + size
+		if end > len(ids) {
+			end = len(ids)
+		}
+		chunks = append(chunks, ids[start:end])
+	}
+	return chunks
+}
+
+// FetchAssetNames resolves custom names for the given item_ids (best-effort: on any
+// error returns an empty map so labels fall back to the type name — never blocks the list).
+// Requests are chunked to ESI's 1000-id limit; a failed batch contributes nothing.
+func (s *FittingService) FetchAssetNames(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
+	if len(itemIDs) == 0 {
+		return map[int64]string{}
+	}
+	out := make(map[int64]string, len(itemIDs))
+	for _, batch := range chunkInt64(itemIDs, assetNamesMaxIDs) {
+		for id, name := range s.fetchAssetNamesBatch(ctx, characterID, batch, accessToken) {
+			out[id] = name
+		}
+	}
+	return out
+}
+
+// fetchAssetNamesBatch POSTs a single batch of ≤1000 ids to ESI /assets/names/.
+// Best-effort: returns an empty map on any error.
+func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
+	bodyBytes, _ := json.Marshal(itemIDs)
+	endpoint := fmt.Sprintf("/latest/characters/%d/assets/names/", characterID)
+	req, err := http.NewRequestWithContext(ctx, "POST", esiconfig.BaseURL+endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("asset names: build request failed", "error", err)
+		}
+		return map[int64]string{}
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := s.esiClient.Do(req)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("asset names: esi request failed", "error", err)
+		}
+		return map[int64]string{}
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != 200 {
+		if s.logger != nil {
+			s.logger.Warn("asset names: non-200", "status", resp.StatusCode)
+		}
+		return map[int64]string{}
+	}
+	raw, _ := io.ReadAll(resp.Body)
+	names, err := parseAssetNames(raw)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("asset names: parse failed", "error", err)
+		}
+		return map[int64]string{}
+	}
+	return names
 }
 
 // isFittedSlot checks if a location_flag represents a fitted module slot

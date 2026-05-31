@@ -1,9 +1,105 @@
 package services
 
 import (
+	"context"
 	"math"
 	"testing"
+
+	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 )
+
+// fakeRouteCalculator is a test double for RouteCalculatorServicer that
+// records the last RouteCalculationRequest so tests can assert on forwarded fields.
+type fakeRouteCalculator struct {
+	lastReq *models.RouteCalculationRequest
+	resp    *models.RouteCalculationResponse
+}
+
+func (f *fakeRouteCalculator) Calculate(_ context.Context, _, _ int, _ float64, _, _ *float64) (*models.RouteCalculationResponse, error) {
+	return f.resp, nil
+}
+
+func (f *fakeRouteCalculator) CalculateWithFilters(_ context.Context, req *models.RouteCalculationRequest) (*models.RouteCalculationResponse, error) {
+	f.lastReq = req
+	return f.resp, nil
+}
+
+// fakeSkillsService is a no-op SkillsServicer for portfolio service tests.
+type fakeSkillsService struct{}
+
+func (f *fakeSkillsService) GetCharacterSkills(_ context.Context, _ int, _ string) (*TradingSkills, error) {
+	return &TradingSkills{}, nil
+}
+
+// TestPortfolioService_Optimize_ForwardsCargoCapacityOverride asserts that when
+// PortfolioRequest.CargoCapacity > 0, the value is forwarded verbatim in the
+// RouteCalculationRequest sent to the route calculator. This ensures the
+// selected ship instance's effective cargo overrides the per-type recompute.
+func TestPortfolioService_Optimize_ForwardsCargoCapacityOverride(t *testing.T) {
+	fake := &fakeRouteCalculator{
+		resp: &models.RouteCalculationResponse{
+			Routes:        []models.TradingRoute{},
+			CargoCapacity: 62500,
+		},
+	}
+	svc := NewPortfolioService(fake, &fakeSkillsService{}, logger.NewNoop())
+
+	req := &models.PortfolioRequest{
+		RegionID:        10000002,
+		ShipTypeID:      12345,
+		CargoCapacity:   62500,
+		Capital:         1_000_000,
+		TimeBudgetMin:   480,
+		LiquidityCapPct: 10,
+		MaxItemPct:      50,
+	}
+
+	_, err := svc.Optimize(context.Background(), req, 0, "")
+	if err != nil {
+		t.Fatalf("Optimize returned error: %v", err)
+	}
+	if fake.lastReq == nil {
+		t.Fatal("CalculateWithFilters was not called")
+	}
+	if fake.lastReq.CargoCapacity != 62500 {
+		t.Errorf("CargoCapacity not forwarded: got %v, want 62500", fake.lastReq.CargoCapacity)
+	}
+}
+
+// TestPortfolioService_Optimize_ZeroCargoCapacityNotForced asserts that when
+// PortfolioRequest.CargoCapacity is 0 (unset), the forwarded request also has 0,
+// so the route service falls back to the per-type fitting recompute.
+func TestPortfolioService_Optimize_ZeroCargoCapacityNotForced(t *testing.T) {
+	fake := &fakeRouteCalculator{
+		resp: &models.RouteCalculationResponse{
+			Routes:        []models.TradingRoute{},
+			CargoCapacity: 50000,
+		},
+	}
+	svc := NewPortfolioService(fake, &fakeSkillsService{}, logger.NewNoop())
+
+	req := &models.PortfolioRequest{
+		RegionID:        10000002,
+		ShipTypeID:      12345,
+		Capital:         1_000_000,
+		TimeBudgetMin:   480,
+		LiquidityCapPct: 10,
+		MaxItemPct:      50,
+		// CargoCapacity intentionally zero (omitted)
+	}
+
+	_, err := svc.Optimize(context.Background(), req, 0, "")
+	if err != nil {
+		t.Fatalf("Optimize returned error: %v", err)
+	}
+	if fake.lastReq == nil {
+		t.Fatal("CalculateWithFilters was not called")
+	}
+	if fake.lastReq.CargoCapacity != 0 {
+		t.Errorf("expected CargoCapacity=0 when unset, got %v", fake.lastReq.CargoCapacity)
+	}
+}
 
 func approx(a, b float64) bool { return math.Abs(a-b) < 1e-6 }
 

@@ -4,11 +4,12 @@ package models
 type PortfolioRequest struct {
 	RegionID        int      `json:"region_id"`
 	ShipTypeID      int      `json:"ship_type_id"`
-	Capital         float64  `json:"capital"`           // ISK budget
-	TimeBudgetMin   float64  `json:"time_budget_min"`   // available trading minutes/day
-	LiquidityCapPct float64  `json:"liquidity_cap_pct"` // 0..100, max share of daily volume per item
-	MaxItemPct      float64  `json:"max_item_pct"`      // 0..100, max share of capital per item
-	SecZones        []string `json:"sec_zones"`         // "high","low","null"
+	CargoCapacity   float64  `json:"cargo_capacity,omitempty"` // Optional: selected ship instance's effective cargo (m³). When >0, overrides the per-type fitting recompute.
+	Capital         float64  `json:"capital"`                  // ISK budget
+	TimeBudgetMin   float64  `json:"time_budget_min"`          // available trading minutes/day
+	LiquidityCapPct float64  `json:"liquidity_cap_pct"`        // 0..100, max share of daily volume per item
+	MaxItemPct      float64  `json:"max_item_pct"`             // 0..100, max share of capital per item
+	SecZones        []string `json:"sec_zones"`                // "high","low","null"
 } // @name PortfolioRequest
 
 // PortfolioItem is one allocated position in the suggested portfolio.
