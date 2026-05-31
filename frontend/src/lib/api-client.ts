@@ -6,7 +6,6 @@ import {
 } from "@/types/character";
 import {
   Region,
-  Ship,
   ItemSearchResult,
   HubComparisonResult,
   PortfolioRequest,
@@ -23,23 +22,6 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:9001";
 // Backend response types
 interface BackendRegionsResponse {
   regions: Array<{ id: number; name: string }>;
-  count: number;
-}
-
-interface BackendShipsResponse {
-  ships: Array<{
-    item_id: number;
-    type_id: number;
-    type_name: string;
-    /** Instance name (custom ship name set by pilot), absent on older responses. */
-    name?: string;
-    cargo_capacity: number;
-    effective_cargo_capacity?: number;
-    // Set by the backend when fitting enrichment ERRORED (vs. a ship that
-    // simply has no cargo-expander). The UI surfaces this instead of silently
-    // showing the base hull as if it were the real fitted value.
-    effective_cargo_unavailable?: boolean;
-  }>;
   count: number;
 }
 
@@ -104,38 +86,6 @@ export async function fetchCharacterWallet(): Promise<number> {
 
   const data = (await response.json()) as { balance: number };
   return data.balance;
-}
-
-/**
- * Fetch all character ships in hangars (requires authentication)
- */
-export async function fetchCharacterShips(): Promise<Ship[]> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/character/ships`, {
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch character ships: ${response.statusText}`);
-  }
-
-  const data: BackendShipsResponse = await response.json();
-
-  if (!Array.isArray(data.ships)) {
-    throw new Error("Invalid ships response: 'ships' missing or not an array");
-  }
-
-  // Convert backend format to Ship format. effective_cargo_capacity and the
-  // enrichment-error flag are carried through so the dropdown can show the
-  // fitted volume (or a visible "unknown" marker) instead of falling back to
-  // the base hull silently.
-  return data.ships.map((ship) => ({
-    item_id: ship.item_id,
-    type_id: ship.type_id,
-    name: ship.name ?? ship.type_name,
-    cargo_capacity: ship.cargo_capacity,
-    effective_cargo_capacity: ship.effective_cargo_capacity,
-    effective_cargo_unavailable: ship.effective_cargo_unavailable,
-  }));
 }
 
 /**

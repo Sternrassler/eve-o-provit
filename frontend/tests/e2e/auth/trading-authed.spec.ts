@@ -9,7 +9,8 @@ import { REGION_THE_FORGE } from '../helpers/constants';
  * Select so the workflow runs against a high-liquidity market that reliably
  * yields routes. Structure assertions only — live market values vary.
  *
- * Select layout: Region is the first combobox on the page, Schiff the second.
+ * Select layout: Region is the only combobox on the page; the current ship is a
+ * read-only card (CurrentShipCard), not a dropdown.
  */
 function countFromText(text: string | null): number {
   return Number(text?.match(/(\d+)/)?.[1] ?? '0');

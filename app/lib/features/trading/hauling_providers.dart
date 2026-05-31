@@ -3,8 +3,8 @@
 /// Provider graph (reuses [tradingApiProvider] from providers.dart):
 ///   tradingApiProvider → haulingRoutesProvider (AsyncNotifier)
 ///
-/// Ship selection reuses the existing trading-feature provider
-/// ([selectedShipTypeIdProvider]).
+/// The ship is the character's CURRENT ship (currentShipProvider); the screen
+/// builds the [HaulingRequest] (incl. cargo override) and calls [find].
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';

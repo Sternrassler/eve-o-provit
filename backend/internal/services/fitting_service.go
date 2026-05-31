@@ -7,8 +7,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
@@ -724,6 +726,28 @@ func parseAssetNames(body []byte) (map[int64]string, error) {
 // assetNamesMaxIDs is ESI's per-request id cap for /assets/names/ (max 1000 ids).
 const assetNamesMaxIDs = 1000
 
+// assetNamesCacheTTL is the Redis TTL for cached asset-name results (1 h, matching the assets cache window).
+const assetNamesCacheTTL = time.Hour
+
+// assetNamesCacheKey returns a stable Redis key for the given characterID and item-id set.
+// The key is independent of input order: the ids are sorted before hashing.
+func assetNamesCacheKey(characterID int, itemIDs []int64) string {
+	sorted := make([]int64, len(itemIDs))
+	copy(sorted, itemIDs)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+
+	h := fnv.New32a()
+	for _, id := range sorted {
+		// Write each id as 8 bytes (big-endian equivalent via repeated shifts).
+		b := [8]byte{
+			byte(id >> 56), byte(id >> 48), byte(id >> 40), byte(id >> 32),
+			byte(id >> 24), byte(id >> 16), byte(id >> 8), byte(id),
+		}
+		_, _ = h.Write(b[:])
+	}
+	return fmt.Sprintf("assetnames:%d:%x", characterID, h.Sum32())
+}
+
 // chunkInt64 splits ids into consecutive slices of at most size elements.
 // A size <= 0 yields a single chunk with all ids.
 func chunkInt64(ids []int64, size int) [][]int64 {
@@ -742,24 +766,72 @@ func chunkInt64(ids []int64, size int) [][]int64 {
 }
 
 // FetchAssetNames resolves custom names for the given item_ids (best-effort: on any
-// error returns an empty map so labels fall back to the type name — never blocks the list).
-// Requests are chunked to ESI's 1000-id limit; a failed batch contributes nothing.
+// error returns whatever partial names were resolved so labels fall back to the type
+// name — never blocks the list).
+// Results are cached in Redis (1 h TTL) keyed by characterID + sorted item-id set,
+// but ONLY when every ESI batch succeeded. A transient ESI error must NOT poison the
+// cache for the full TTL.
+// On a Redis error the function falls through to ESI transparently.
 func (s *FittingService) FetchAssetNames(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
 	if len(itemIDs) == 0 {
 		return map[int64]string{}
 	}
+
+	cacheKey := assetNamesCacheKey(characterID, itemIDs)
+
+	// 1. Try Redis cache.
+	if cachedBytes, err := s.redisClient.Get(ctx, cacheKey).Bytes(); err == nil {
+		var names map[int64]string
+		if err := json.Unmarshal(cachedBytes, &names); err == nil {
+			return names
+		}
+		if s.logger != nil {
+			s.logger.Warn("asset names: failed to unmarshal cached entry", "key", cacheKey)
+		}
+	}
+
+	// 2. Cache miss (or Redis error) — fetch from ESI.
+	names, ok := s.fetchAssetNamesFromESI(ctx, characterID, itemIDs, accessToken)
+
+	// 3. Store to Redis only when all batches succeeded (fail-loud: don't cache ESI errors).
+	if ok {
+		if data, err := json.Marshal(names); err == nil {
+			if err := s.redisClient.Set(ctx, cacheKey, data, assetNamesCacheTTL).Err(); err != nil {
+				if s.logger != nil {
+					s.logger.Warn("asset names: failed to cache in Redis", "key", cacheKey, "error", err)
+				}
+			}
+		}
+	}
+
+	return names
+}
+
+// fetchAssetNamesFromESI resolves custom names via ESI /assets/names/ (chunk-and-merge).
+// Returns (names, ok): ok is true only when every batch fetch succeeded (no ESI/build/parse
+// error). A genuinely-empty success (all ships unnamed) returns (empty map, true).
+// On any batch failure the partial names collected so far are returned with ok=false so
+// the caller can decide not to cache the result.
+func (s *FittingService) fetchAssetNamesFromESI(ctx context.Context, characterID int, itemIDs []int64, accessToken string) (map[int64]string, bool) {
 	out := make(map[int64]string, len(itemIDs))
+	allOK := true
 	for _, batch := range chunkInt64(itemIDs, assetNamesMaxIDs) {
-		for id, name := range s.fetchAssetNamesBatch(ctx, characterID, batch, accessToken) {
+		names, batchOK := s.fetchAssetNamesBatch(ctx, characterID, batch, accessToken)
+		if !batchOK {
+			allOK = false
+		}
+		for id, name := range names {
 			out[id] = name
 		}
 	}
-	return out
+	return out, allOK
 }
 
 // fetchAssetNamesBatch POSTs a single batch of ≤1000 ids to ESI /assets/names/.
-// Best-effort: returns an empty map on any error.
-func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID int, itemIDs []int64, accessToken string) map[int64]string {
+// Returns (names, ok): ok is false whenever a request-build, network, HTTP-status, or
+// parse error occurs so the caller can propagate a "partial result" signal without
+// caching the incomplete response.
+func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID int, itemIDs []int64, accessToken string) (map[int64]string, bool) {
 	bodyBytes, _ := json.Marshal(itemIDs)
 	endpoint := fmt.Sprintf("/latest/characters/%d/assets/names/", characterID)
 	req, err := http.NewRequestWithContext(ctx, "POST", esiconfig.BaseURL+endpoint, bytes.NewReader(bodyBytes))
@@ -767,7 +839,7 @@ func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID i
 		if s.logger != nil {
 			s.logger.Warn("asset names: build request failed", "error", err)
 		}
-		return map[int64]string{}
+		return map[int64]string{}, false
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Content-Type", "application/json")
@@ -776,14 +848,14 @@ func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID i
 		if s.logger != nil {
 			s.logger.Warn("asset names: esi request failed", "error", err)
 		}
-		return map[int64]string{}
+		return map[int64]string{}, false
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != 200 {
 		if s.logger != nil {
 			s.logger.Warn("asset names: non-200", "status", resp.StatusCode)
 		}
-		return map[int64]string{}
+		return map[int64]string{}, false
 	}
 	raw, _ := io.ReadAll(resp.Body)
 	names, err := parseAssetNames(raw)
@@ -791,9 +863,9 @@ func (s *FittingService) fetchAssetNamesBatch(ctx context.Context, characterID i
 		if s.logger != nil {
 			s.logger.Warn("asset names: parse failed", "error", err)
 		}
-		return map[int64]string{}
+		return map[int64]string{}, false
 	}
-	return names
+	return names, true
 }
 
 // isFittedSlot checks if a location_flag represents a fitted module slot

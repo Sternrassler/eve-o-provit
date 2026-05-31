@@ -26,6 +26,33 @@ void main() {
         'sec_zones': ['high'],
       });
     });
+
+    test('omits cargo_capacity when null (backend falls back to per-type)', () {
+      const req = PortfolioRequest(
+        regionId: 10000002,
+        shipTypeId: 649,
+        capital: 1,
+        timeBudgetMin: 1,
+        liquidityCapPct: 1,
+        maxItemPct: 1,
+        secZones: ['high'],
+      );
+      expect(req.toJson().containsKey('cargo_capacity'), isFalse);
+    });
+
+    test('includes cargo_capacity override when set (current-ship cargo)', () {
+      const req = PortfolioRequest(
+        regionId: 10000002,
+        shipTypeId: 649,
+        capital: 1,
+        timeBudgetMin: 1,
+        liquidityCapPct: 1,
+        maxItemPct: 1,
+        secZones: ['high'],
+        cargoCapacity: 9656.9,
+      );
+      expect(req.toJson()['cargo_capacity'], 9656.9);
+    });
   });
 
   // ── PortfolioResult.fromJson ───────────────────────────────────────────────

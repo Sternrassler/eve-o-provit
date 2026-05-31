@@ -4,6 +4,7 @@ package models
 type HaulingRequest struct {
 	OriginRegionID int     `json:"origin_region_id"` // 0 = use character's current region
 	ShipTypeID     int     `json:"ship_type_id"`
+	CargoCapacity  float64 `json:"cargo_capacity,omitempty"` // Optional: selected ship instance's effective cargo (m³). When >0, overrides the per-type recompute.
 	Capital        float64 `json:"capital"`
 	AvoidLowSec    bool    `json:"avoid_low_sec"`
 	MaxRoutes      int     `json:"max_routes"` // 0 = default 15

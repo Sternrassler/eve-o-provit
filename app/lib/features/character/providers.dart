@@ -41,6 +41,36 @@ final activeShipProvider = FutureProvider<CharacterShip>((ref) async {
   return api.activeShip();
 });
 
+/// The character's CURRENT (flown) ship — the single source of truth for every
+/// trading view now that the ship dropdown is gone.
+///
+/// Mirrors the web `useCurrentShip` hook: gated on auth (returns null while
+/// unauthenticated so a logged-out mount never fires a request), and re-runs
+/// when auth flips. Errors are NOT swallowed — they propagate as [AsyncError]
+/// so the UI can FAIL LOUD ("Aktuelles Schiff konnte nicht geladen werden")
+/// instead of silently rendering "no ship".
+///
+/// Refresh by invalidating this provider (`ref.invalidate(currentShipProvider)`).
+final currentShipProvider = FutureProvider<CharacterShip?>((ref) async {
+  final auth = ref.watch(authControllerProvider).value;
+  if (auth is! Authenticated) return null;
+  final api = ref.watch(characterApiProvider);
+  return api.activeShip();
+});
+
+/// Derives the `cargo_capacity` override to send with a calculation request,
+/// from the current ship. Returns the effective (fitted) cargo only when it is
+/// known and > 0 and NOT flagged unavailable; otherwise null (omit the field so
+/// the backend falls back to its per-type computation). Mirrors the web's
+/// `cargoOverride` / `buildPortfolioRequest` logic exactly.
+double? cargoOverrideForShip(CharacterShip? ship) {
+  if (ship == null) return null;
+  if (ship.effectiveCargoUnavailable) return null;
+  final eff = ship.effectiveCargoCapacity;
+  if (eff == null || eff <= 0) return null;
+  return eff;
+}
+
 /// Character's wallet balance in ISK; null when not authenticated or on error
 /// (e.g. the character authorized before the wallet scope was added). Used to
 /// pre-fill the ROI capital field.

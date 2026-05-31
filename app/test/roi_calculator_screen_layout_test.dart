@@ -18,7 +18,7 @@ import 'package:eve_o_provit/core/theme.dart';
 import 'package:eve_o_provit/features/character/character_api.dart';
 import 'package:eve_o_provit/features/character/character_models.dart';
 import 'package:eve_o_provit/features/character/providers.dart'
-    show characterApiProvider;
+    show characterApiProvider, currentShipProvider;
 import 'package:eve_o_provit/features/trading/providers.dart';
 import 'package:eve_o_provit/features/trading/roi_calculator_screen.dart';
 import 'package:eve_o_provit/features/trading/roi_providers.dart';
@@ -104,11 +104,16 @@ class _FakeTradingApi extends TradingApi {
 
 class _FakeCharacterApi extends CharacterApi {
   _FakeCharacterApi() : super(Dio());
-
-  @override
-  Future<CharacterShipsResponse> ships() async =>
-      const CharacterShipsResponse(ships: [], count: 0);
 }
+
+const _currentShip = CharacterShip(
+  shipTypeId: 650,
+  shipName: 'My Nereus',
+  shipItemId: 1000000000002,
+  shipTypeName: 'Nereus',
+  cargoCapacity: 2700.0,
+  effectiveCargoCapacity: 9656.9,
+);
 
 class _StubNotifier extends RoiOptimizeNotifier {
   @override
@@ -136,6 +141,7 @@ Future<void> _pumpScreen(
       overrides: [
         tradingApiProvider.overrideWithValue(_FakeTradingApi()),
         characterApiProvider.overrideWithValue(_FakeCharacterApi()),
+        currentShipProvider.overrideWith((ref) async => _currentShip),
         roiOptimizeProvider.overrideWith(notifier),
       ],
       child: MaterialApp(

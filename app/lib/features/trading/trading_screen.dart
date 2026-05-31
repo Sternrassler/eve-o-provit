@@ -14,12 +14,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../api/trading_models.dart';
 import '../../auth/auth_controller.dart';
 import '../../core/breakpoint.dart';
+import '../character/providers.dart';
 import '../trading/providers.dart';
+import 'current_ship_card.dart';
 import 'current_selection_prefill.dart';
 import 'route_detail.dart';
 import 'route_list.dart';
 import 'ship_fitting_card.dart';
-import 'ship_select.dart';
 import 'trading_filters_panel.dart';
 
 // ---------------------------------------------------------------------------
@@ -83,7 +84,12 @@ class _TwoPaneLayout extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedRoute = ref.watch(selectedRouteProvider);
-    final selectedShipTypeId = ref.watch(selectedShipTypeIdProvider);
+    // The fitting card keys off the CURRENT ship's type id (no dropdown).
+    final currentShip = ref.watch(currentShipProvider).value;
+    final currentShipTypeId =
+        (currentShip != null && currentShip.shipTypeId > 0)
+            ? currentShip.shipTypeId
+            : null;
     final authState = ref.watch(authControllerProvider).value;
     final character =
         authState is Authenticated ? authState.character : null;
@@ -101,10 +107,10 @@ class _TwoPaneLayout extends ConsumerWidget {
               children: [
                 const TradingFiltersPanel(),
                 const SizedBox(height: 12),
-                if (character != null && selectedShipTypeId != null)
+                if (character != null && currentShipTypeId != null)
                   ShipFittingCard(
                     characterId: character.id,
-                    shipTypeId: selectedShipTypeId,
+                    shipTypeId: currentShipTypeId,
                   ),
               ],
             ),
@@ -222,7 +228,7 @@ class _DetailPlaceholder extends StatelessWidget {
 
 /// Horizontal (or wrapping) bar with trading controls.
 ///
-/// Contains: Region dropdown, ShipSelect, market refresh, Berechnen button.
+/// Contains: Region dropdown, CurrentShipCard, market refresh, Berechnen button.
 class _ControlsBar extends ConsumerStatefulWidget {
   @override
   ConsumerState<_ControlsBar> createState() => _ControlsBarState();
@@ -294,13 +300,14 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
 
   Future<void> _calculate() async {
     final region = ref.read(selectedRegionProvider);
-    final shipTypeId = ref.read(selectedShipTypeIdProvider);
+    final ship = ref.read(currentShipProvider).value;
     if (region == null) {
       _showSnack('Bitte eine Region auswählen.');
       return;
     }
-    if (shipTypeId == null) {
-      _showSnack('Bitte ein Schiff auswählen.');
+    // Never send ship_type_id 0 — gated by the button, guarded here too.
+    if (ship == null || ship.shipTypeId <= 0) {
+      _showSnack('Aktuelles Schiff noch nicht geladen.');
       return;
     }
     setState(() => _calculating = true);
@@ -317,6 +324,9 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
     final selectedRegion = ref.watch(selectedRegionProvider);
     final accent = Theme.of(context).colorScheme.primary;
     final busy = _refreshing || _calculating;
+    // Gate "Berechnen" until the current ship is loaded (valid type id).
+    final ship = ref.watch(currentShipProvider).value;
+    final shipReady = ship != null && ship.shipTypeId > 0;
 
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -366,10 +376,10 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
               ),
             ),
 
-            // ── Ship selector ───────────────────────────────────────────────
-            SizedBox(
+            // ── Current ship (read-only + refresh) ──────────────────────────
+            const SizedBox(
               width: 220,
-              child: ShipSelect(enabled: !busy),
+              child: CurrentShipCard(),
             ),
 
             // ── Market refresh + staleness ──────────────────────────────────
@@ -401,7 +411,7 @@ class _ControlsBarState extends ConsumerState<_ControlsBar> {
 
             // ── Calculate button ───────────────────────────────────────────
             FilledButton(
-              onPressed: busy ? null : _calculate,
+              onPressed: (busy || !shipReady) ? null : _calculate,
               style: FilledButton.styleFrom(
                 backgroundColor: accent,
                 foregroundColor: Colors.white,

@@ -3,8 +3,9 @@
 /// Provider graph (reuses [tradingApiProvider] from providers.dart):
 ///   tradingApiProvider → roiOptimizeProvider (AsyncNotifier)
 ///
-/// Region/ship selection reuses the existing trading-feature providers
-/// ([selectedRegionProvider], [selectedShipTypeIdProvider]).
+/// Region selection reuses the trading-feature [selectedRegionProvider]; the
+/// ship is the character's CURRENT ship (currentShipProvider). The screen builds
+/// the [PortfolioRequest] (incl. cargo override) and calls [optimize].
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';

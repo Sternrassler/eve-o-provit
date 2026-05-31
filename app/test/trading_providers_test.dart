@@ -10,6 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:eve_o_provit/api/trading_api.dart';
 import 'package:eve_o_provit/api/trading_models.dart';
+import 'package:eve_o_provit/features/character/character_models.dart';
+import 'package:eve_o_provit/features/character/providers.dart'
+    show currentShipProvider;
 import 'package:eve_o_provit/features/trading/providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -129,14 +132,35 @@ RouteCalculationResponse _fakeResponse({
   );
 }
 
+/// A [CharacterShip] fixture for the current ship (the ship is no longer
+/// user-selected; [currentShipProvider] is the source of truth). [effectiveM3]
+/// (when > 0 and not [unavailable]) becomes the `cargo_capacity` override.
+CharacterShip _ship({
+  int typeId = 649,
+  double? effectiveM3,
+  bool unavailable = false,
+}) =>
+    CharacterShip(
+      shipTypeId: typeId,
+      shipName: 'Test Ship',
+      shipItemId: 1,
+      shipTypeName: 'Test',
+      cargoCapacity: 5000,
+      effectiveCargoCapacity: effectiveM3,
+      effectiveCargoUnavailable: unavailable,
+    );
+
 // ---------------------------------------------------------------------------
-// Helper — builds a ProviderContainer with tradingApiProvider overridden
+// Helper — builds a ProviderContainer with tradingApiProvider overridden and
+// an optional current-ship override.
 // ---------------------------------------------------------------------------
 
-ProviderContainer _makeContainer(FakeTradingApi fakeApi) {
+ProviderContainer _makeContainer(FakeTradingApi fakeApi, {CharacterShip? ship}) {
   return ProviderContainer(
     overrides: [
       tradingApiProvider.overrideWithValue(fakeApi),
+      if (ship != null)
+        currentShipProvider.overrideWith((ref) async => ship),
     ],
   );
 }
@@ -209,12 +233,13 @@ void main() {
             RegionsResponse(regions: _fakeRegions, count: 2),
         calculateCallback: (_) async => expectedResponse,
       );
-      final container = _makeContainer(api);
+      final container = _makeContainer(api, ship: _ship(typeId: 649));
       addTearDown(container.dispose);
 
-      // Set up required selection state.
+      // Set up required selection state (region) — ship comes from the override.
       container.read(selectedRegionProvider.notifier).state = _fakeRegions[0];
-      container.read(selectedShipTypeIdProvider.notifier).state = 649;
+      // Ensure the current ship is resolved before calculating.
+      await container.read(currentShipProvider.future);
 
       // Trigger calculation.
       await container.read(routesProvider.notifier).calculate();
@@ -237,16 +262,55 @@ void main() {
           return _fakeResponse();
         },
       );
-      final container = _makeContainer(api);
+      final container = _makeContainer(api, ship: _ship(typeId: 12345));
       addTearDown(container.dispose);
 
       container.read(selectedRegionProvider.notifier).state = _fakeRegions[1];
-      container.read(selectedShipTypeIdProvider.notifier).state = 12345;
+      await container.read(currentShipProvider.future);
 
       await container.read(routesProvider.notifier).calculate();
 
       expect(capturedRequest?.regionId, 10000043); // Domain
       expect(capturedRequest?.shipTypeId, 12345);
+    });
+
+    test(
+        'calculate() sends the current ship effective cargo as cargo_capacity '
+        'override (omitted when unavailable/0)', () async {
+      RouteCalculationRequest? capturedRequest;
+      final api = FakeTradingApi(
+        regionsCallback: () async =>
+            RegionsResponse(regions: _fakeRegions, count: 2),
+        calculateCallback: (req) async {
+          capturedRequest = req;
+          return _fakeResponse();
+        },
+      );
+
+      // 1) effective cargo known → sent as cargo_capacity.
+      final c1 = _makeContainer(
+        api,
+        ship: _ship(typeId: 648, effectiveM3: 9656.0),
+      );
+      addTearDown(c1.dispose);
+      c1.read(selectedRegionProvider.notifier).state = _fakeRegions[0];
+      await c1.read(currentShipProvider.future);
+      await c1.read(routesProvider.notifier).calculate();
+      expect(capturedRequest?.cargoCapacity, 9656.0);
+      expect(capturedRequest!.toJson()['cargo_capacity'], 9656.0);
+
+      // 2) effective cargo unavailable → override omitted.
+      capturedRequest = null;
+      final c2 = _makeContainer(
+        api,
+        ship: _ship(typeId: 648, effectiveM3: 9656.0, unavailable: true),
+      );
+      addTearDown(c2.dispose);
+      c2.read(selectedRegionProvider.notifier).state = _fakeRegions[0];
+      await c2.read(currentShipProvider.future);
+      await c2.read(routesProvider.notifier).calculate();
+      expect(capturedRequest?.cargoCapacity, isNull);
+      expect(capturedRequest!.toJson().containsKey('cargo_capacity'), isFalse);
     });
 
     test(
@@ -261,7 +325,9 @@ void main() {
           return _fakeResponse();
         },
       );
-      final container = _makeContainer(api);
+      // Ship with NO effective cargo → no cargo_capacity override, so the body
+      // carries only region_id + ship_type_id.
+      final container = _makeContainer(api, ship: _ship(typeId: 648));
       addTearDown(container.dispose);
 
       // Set non-default filters; they must NOT leak into the request body.
@@ -274,7 +340,7 @@ void main() {
             ),
           );
       container.read(selectedRegionProvider.notifier).state = _fakeRegions[0];
-      container.read(selectedShipTypeIdProvider.notifier).state = 648;
+      await container.read(currentShipProvider.future);
 
       await container.read(routesProvider.notifier).calculate();
 
@@ -299,11 +365,11 @@ void main() {
             RegionsResponse(regions: _fakeRegions, count: 2),
         calculateCallback: (_) async => emptyResponse,
       );
-      final container = _makeContainer(api);
+      final container = _makeContainer(api, ship: _ship(typeId: 649));
       addTearDown(container.dispose);
 
       container.read(selectedRegionProvider.notifier).state = _fakeRegions[0];
-      container.read(selectedShipTypeIdProvider.notifier).state = 649;
+      await container.read(currentShipProvider.future);
 
       await container.read(routesProvider.notifier).calculate();
 
@@ -334,11 +400,10 @@ void main() {
           return _fakeResponse();
         },
       );
-      final container = _makeContainer(api);
+      // ship set, but region remains null.
+      final container = _makeContainer(api, ship: _ship(typeId: 649));
       addTearDown(container.dispose);
-
-      // shipTypeId set, but region remains null.
-      container.read(selectedShipTypeIdProvider.notifier).state = 649;
+      await container.read(currentShipProvider.future);
 
       await container.read(routesProvider.notifier).calculate();
 
@@ -348,7 +413,8 @@ void main() {
       expect(result, isNull);
     });
 
-    test('calculate() is a no-op when shipTypeId is null', () async {
+    test('calculate() is a no-op when the current ship is not loaded (null)',
+        () async {
       bool apiCalled = false;
       final api = FakeTradingApi(
         regionsCallback: () async =>
@@ -358,11 +424,17 @@ void main() {
           return _fakeResponse();
         },
       );
-      final container = _makeContainer(api);
+      // currentShipProvider resolves to null (no current ship loaded).
+      final container = ProviderContainer(
+        overrides: [
+          tradingApiProvider.overrideWithValue(api),
+          currentShipProvider.overrideWith((ref) async => null),
+        ],
+      );
       addTearDown(container.dispose);
 
       container.read(selectedRegionProvider.notifier).state = _fakeRegions[0];
-      // shipTypeId remains null.
+      await container.read(currentShipProvider.future);
 
       await container.read(routesProvider.notifier).calculate();
 
@@ -490,9 +562,9 @@ void main() {
             RegionsResponse(regions: _fakeRegions, count: 2),
         calculateCallback: (_) async => _fakeResponse(routes: routes),
       );
-      final container = _makeContainer(api);
+      final container = _makeContainer(api, ship: _ship(typeId: 648));
       container.read(selectedRegionProvider.notifier).state = _fakeRegions[0];
-      container.read(selectedShipTypeIdProvider.notifier).state = 648;
+      await container.read(currentShipProvider.future);
       await container.read(routesProvider.notifier).calculate();
       return container;
     }

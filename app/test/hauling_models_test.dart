@@ -7,6 +7,38 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:eve_o_provit/api/hauling_models.dart';
 
 void main() {
+  group('HaulingRequest.toJson', () {
+    test('maps required fields and omits cargo_capacity when null', () {
+      const req = HaulingRequest(
+        originRegionId: 0,
+        shipTypeId: 648,
+        capital: 500000000,
+        avoidLowSec: true,
+        maxRoutes: 15,
+      );
+      expect(req.toJson(), {
+        'origin_region_id': 0,
+        'ship_type_id': 648,
+        'capital': 500000000.0,
+        'avoid_low_sec': true,
+        'max_routes': 15,
+      });
+      expect(req.toJson().containsKey('cargo_capacity'), isFalse);
+    });
+
+    test('includes cargo_capacity override when set (current-ship cargo)', () {
+      const req = HaulingRequest(
+        originRegionId: 0,
+        shipTypeId: 648,
+        capital: 1,
+        avoidLowSec: false,
+        maxRoutes: 1,
+        cargoCapacity: 9656.9,
+      );
+      expect(req.toJson()['cargo_capacity'], 9656.9);
+    });
+  });
+
   group('HaulingResponse.fromJson', () {
     const Map<String, dynamic> sample = {
       'origin_region_id': 10000002,

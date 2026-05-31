@@ -26,6 +26,7 @@ class HaulingRequest {
     required this.capital,
     required this.avoidLowSec,
     required this.maxRoutes,
+    this.cargoCapacity,
   });
 
   /// Backend: `origin_region_id` — 0 means "use the character's current region".
@@ -33,6 +34,11 @@ class HaulingRequest {
 
   /// Backend: `ship_type_id`
   final int shipTypeId;
+
+  /// Backend: `cargo_capacity` (omitempty — nullable). The current ship's exact
+  /// effective (fitted) cargo override. Omitted when unavailable/0 so the
+  /// backend keeps its per-type computation (with fitted warp/align intact).
+  final double? cargoCapacity;
 
   /// Backend: `capital` — total ISK available for hauling.
   final double capital;
@@ -43,13 +49,17 @@ class HaulingRequest {
   /// Backend: `max_routes` — cap on the number of routes returned.
   final int maxRoutes;
 
-  Map<String, dynamic> toJson() => {
-        'origin_region_id': originRegionId,
-        'ship_type_id': shipTypeId,
-        'capital': capital,
-        'avoid_low_sec': avoidLowSec,
-        'max_routes': maxRoutes,
-      };
+  Map<String, dynamic> toJson() {
+    final m = <String, dynamic>{
+      'origin_region_id': originRegionId,
+      'ship_type_id': shipTypeId,
+      'capital': capital,
+      'avoid_low_sec': avoidLowSec,
+      'max_routes': maxRoutes,
+    };
+    if (cargoCapacity != null) m['cargo_capacity'] = cargoCapacity;
+    return m;
+  }
 }
 
 // ---------------------------------------------------------------------------

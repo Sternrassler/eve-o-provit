@@ -103,6 +103,42 @@ void main() {
 
       expect(ship.shipTypeName, equals(''));
       expect(ship.cargoCapacity, equals(0.0));
+      // Effective-cargo fields default to absent / available.
+      expect(ship.effectiveCargoCapacity, isNull);
+      expect(ship.effectiveCargoUnavailable, isFalse);
+    });
+
+    test('parses effective_cargo_capacity + effective_cargo_unavailable', () {
+      final json = {
+        'ship_type_id': 650,
+        'ship_name': 'My Nereus',
+        'ship_item_id': 1000000000002,
+        'ship_type_name': 'Nereus',
+        'cargo_capacity': 2700.0,
+        'effective_cargo_capacity': 9656.9,
+        'effective_cargo_unavailable': false,
+      };
+
+      final ship = CharacterShip.fromJson(json);
+
+      expect(ship.effectiveCargoCapacity, closeTo(9656.9, 0.01));
+      expect(ship.effectiveCargoUnavailable, isFalse);
+    });
+
+    test('effective_cargo_unavailable=true is parsed (fitting errored)', () {
+      final json = {
+        'ship_type_id': 650,
+        'ship_name': 'My Nereus',
+        'ship_item_id': 1000000000002,
+        'ship_type_name': 'Nereus',
+        'cargo_capacity': 2700.0,
+        'effective_cargo_unavailable': true,
+      };
+
+      final ship = CharacterShip.fromJson(json);
+
+      expect(ship.effectiveCargoUnavailable, isTrue);
+      expect(ship.effectiveCargoCapacity, isNull);
     });
   });
 

@@ -83,7 +83,9 @@ class CharacterInfo {
 ///   "ship_name": "Nereus",
 ///   "ship_item_id": 1000000000002,
 ///   "ship_type_name": "Nereus",
-///   "cargo_capacity": 2700.0
+///   "cargo_capacity": 2700.0,
+///   "effective_cargo_capacity": 9656.9,
+///   "effective_cargo_unavailable": false
 /// }
 /// ```
 @immutable
@@ -95,6 +97,7 @@ class CharacterShip {
     required this.shipTypeName,
     required this.cargoCapacity,
     this.effectiveCargoCapacity,
+    this.effectiveCargoUnavailable = false,
   });
 
   final int shipTypeId;
@@ -102,7 +105,15 @@ class CharacterShip {
   final int shipItemId;
   final String shipTypeName;
   final double cargoCapacity;
+
+  /// Effective cargo (hull + skills + fitted modules). Absent when the ship has
+  /// no cargo-expander fitting (base hull is then correct).
   final double? effectiveCargoCapacity;
+
+  /// True when fitting enrichment ERRORED — effective volume is unknown, so the
+  /// base cargo should be shown with a "fitted unbekannt" hint and NO cargo
+  /// override should be sent to the backend.
+  final bool effectiveCargoUnavailable;
 
   factory CharacterShip.fromJson(Map<String, dynamic> json) {
     return CharacterShip(
@@ -113,6 +124,8 @@ class CharacterShip {
       cargoCapacity: (json['cargo_capacity'] as num?)?.toDouble() ?? 0.0,
       effectiveCargoCapacity:
           (json['effective_cargo_capacity'] as num?)?.toDouble(),
+      effectiveCargoUnavailable:
+          json['effective_cargo_unavailable'] as bool? ?? false,
     );
   }
 

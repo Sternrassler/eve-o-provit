@@ -15,20 +15,18 @@ import { DiversificationScore } from "@/components/trading/DiversificationScore"
 import { SkillsAppliedPanel } from "@/components/trading/SkillsAppliedPanel";
 import {
   fetchCharacterLocation,
-  fetchCharacterShip,
   fetchCharacterWallet,
   optimizePortfolio,
 } from "@/lib/api-client";
 import { PortfolioRequest, Ship } from "@/types/trading";
 import { buildPortfolioRequest } from "@/lib/portfolio-request";
+import { useCurrentShip } from "@/lib/use-current-ship";
 import { Loader2 } from "lucide-react";
 
 const DEFAULT_REGION = "10000002"; // The Forge
-const DEFAULT_SHIP = "649";
 
 const defaultForm: PortfolioFormState = {
   region: DEFAULT_REGION,
-  ship: DEFAULT_SHIP,
   capital: 500_000_000,
   timeBudgetMin: 120,
   liquidityCapPct: 10,
@@ -41,21 +39,29 @@ const defaultForm: PortfolioFormState = {
 function ROICalculatorContent() {
   const { isAuthenticated } = useAuth();
   const [form, setForm] = useState<PortfolioFormState>(defaultForm);
-  // null = no manual choice yet; effective region/ship/capital are derived below.
+  // null = no manual choice yet; effective region/capital are derived below.
   const [regionOverride, setRegionOverride] = useState<string | null>(null);
-  const [shipOverride, setShipOverride] = useState<string | null>(null);
   const [capitalOverride, setCapitalOverride] = useState<number | null>(null);
-  // The ship instance currently picked in the dropdown (reported by ShipSelect).
-  // Its effective cargo is sent as the optimizer override.
-  const [selectedShip, setSelectedShip] = useState<Ship | null>(null);
 
-  // Load the character's current location + ship + wallet to pre-fill the form.
+  // The ship is always the character's current ship — no longer user-selectable.
+  const { ship: currentShip } = useCurrentShip();
+  const shipForRequest: Ship | null = currentShip
+    ? {
+        item_id: currentShip.ship_item_id,
+        type_id: currentShip.ship_type_id,
+        name: currentShip.ship_name,
+        cargo_capacity: currentShip.cargo_capacity,
+        effective_cargo_capacity: currentShip.effective_cargo_capacity,
+        effective_cargo_unavailable: currentShip.effective_cargo_unavailable,
+      }
+    : null;
+
+  // Load the character's current location + wallet to pre-fill the form.
   const { data: characterData } = useQuery({
     queryKey: ["characterData", isAuthenticated],
     queryFn: async () => {
-      const [location, ship, wallet] = await Promise.all([
+      const [location, wallet] = await Promise.all([
         fetchCharacterLocation(),
-        fetchCharacterShip(),
         // Wallet needs the (newer) wallet scope; tolerate its absence so a
         // character authorized before the scope was added still works — but
         // capture the failure so the UI can say the capital is a placeholder
@@ -70,7 +76,7 @@ function ROICalculatorContent() {
           }),
         ),
       ]);
-      return { location, ship, wallet };
+      return { location, wallet };
     },
     enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
@@ -88,12 +94,6 @@ function ROICalculatorContent() {
       regionOverride ??
       characterData?.location.region_id?.toString() ??
       DEFAULT_REGION,
-    // The dropdown value is a ship instance's item_id, so the prefill must be
-    // the active ship's item_id (not its type_id) to select the right option.
-    ship:
-      shipOverride ??
-      characterData?.ship.ship_item_id?.toString() ??
-      DEFAULT_SHIP,
     capital:
       capitalOverride ??
       (walletValue != null ? Math.floor(walletValue) : form.capital),
@@ -106,7 +106,6 @@ function ROICalculatorContent() {
 
   const handleFormChange = (next: PortfolioFormState) => {
     if (next.region !== effectiveForm.region) setRegionOverride(next.region);
-    if (next.ship !== effectiveForm.ship) setShipOverride(next.ship);
     if (next.capital !== effectiveForm.capital)
       setCapitalOverride(next.capital);
     setForm(next);
@@ -117,7 +116,9 @@ function ROICalculatorContent() {
   });
 
   const handleSubmit = () => {
-    optimizeMutation.mutate(buildPortfolioRequest(effectiveForm, selectedShip));
+    optimizeMutation.mutate(
+      buildPortfolioRequest(effectiveForm, shipForRequest),
+    );
   };
 
   const apiError = optimizeMutation.isError
@@ -167,8 +168,9 @@ function ROICalculatorContent() {
           onSubmit={handleSubmit}
           disabled={!isAuthenticated || optimizeMutation.isPending}
           loading={optimizeMutation.isPending}
-          authenticated={isAuthenticated}
-          onShipSelect={setSelectedShip}
+          // Block submission until the current ship is loaded — otherwise the
+          // request would carry ship_type_id: 0.
+          submitDisabled={!shipForRequest}
         />
 
         {/* Results */}

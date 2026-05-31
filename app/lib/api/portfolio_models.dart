@@ -28,6 +28,7 @@ class PortfolioRequest {
     required this.liquidityCapPct,
     required this.maxItemPct,
     required this.secZones,
+    this.cargoCapacity,
   });
 
   /// Backend: `region_id`
@@ -35,6 +36,11 @@ class PortfolioRequest {
 
   /// Backend: `ship_type_id`
   final int shipTypeId;
+
+  /// Backend: `cargo_capacity` (omitempty — nullable). The current ship's exact
+  /// effective (fitted) cargo, sent so the optimizer uses the instance figure
+  /// instead of a per-type recompute. Omitted when unavailable/0.
+  final double? cargoCapacity;
 
   /// Backend: `capital` — total ISK available to allocate.
   final double capital;
@@ -51,15 +57,19 @@ class PortfolioRequest {
   /// Backend: `sec_zones` — security zones to include ("high"|"low"|"null").
   final List<String> secZones;
 
-  Map<String, dynamic> toJson() => {
-        'region_id': regionId,
-        'ship_type_id': shipTypeId,
-        'capital': capital,
-        'time_budget_min': timeBudgetMin,
-        'liquidity_cap_pct': liquidityCapPct,
-        'max_item_pct': maxItemPct,
-        'sec_zones': secZones,
-      };
+  Map<String, dynamic> toJson() {
+    final m = <String, dynamic>{
+      'region_id': regionId,
+      'ship_type_id': shipTypeId,
+      'capital': capital,
+      'time_budget_min': timeBudgetMin,
+      'liquidity_cap_pct': liquidityCapPct,
+      'max_item_pct': maxItemPct,
+      'sec_zones': secZones,
+    };
+    if (cargoCapacity != null) m['cargo_capacity'] = cargoCapacity;
+    return m;
+  }
 }
 
 // ---------------------------------------------------------------------------

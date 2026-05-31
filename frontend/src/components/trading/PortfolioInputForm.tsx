@@ -1,17 +1,15 @@
 "use client";
 
 import { RegionSelect } from "./RegionSelect";
-import { ShipSelect } from "./ShipSelect";
+import { CurrentShipCard } from "@/components/trading/CurrentShipCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
-import { Ship } from "@/types/trading";
 
 export interface PortfolioFormState {
   region: string;
-  ship: string;
   capital: number;
   timeBudgetMin: number;
   liquidityCapPct: number;
@@ -27,16 +25,16 @@ interface PortfolioInputFormProps {
   onSubmit: () => void;
   disabled?: boolean;
   loading?: boolean;
-  authenticated?: boolean;
-  /** Forwarded to ShipSelect — reports the selected ship instance so the page
-   *  can send its effective cargo as the optimizer override. */
-  onShipSelect?: (ship: Ship | null) => void;
+  /** Disables only the submit button (inputs stay editable). Used to block
+   *  submission until the current ship is loaded. */
+  submitDisabled?: boolean;
 }
 
 /**
- * Input form for the ROI Calculator / capital-allocation optimizer: region +
- * ship selectors, capital / time / liquidity / max-per-item numeric inputs and
- * security-zone checkboxes.
+ * Input form for the ROI Calculator / capital-allocation optimizer: region
+ * selector, the read-only current-ship card, capital / time / liquidity /
+ * max-per-item numeric inputs and security-zone checkboxes. The ship is no
+ * longer user-selectable — it's always the character's current ship.
  */
 export function PortfolioInputForm({
   state,
@@ -44,8 +42,7 @@ export function PortfolioInputForm({
   onSubmit,
   disabled,
   loading,
-  authenticated = false,
-  onShipSelect,
+  submitDisabled,
 }: PortfolioInputFormProps) {
   const update = <K extends keyof PortfolioFormState>(
     key: K,
@@ -68,13 +65,7 @@ export function PortfolioInputForm({
         onChange={(v) => update("region", v)}
         disabled={disabled}
       />
-      <ShipSelect
-        value={state.ship}
-        onChange={(v) => update("ship", v)}
-        disabled={disabled}
-        authenticated={authenticated}
-        onSelect={onShipSelect}
-      />
+      <CurrentShipCard />
 
       <div className="space-y-2">
         <Label htmlFor="capital">Kapital (ISK)</Label>
@@ -166,7 +157,7 @@ export function PortfolioInputForm({
       <Button
         type="submit"
         className="w-full"
-        disabled={disabled || loading || noSecZone}
+        disabled={disabled || loading || noSecZone || submitDisabled}
       >
         {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
         {loading ? "Optimiere..." : "Portfolio optimieren"}

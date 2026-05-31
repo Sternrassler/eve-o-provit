@@ -22,10 +22,9 @@ import '../../api/hauling_models.dart';
 import '../../core/breakpoint.dart';
 import '../../core/format.dart';
 import '../../core/security_risk.dart';
-import 'current_selection_prefill.dart';
+import '../character/providers.dart';
+import 'current_ship_card.dart';
 import 'hauling_providers.dart';
-import 'providers.dart';
-import 'ship_select.dart';
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -93,19 +92,13 @@ class _InputForm extends ConsumerStatefulWidget {
   ConsumerState<_InputForm> createState() => _InputFormState();
 }
 
-class _InputFormState extends ConsumerState<_InputForm>
-    with CurrentSelectionPrefill {
+class _InputFormState extends ConsumerState<_InputForm> {
   final _capitalController = TextEditingController(text: '500000000');
   bool _avoidLowSec = true;
   String? _error;
 
-  @override
-  void initState() {
-    super.initState();
-    // Pre-fill the ship with the character's active ship (region unused here —
-    // hauling derives its origin region from the current location backend-side).
-    startSelectionPrefill();
-  }
+  // No ship/region prefill needed: hauling uses the character's CURRENT ship
+  // directly and derives its origin region backend-side (origin_region_id: 0).
 
   @override
   void dispose() {
@@ -114,12 +107,13 @@ class _InputFormState extends ConsumerState<_InputForm>
   }
 
   Future<void> _search() async {
-    final shipTypeId = ref.read(selectedShipTypeIdProvider);
+    final ship = ref.read(currentShipProvider).value;
     final capital = double.tryParse(
         _capitalController.text.replaceAll(RegExp(r'[^0-9.]'), ''));
 
-    if (shipTypeId == null) {
-      setState(() => _error = 'Bitte ein Schiff auswählen.');
+    // Never send ship_type_id 0 — gated by the button, guarded here too.
+    if (ship == null || ship.shipTypeId <= 0) {
+      setState(() => _error = 'Aktuelles Schiff noch nicht geladen.');
       return;
     }
     if (capital == null || capital <= 0) {
@@ -132,10 +126,11 @@ class _InputFormState extends ConsumerState<_InputForm>
     // origin_region_id: 0 ⇒ backend uses the character's current region.
     final request = HaulingRequest(
       originRegionId: 0,
-      shipTypeId: shipTypeId,
+      shipTypeId: ship.shipTypeId,
       capital: capital,
       avoidLowSec: _avoidLowSec,
       maxRoutes: 15,
+      cargoCapacity: cargoOverrideForShip(ship),
     );
 
     await ref.read(haulingRoutesProvider.notifier).find(request);
@@ -144,13 +139,16 @@ class _InputFormState extends ConsumerState<_InputForm>
   @override
   Widget build(BuildContext context) {
     final busy = ref.watch(haulingRoutesProvider).isLoading;
+    // Gate "Routen suchen" until the current ship is loaded (valid type id).
+    final ship = ref.watch(currentShipProvider).value;
+    final shipReady = ship != null && ship.shipTypeId > 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Ship ───────────────────────────────────────────────────────────
-        ShipSelect(enabled: !busy),
+        // ── Ship (read-only current ship + refresh) ─────────────────────────
+        const CurrentShipCard(),
         const SizedBox(height: 12),
 
         // ── Capital ────────────────────────────────────────────────────────
@@ -194,7 +192,7 @@ class _InputFormState extends ConsumerState<_InputForm>
 
         // ── Search button ──────────────────────────────────────────────────
         FilledButton.icon(
-          onPressed: busy ? null : _search,
+          onPressed: (busy || !shipReady) ? null : _search,
           icon: busy
               ? const SizedBox(
                   width: 16,

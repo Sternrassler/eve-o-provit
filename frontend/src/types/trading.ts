@@ -212,6 +212,11 @@ export interface HaulingRequest {
   capital: number;
   avoid_low_sec: boolean;
   max_routes: number;
+  /** Selected ship instance's effective cargo (m³). When set, the backend uses
+   *  this exact value instead of recomputing per ship type. Omitted when the
+   *  instance's effective cargo is unavailable/unknown (backend falls back to
+   *  the per-type recompute). */
+  cargo_capacity?: number;
 }
 
 export interface HaulingItem {
