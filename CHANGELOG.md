@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.1] - 2026-05-31
+
+### Fixed
+
+- **Mining-Rechner: Compressed-Erze raus aus der Rangliste (#155).** „Compressed …" und „Batch Compressed …"-Varianten werden nicht abgebaut (Roh-Erz wird danach komprimiert) und hatten ein winziges Volumen (0,001 m³ statt 0,1 m³), das ISK/m³ und ISK/h ~100× verzerrte. Die Erz-Liste filtert sie jetzt aus (451→206 Erztypen).
+
 ## [0.20.0] - 2026-05-31
 
 ### Added
