@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"math"
 	"testing"
 
@@ -26,11 +27,38 @@ func (f *fakeMiningMarket) GetMarketOrders(_ context.Context, _ int, typeID int)
 		return []database.MarketOrder{}, nil
 	}
 	return []database.MarketOrder{
-		{TypeID: typeID, IsBuyOrder: true, Price: price, VolumeRemain: 1_000_000},
+		{TypeID: typeID, IsBuyOrder: true, Price: price, VolumeRemain: 1_000_000, LocationID: 60000123},
 		// a lower buy order + a sell order, to prove we pick the highest buy.
-		{TypeID: typeID, IsBuyOrder: true, Price: price * 0.5, VolumeRemain: 100},
+		{TypeID: typeID, IsBuyOrder: true, Price: price * 0.5, VolumeRemain: 100, LocationID: 60000999},
 		{TypeID: typeID, IsBuyOrder: false, Price: price * 2, VolumeRemain: 100},
 	}, nil
+}
+
+// fakeMiningNames resolves canned station/system/type names. Station 60000001 is the
+// reprocess station; 60000123 is the sell-order station (both NPC); others → structure.
+type fakeMiningNames struct{}
+
+func (fakeMiningNames) GetStationName(_ context.Context, id int64) (string, error) {
+	switch id {
+	case 60000001:
+		return "Test Reprocess Station", nil
+	case 60000123:
+		return "Jita IV-4", nil
+	}
+	return fmt.Sprintf("Station-%d", id), nil // unknown → resolver treats as structure
+}
+
+func (fakeMiningNames) GetSystemName(_ context.Context, _ int64) (string, error) { return "Jita", nil }
+
+func (fakeMiningNames) GetSystemIDForLocation(_ context.Context, _ int64) (int64, error) {
+	return 30000142, nil
+}
+
+func (fakeMiningNames) GetTypeInfo(_ context.Context, typeID int) (*database.TypeInfo, error) {
+	if typeID == tritaniumTypeID {
+		return &database.TypeInfo{Name: "Tritanium"}, nil
+	}
+	return &database.TypeInfo{Name: ""}, nil
 }
 
 type fakeStations struct{ stations []database.ReprocessStation }
@@ -91,7 +119,7 @@ func TestMiningService_OreRanking_Veldspar(t *testing.T) {
 		{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
 	}}
 
-	svc := NewMiningService(sdeDB, stations, market, skills, fitting, nil, nil, logger.NewNoop())
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, nil, nil, fakeMiningNames{}, logger.NewNoop())
 
 	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
 		RegionID: 10000002,
@@ -155,6 +183,27 @@ func TestMiningService_OreRanking_Veldspar(t *testing.T) {
 	if row.BestStationID != 60000001 {
 		t.Errorf("BestStationID: got %d, want 60000001", row.BestStationID)
 	}
+
+	// Locations: reprocess station name+system, raw sell location, per-mineral breakdown.
+	if row.BestStationName != "Test Reprocess Station" || row.BestStationSystem != "Jita" {
+		t.Errorf("reprocess station: name=%q system=%q", row.BestStationName, row.BestStationSystem)
+	}
+	if row.RawSell == nil || row.RawSell.IsStructure || row.RawSell.StationName != "Jita IV-4" || row.RawSell.SystemName != "Jita" {
+		t.Errorf("RawSell: %+v", row.RawSell)
+	}
+	if len(row.Materials) != 1 {
+		t.Fatalf("Materials: want 1 (Tritanium), got %d", len(row.Materials))
+	}
+	mat := row.Materials[0]
+	if mat.MaterialTypeID != tritaniumTypeID || mat.MaterialName != "Tritanium" {
+		t.Errorf("material: id=%d name=%q", mat.MaterialTypeID, mat.MaterialName)
+	}
+	if mat.EffectiveQty != 200 { // floor(400 × 0.50)
+		t.Errorf("EffectiveQty: got %d, want 200", mat.EffectiveQty)
+	}
+	if mat.BuyPrice != tritBuy || mat.Sell.StationName != "Jita IV-4" {
+		t.Errorf("material sell: price=%v sell=%+v", mat.BuyPrice, mat.Sell)
+	}
 }
 
 // TestMiningService_OreRanking_NoMiningSetup verifies that with no fitted mining modules
@@ -176,7 +225,7 @@ func TestMiningService_OreRanking_NoMiningSetup(t *testing.T) {
 		{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
 	}}
 
-	svc := NewMiningService(sdeDB, stations, market, skills, fitting, nil, nil, logger.NewNoop())
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, nil, nil, fakeMiningNames{}, logger.NewNoop())
 
 	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
 		RegionID: 10000002,

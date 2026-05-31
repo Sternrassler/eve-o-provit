@@ -57,6 +57,72 @@ OreRankingResponse _fakeResponse() => const OreRankingResponse(
       ],
     );
 
+OreRankingResponse _detailResponse() => const OreRankingResponse(
+      regionId: 10000002,
+      secBand: 'high',
+      noMiningSetup: false,
+      rows: [
+        OreRankRow(
+          oreTypeId: 1230,
+          oreName: 'Veldspar',
+          miningM3PerHour: 3600,
+          rawIskPerHour: 4200000,
+          refineIskPerHour: 5100000,
+          rawNetPerM3: 1166.67,
+          refineNetPerM3: 1416.67,
+          best: 'refine',
+          deltaIskPerHour: 900000,
+          bestStationId: 60003760,
+          bestStationTax: 0.05,
+          bestStationName: 'Jita IV - Moon 4 - Caldari Navy Assembly Plant',
+          bestStationSystem: 'Jita',
+          materials: [
+            RefineMaterial(
+              materialTypeId: 34,
+              materialName: 'Tritanium',
+              effectiveQty: 12345,
+              buyPrice: 5.5,
+              sell: SellLocation(
+                isStructure: false,
+                stationName: 'Amarr VIII - Emperor Family Academy',
+                systemName: 'Amarr',
+              ),
+            ),
+          ],
+        ),
+        OreRankRow(
+          oreTypeId: 1228,
+          oreName: 'Scordite',
+          miningM3PerHour: 3000,
+          rawIskPerHour: 3100000,
+          refineIskPerHour: 3400000,
+          rawNetPerM3: 1033.33,
+          refineNetPerM3: 1133.33,
+          best: 'raw',
+          deltaIskPerHour: 300000,
+          bestStationTax: 0.04,
+          rawSell: SellLocation(
+            isStructure: false,
+            stationName: 'Dodixie IX - Moon 20 - Federation Navy Assembly Plant',
+            systemName: 'Dodixie',
+          ),
+        ),
+        OreRankRow(
+          oreTypeId: 1224,
+          oreName: 'Pyroxeres',
+          miningM3PerHour: 2000,
+          rawIskPerHour: 2100000,
+          refineIskPerHour: 1900000,
+          rawNetPerM3: 700,
+          refineNetPerM3: 633,
+          best: 'raw',
+          deltaIskPerHour: 200000,
+          bestStationTax: 0.03,
+          rawSell: SellLocation(isStructure: true),
+        ),
+      ],
+    );
+
 OreRankingResponse _noSetupResponse() => const OreRankingResponse(
       regionId: 10000002,
       secBand: 'high',
@@ -87,6 +153,11 @@ const _currentShip = CharacterShip(
 class _StubNotifier extends OreRankingNotifier {
   @override
   Future<OreRankingResponse?> build() async => _fakeResponse();
+}
+
+class _DetailNotifier extends OreRankingNotifier {
+  @override
+  Future<OreRankingResponse?> build() async => _detailResponse();
 }
 
 class _NoSetupNotifier extends OreRankingNotifier {
@@ -200,5 +271,55 @@ void main() {
     expect(find.byKey(const Key('current-ship-card')), findsOneWidget);
     // Ship name from the stub.
     expect(find.text('Schiff'), findsOneWidget);
+  });
+
+  testWidgets('Location detail is hidden until a row is expanded',
+      (tester) async {
+    await _pumpScreen(tester, 1280, notifier: _DetailNotifier.new);
+
+    // Reprocess station + minerals live in the collapsed (lazy) detail panel.
+    expect(find.textContaining('Aufbereiten bei'), findsNothing);
+    expect(find.text('Tritanium'), findsNothing);
+  });
+
+  testWidgets('Expanding a refine row shows reprocess station + mineral sell',
+      (tester) async {
+    await _pumpScreen(tester, 1280, notifier: _DetailNotifier.new);
+
+    await tester.tap(find.byKey(const ValueKey('mining-ore-expand-1230')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Caldari Navy Assembly Plant — Jita'),
+      findsOneWidget,
+    );
+    expect(find.text('Tritanium'), findsOneWidget);
+    expect(
+      find.textContaining('Emperor Family Academy — Amarr'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Expanding a raw row shows the raw ore sell location',
+      (tester) async {
+    await _pumpScreen(tester, 1280, notifier: _DetailNotifier.new);
+
+    await tester.tap(find.byKey(const ValueKey('mining-ore-expand-1228')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Federation Navy Assembly Plant — Dodixie'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('Citadel sell location renders as Player-Struktur',
+      (tester) async {
+    await _pumpScreen(tester, 1280, notifier: _DetailNotifier.new);
+
+    await tester.tap(find.byKey(const ValueKey('mining-ore-expand-1224')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Player-Struktur'), findsOneWidget);
   });
 }

@@ -101,6 +101,74 @@ void main() {
       });
       expect(row.bestStationId, isNull);
     });
+
+    test('parses location fields: reprocess station, raw_sell, materials', () {
+      final row = OreRankRow.fromJson(const {
+        'ore_type_id': 1230,
+        'ore_name': 'Veldspar',
+        'best': 'refine',
+        'best_station_name': 'Jita IV - Moon 4 - Caldari Navy Assembly Plant',
+        'best_station_system': 'Jita',
+        'raw_sell': {
+          'station_name': 'Amarr VIII - Emperor Family Academy',
+          'system_name': 'Amarr',
+          'is_structure': false,
+        },
+        'materials': [
+          {
+            'material_type_id': 34,
+            'material_name': 'Tritanium',
+            'effective_qty': 12345,
+            'buy_price': 5.5,
+            'sell': {
+              'station_name': 'Dodixie IX - Moon 20 - Federation Navy',
+              'system_name': 'Dodixie',
+              'is_structure': false,
+            },
+          },
+        ],
+      });
+
+      expect(row.bestStationName,
+          'Jita IV - Moon 4 - Caldari Navy Assembly Plant');
+      expect(row.bestStationSystem, 'Jita');
+      expect(row.rawSell, isNotNull);
+      expect(row.rawSell!.isStructure, isFalse);
+      expect(row.rawSell!.stationName, 'Amarr VIII - Emperor Family Academy');
+      expect(row.rawSell!.systemName, 'Amarr');
+
+      expect(row.materials, hasLength(1));
+      final mat = row.materials.first;
+      expect(mat.materialTypeId, 34);
+      expect(mat.materialName, 'Tritanium');
+      expect(mat.effectiveQty, 12345);
+      expect(mat.buyPrice, 5.5);
+      expect(mat.sell.systemName, 'Dodixie');
+    });
+
+    test('location fields default when absent (no exceptions)', () {
+      final row = OreRankRow.fromJson(const {
+        'ore_type_id': 1228,
+        'ore_name': 'Scordite',
+        'best': 'raw',
+      });
+      expect(row.bestStationName, isNull);
+      expect(row.bestStationSystem, isNull);
+      expect(row.rawSell, isNull);
+      expect(row.materials, isEmpty);
+    });
+
+    test('citadel sell location parses is_structure=true', () {
+      final row = OreRankRow.fromJson(const {
+        'ore_type_id': 1228,
+        'ore_name': 'Scordite',
+        'best': 'raw',
+        'raw_sell': {'is_structure': true},
+      });
+      expect(row.rawSell, isNotNull);
+      expect(row.rawSell!.isStructure, isTrue);
+      expect(row.rawSell!.stationName, isNull);
+    });
   });
 
   group('OreRankingResponse.fromJson', () {

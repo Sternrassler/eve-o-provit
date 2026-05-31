@@ -33,6 +33,81 @@ class OreRankingRequest {
 }
 
 // ---------------------------------------------------------------------------
+// SellLocation
+// ---------------------------------------------------------------------------
+
+/// Where an item (raw ore or a refined mineral) can be sold.
+/// Backend: the `raw_sell` object and each material's `sell` object.
+class SellLocation {
+  const SellLocation({
+    required this.isStructure,
+    this.stationName,
+    this.systemName,
+  });
+
+  /// Backend: `is_structure` — true when the location is a player citadel
+  /// (the SDE can't name it; the UI shows "Player-Struktur").
+  final bool isStructure;
+
+  /// Backend: `station_name` — nullable; absent for citadels.
+  final String? stationName;
+
+  /// Backend: `system_name` — nullable; absent for citadels.
+  final String? systemName;
+
+  factory SellLocation.fromJson(Map<String, dynamic> json) {
+    return SellLocation(
+      isStructure: json['is_structure'] as bool? ?? false,
+      stationName: json['station_name'] as String?,
+      systemName: json['system_name'] as String?,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// RefineMaterial
+// ---------------------------------------------------------------------------
+
+/// One mineral produced by reprocessing the ore, with where to sell it.
+/// Backend: an element of an ore row's `materials` array.
+class RefineMaterial {
+  const RefineMaterial({
+    required this.materialTypeId,
+    required this.materialName,
+    required this.effectiveQty,
+    required this.buyPrice,
+    required this.sell,
+  });
+
+  /// Backend: `material_type_id`
+  final int materialTypeId;
+
+  /// Backend: `material_name`
+  final String materialName;
+
+  /// Backend: `effective_qty` — units produced after the station's net yield.
+  final int effectiveQty;
+
+  /// Backend: `buy_price` — highest buy order for the mineral.
+  final double buyPrice;
+
+  /// Backend: `sell` — where the mineral fetches that best buy price.
+  final SellLocation sell;
+
+  factory RefineMaterial.fromJson(Map<String, dynamic> json) {
+    return RefineMaterial(
+      materialTypeId: (json['material_type_id'] as num?)?.toInt() ?? 0,
+      materialName: json['material_name'] as String? ?? '',
+      effectiveQty: (json['effective_qty'] as num?)?.toInt() ?? 0,
+      buyPrice: (json['buy_price'] as num?)?.toDouble() ?? 0,
+      sell: json['sell'] is Map<String, dynamic>
+          ? SellLocation.fromJson(json['sell'] as Map<String, dynamic>)
+          : const SellLocation(isStructure: false),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // OreRankRow
 // ---------------------------------------------------------------------------
 
@@ -51,6 +126,10 @@ class OreRankRow {
     required this.deltaIskPerHour,
     required this.bestStationTax,
     this.bestStationId,
+    this.bestStationName,
+    this.bestStationSystem,
+    this.rawSell,
+    this.materials = const [],
   });
 
   /// Backend: `ore_type_id`
@@ -86,7 +165,21 @@ class OreRankRow {
   /// Backend: `best_station_tax`
   final double bestStationTax;
 
+  /// Backend: `best_station_name` — nullable; the reprocess station's name.
+  final String? bestStationName;
+
+  /// Backend: `best_station_system` — nullable; the reprocess station's system.
+  final String? bestStationSystem;
+
+  /// Backend: `raw_sell` — nullable; where to sell the raw ore (best buy).
+  final SellLocation? rawSell;
+
+  /// Backend: `materials` — per-mineral breakdown for the refine path. Empty
+  /// for the raw path (or when the backend omits it).
+  final List<RefineMaterial> materials;
+
   factory OreRankRow.fromJson(Map<String, dynamic> json) {
+    final rawMaterials = json['materials'] as List<dynamic>? ?? const [];
     return OreRankRow(
       oreTypeId: (json['ore_type_id'] as num?)?.toInt() ?? 0,
       oreName: json['ore_name'] as String? ?? '',
@@ -100,6 +193,15 @@ class OreRankRow {
       deltaIskPerHour: (json['delta_isk_per_hour'] as num?)?.toDouble() ?? 0,
       bestStationId: (json['best_station_id'] as num?)?.toInt(),
       bestStationTax: (json['best_station_tax'] as num?)?.toDouble() ?? 0,
+      bestStationName: json['best_station_name'] as String?,
+      bestStationSystem: json['best_station_system'] as String?,
+      rawSell: json['raw_sell'] is Map<String, dynamic>
+          ? SellLocation.fromJson(json['raw_sell'] as Map<String, dynamic>)
+          : null,
+      materials: rawMaterials
+          .whereType<Map<String, dynamic>>()
+          .map(RefineMaterial.fromJson)
+          .toList(),
     );
   }
 }
