@@ -98,11 +98,12 @@ func TestGetMinRouteSecurityStatus_EdgeCases(t *testing.T) {
 			}
 
 			var result string
-			if minSec >= 0.5 {
+			switch {
+			case minSec >= 0.5:
 				result = "high"
-			} else if minSec > 0 {
+			case minSec > 0:
 				result = "low"
-			} else {
+			default:
 				result = "null"
 			}
 

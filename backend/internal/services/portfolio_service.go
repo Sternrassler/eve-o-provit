@@ -27,8 +27,8 @@ func NewPortfolioService(routes RouteCalculatorServicer, skills SkillsServicer, 
 // Optimize computes the suggested capital allocation for the request.
 func (s *PortfolioService) Optimize(ctx context.Context, req *models.PortfolioRequest, characterID int, accessToken string) (*models.PortfolioResult, error) {
 	// Route calc needs the character in context for skill-aware cargo/fees.
-	ctx = context.WithValue(ctx, contextKeyCharacterID, characterID)
-	ctx = context.WithValue(ctx, contextKeyAccessToken, accessToken)
+	ctx = context.WithValue(ctx, CtxKeyCharacterID, characterID)
+	ctx = context.WithValue(ctx, CtxKeyAccessToken, accessToken)
 
 	resp, err := s.routes.CalculateWithFilters(ctx, &models.RouteCalculationRequest{
 		RegionID:             req.RegionID,

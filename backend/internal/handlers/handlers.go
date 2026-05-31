@@ -60,6 +60,7 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 }
 
 // NewWithConcrete creates a handler from concrete types (backward compatibility wrapper)
+//
 // Deprecated: Use New with interfaces instead
 func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRepo *database.MarketRepository, esiClient *esi.Client) *Handler {
 	marketService := services.NewMarketService(marketRepo, esiClient)

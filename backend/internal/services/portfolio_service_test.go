@@ -132,7 +132,7 @@ func TestOptimize_DiversificationScore(t *testing.T) {
 		OptimizeParams{Capital: 1000, CargoCapacity: 1e9, TimeBudgetMin: 1e9, LiquidityCapPct: 100, MaxItemPct: 100})
 	two := opt.Optimize([]Candidate{cand(1, "A", 10, 100, 1, 1e9, 10), cand(2, "B", 10, 100, 1, 1e9, 10)},
 		OptimizeParams{Capital: 1000, CargoCapacity: 1e9, TimeBudgetMin: 1e9, LiquidityCapPct: 100, MaxItemPct: 50})
-	if !(two.DiversificationScore > one.DiversificationScore) {
+	if two.DiversificationScore <= one.DiversificationScore {
 		t.Errorf("two-item portfolio should score higher: one=%d two=%d", one.DiversificationScore, two.DiversificationScore)
 	}
 }

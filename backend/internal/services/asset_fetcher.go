@@ -112,13 +112,7 @@ func (f *ESIAssetFetcher) page(ctx context.Context, base, token string, page int
 	}
 	out := make([]RawAsset, 0, len(raw))
 	for _, a := range raw {
-		out = append(out, RawAsset{
-			ItemID:       a.ItemID,
-			TypeID:       a.TypeID,
-			LocationID:   a.LocationID,
-			Quantity:     a.Quantity,
-			LocationFlag: a.LocationFlag,
-		})
+		out = append(out, RawAsset(a))
 	}
 	return out, pages, expiresAt, nil
 }

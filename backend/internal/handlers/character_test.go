@@ -48,7 +48,7 @@ func TestCharacterHandler_GetCharacterSkills_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	// Execute request with locals
-	resp, err := app.Test(req, -1)
+	_, err := app.Test(req, -1)
 	require.NoError(t, err)
 
 	// Manually set locals (simulating AuthMiddleware)
@@ -63,7 +63,7 @@ func TestCharacterHandler_GetCharacterSkills_Success(t *testing.T) {
 	app2.Get("/api/v1/characters/:characterId/skills", handler.GetCharacterSkills)
 
 	req2 := httptest.NewRequest("GET", "/api/v1/characters/12345/skills", nil)
-	resp, err = app2.Test(req2, -1)
+	resp, err := app2.Test(req2, -1)
 	require.NoError(t, err)
 
 	// Verify response

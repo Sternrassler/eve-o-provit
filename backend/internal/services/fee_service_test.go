@@ -118,11 +118,6 @@ func TestFeeService_CalculateSalesTax(t *testing.T) {
 	}
 }
 
-// testLogger returns a noop logger for use in tests.
-func testLogger() *logger.Logger {
-	return logger.NewNoop()
-}
-
 // floatEquals checks if two floats are equal within a tolerance
 func floatEquals(a, b, tolerance float64) bool {
 	diff := a - b
