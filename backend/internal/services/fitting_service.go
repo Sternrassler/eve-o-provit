@@ -611,6 +611,36 @@ func (s *FittingService) getDefaultFitting(shipTypeID int) *FittingData {
 	}
 }
 
+// fittedItemsForShip collects cargo.FittedItem entries for all modules fitted to a specific
+// ship item. It uses only the asset list (no ESI dogma lookups), making it suitable for
+// lightweight per-instance effective-cargo calculations.
+func (s *FittingService) fittedItemsForShip(ctx context.Context, assets []esiAsset, shipItemID int64) []cargo.FittedItem {
+	items := make([]cargo.FittedItem, 0)
+	for _, asset := range assets {
+		if asset.LocationID == shipItemID && isFittedSlot(asset.LocationFlag) {
+			items = append(items, cargo.FittedItem{TypeID: int64(asset.TypeID), Slot: asset.LocationFlag})
+		}
+	}
+	return items
+}
+
+// EffectiveCargoForShipItem computes the effective cargo hold for a specific ship instance
+// (identified by shipItemID) using the supplied asset list and character skills.
+// Returns (effectiveCargo, unavailable): unavailable is true when the SDE lookup fails.
+func (s *FittingService) EffectiveCargoForShipItem(
+	ctx context.Context, shipTypeID int, shipItemID int64, assets []esiAsset, charSkills *cargo.CharacterSkills,
+) (float64, bool) {
+	items := s.fittedItemsForShip(ctx, assets, shipItemID)
+	caps, err := cargo.GetShipCapacitiesDeterministic(ctx, s.sdeDB, int64(shipTypeID), charSkills, items)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Warn("effective cargo per-item calc failed", "shipTypeID", shipTypeID, "itemID", shipItemID, "error", err)
+		}
+		return 0, true
+	}
+	return caps.EffectiveCargoHold, false
+}
+
 // isFittedSlot checks if a location_flag represents a fitted module slot
 func isFittedSlot(locationFlag string) bool {
 	fittedSlots := map[string]bool{
