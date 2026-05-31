@@ -5,14 +5,16 @@
 ///                                    → routesProvider (AsyncNotifier)
 ///
 /// Selection state (independent leaves):
-///   selectedRegionProvider, selectedShipTypeIdProvider, selectedRouteProvider
+///   selectedRegionProvider, selectedRouteProvider
 ///
 /// Filter state:
 ///   filtersProvider (Notifier)
 ///
 /// Character ship providers:
-///   characterShipsProvider — list of ships in hangar (FutureProvider)
-///   fittingProvider        — CharacterFitting for (characterId, shipTypeId)
+///   fittingProvider — CharacterFitting for (characterId, shipTypeId)
+///
+/// The ship is no longer user-selectable: the current ship lives in
+/// [currentShipProvider] (character feature) and drives every calculation.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,7 +23,8 @@ import '../../api/dio_client.dart';
 import '../../api/trading_api.dart';
 import '../../api/trading_models.dart';
 import '../character/character_models.dart';
-import '../character/providers.dart' show characterApiProvider;
+import '../character/providers.dart'
+    show cargoOverrideForShip, characterApiProvider, currentShipProvider;
 
 // ---------------------------------------------------------------------------
 // TradingApi provider
@@ -33,24 +36,8 @@ final tradingApiProvider = Provider<TradingApi>((ref) {
 });
 
 // ---------------------------------------------------------------------------
-// Character-ship providers (used by ShipSelect + ShipFittingCard)
+// Character-ship providers (used by ShipFittingCard)
 // ---------------------------------------------------------------------------
-
-/// Fetches all ships in the character's hangar.
-///
-/// Returns an empty list on error so the UI can fall back gracefully.
-/// Uses [characterApiProvider] from the character feature.
-final characterShipsProvider =
-    FutureProvider<List<CharacterAssetShip>>((ref) async {
-  final api = ref.watch(characterApiProvider);
-  try {
-    final response = await api.ships();
-    return response.ships;
-  } catch (_) {
-    return const [];
-  }
-});
-
 
 /// Fetches [CharacterFitting] for a given (characterId, shipTypeId) pair.
 final fittingProvider = FutureProvider.family<CharacterFitting, (int, int)>(
@@ -90,22 +77,6 @@ class SelectedRegionNotifier extends Notifier<Region?> {
 final selectedRegionProvider =
     NotifierProvider<SelectedRegionNotifier, Region?>(
   SelectedRegionNotifier.new,
-);
-
-/// Notifier for the currently selected ship type ID; null until set.
-/// (Ship selection UI is implemented in a later task.)
-class SelectedShipTypeIdNotifier extends Notifier<int?> {
-  @override
-  int? build() => null;
-
-  /// Sets the selected ship type ID.
-  void select(int? typeId) => state = typeId;
-}
-
-/// Provider for the currently selected ship type ID (int?).
-final selectedShipTypeIdProvider =
-    NotifierProvider<SelectedShipTypeIdNotifier, int?>(
-  SelectedShipTypeIdNotifier.new,
 );
 
 /// Notifier for the [TradingRoute] displayed in the detail pane.
@@ -238,26 +209,29 @@ class RoutesNotifier extends AsyncNotifier<RouteCalculationResponse?> {
 
   /// Runs a route calculation with the current selection.
   ///
-  /// Requires [selectedRegionProvider] and [selectedShipTypeIdProvider] to be
-  /// non-null; if either is missing, this is a no-op.
+  /// Requires [selectedRegionProvider] to be non-null and the character's
+  /// CURRENT ship ([currentShipProvider]) to be loaded with a valid type id;
+  /// if either is missing, this is a no-op (we never send ship_type_id 0).
   ///
-  /// The backend `RouteCalculationRequest` accepts only region/ship (plus
-  /// optional fitting/volume params) — it has NO security-zone or
-  /// profit/spread filter fields. Like the Next.js web client, filtering by
-  /// security zone / min-spread / min-profit happens CLIENT-SIDE on the
-  /// returned routes (see [filteredRoutesProvider]). We therefore send only
-  /// region_id + ship_type_id, matching the web request body exactly.
+  /// The backend `RouteCalculationRequest` accepts region/ship plus optional
+  /// fitting/volume params — it has NO security-zone or profit/spread filter
+  /// fields. Like the Next.js web client, filtering by security zone /
+  /// min-spread / min-profit happens CLIENT-SIDE on the returned routes (see
+  /// [filteredRoutesProvider]). We send region_id + ship_type_id, plus the
+  /// current ship's effective cargo as a `cargo_capacity` override (omitted
+  /// when unavailable/0), matching the web request body exactly.
   Future<void> calculate() async {
     final region = ref.read(selectedRegionProvider);
-    final shipTypeId = ref.read(selectedShipTypeIdProvider);
+    final ship = ref.read(currentShipProvider).value;
 
-    if (region == null || shipTypeId == null) return;
+    if (region == null || ship == null || ship.shipTypeId <= 0) return;
 
     state = const AsyncLoading();
 
     final request = RouteCalculationRequest(
       regionId: region.id,
-      shipTypeId: shipTypeId,
+      shipTypeId: ship.shipTypeId,
+      cargoCapacity: cargoOverrideForShip(ship),
     );
 
     state = await AsyncValue.guard(() async {

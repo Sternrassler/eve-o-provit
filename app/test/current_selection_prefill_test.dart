@@ -1,6 +1,10 @@
-/// Verifies the CurrentSelectionPrefill mixin seeds the shared region + ship
-/// selection from the character's current region / active ship — once, and
-/// without overwriting an explicit prior choice.
+/// Verifies the CurrentSelectionPrefill mixin seeds the shared region selection
+/// from the character's current region — once, and without overwriting an
+/// explicit prior choice.
+///
+/// (Ship pre-fill was removed: every trading view now reads the character's
+/// CURRENT ship directly via currentShipProvider — there is no ship selection
+/// state to seed.)
 library;
 
 import 'package:flutter/material.dart';
@@ -9,18 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:eve_o_provit/api/trading_models.dart';
 import 'package:eve_o_provit/auth/auth_controller.dart';
-import 'package:eve_o_provit/features/character/character_models.dart';
 import 'package:eve_o_provit/features/character/providers.dart';
 import 'package:eve_o_provit/features/trading/current_selection_prefill.dart';
 import 'package:eve_o_provit/features/trading/providers.dart';
-
-CharacterShip _ship(int typeId) => CharacterShip(
-      shipTypeId: typeId,
-      shipName: 'Test',
-      shipItemId: 1,
-      shipTypeName: 'Test Ship',
-      cargoCapacity: 1000,
-    );
 
 // Auth controller stub that reports an authenticated session (the prefill is
 // gated on Authenticated).
@@ -68,17 +63,15 @@ void main() {
     Region(id: 10000042, name: 'Metropolis'),
   ];
 
-  testWidgets('seeds region + ship from current values', (tester) async {
+  testWidgets('seeds region from the current region', (tester) async {
     final c = ProviderContainer(overrides: [
       authControllerProvider.overrideWith(_AuthedController.new),
-      activeShipProvider.overrideWith((ref) async => _ship(12005)),
       currentRegionIdProvider.overrideWith((ref) async => 10000042),
       regionsProvider.overrideWith((ref) async => regions),
     ]);
     addTearDown(c.dispose);
     await _pump(tester, c);
 
-    expect(c.read(selectedShipTypeIdProvider), 12005);
     expect(c.read(selectedRegionProvider)?.id, 10000042);
   });
 
@@ -86,32 +79,45 @@ void main() {
       (tester) async {
     final c = ProviderContainer(overrides: [
       authControllerProvider.overrideWith(_AuthedController.new),
-      activeShipProvider.overrideWith((ref) async => _ship(12005)),
       currentRegionIdProvider.overrideWith((ref) async => null),
       regionsProvider.overrideWith((ref) async => regions),
     ]);
     addTearDown(c.dispose);
     await _pump(tester, c);
 
-    // Ship still seeds; region has no current value → left unset (no fallback).
-    expect(c.read(selectedShipTypeIdProvider), 12005);
+    // No current region → left unset (no hard fallback).
     expect(c.read(selectedRegionProvider), isNull);
   });
 
-  // Regression guard: a mount before authentication must NOT prematurely apply
-  // the 648 fallback / leave region empty for the session (the original bug —
-  // the prefill fired during the SSO login transition and cached null).
+  testWidgets('does not override an explicit prior region choice',
+      (tester) async {
+    final c = ProviderContainer(overrides: [
+      authControllerProvider.overrideWith(_AuthedController.new),
+      currentRegionIdProvider.overrideWith((ref) async => 10000042),
+      regionsProvider.overrideWith((ref) async => regions),
+    ]);
+    addTearDown(c.dispose);
+
+    // User picks The Forge before the prefill resolves.
+    c.read(selectedRegionProvider.notifier).select(regions[0]);
+    await _pump(tester, c);
+
+    // The explicit choice is preserved (not overwritten by the current region).
+    expect(c.read(selectedRegionProvider)?.id, 10000002);
+  });
+
+  // Regression guard: a mount before authentication must NOT prematurely seed
+  // the region (the original bug — the prefill fired during the SSO login
+  // transition and cached null).
   testWidgets('does not prefill while unauthenticated', (tester) async {
     final c = ProviderContainer(overrides: [
       authControllerProvider.overrideWith(_UnauthedController.new),
-      activeShipProvider.overrideWith((ref) async => _ship(12005)),
       currentRegionIdProvider.overrideWith((ref) async => 10000042),
       regionsProvider.overrideWith((ref) async => regions),
     ]);
     addTearDown(c.dispose);
     await _pump(tester, c);
 
-    expect(c.read(selectedShipTypeIdProvider), isNull);
     expect(c.read(selectedRegionProvider), isNull);
   });
 }

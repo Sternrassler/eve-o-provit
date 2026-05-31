@@ -13,6 +13,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:eve_o_provit/api/trading_api.dart';
 import 'package:eve_o_provit/api/trading_models.dart';
+import 'package:eve_o_provit/features/character/character_models.dart';
+import 'package:eve_o_provit/features/character/providers.dart'
+    show currentShipProvider;
 import 'package:eve_o_provit/features/trading/providers.dart';
 import 'package:eve_o_provit/features/trading/route_card.dart';
 import 'package:eve_o_provit/features/trading/route_detail.dart';
@@ -116,6 +119,15 @@ TradingRoute _fakeRoute({
   );
 }
 
+const _currentShip = CharacterShip(
+  shipTypeId: 650,
+  shipName: 'My Nereus',
+  shipItemId: 1000000000002,
+  shipTypeName: 'Nereus',
+  cargoCapacity: 2700.0,
+  effectiveCargoCapacity: 9656.9,
+);
+
 RouteCalculationResponse _fakeResponse() => RouteCalculationResponse(
       regionId: 10000002,
       regionName: 'The Forge',
@@ -166,6 +178,7 @@ Future<void> _pumpScreen(
     ProviderScope(
       overrides: [
         tradingApiProvider.overrideWithValue(_FakeApi()),
+        currentShipProvider.overrideWith((ref) async => _currentShip),
         routesProvider.overrideWith(_StubRoutesNotifier.new),
       ],
       child: MaterialApp(
