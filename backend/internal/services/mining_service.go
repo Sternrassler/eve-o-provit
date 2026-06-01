@@ -364,7 +364,7 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 
 		row := models.OreRankRow{
 			OreTypeID:           o.TypeID,
-			OreName:             o.Name,
+			OreName:             allOres[i].Name, // real client name from ListOres (GetOre returns the raw "-Grade" name)
 			MiningM3PerHour:     oreM3h,
 			RawNetPerM3:         cmp.RawNetPerM3,
 			RefineNetPerM3:      cmp.RefineNetPerM3,

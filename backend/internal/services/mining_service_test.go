@@ -352,4 +352,49 @@ func TestMiningService_OreRanking_EstimateWhenShipUnknown(t *testing.T) {
 	}
 }
 
+// TestMiningService_OreRanking_VariantRealName verifies an ore VARIANT row shows its
+// real in-game name (from ListOres' blueprint-derived rename), not the raw SDE
+// "<Ore> II-Grade" name. 17470 = SDE "Veldspar II-Grade" → client "Concentrated Veldspar".
+func TestMiningService_OreRanking_VariantRealName(t *testing.T) {
+	sdeDB := testutil.OpenTestDB(t)
+	defer func() { _ = sdeDB.Close() }()
+
+	const concentratedVeldsparTypeID = 17470 // group 462 (Veldspar), in Jita's hi-sec set
+	market := &fakeMiningMarket{buyPriceByType: map[int]float64{
+		concentratedVeldsparTypeID: 20.0,
+		tritaniumTypeID:            5.0,
+	}}
+	skills := &fakeMiningSkillsProvider{
+		skills:    &MiningReprocessingSkills{OreProcessing: map[int64]int{}, SkillLevels: map[int64]int{}},
+		standings: map[int64]float64{},
+	}
+	fitting := &fakeMiningModules{ids: []int64{stripMinerITypeID}}
+	stations := &fakeStations{stations: []database.ReprocessStation{
+		{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
+	}}
+	loc := fakeMiningLocation{shipTypeID: 22544}
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
+
+	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
+		RegionID:    10000002,
+		AllowLowSec: false,
+	})
+	if err != nil {
+		t.Fatalf("OreRanking error: %v", err)
+	}
+	var row *models.OreRankRow
+	for i := range resp.Rows {
+		if resp.Rows[i].OreTypeID == concentratedVeldsparTypeID {
+			row = &resp.Rows[i]
+			break
+		}
+	}
+	if row == nil {
+		t.Fatal("Concentrated Veldspar (17470) row not found")
+	}
+	if row.OreName != "Concentrated Veldspar" {
+		t.Errorf("OreName: got %q, want %q (real client name, not the raw -Grade)", row.OreName, "Concentrated Veldspar")
+	}
+}
+
 func approxEq(a, b float64) bool { return math.Abs(a-b) < 1e-6 }

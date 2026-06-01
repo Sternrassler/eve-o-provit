@@ -6,15 +6,22 @@ import (
 	"fmt"
 )
 
+// roleBonusOnce marks a recognised effect as a flat role bonus (applied once, not
+// scaled per skill level). Skill type ids are never 0, so it is a safe sentinel.
+const roleBonusOnce = 0
+
 // recognisedHullYieldEffects maps a ship-bonus effect (by dogmaEffects.name)
-// that modifies ore-mining yield (attr 77) to the skill whose level scales it.
-// The modifier's own skillTypeID is a constant (3386) in the SDE and must be ignored.
-// A hull whose attr-77 ship bonus is NOT in this set is reported unresolved, so the
-// caller marks the row as an estimate instead of computing a partial (wrong) value.
+// that modifies ore-mining yield (attr 77) to the skill whose level scales it, or
+// roleBonusOnce for flat role bonuses. The modifier's own skillTypeID is a constant
+// (3386) in the SDE and must be ignored. A hull whose attr-77 ship bonus is NOT in
+// this set is reported unresolved, so the caller marks the row as an estimate
+// instead of computing a partial (wrong) value.
 var recognisedHullYieldEffects = map[string]int64{
-	"miningBargeBonusOreMiningYield":   17940, // Mining Barge
-	"exhumersBonusOreMiningYield":      22551, // Exhumers
-	"miningFrigateBonusOreMiningYield": 32918, // Mining Frigate
+	"miningBargeBonusOreMiningYield":            17940,         // Mining Barge
+	"exhumersBonusOreMiningYield":               22551,         // Exhumers
+	"miningFrigateBonusOreMiningYield":          32918,         // Mining Frigate
+	"shipMiningYieldBonusOreDestroyer1":         89241,         // Mining Destroyer (Pioneer)
+	"shipMiningBonusYieldOreDestroyerRoleBonus": roleBonusOnce, // Pioneer role bonus
 }
 
 const attrMiningAmountModified = 77
@@ -49,9 +56,12 @@ func HullMiningYieldMultiplier(db *sql.DB, hullTypeID int64, skillLevels map[int
 			resolved = false // unrecognised mining bonus on this hull
 			continue
 		}
+		level := 1 // role bonus: applied once
+		if skillID != roleBonusOnce {
+			level = skillLevels[skillID]
+		}
 		for _, m := range mods {
-			value := hullAttrs[m.ModifyingAttributeID] // per-level % on this hull
-			level := skillLevels[skillID]
+			value := hullAttrs[m.ModifyingAttributeID] // per-level % (or flat % for role bonus)
 			mult *= 1.0 + (value/100.0)*float64(level)
 		}
 	}
