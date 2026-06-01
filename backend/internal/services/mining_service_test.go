@@ -371,9 +371,9 @@ func TestMiningService_OreRanking_EstimateWhenShipUnknown(t *testing.T) {
 	}
 }
 
-// TestMiningService_OreRanking_VariantRealName verifies an ore VARIANT row shows its
-// real in-game name (from ListOres' blueprint-derived rename), not the raw SDE
-// "<Ore> II-Grade" name. 17470 = SDE "Veldspar II-Grade" → client "Concentrated Veldspar".
+// TestMiningService_OreRanking_VariantRealName verifies an ore VARIANT row shows the
+// in-game "<Ore> II-Grade" name paired with our client-name adjective in parens.
+// 17470 = SDE "Veldspar II-Grade", client "Concentrated Veldspar" → "Veldspar II-Grade (Concentrated)".
 func TestMiningService_OreRanking_VariantRealName(t *testing.T) {
 	sdeDB := testutil.OpenTestDB(t)
 	defer func() { _ = sdeDB.Close() }()
@@ -411,8 +411,8 @@ func TestMiningService_OreRanking_VariantRealName(t *testing.T) {
 	if row == nil {
 		t.Fatal("Concentrated Veldspar (17470) row not found")
 	}
-	if row.OreName != "Concentrated Veldspar" {
-		t.Errorf("OreName: got %q, want %q (real client name, not the raw -Grade)", row.OreName, "Concentrated Veldspar")
+	if row.OreName != "Veldspar II-Grade (Concentrated)" {
+		t.Errorf("OreName: got %q, want %q (in-game name + our adjective)", row.OreName, "Veldspar II-Grade (Concentrated)")
 	}
 }
 

@@ -72,14 +72,35 @@ func ListOres(db *sql.DB) ([]Ore, error) {
 		if err := rows.Scan(&o.TypeID, &o.Name, &o.GroupID, &o.PortionSize, &o.VolumeM3); err != nil {
 			return nil, err
 		}
-		if name, ok := disp[o.TypeID]; ok {
-			o.Name = name // real in-game name (Concentrated Veldspar, Vivid Hemorphite, …)
-		} else if strings.Contains(o.Name, "-Grade") {
-			continue // un-belt-able variant (IV-Grade/0-Grade): not mined, drop it
+		// Base ores (no grade suffix) keep their plain in-game name.
+		if !strings.Contains(o.Name, "-Grade") {
+			out = append(out, o)
+			continue
+		}
+		// Variant: pair the in-game "-Grade" name (what the client shows) with our
+		// client-name adjective in parens, e.g. "Veldspar II-Grade (Concentrated)".
+		// The adjective is the leading word of the compression-blueprint name
+		// ("Concentrated Veldspar" → "Concentrated").
+		derived, ok := disp[o.TypeID]
+		if !ok {
+			continue // IV-Grade/0-Grade: no compression blueprint → un-belt-able, drop it
+		}
+		if adj := firstWord(derived); adj != "" {
+			o.Name = o.Name + " (" + adj + ")"
 		}
 		out = append(out, o)
 	}
 	return out, rows.Err()
+}
+
+// firstWord returns the leading whitespace-delimited token of s — the distinguishing
+// adjective of an ore variant's client name (e.g. "Concentrated" from "Concentrated
+// Veldspar", "Onyx" from "Onyx Ochre").
+func firstWord(s string) string {
+	if i := strings.IndexByte(s, ' '); i > 0 {
+		return s[:i]
+	}
+	return s
 }
 
 // oreDisplayNames maps a raw ore variant typeID to its real in-game name, derived
