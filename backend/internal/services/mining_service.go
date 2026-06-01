@@ -212,7 +212,17 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	// rather than gating on a separate resolved flag.
 	var oreHoldM3 float64
 	if hullResolved && hullTypeID != 0 {
-		if c, found, e := mining.OreHoldCapacity(s.sdeDB, int64(hullTypeID)); e == nil && found {
+		c, found, e := mining.OreHoldCapacity(s.sdeDB, int64(hullTypeID))
+		switch {
+		case e != nil:
+			if s.logger != nil {
+				s.logger.Warn("ore ranking: ore-hold capacity lookup failed", "hullTypeID", hullTypeID, "error", e)
+			}
+		case !found:
+			if s.logger != nil {
+				s.logger.Warn("ore ranking: ore-hold capacity unknown for hull", "hullTypeID", hullTypeID)
+			}
+		default:
 			oreHoldM3 = c
 		}
 	}
@@ -221,6 +231,8 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 		if fit, e := s.fitting.GetShipFitting(ctx, characterID, hullTypeID, accessToken); e == nil && fit != nil {
 			ws, at := fit.Bonuses.WarpSpeedAUS, fit.Bonuses.AlignTime
 			navParams.WarpSpeed, navParams.AlignTime = &ws, &at
+		} else if e != nil && s.logger != nil {
+			s.logger.Warn("ore ranking: ship fitting lookup failed, using default warp/align", "hullTypeID", hullTypeID, "error", e)
 		}
 	}
 	travelMemo := map[travelKey]*navigation.RouteResult{}
