@@ -51,6 +51,34 @@ func TestNetYield(t *testing.T) {
 	}
 }
 
+func TestListOres_RealNamesAndNoGrade(t *testing.T) {
+	db := testutil.OpenTestDB(t)
+	defer func() { _ = db.Close() }()
+	ores, err := ListOres(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byID := map[int64]string{}
+	for _, o := range ores {
+		byID[o.TypeID] = o.Name
+		if strings.Contains(o.Name, "-Grade") {
+			t.Errorf("'-Grade' name leaked: %d %q", o.TypeID, o.Name)
+		}
+	}
+	if byID[17470] != "Concentrated Veldspar" {
+		t.Errorf("17470: got %q, want Concentrated Veldspar", byID[17470])
+	}
+	if byID[17444] != "Vivid Hemorphite" {
+		t.Errorf("17444: got %q, want Vivid Hemorphite", byID[17444])
+	}
+	if byID[1230] != "Veldspar" {
+		t.Errorf("1230: got %q, want Veldspar", byID[1230])
+	}
+	if _, ok := byID[46689]; ok { // Veldspar IV-Grade — no blueprint name → filtered
+		t.Errorf("Veldspar IV-Grade (46689) must be filtered out")
+	}
+}
+
 func TestListOres_ExcludesCompressedVariants(t *testing.T) {
 	db := testutil.OpenTestDB(t)
 	ores, err := ListOres(db)

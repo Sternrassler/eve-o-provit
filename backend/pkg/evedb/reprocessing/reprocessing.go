@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // Material represents a single output material from reprocessing an ore.
@@ -61,13 +62,52 @@ func ListOres(db *sql.DB) ([]Ore, error) {
 		return nil, fmt.Errorf("list ores: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
+	disp, err := oreDisplayNames(db)
+	if err != nil {
+		return nil, err
+	}
 	var out []Ore
 	for rows.Next() {
 		var o Ore
 		if err := rows.Scan(&o.TypeID, &o.Name, &o.GroupID, &o.PortionSize, &o.VolumeM3); err != nil {
 			return nil, err
 		}
+		if name, ok := disp[o.TypeID]; ok {
+			o.Name = name // real in-game name (Concentrated Veldspar, Vivid Hemorphite, …)
+		} else if strings.Contains(o.Name, "-Grade") {
+			continue // un-belt-able variant (IV-Grade/0-Grade): not mined, drop it
+		}
 		out = append(out, o)
+	}
+	return out, rows.Err()
+}
+
+// oreDisplayNames maps a raw ore variant typeID to its real in-game name, derived
+// from CCP's compression blueprints: a "Compressed <Descriptive> Blueprint" lists
+// the raw ore variant as its manufacturing material, so <Descriptive> is that
+// ore's display name. Base ores map to their own name (identity). Variants without
+// such a blueprint (e.g. IV-Grade / 0-Grade) are absent from the map.
+func oreDisplayNames(db *sql.DB) (map[int64]string, error) {
+	rows, err := db.Query(`
+		SELECT json_extract(b.activities,'$.manufacturing.materials[0].typeID'),
+		       replace(replace(json_extract(t.name,'$.en'),'Compressed ',''),' Blueprint','')
+		FROM blueprints b
+		JOIN types t ON t._key = b.blueprintTypeID
+		WHERE json_extract(t.name,'$.en') LIKE 'Compressed %Blueprint'`)
+	if err != nil {
+		return nil, fmt.Errorf("ore display names: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	out := map[int64]string{}
+	for rows.Next() {
+		var oreID sql.NullInt64
+		var name string
+		if err := rows.Scan(&oreID, &name); err != nil {
+			return nil, err
+		}
+		if oreID.Valid && name != "" {
+			out[oreID.Int64] = name
+		}
 	}
 	return out, rows.Err()
 }
