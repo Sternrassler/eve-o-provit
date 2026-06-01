@@ -46,6 +46,11 @@ type OreRankRow struct {
 	BestStationSystem string           `json:"best_station_system,omitempty"` // reprocess station system
 	RawSell           *SellLocation    `json:"raw_sell,omitempty"`            // where to sell the raw ore
 	Materials         []RefineMaterial `json:"materials,omitempty"`           // per-mineral sell breakdown
+	// Yield accuracy (hull role/skill bonus + best-case ore crystal):
+	HullYieldMultiplier float64 `json:"hull_yield_multiplier,omitempty"` // hull-wide (same on every row); 1.0 = none
+	CrystalMultiplier   float64 `json:"crystal_multiplier,omitempty"`    // per ore; 1.0 = no crystals used
+	IsEstimate          bool    `json:"is_estimate,omitempty"`           // hull bonus / crystal not fully resolved
+	EstimateReason      string  `json:"estimate_reason,omitempty"`       // short reason, only when IsEstimate
 }
 
 // OreRankingResponse is the ore-ranking result for a region + security band.
