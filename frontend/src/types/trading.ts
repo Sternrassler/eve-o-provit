@@ -355,6 +355,7 @@ export interface SellLocation {
   station_name?: string;
   system_name?: string;
   is_structure: boolean;
+  location_id?: number;
 }
 
 export interface RefineMaterial {

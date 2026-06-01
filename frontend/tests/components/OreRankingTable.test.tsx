@@ -1,7 +1,24 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import { OreRankingTable } from "@/components/trading/OreRankingTable";
 import { OreRankRow } from "@/types/trading";
+import { openMarketDetails, setWaypoint } from "@/lib/api-client";
+
+vi.mock("@/hooks/use-toast", () => ({
+  useToast: () => ({ toast: vi.fn() }),
+}));
+vi.mock("@/lib/api-client", () => ({
+  openMarketDetails: vi.fn().mockResolvedValue(undefined),
+  setWaypoint: vi.fn().mockResolvedValue(undefined),
+}));
+
+const openMarketMock = vi.mocked(openMarketDetails);
+const setWaypointMock = vi.mocked(setWaypoint);
+
+beforeEach(() => {
+  openMarketMock.mockClear();
+  setWaypointMock.mockClear();
+});
 
 function makeRow(overrides: Partial<OreRankRow> = {}): OreRankRow {
   return {
@@ -202,5 +219,45 @@ describe("OreRankingTable", () => {
     const detail = screen.getByTestId("ore-ranking-detail");
     expect(within(detail).getByText(/Zyklus/)).toBeInTheDocument();
     expect(within(detail).getByText(/Amarr/)).toBeInTheDocument();
+  });
+
+  it("opens the ore market on ore-name click without expanding the row", () => {
+    render(<OreRankingTable rows={[makeRow({ ore_type_id: 1230, ore_name: "Veldspar" })]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Veldspar" }));
+    expect(openMarketMock).toHaveBeenCalledWith(1230);
+    expect(screen.queryByTestId("ore-ranking-detail")).not.toBeInTheDocument();
+  });
+
+  it("routes to the reprocess station and opens/routes minerals in the refine detail", () => {
+    const r = makeRow({
+      ore_type_id: 1230, ore_name: "Veldspar", best: "refine",
+      best_station_id: 60003760, best_station_name: "Jita IV-4", best_station_system: "Jita",
+      materials: [{
+        material_type_id: 34, material_name: "Tritanium", effective_qty: 100, buy_price: 5,
+        sell: { station_name: "Amarr VIII", system_name: "Amarr", is_structure: false, location_id: 60008494 },
+      }],
+    });
+    render(<OreRankingTable rows={[r]} />);
+    fireEvent.click(screen.getByTestId("ore-ranking-row"));
+
+    fireEvent.click(screen.getByRole("button", { name: /Jita IV-4 — Jita/ }));
+    expect(setWaypointMock).toHaveBeenCalledWith(60003760, { clearOtherWaypoints: true });
+
+    fireEvent.click(screen.getByRole("button", { name: "Tritanium" }));
+    expect(openMarketMock).toHaveBeenCalledWith(34);
+
+    fireEvent.click(screen.getByRole("button", { name: /Amarr VIII — Amarr/ }));
+    expect(setWaypointMock).toHaveBeenCalledWith(60008494, { clearOtherWaypoints: true });
+  });
+
+  it("routes to the raw ore sell location in the raw detail", () => {
+    const r = makeRow({
+      ore_type_id: 1228, ore_name: "Scordite", best: "raw",
+      raw_sell: { station_name: "Dodixie IX", system_name: "Dodixie", is_structure: false, location_id: 60011866 },
+    });
+    render(<OreRankingTable rows={[r]} />);
+    fireEvent.click(screen.getByTestId("ore-ranking-row"));
+    fireEvent.click(screen.getByRole("button", { name: /Dodixie IX — Dodixie/ }));
+    expect(setWaypointMock).toHaveBeenCalledWith(60011866, { clearOtherWaypoints: true });
   });
 });
