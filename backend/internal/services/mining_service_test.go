@@ -19,6 +19,8 @@ import (
 type fakeMiningMarket struct {
 	// buyPriceByType maps typeID → highest buy price returned as a single buy order.
 	buyPriceByType map[int]float64
+	// locByType overrides the highest-buy-order station per type (default 60000123).
+	locByType map[int]int64
 }
 
 func (f *fakeMiningMarket) GetMarketOrders(_ context.Context, _ int, typeID int) ([]database.MarketOrder, error) {
@@ -26,10 +28,24 @@ func (f *fakeMiningMarket) GetMarketOrders(_ context.Context, _ int, typeID int)
 	if !ok {
 		return []database.MarketOrder{}, nil
 	}
+	loc := int64(60000123)
+	if f.locByType != nil {
+		if l, ok := f.locByType[typeID]; ok {
+			loc = l
+		}
+	}
+	// Lower buy-order location: same override when set (keeps all orders unreachable),
+	// otherwise the default NPC station 60000999 (to prove we pick the highest buy).
+	lowerLoc := int64(60000999)
+	if f.locByType != nil {
+		if l, ok := f.locByType[typeID]; ok {
+			lowerLoc = l
+		}
+	}
 	return []database.MarketOrder{
-		{TypeID: typeID, IsBuyOrder: true, Price: price, VolumeRemain: 1_000_000, LocationID: 60000123},
+		{TypeID: typeID, IsBuyOrder: true, Price: price, VolumeRemain: 1_000_000, LocationID: loc},
 		// a lower buy order + a sell order, to prove we pick the highest buy.
-		{TypeID: typeID, IsBuyOrder: true, Price: price * 0.5, VolumeRemain: 100, LocationID: 60000999},
+		{TypeID: typeID, IsBuyOrder: true, Price: price * 0.5, VolumeRemain: 100, LocationID: lowerLoc},
 		{TypeID: typeID, IsBuyOrder: false, Price: price * 2, VolumeRemain: 100},
 	}, nil
 }
@@ -50,7 +66,10 @@ func (fakeMiningNames) GetStationName(_ context.Context, id int64) (string, erro
 
 func (fakeMiningNames) GetSystemName(_ context.Context, _ int64) (string, error) { return "Jita", nil }
 
-func (fakeMiningNames) GetSystemIDForLocation(_ context.Context, _ int64) (int64, error) {
+func (fakeMiningNames) GetSystemIDForLocation(_ context.Context, id int64) (int64, error) {
+	if id >= 1_000_000_000_000 {
+		return 0, fmt.Errorf("no system for structure %d", id)
+	}
 	return 30000142, nil
 }
 
@@ -394,6 +413,127 @@ func TestMiningService_OreRanking_VariantRealName(t *testing.T) {
 	}
 	if row.OreName != "Concentrated Veldspar" {
 		t.Errorf("OreName: got %q, want %q (real client name, not the raw -Grade)", row.OreName, "Concentrated Veldspar")
+	}
+}
+
+// TestMiningService_OreRanking_CitadelUnreachable verifies that an ore whose only raw
+// buy order AND whose mineral buy orders are all in a citadel (≥1e12) is skipped
+// entirely — not ranked, not estimated.
+func TestMiningService_OreRanking_CitadelUnreachable(t *testing.T) {
+	sdeDB := testutil.OpenTestDB(t)
+	defer func() { _ = sdeDB.Close() }()
+
+	// Both Veldspar raw and its refine mineral (Tritanium) are only buyable in a citadel.
+	market := &fakeMiningMarket{
+		buyPriceByType: map[int]float64{
+			veldsparTypeID:  15.0,
+			tritaniumTypeID: 5.0,
+		},
+		locByType: map[int]int64{
+			veldsparTypeID:  1_035_000_000_001,
+			tritaniumTypeID: 1_035_000_000_001,
+		},
+	}
+	skills := &fakeMiningSkillsProvider{
+		skills: &MiningReprocessingSkills{
+			OreProcessing: map[int64]int{},
+			SkillLevels:   map[int64]int{17940: 5, 22551: 5},
+		},
+		standings: map[int64]float64{},
+	}
+	fitting := &fakeMiningModules{ids: []int64{stripMinerITypeID}}
+	stations := &fakeStations{stations: []database.ReprocessStation{
+		{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
+	}}
+	loc := fakeMiningLocation{shipTypeID: 22544}
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
+
+	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
+		RegionID:    10000002,
+		AllowLowSec: false,
+	})
+	if err != nil {
+		t.Fatalf("OreRanking error: %v", err)
+	}
+
+	// Veldspar is fully unreachable (both raw and refine paths unreachable) → must be skipped.
+	for _, r := range resp.Rows {
+		if r.OreTypeID == veldsparTypeID {
+			t.Errorf("Veldspar (both raw and refine in citadel) must be skipped, but found row: %+v", r)
+		}
+	}
+}
+
+// TestMiningService_OreRanking_DecoupledRawWhenRefineUnreachable verifies that when
+// the refine path is unavailable (only reprocess station is a citadel) but the raw
+// sell path is reachable, the Veldspar row resolves as "raw", is not an estimate,
+// and has EffectiveISKPerHour > 0.
+func TestMiningService_OreRanking_DecoupledRawWhenRefineUnreachable(t *testing.T) {
+	sdeDB := testutil.OpenTestDB(t)
+	defer func() { _ = sdeDB.Close() }()
+
+	// Raw Veldspar buy order at default NPC station (reachable). Tritanium also reachable.
+	market := &fakeMiningMarket{
+		buyPriceByType: map[int]float64{
+			veldsparTypeID:  15.0,
+			tritaniumTypeID: 5.0,
+		},
+		// No locByType override → highest buy at 60000123 (NPC, reachable).
+	}
+	skills := &fakeMiningSkillsProvider{
+		skills: &MiningReprocessingSkills{
+			OreProcessing: map[int64]int{},
+			SkillLevels:   map[int64]int{17940: 5, 22551: 5},
+		},
+		standings: map[int64]float64{},
+	}
+	fitting := &fakeMiningModules{ids: []int64{stripMinerITypeID}}
+	// The ONLY reprocess station is a citadel → unreachable → refine unavailable for all ores.
+	stations := &fakeStations{stations: []database.ReprocessStation{
+		{StationID: 1_035_000_000_009, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
+	}}
+	loc := fakeMiningLocation{shipTypeID: 22544}
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
+
+	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
+		RegionID:    10000002,
+		AllowLowSec: false,
+	})
+	if err != nil {
+		t.Fatalf("OreRanking error: %v", err)
+	}
+
+	// Find the Veldspar row — it must exist (raw path is reachable).
+	var row *models.OreRankRow
+	for i := range resp.Rows {
+		if resp.Rows[i].OreTypeID == veldsparTypeID {
+			row = &resp.Rows[i]
+			break
+		}
+	}
+	if row == nil {
+		t.Fatal("Veldspar row must be present (raw path is reachable even though refine is not)")
+	}
+
+	// Raw path wins because refine is unavailable.
+	if row.Best != "raw" {
+		t.Errorf("Best: got %q, want %q (refine unavailable → raw wins)", row.Best, "raw")
+	}
+	// IsEstimate is for hull/crystal resolution failures, not routing failures.
+	if row.IsEstimate {
+		t.Errorf("IsEstimate must be false (routing failure is not an estimate condition): %+v", *row)
+	}
+	// The raw sell station is reachable → effective ISK/h must be > 0.
+	if row.EffectiveISKPerHour <= 0 {
+		t.Errorf("EffectiveISKPerHour must be > 0 (raw path is reachable): %v", row.EffectiveISKPerHour)
+	}
+	// No reachable reprocess station → BestStationID must be 0.
+	if row.BestStationID != 0 {
+		t.Errorf("BestStationID: got %d, want 0 (no reachable reprocess station)", row.BestStationID)
+	}
+	// RawSell must be set.
+	if row.RawSell == nil {
+		t.Error("RawSell must be set (raw path is the only available path)")
 	}
 }
 
