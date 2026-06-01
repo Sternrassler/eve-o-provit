@@ -74,7 +74,7 @@ func (f *fakeMiningModules) ActiveShipFittedModuleTypeIDs(_ context.Context, _ i
 }
 
 func (f *fakeMiningModules) GetShipFitting(_ context.Context, _, _ int, _ string) (*FittingData, error) {
-	return nil, nil
+	return &FittingData{Bonuses: FittingBonuses{WarpSpeedAUS: 3.0, AlignTime: 6.0}}, nil
 }
 
 // fakeMiningSkillsProvider implements MiningSkillsProvider with fixed skills + standings.
@@ -99,7 +99,7 @@ type fakeMiningLocation struct {
 }
 
 func (f fakeMiningLocation) GetCharacterLocation(_ context.Context, _ int, _ string) (*CharacterLocation, error) {
-	return &CharacterLocation{}, nil
+	return &CharacterLocation{SolarSystemID: 30000142}, nil // Jita
 }
 
 func (f fakeMiningLocation) GetActiveShipTypeID(_ context.Context, _ int, _ string) (int, error) {
@@ -239,6 +239,22 @@ func TestMiningService_OreRanking_Veldspar(t *testing.T) {
 	}
 	if mat.BuyPrice != tritBuy || mat.Sell.StationName != "Jita IV-4" {
 		t.Errorf("material sell: price=%v sell=%+v", mat.BuyPrice, mat.Sell)
+	}
+	// Effective ISK/h (haul-downtime cycle). Active ship = Hulk (ore hold 11500).
+	// Origin/sell/reprocess all resolve to system 30000142 in this fake → travel 0,
+	// so the only downtime is the per-stop overhead.
+	if row.LoadVolumeM3 != 11500 {
+		t.Errorf("LoadVolumeM3: got %v, want 11500 (Hulk ore hold)", row.LoadVolumeM3)
+	}
+	if row.EffectiveISKPerHour <= 0 {
+		t.Error("EffectiveISKPerHour should be set (cycle resolvable)")
+	}
+	gross := row.MiningM3PerHour * row.RawNetPerM3
+	if row.Best == "raw" && row.EffectiveISKPerHour >= gross {
+		t.Errorf("effective (%v) must be below gross (%v) due to stop overhead", row.EffectiveISKPerHour, gross)
+	}
+	if row.IsEstimate {
+		t.Errorf("row should be resolvable (not estimate): %+v", *row)
 	}
 }
 
