@@ -107,6 +107,15 @@ function OreRankRow({ row }: { row: OreRankRow }) {
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
             {row.ore_name}
+            {row.is_estimate && (
+              <span
+                data-testid="ore-estimate-badge"
+                title={row.estimate_reason || "Schätzwert"}
+                className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+              >
+                ≈ Schätzung
+              </span>
+            )}
           </span>
         </td>
         <td className="px-4 py-3 text-right">{m3PerHour}</td>
