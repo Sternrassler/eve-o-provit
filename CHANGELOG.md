@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Mining-ISK/h: Schiffs-Boni + Erz-Crystals eingerechnet (#157).** Die ISK/h des Mining-Rechners ist jetzt genau statt skills-only Untergrenze: sie berücksichtigt den **Hull-Mining-Yield-Bonus** des aktuellen Schiffs (Rollen- + per-Skill-Level-Bonus, data-driven aus der SDE-Dogma; Mining Barge / Exhumers / Mining Frigate) und ein **best-case T2-Erz-Crystal** pro Erz (wenn ein crystal-fähiger Miner gefittet ist). Zeilen, deren Bonus/Crystal nicht auflösbar ist (unbekanntes Schiff, exotischer Hull-Bonus wie Venture/Orca/Rorqual, oder Erz ohne passendes Crystal wie Mercoxit), tragen einen **≈-Schätzwert-Marker** mit Grund — nie ein still angenommenes 1.0 (fail-loud). Der Hull-Bonus skaliert alle Erze gleich (Ranking unverändert), Crystals sind erz-spezifisch (können umsortieren); die Roh-vs-Refine-Entscheidung bleibt bei beiden unberührt. Web + Flutter.
+
 ## [0.21.0] - 2026-06-01
 
 ### Added
