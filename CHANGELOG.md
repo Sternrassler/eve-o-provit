@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-06-01
+
 ### Added
 
 - **Mining-Rechner: In-Game-Markt- + Routen-Links (#160, nur Web).** Aus der Erz-Rangliste heraus direkt im EVE-Client agieren: **Erz- oder Mineral-Name anklicken** öffnet das Marktfenster (`openMarketDetails`); **Reprocess-Station oder einen Verkaufsort anklicken** setzt einen Autopilot-Waypoint (`setWaypoint`, ersetzt die Route). Der Erz-Name-Klick öffnet den Markt, ohne die Zeile auf-/zuzuklappen. Fehlt ein Routenziel, bleibt der Eintrag reiner Text; ein ESI-Fehler (EVE nicht offen, kein Docking-Zugriff) erscheint als Fehler-Toast. Backend: `SellLocation` trägt jetzt eine `location_id` als Waypoint-Ziel (NPC-Station und Citadel); Reprocess-Route nutzt `best_station_id`. Wiederverwendet die bestehenden ESI-UI-Calls; der Web-SSO hat die nötigen Scopes (`esi-ui.open_window.v1` + `esi-ui.write_waypoint.v1`) bereits — **kein neuer Scope, kein Re-Login**. Nur Web (kein Flutter).
