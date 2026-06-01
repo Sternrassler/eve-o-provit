@@ -90,10 +90,13 @@ Pro Erz, unabhängig:
   `EffectiveISKPerHour`, `CycleMinutes`, `FillMinutes`, `RouteJumps`,
   `SellSystemName`, `RawNetPerM3`/`RefineNetPerM3` (nur die verfügbaren Pfade),
   Brutto-ISK/h, `RawSell`/`Materials` entsprechend.
-- Wenn **nicht** `available` (kein erreichbarer Ort) und `oreM3h > 0`:
-  `IsEstimate = true`, Grund „Kein erreichbarer Verkaufs-/Reprocess-Ort unter
-  deiner Sicherheits-Bereitschaft".
-- Feature-#1-Estimate (Hull/Crystal) bleibt separat und hat Vorrang beim Grund.
+- Wenn **nicht** `available` (kein erreichbarer Verkaufs- **und** kein
+  erreichbarer Reprocess-Ort): die Zeile wird **übersprungen** (nicht gerankt) —
+  das Erz ist unter deiner Sicherheits-Bereitschaft nicht verkauf-/aufbereitbar.
+  Da `bestReachableBuyOrder` das beste **erreichbare** Order wählt (meist eine
+  NPC-Station, auch wenn das global beste in einer Citadel liegt), ist „gar
+  nichts erreichbar" ein seltener Rand. `is_estimate` bleibt damit **nur** für
+  Hull/Crystal (Feature #1) reserviert.
 
 Das behebt (1): ein nicht erreichbarer Refine-Pfad lässt einen erreichbaren
 Raw-Pfad **unangetastet** (Zeile zeigt Raw, keine Schätzung).
