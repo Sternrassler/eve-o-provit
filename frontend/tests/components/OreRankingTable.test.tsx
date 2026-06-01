@@ -187,4 +187,20 @@ describe("OreRankingTable", () => {
     const detail = screen.getByTestId("ore-ranking-detail");
     expect(within(detail).getByText("Player-Structure")).toBeInTheDocument();
   });
+
+  it("shows effective ISK/h and cycle detail when present", () => {
+    const r = makeRow({
+      ore_type_id: 1230, ore_name: "Veldspar", best: "refine",
+      effective_isk_per_hour: 950000, raw_isk_per_hour: 500000,
+      refine_isk_per_hour: 1100000, cycle_minutes: 12.5, route_jumps: 3,
+      sell_system_name: "Amarr",
+    });
+    render(<OreRankingTable rows={[r]} />);
+    expect(screen.getByTestId("ore-effective-isk")).toHaveTextContent(/ISK/);
+
+    fireEvent.click(screen.getByTestId("ore-ranking-row"));
+    const detail = screen.getByTestId("ore-ranking-detail");
+    expect(within(detail).getByText(/Zyklus/)).toBeInTheDocument();
+    expect(within(detail).getByText(/Amarr/)).toBeInTheDocument();
+  });
 });
