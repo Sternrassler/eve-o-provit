@@ -51,3 +51,30 @@ func TestHullMiningYieldMultiplier(t *testing.T) {
 		t.Error("Venture has an unrecognised attr-77 bonus → resolved must be false")
 	}
 }
+
+func TestHullMiningYieldMultiplier_Pioneer(t *testing.T) {
+	db := testutil.OpenTestDB(t)
+	defer func() { _ = db.Close() }()
+
+	// Pioneer (89240, mining destroyer): +10%/lvl Mining Destroyer (skill 89241) ×
+	// +50% role bonus (applied once). At Mining Destroyer V: 1.50 × 1.50 = 2.25.
+	mul, resolved, err := HullMiningYieldMultiplier(db, 89240, map[int64]int{89241: 5})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !resolved {
+		t.Error("Pioneer bonuses must be fully resolved")
+	}
+	if mul < 2.2499 || mul > 2.2501 {
+		t.Errorf("Pioneer MD V: got %v, want 2.25", mul)
+	}
+
+	// Mining Destroyer 0: skill bonus 1.0 × role bonus 1.50 = 1.50.
+	mul, resolved, err = HullMiningYieldMultiplier(db, 89240, map[int64]int{})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !resolved || mul < 1.4999 || mul > 1.5001 {
+		t.Errorf("Pioneer MD 0: got mul=%v resolved=%v, want 1.5/true", mul, resolved)
+	}
+}
