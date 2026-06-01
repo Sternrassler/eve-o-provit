@@ -147,8 +147,8 @@ func TestMiningService_OreRanking_Veldspar(t *testing.T) {
 	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
 
 	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
-		RegionID: 10000002,
-		SecBand:  "high",
+		RegionID:    10000002,
+		AllowLowSec: false,
 	})
 	if err != nil {
 		t.Fatalf("OreRanking error: %v", err)
@@ -168,6 +168,17 @@ func TestMiningService_OreRanking_Veldspar(t *testing.T) {
 	if row == nil {
 		t.Fatal("Veldspar row not found in response")
 	}
+
+	// System-accurate ore set: Jita (Caldari 0.9) → only hi-sec ores, no low-sec leak.
+	for _, r := range resp.Rows {
+		if r.OreTypeID == 1231 || r.OreTypeID == 21 { // Hemorphite / Hedbergite (low-sec)
+			t.Errorf("low-sec ore leaked into hi-sec ranking: %d %q", r.OreTypeID, r.OreName)
+		}
+	}
+	if resp.Quarter != "caldari" {
+		t.Errorf("Quarter: got %q, want caldari", resp.Quarter)
+	}
+
 	if row.Best == "" {
 		t.Error("Best verdict not set")
 	}
@@ -281,8 +292,8 @@ func TestMiningService_OreRanking_NoMiningSetup(t *testing.T) {
 	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
 
 	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
-		RegionID: 10000002,
-		SecBand:  "high",
+		RegionID:    10000002,
+		AllowLowSec: false,
 	})
 	if err != nil {
 		t.Fatalf("OreRanking error: %v", err)
@@ -324,7 +335,7 @@ func TestMiningService_OreRanking_EstimateWhenShipUnknown(t *testing.T) {
 	loc := fakeMiningLocation{shipErr: fmt.Errorf("esi down")}
 	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
 
-	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{RegionID: 10000002, SecBand: "high"})
+	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{RegionID: 10000002, AllowLowSec: false})
 	if err != nil {
 		t.Fatalf("OreRanking error: %v", err)
 	}

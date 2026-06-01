@@ -17,18 +17,18 @@ library;
 class OreRankingRequest {
   const OreRankingRequest({
     required this.regionId,
-    required this.secBand,
+    required this.allowLowSec,
   });
 
   /// Backend: `region_id` — 0 means "use the character's current region".
   final int regionId;
 
-  /// Backend: `sec_band` — "high" | "low" | "null".
-  final String secBand;
+  /// Backend: `allow_low_sec` — true includes Low-Sec ores/sell orders.
+  final bool allowLowSec;
 
   Map<String, dynamic> toJson() => {
         'region_id': regionId,
-        'sec_band': secBand,
+        'allow_low_sec': allowLowSec,
       };
 }
 
@@ -269,16 +269,25 @@ class OreRankRow {
 class OreRankingResponse {
   const OreRankingResponse({
     required this.regionId,
-    required this.secBand,
     required this.noMiningSetup,
     required this.rows,
+    this.systemSecurity = 0.0,
+    this.quarter = '',
+    this.notAvailableReason,
   });
 
   /// Backend: `region_id`
   final int regionId;
 
-  /// Backend: `sec_band`
-  final String secBand;
+  /// Backend: `system_security` — security status of the character's system.
+  final double systemSecurity;
+
+  /// Backend: `quarter` — e.g. "Q2 2026".
+  final String quarter;
+
+  /// Backend: `not_available_reason` — non-null when rows is empty due to a
+  /// known reason (e.g. no market data).
+  final String? notAvailableReason;
 
   /// Backend: `no_mining_setup` — true when the character has no mining lasers.
   final bool noMiningSetup;
@@ -293,7 +302,9 @@ class OreRankingResponse {
     final rawRows = json['rows'] as List<dynamic>? ?? const [];
     return OreRankingResponse(
       regionId: (json['region_id'] as num?)?.toInt() ?? 0,
-      secBand: json['sec_band'] as String? ?? 'high',
+      systemSecurity: (json['system_security'] as num?)?.toDouble() ?? 0.0,
+      quarter: json['quarter'] as String? ?? '',
+      notAvailableReason: json['not_available_reason'] as String?,
       noMiningSetup: json['no_mining_setup'] as bool? ?? false,
       rows: rawRows
           .whereType<Map<String, dynamic>>()

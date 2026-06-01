@@ -8,19 +8,15 @@ import 'package:eve_o_provit/api/mining_models.dart';
 
 void main() {
   group('OreRankingRequest.toJson', () {
-    test('maps region_id and sec_band', () {
-      const req = OreRankingRequest(regionId: 0, secBand: 'high');
-      expect(req.toJson(), {'region_id': 0, 'sec_band': 'high'});
+    test('maps region_id and allow_low_sec', () {
+      const req = OreRankingRequest(regionId: 0, allowLowSec: false);
+      expect(req.toJson(), {'region_id': 0, 'allow_low_sec': false});
     });
 
-    test('serializes low and null bands correctly', () {
+    test('allow_low_sec true', () {
       expect(
-        const OreRankingRequest(regionId: 10000002, secBand: 'low').toJson(),
-        {'region_id': 10000002, 'sec_band': 'low'},
-      );
-      expect(
-        const OreRankingRequest(regionId: 10000002, secBand: 'null').toJson(),
-        {'region_id': 10000002, 'sec_band': 'null'},
+        const OreRankingRequest(regionId: 10000002, allowLowSec: true).toJson(),
+        {'region_id': 10000002, 'allow_low_sec': true},
       );
     });
   });
@@ -210,7 +206,8 @@ void main() {
   group('OreRankingResponse.fromJson', () {
     const Map<String, dynamic> sample = {
       'region_id': 10000002,
-      'sec_band': 'high',
+      'system_security': 0.9,
+      'quarter': 'Q2 2026',
       'no_mining_setup': false,
       'rows': [
         {
@@ -246,7 +243,9 @@ void main() {
       final resp = OreRankingResponse.fromJson(sample);
 
       expect(resp.regionId, 10000002);
-      expect(resp.secBand, 'high');
+      expect(resp.systemSecurity, closeTo(0.9, 0.001));
+      expect(resp.quarter, 'Q2 2026');
+      expect(resp.notAvailableReason, isNull);
       expect(resp.noMiningSetup, isFalse);
       expect(resp.isEmpty, isFalse);
       expect(resp.rows, hasLength(2));
@@ -264,7 +263,6 @@ void main() {
     test('no_mining_setup=true is parsed correctly', () {
       final resp = OreRankingResponse.fromJson(const {
         'region_id': 10000002,
-        'sec_band': 'high',
         'no_mining_setup': true,
         'rows': [],
       });
@@ -277,16 +275,28 @@ void main() {
       final resp = OreRankingResponse.fromJson(const {});
 
       expect(resp.regionId, 0);
-      expect(resp.secBand, 'high');
+      expect(resp.systemSecurity, 0.0);
+      expect(resp.quarter, '');
+      expect(resp.notAvailableReason, isNull);
       expect(resp.noMiningSetup, isFalse);
       expect(resp.rows, isEmpty);
+      expect(resp.isEmpty, isTrue);
+    });
+
+    test('not_available_reason is parsed when present', () {
+      final resp = OreRankingResponse.fromJson(const {
+        'region_id': 10000002,
+        'no_mining_setup': false,
+        'not_available_reason': 'Keine Marktdaten verfügbar',
+        'rows': [],
+      });
+      expect(resp.notAvailableReason, 'Keine Marktdaten verfügbar');
       expect(resp.isEmpty, isTrue);
     });
 
     test('empty rows list is a valid "no ores" result', () {
       final resp = OreRankingResponse.fromJson(const {
         'region_id': 10000002,
-        'sec_band': 'null',
         'no_mining_setup': false,
         'rows': [],
       });

@@ -36,15 +36,16 @@ describe("fetchOreRanking", () => {
     const rows = [makeRow(), makeRow({ ore_type_id: 1231, ore_name: "Scordite", best: "raw" })];
     mockJson({
       region_id: 10000002,
-      sec_band: "high",
+      quarter: "caldari",
+      system_security: 0.9,
       no_mining_setup: false,
       rows,
     });
 
-    const result = await fetchOreRanking({ region_id: 0, sec_band: "high" });
+    const result = await fetchOreRanking({ region_id: 0, allow_low_sec: false });
 
     expect(result.region_id).toBe(10000002);
-    expect(result.sec_band).toBe("high");
+    expect(result.quarter).toBe("caldari");
     expect(result.no_mining_setup).toBe(false);
     expect(result.rows).toHaveLength(2);
     expect(result.rows[0].ore_name).toBe("Veldspar");
@@ -61,28 +62,28 @@ describe("fetchOreRanking", () => {
     );
 
     await expect(
-      fetchOreRanking({ region_id: 0, sec_band: "high" }),
+      fetchOreRanking({ region_id: 0, allow_low_sec: false }),
     ).rejects.toThrow(/Failed to fetch ore ranking/);
   });
 
   it("throws on a malformed response (no rows array) instead of returning silently", async () => {
-    mockJson({ region_id: 10000002, sec_band: "high", no_mining_setup: false });
+    mockJson({ region_id: 10000002, quarter: "caldari", system_security: 0.9, no_mining_setup: false });
     // no `rows` key
 
     await expect(
-      fetchOreRanking({ region_id: 0, sec_band: "high" }),
+      fetchOreRanking({ region_id: 0, allow_low_sec: false }),
     ).rejects.toThrow(/rows/);
   });
 
   it("uses POST to /api/v1/mining/ore-ranking with credentials include", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
-        JSON.stringify({ region_id: 10000002, sec_band: "high", no_mining_setup: false, rows: [] }),
+        JSON.stringify({ region_id: 10000002, quarter: "caldari", system_security: 0.9, no_mining_setup: false, rows: [] }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
 
-    await fetchOreRanking({ region_id: 0, sec_band: "high" });
+    await fetchOreRanking({ region_id: 0, allow_low_sec: false });
 
     expect(fetchSpy).toHaveBeenCalledOnce();
     const [url, init] = fetchSpy.mock.calls[0];

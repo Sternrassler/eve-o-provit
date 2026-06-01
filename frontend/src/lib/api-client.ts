@@ -272,7 +272,7 @@ export async function findSellOptions(
  * Rank ores by ISK/hour (raw sell vs reprocess) for the character's current
  * region and the given security band (requires authentication). Rows are
  * returned pre-sorted by best_isk_per_hour descending.
- * @param req - region_id (0 = character's current region) + sec_band
+ * @param req - region_id (0 = character's current region) + allow_low_sec
  */
 export async function fetchOreRanking(
   req: OreRankingRequest

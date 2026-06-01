@@ -20,24 +20,16 @@ import { fetchOreRanking } from "@/lib/api-client";
 import { OreRankingRequest } from "@/types/trading";
 import { Loader2 } from "lucide-react";
 
-type SecBand = "high" | "low" | "null";
-
-const SEC_BAND_LABELS: Record<SecBand, string> = {
-  high: "High-Sec",
-  low: "Low-Sec",
-  null: "Null-Sec",
-};
-
 function MiningPageContent() {
   const { isAuthenticated } = useAuth();
-  const [secBand, setSecBand] = useState<SecBand>("high");
+  const [allowLowSec, setAllowLowSec] = useState(false);
 
   const miningMutation = useMutation({
     mutationFn: (req: OreRankingRequest) => fetchOreRanking(req),
   });
 
   const handleSubmit = () => {
-    miningMutation.mutate({ region_id: 0, sec_band: secBand });
+    miningMutation.mutate({ region_id: 0, allow_low_sec: allowLowSec });
   };
 
   const apiError = miningMutation.isError
@@ -79,19 +71,18 @@ function MiningPageContent() {
           <CurrentShipCard />
 
           <div className="space-y-2">
-            <Label htmlFor="sec-band">Sicherheitsklasse</Label>
+            <Label htmlFor="sec-band">Sicherheits-Bereitschaft</Label>
             <Select
-              value={secBand}
-              onValueChange={(v) => setSecBand(v as SecBand)}
+              value={allowLowSec ? "low" : "high"}
+              onValueChange={(v) => setAllowLowSec(v === "low")}
               disabled={disabled}
             >
               <SelectTrigger id="sec-band">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="high">{SEC_BAND_LABELS.high}</SelectItem>
-                <SelectItem value="low">{SEC_BAND_LABELS.low}</SelectItem>
-                <SelectItem value="null">{SEC_BAND_LABELS.null}</SelectItem>
+                <SelectItem value="high">Nur High-Sec</SelectItem>
+                <SelectItem value="low">High + Low-Sec</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -127,12 +118,32 @@ function MiningPageContent() {
 
           {miningMutation.isSuccess && miningMutation.data && (
             <div className="space-y-4">
+              {(miningMutation.data.quarter || miningMutation.data.system_security != null) && (
+                <p className="text-sm text-muted-foreground">
+                  {[
+                    miningMutation.data.quarter,
+                    miningMutation.data.system_security != null
+                      ? miningMutation.data.system_security.toFixed(1)
+                      : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
               {miningMutation.data.no_mining_setup && (
                 <Alert>
                   <AlertTitle>Kein Mining-Setup</AlertTitle>
                   <AlertDescription>
                     Dein aktuelles Schiff hat kein Mining-Setup — ISK/h kann
                     nicht berechnet werden
+                  </AlertDescription>
+                </Alert>
+              )}
+              {miningMutation.data.not_available_reason && miningMutation.data.rows.length === 0 && (
+                <Alert>
+                  <AlertTitle>Keine Daten verfügbar</AlertTitle>
+                  <AlertDescription>
+                    {miningMutation.data.not_available_reason}
                   </AlertDescription>
                 </Alert>
               )}

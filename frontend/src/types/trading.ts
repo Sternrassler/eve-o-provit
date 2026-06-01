@@ -348,7 +348,7 @@ export interface SellOptionsResponse {
 
 export interface OreRankingRequest {
   region_id: number;
-  sec_band: string; // "high" | "low" | "null"
+  allow_low_sec: boolean;
 }
 
 export interface SellLocation {
@@ -396,7 +396,9 @@ export interface OreRankRow {
 
 export interface OreRankingResponse {
   region_id: number;
-  sec_band: string;
+  system_security?: number;
+  quarter?: string;
+  not_available_reason?: string;
   no_mining_setup: boolean;
   rows: OreRankRow[];
 }
