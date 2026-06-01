@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-06-01
+
 ### Changed
 
 - **Mining-Rechner: system-genaue Erz-Verfügbarkeit + echte Erz-Namen (#164).** Das Ranking zeigt jetzt **nur die Erze, die im aktuellen System wirklich vorkommen** — deterministisch aus Sicherheitsstatus + Empire-Quarter (EVE-University-Regeln), für **High- und Low-Sec**. Vorher lieferte der grobe „high"-Filter fälschlich auch Low-Sec-Erze (Hemorphite/Hedbergite/Kernite/Jaspet), die es im Hi-Sec gar nicht gibt. Neuer **Toggle „Nur High-Sec / High + Low-Sec"** (Bereitschaft; steuert auch das Routing). Erz-Varianten tragen jetzt ihre **echten Client-Namen** (Concentrated/Dense Veldspar, Vivid/Radiant Hemorphite …), data-driven aus CCPs Kompressions-Blueprints; nicht-abbaubare „IV-/0-Grade"-Geistervarianten (kein Blueprint) sind rausgefiltert. **Fail-loud:** kein Standort → Fehler; unbekanntes Quarter → nur quarter-unabhängige Erze; Low-Sec bei „Nur High-Sec" bzw. Null-Sec → Hinweis statt falscher Liste. API-Bruch: `sec_band` → `allow_low_sec`; Web + Flutter umgestellt. Zurückgestellt: Null-Sec (#161), Class K (#162), exakte Belt-Inhalte per Scanner/Manuell (#163).
