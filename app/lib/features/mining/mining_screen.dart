@@ -202,7 +202,8 @@ class _ResultPane extends ConsumerWidget {
               child: Text(
                 'Hinweis: ISK/h berücksichtigt Schiffs-/Skill-Boni und (best-case) '
                 'Erz-Crystals. Zeilen mit ≈ sind Schätzwerte (Schiffs-Bonus oder '
-                'Crystal nicht auflösbar). Roh-vs-Refine-Verdict unberührt.',
+                'Crystal nicht auflösbar). Roh-vs-Refine-Verdict unberührt.'
+                ' ISK/h ist effektiv inkl. Füllen + Flug (ein Zyklus ab deinem System).',
                 style: TextStyle(fontSize: 11, color: Colors.grey),
               ),
             ),
@@ -415,6 +416,7 @@ class _OreRankTile extends StatelessWidget {
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
           child: Text(
+            '${row.effectiveIskPerHour > 0 ? 'eff ${fmtIsk(row.effectiveIskPerHour)} · ' : ''}'
             'm³/h ${fmtVolume(row.miningM3PerHour)} · '
             'roh ${fmtIsk(row.rawIskPerHour)} · '
             'refine ${fmtIsk(row.refineIskPerHour)} · '
@@ -452,6 +454,15 @@ class _OreRankTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (row.cycleMinutes > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              'Zyklus ${row.cycleMinutes.toStringAsFixed(1)} min · ${row.routeJumps} Jumps'
+              '${row.sellSystemName != null ? ' · Verkauf in ${row.sellSystemName}' : ''}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
         _detailLine(
           context,
           'Aufbereiten bei',
@@ -508,7 +519,21 @@ class _OreRankTile extends StatelessWidget {
   }
 
   Widget _rawDetail(BuildContext context) {
-    return _detailLine(context, 'Roh verkaufen bei', _formatSell(row.rawSell));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (row.cycleMinutes > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              'Zyklus ${row.cycleMinutes.toStringAsFixed(1)} min · ${row.routeJumps} Jumps'
+              '${row.sellSystemName != null ? ' · Verkauf in ${row.sellSystemName}' : ''}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        _detailLine(context, 'Roh verkaufen bei', _formatSell(row.rawSell)),
+      ],
+    );
   }
 
   Widget _detailLine(BuildContext context, String label, String value) {

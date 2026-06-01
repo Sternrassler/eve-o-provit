@@ -76,6 +76,9 @@ OreRankingResponse _detailResponse() => const OreRankingResponse(
           bestStationTax: 0.05,
           bestStationName: 'Jita IV - Moon 4 - Caldari Navy Assembly Plant',
           bestStationSystem: 'Jita',
+          effectiveIskPerHour: 950000,
+          cycleMinutes: 12.5,
+          routeJumps: 3,
           materials: [
             RefineMaterial(
               materialTypeId: 34,
@@ -333,5 +336,18 @@ void main() {
     expect(find.byKey(const ValueKey('mining-estimate-1224')), findsOneWidget);
     // Veldspar (1230) is exact → no marker.
     expect(find.byKey(const ValueKey('mining-estimate-1230')), findsNothing);
+  });
+
+  testWidgets('Expanded row shows the cycle line', (tester) async {
+    await _pumpScreen(tester, 1280, notifier: _DetailNotifier.new);
+    await tester.tap(find.byKey(const ValueKey('mining-ore-expand-1230')));
+    await tester.pumpAndSettle();
+    // Scope to the expanded tile to avoid matching the footer hint that also
+    // contains the word "Zyklus".
+    final tileScope = find.ancestor(
+      of: find.textContaining('Zyklus 12.5 min'),
+      matching: find.byKey(const ValueKey('mining-ore-row-1230')),
+    );
+    expect(tileScope, findsOneWidget);
   });
 }

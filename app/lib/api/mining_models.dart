@@ -134,6 +134,12 @@ class OreRankRow {
     this.crystalMultiplier = 1.0,
     this.isEstimate = false,
     this.estimateReason,
+    this.effectiveIskPerHour = 0.0,
+    this.loadVolumeM3 = 0.0,
+    this.fillMinutes = 0.0,
+    this.cycleMinutes = 0.0,
+    this.routeJumps = 0,
+    this.sellSystemName,
   });
 
   /// Backend: `ore_type_id`
@@ -194,6 +200,24 @@ class OreRankRow {
   /// Backend: `estimate_reason` — short reason, present only when [isEstimate].
   final String? estimateReason;
 
+  /// Backend: `effective_isk_per_hour` — ISK/h including fill + travel cycle.
+  final double effectiveIskPerHour;
+
+  /// Backend: `load_volume_m3` — m³ loaded per haul cycle.
+  final double loadVolumeM3;
+
+  /// Backend: `fill_minutes` — minutes to fill the cargo hold.
+  final double fillMinutes;
+
+  /// Backend: `cycle_minutes` — total cycle time in minutes (fill + travel).
+  final double cycleMinutes;
+
+  /// Backend: `route_jumps` — jumps to sell station and back.
+  final int routeJumps;
+
+  /// Backend: `sell_system_name` — nullable; name of the sell system.
+  final String? sellSystemName;
+
   factory OreRankRow.fromJson(Map<String, dynamic> json) {
     final rawMaterials = json['materials'] as List<dynamic>? ?? const [];
     return OreRankRow(
@@ -223,6 +247,12 @@ class OreRankRow {
       crystalMultiplier: (json['crystal_multiplier'] as num?)?.toDouble() ?? 1.0,
       isEstimate: json['is_estimate'] as bool? ?? false,
       estimateReason: json['estimate_reason'] as String?,
+      effectiveIskPerHour: (json['effective_isk_per_hour'] as num?)?.toDouble() ?? 0.0,
+      loadVolumeM3: (json['load_volume_m3'] as num?)?.toDouble() ?? 0.0,
+      fillMinutes: (json['fill_minutes'] as num?)?.toDouble() ?? 0.0,
+      cycleMinutes: (json['cycle_minutes'] as num?)?.toDouble() ?? 0.0,
+      routeJumps: (json['route_jumps'] as num?)?.toInt() ?? 0,
+      sellSystemName: json['sell_system_name'] as String?,
     );
   }
 }
