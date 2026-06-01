@@ -119,6 +119,8 @@ OreRankingResponse _detailResponse() => const OreRankingResponse(
           deltaIskPerHour: 200000,
           bestStationTax: 0.03,
           rawSell: SellLocation(isStructure: true),
+          isEstimate: true,
+          estimateReason: 'Kein Crystal für dieses Erz',
         ),
       ],
     );
@@ -321,5 +323,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Player-Struktur'), findsOneWidget);
+  });
+
+  testWidgets('Estimate rows show the ≈ marker; exact rows do not',
+      (tester) async {
+    await _pumpScreen(tester, 1280, notifier: _DetailNotifier.new);
+
+    // Pyroxeres (1224) is flagged is_estimate → marker present.
+    expect(find.byKey(const ValueKey('mining-estimate-1224')), findsOneWidget);
+    // Veldspar (1230) is exact → no marker.
+    expect(find.byKey(const ValueKey('mining-estimate-1230')), findsNothing);
   });
 }

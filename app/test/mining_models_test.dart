@@ -158,6 +158,26 @@ void main() {
       expect(row.materials, isEmpty);
     });
 
+    test('parses estimate + multiplier fields; defaults to exact', () {
+      final est = OreRankRow.fromJson(const {
+        'ore_type_id': 1228,
+        'ore_name': 'Scordite',
+        'best': 'raw',
+        'is_estimate': true,
+        'estimate_reason': 'Kein Crystal für dieses Erz',
+        'hull_yield_multiplier': 1.495,
+        'crystal_multiplier': 1.0,
+      });
+      expect(est.isEstimate, isTrue);
+      expect(est.estimateReason, 'Kein Crystal für dieses Erz');
+      expect(est.hullYieldMultiplier, closeTo(1.495, 0.001));
+
+      final exact = OreRankRow.fromJson(
+          const {'ore_type_id': 1230, 'ore_name': 'Veldspar', 'best': 'refine'});
+      expect(exact.isEstimate, isFalse);
+      expect(exact.crystalMultiplier, 1.0);
+    });
+
     test('citadel sell location parses is_structure=true', () {
       final row = OreRankRow.fromJson(const {
         'ore_type_id': 1228,

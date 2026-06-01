@@ -200,9 +200,9 @@ class _ResultPane extends ConsumerWidget {
             const Padding(
               padding: EdgeInsets.only(top: 8),
               child: Text(
-                'Hinweis: ISK/h ist eine skills-basierte Untergrenze — Schiffs-Rollenboni '
-                '(Mining Barge/Exhumer) und Erz-Crystals fehlen noch. '
-                'Roh-vs-Refine-Verdict und Ranking sind unberührt.',
+                'Hinweis: ISK/h berücksichtigt Schiffs-/Skill-Boni und (best-case) '
+                'Erz-Crystals. Zeilen mit ≈ sind Schätzwerte (Schiffs-Bonus oder '
+                'Crystal nicht auflösbar). Roh-vs-Refine-Verdict unberührt.',
                 style: TextStyle(fontSize: 11, color: Colors.grey),
               ),
             ),
@@ -394,6 +394,21 @@ class _OreRankTile extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
+            if (row.isEstimate)
+              Padding(
+                key: ValueKey('mining-estimate-${row.oreTypeId}'),
+                padding: const EdgeInsets.only(right: 6),
+                child: Tooltip(
+                  message: row.estimateReason ?? 'Schätzwert',
+                  child: const Text(
+                    '≈',
+                    style: TextStyle(
+                      color: Color(0xFFFFB300),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
             _verdictChip(context, verdictColor, verdictLabel),
           ],
         ),

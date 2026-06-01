@@ -130,6 +130,10 @@ class OreRankRow {
     this.bestStationSystem,
     this.rawSell,
     this.materials = const [],
+    this.hullYieldMultiplier = 1.0,
+    this.crystalMultiplier = 1.0,
+    this.isEstimate = false,
+    this.estimateReason,
   });
 
   /// Backend: `ore_type_id`
@@ -178,6 +182,18 @@ class OreRankRow {
   /// for the raw path (or when the backend omits it).
   final List<RefineMaterial> materials;
 
+  /// Backend: `hull_yield_multiplier` — hull role/skill yield bonus (1.0 = none).
+  final double hullYieldMultiplier;
+
+  /// Backend: `crystal_multiplier` — best-case ore crystal bonus (1.0 = none).
+  final double crystalMultiplier;
+
+  /// Backend: `is_estimate` — true when hull bonus / crystal was not fully resolved.
+  final bool isEstimate;
+
+  /// Backend: `estimate_reason` — short reason, present only when [isEstimate].
+  final String? estimateReason;
+
   factory OreRankRow.fromJson(Map<String, dynamic> json) {
     final rawMaterials = json['materials'] as List<dynamic>? ?? const [];
     return OreRankRow(
@@ -202,6 +218,11 @@ class OreRankRow {
           .whereType<Map<String, dynamic>>()
           .map(RefineMaterial.fromJson)
           .toList(),
+      hullYieldMultiplier:
+          (json['hull_yield_multiplier'] as num?)?.toDouble() ?? 1.0,
+      crystalMultiplier: (json['crystal_multiplier'] as num?)?.toDouble() ?? 1.0,
+      isEstimate: json['is_estimate'] as bool? ?? false,
+      estimateReason: json['estimate_reason'] as String?,
     );
   }
 }
