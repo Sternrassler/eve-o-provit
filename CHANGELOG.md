@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Mining-Rechner: Ranking nach effektiver ISK/h inkl. Haul-Downtime (#159).** Die Erz-Rangliste sortiert jetzt nach der **realistischen** ISK/h, die den Lade-Zyklus einrechnet: Erzraum vollmachen → zum Verkauf bzw. zur Aufbereitung fliegen → dort weiterminen (Einweg-Kette, kein Rückweg). Raw = 1 Etappe (Erz-Verkauf), Refine = 2 Etappen (Reprocess-Station → bestes In-Region-Verkaufs-Hub, das die ISK/h maximiert). Erzraum aus dem aktuellen Schiff (SDE-Attr 1556, sonst Frachtraum), Reisezeit aus Warp/Align des Schiffs, fixer Stopp-Overhead (75 s). Der **Verdict** (roh vs. refine) ergibt sich jetzt aus der höheren effektiven ISK/h; für den Refine-Pfad löst „alle Minerale am besten Einzel-Hub" das frühere „pro Mineral egal wo" ab (Verdict/Ranking können sich dadurch ändern). **Fail-loud:** ist Standort, Schiff-Warp/Align oder eine Route nicht auflösbar, bleibt die Brutto-ISK/h stehen und die Zeile trägt den ≈-Schätzwert-Marker — nie ein stilles „0 Downtime". Web + Flutter. Greedy-1-Schritt ab dem aktuellen System; das volle Optimum (Max-Ratio-Cycle / Tramp-Steamer) ist als Follow-up #158 angelegt.
+
 ## [0.22.0] - 2026-06-01
 
 ### Added
