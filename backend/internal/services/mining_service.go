@@ -206,28 +206,34 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 
 	const oreStopSecs = 75.0 // fixed dock/action overhead per stop (shown in UI)
 
-	// Cycle inputs: origin system, ore-hold capacity, ship warp/align.
-	cycleResolved := true
+	// Cycle inputs: origin system, ore-hold capacity, ship warp/align. When the
+	// hull/fit can't be resolved, oreHoldM3 stays 0 (→ zero effective ISK/h) and
+	// navParams keeps default warp/align — the per-ore haul-downtime degrades
+	// rather than gating on a separate resolved flag.
 	var oreHoldM3 float64
 	if hullResolved && hullTypeID != 0 {
-		if c, found, e := mining.OreHoldCapacity(s.sdeDB, int64(hullTypeID)); e == nil && found {
+		c, found, e := mining.OreHoldCapacity(s.sdeDB, int64(hullTypeID))
+		switch {
+		case e != nil:
+			if s.logger != nil {
+				s.logger.Warn("ore ranking: ore-hold capacity lookup failed", "hullTypeID", hullTypeID, "error", e)
+			}
+		case !found:
+			if s.logger != nil {
+				s.logger.Warn("ore ranking: ore-hold capacity unknown for hull", "hullTypeID", hullTypeID)
+			}
+		default:
 			oreHoldM3 = c
-		} else {
-			cycleResolved = false
 		}
-	} else {
-		cycleResolved = false
 	}
 	navParams := &navigation.NavigationParams{AvoidLowSec: !req.AllowLowSec}
 	if hullResolved && hullTypeID != 0 {
 		if fit, e := s.fitting.GetShipFitting(ctx, characterID, hullTypeID, accessToken); e == nil && fit != nil {
 			ws, at := fit.Bonuses.WarpSpeedAUS, fit.Bonuses.AlignTime
 			navParams.WarpSpeed, navParams.AlignTime = &ws, &at
-		} else {
-			cycleResolved = false
+		} else if e != nil && s.logger != nil {
+			s.logger.Warn("ore ranking: ship fitting lookup failed, using default warp/align", "hullTypeID", hullTypeID, "error", e)
 		}
-	} else {
-		cycleResolved = false
 	}
 	travelMemo := map[travelKey]*navigation.RouteResult{}
 	sysOf := map[int64]int64{} // order location → system, memoised across ores
@@ -237,8 +243,22 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	if err != nil {
 		return nil, err
 	}
+	stationSys := map[int64]int64{}    // stationID → system (reachable only)
+	stationSecs := map[int64]float64{} // stationID → origin→station one-way secs
+	stationJumps := map[int64]int{}    // stationID → origin→station jumps
 	stStandings := make([]StationStanding, 0, len(stations))
 	for _, st := range stations {
+		sysID, e := s.names.GetSystemIDForLocation(ctx, st.StationID)
+		if e != nil {
+			continue // citadel/unresolvable → not reachable
+		}
+		secs, jumps, reachable := s.travelSecs(originSys, sysID, navParams, travelMemo)
+		if !reachable {
+			continue
+		}
+		stationSys[st.StationID] = sysID
+		stationSecs[st.StationID] = secs
+		stationJumps[st.StationID] = jumps
 		stStandings = append(stStandings, StationStanding{
 			StationID: st.StationID,
 			BaseRate:  st.BaseRate,
@@ -264,15 +284,19 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	loc := newLocResolver(s.names)
 	var bestStationName, bestStationSystem string
 	var reprocessSys int64
+	var reprocessSecs float64
+	var reprocessJumps int
+	reprocessAvailable := false
 	if bestStationID != 0 {
+		reprocessSys = stationSys[bestStationID]
+		reprocessSecs = stationSecs[bestStationID]
+		reprocessJumps = stationJumps[bestStationID]
+		reprocessAvailable = true
 		if n, e := s.names.GetStationName(ctx, bestStationID); e == nil && !strings.HasPrefix(n, "Station-") {
 			bestStationName = n
 		}
-		if sysID, e := s.names.GetSystemIDForLocation(ctx, bestStationID); e == nil {
-			reprocessSys = sysID
-			if sn, e2 := s.names.GetSystemName(ctx, sysID); e2 == nil {
-				bestStationSystem = sn
-			}
+		if sn, e := s.names.GetSystemName(ctx, reprocessSys); e == nil {
+			bestStationSystem = sn
 		}
 	}
 
@@ -323,163 +347,169 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 		}
 		oreM3h := m3h * hullMul * crystalMul
 
-		orePrice, oreLoc, oreOK := s.highestBuyOrder(ctx, regionID, int(o.TypeID))
-
-		// Materials: each material's highest buy order → CompareOre input + per-mineral breakdown.
-		mats := make([]MaterialValue, 0, len(o.Materials))
-		breakdown := make([]models.RefineMaterial, 0, len(o.Materials))
-		anyMatPrice := false
-		for _, m := range o.Materials {
-			mp, mLoc, mOK := s.highestBuyOrder(ctx, regionID, int(m.MaterialTypeID))
-			if mOK && mp > 0 {
-				anyMatPrice = true
-			}
-			mats = append(mats, MaterialValue{Qty: m.Quantity, BuyPrice: mp})
-			rm := models.RefineMaterial{
-				MaterialTypeID: m.MaterialTypeID,
-				MaterialName:   s.typeName(ctx, int(m.MaterialTypeID)),
-				EffectiveQty:   int64(math.Floor(float64(m.Quantity) * net)),
-				BuyPrice:       mp,
-			}
-			if mOK {
-				rm.Sell = loc.resolve(ctx, mLoc)
-			}
-			breakdown = append(breakdown, rm)
-		}
-
-		// Skip the ore entirely if NEITHER raw nor refine has any buy-order value.
-		if !oreOK && !anyMatPrice {
-			continue
-		}
-
-		cmp := CompareOre(OreCompareInput{
-			PortionSize:  o.PortionSize,
-			OreVolumeM3:  o.VolumeM3,
-			OreBuyPrice:  orePrice,
-			Materials:    mats,
-			NetYield:     net,
-			StationTake:  stationTax,
-			SalesTaxRate: salesTaxRate,
+		// ---- RAW path (reachability-aware): best reachable ore buy order ----
+		orePrice, oreLoc, _, oreSecs, oreJumps, oreOK :=
+			s.bestReachableBuyOrder(ctx, regionID, int(o.TypeID), originSys, navParams, travelMemo, sysOf)
+		rawCmp := CompareOre(OreCompareInput{
+			PortionSize: o.PortionSize, OreVolumeM3: o.VolumeM3, OreBuyPrice: orePrice,
+			Materials: nil, NetYield: net, StationTake: stationTax, SalesTaxRate: salesTaxRate,
 		})
-
-		row := models.OreRankRow{
-			OreTypeID:           o.TypeID,
-			OreName:             allOres[i].Name, // real client name from ListOres (GetOre returns the raw "-Grade" name)
-			MiningM3PerHour:     oreM3h,
-			RawNetPerM3:         cmp.RawNetPerM3,
-			RefineNetPerM3:      cmp.RefineNetPerM3,
-			Best:                cmp.Best,
-			RawISKPerHour:       oreM3h * cmp.RawNetPerM3,
-			RefineISKPerHour:    oreM3h * cmp.RefineNetPerM3,
-			DeltaISKPerHour:     oreM3h * cmp.DeltaPerM3,
-			BestStationID:       bestStationID,
-			BestStationTax:      stationTax,
-			BestStationName:     bestStationName,
-			BestStationSystem:   bestStationSystem,
-			Materials:           breakdown,
-			HullYieldMultiplier: hullMul,
-			CrystalMultiplier:   crystalMul,
-			IsEstimate:          oreIsEstimate,
-			EstimateReason:      oreEstimateReason,
-		}
-		if oreOK {
-			rs := loc.resolve(ctx, oreLoc)
-			row.RawSell = &rs
-		}
-
-		// ---- Haul-downtime cycle (greedy): raw 1 leg, refine best-hub 2 legs ----
-		rowResolved := cycleResolved && hullResolved
+		// "Reachable" = a sell destination exists under the player's security
+		// preference, independent of mining setup: per-m³ rows must still appear with
+		// no miner fitted (effective ISK/h then stays 0).
+		rawReachable := oreOK
 		var rawEff, rawCycleMin, rawFillMin float64
-		var rawJumps int
-		var rawSellSys int64
-		if rowResolved && oreOK {
-			if sid, e := s.names.GetSystemIDForLocation(ctx, oreLoc); e == nil {
-				rawSellSys = sid
-				if secs, jumps, ok := s.travelSecs(originSys, rawSellSys, navParams, travelMemo); ok {
-					rawEff, rawCycleMin, rawFillMin = mining.EffectiveISKPerHour(oreHoldM3, oreM3h, cmp.RawNetPerM3, secs, oreStopSecs)
-					rawJumps = jumps
-				} else {
-					rowResolved = false
-				}
-			} else {
-				rowResolved = false
-			}
+		if rawReachable && oreM3h > 0 {
+			rawEff, rawCycleMin, rawFillMin =
+				mining.EffectiveISKPerHour(oreHoldM3, oreM3h, rawCmp.RawNetPerM3, oreSecs, oreStopSecs)
 		}
 
-		var refEff, refCycleMin, refFillMin float64
+		// ---- REFINE path: reachable reprocess + best reachable hub ----
+		var refNet, refEff, refCycleMin, refFillMin float64
 		var refJumps int
 		var refSellSysName string
-		// A reprocess station exists but its system didn't resolve → can't route the
-		// refine haul; fail-loud rather than silently publishing a raw-only verdict.
-		if rowResolved && bestStationID != 0 && reprocessSys == 0 {
-			rowResolved = false
-		}
-		if rowResolved && reprocessSys != 0 {
-			o2rSecs, o2rJumps, ok := s.travelSecs(originSys, reprocessSys, navParams, travelMemo)
-			if !ok {
-				rowResolved = false
-			} else {
-				bySys := make(map[int64]map[int64]systemBuy, len(o.Materials)) // mineralType → system → buy
-				candidates := map[int64]bool{}
-				for _, m := range o.Materials {
-					g, e := s.bestBuyBySystem(ctx, regionID, int(m.MaterialTypeID), sysOf)
-					if e != nil {
-						rowResolved = false
-						break
+		var refBreakdown []models.RefineMaterial
+		refineReachable := false
+		if reprocessAvailable {
+			bySys := make(map[int64]map[int64]systemBuy, len(o.Materials))
+			candidates := map[int64]bool{}
+			ok := true
+			for _, m := range o.Materials {
+				g, e := s.bestBuyBySystem(ctx, regionID, int(m.MaterialTypeID), sysOf)
+				if e != nil {
+					if s.logger != nil {
+						s.logger.Warn("ore ranking: mineral market fetch failed", "typeID", m.MaterialTypeID, "error", e)
 					}
-					bySys[m.MaterialTypeID] = g
-					for sysID := range g {
-						candidates[sysID] = true
-					}
+					ok = false
+					break
 				}
-				bestEff := -1.0
+				bySys[m.MaterialTypeID] = g
+				for sysID := range g {
+					candidates[sysID] = true
+				}
+			}
+			if ok {
+				// Pick the best reachable hub by effective ISK/h when mining, else by
+				// per-m³ refine net so the per-m³ column is meaningful with no miner.
+				bestScore := -math.MaxFloat64
 				for sysID := range candidates {
+					hubSecs, hubJumps, reachable := s.travelSecs(reprocessSys, sysID, navParams, travelMemo)
+					if !reachable {
+						continue
+					}
 					mats := make([]MaterialValue, 0, len(o.Materials))
 					for _, m := range o.Materials {
-						price := bySys[m.MaterialTypeID][sysID].price // 0 if absent
-						mats = append(mats, MaterialValue{Qty: m.Quantity, BuyPrice: price})
+						mats = append(mats, MaterialValue{Qty: m.Quantity, BuyPrice: bySys[m.MaterialTypeID][sysID].price})
 					}
 					hubCmp := CompareOre(OreCompareInput{
 						PortionSize: o.PortionSize, OreVolumeM3: o.VolumeM3, OreBuyPrice: orePrice,
 						Materials: mats, NetYield: net, StationTake: stationTax, SalesTaxRate: salesTaxRate,
 					})
-					hubSecs, hubJumps, hok := s.travelSecs(reprocessSys, sysID, navParams, travelMemo)
-					if !hok {
-						continue
+					var eff, cyc, fil float64
+					if oreM3h > 0 {
+						eff, cyc, fil = mining.EffectiveISKPerHour(
+							oreHoldM3, oreM3h, hubCmp.RefineNetPerM3, reprocessSecs+hubSecs, 2*oreStopSecs)
 					}
-					eff, cyc, fil := mining.EffectiveISKPerHour(oreHoldM3, oreM3h, hubCmp.RefineNetPerM3, o2rSecs+hubSecs, 2*oreStopSecs)
-					if eff > bestEff {
-						bestEff, refEff, refCycleMin, refFillMin = eff, eff, cyc, fil
-						refJumps = o2rJumps + hubJumps
+					// Rank by effective ISK/h only when it's well-defined (ore hold
+					// known); otherwise eff is 0 for every hub, so fall back to
+					// per-m³ net for a deterministic, meaningful choice.
+					score := hubCmp.RefineNetPerM3
+					if oreM3h > 0 && oreHoldM3 > 0 {
+						score = eff
+					}
+					if score > bestScore {
+						bestScore = score
+						refNet = hubCmp.RefineNetPerM3
+						refEff, refCycleMin, refFillMin = eff, cyc, fil
+						refJumps = reprocessJumps + hubJumps
 						if sn, e := s.names.GetSystemName(ctx, sysID); e == nil {
 							refSellSysName = sn
 						}
+						// Reset length, keep backing array; the prior winner's
+						// materials in it are intentionally discarded.
+						refBreakdown = refBreakdown[:0]
+						for _, m := range o.Materials {
+							sb := bySys[m.MaterialTypeID][sysID]
+							rm := models.RefineMaterial{
+								MaterialTypeID: m.MaterialTypeID,
+								MaterialName:   s.typeName(ctx, int(m.MaterialTypeID)),
+								EffectiveQty:   int64(math.Floor(float64(m.Quantity) * net)),
+								BuyPrice:       sb.price,
+							}
+							if sb.locationID != 0 {
+								rm.Sell = loc.resolve(ctx, sb.locationID)
+							}
+							refBreakdown = append(refBreakdown, rm)
+						}
+						refineReachable = true
 					}
 				}
 			}
 		}
 
-		if rowResolved && (rawEff > 0 || refEff > 0) {
-			if refEff > rawEff {
-				row.Best = "refine"
-				row.EffectiveISKPerHour, row.CycleMinutes, row.FillMinutes = refEff, refCycleMin, refFillMin
-				row.RouteJumps, row.SellSystemName = refJumps, refSellSysName
-			} else {
-				row.Best = "raw"
-				row.EffectiveISKPerHour, row.CycleMinutes, row.FillMinutes = rawEff, rawCycleMin, rawFillMin
-				row.RouteJumps = rawJumps
-				if row.RawSell != nil {
-					row.SellSystemName = row.RawSell.SystemName
-				}
-			}
-			row.LoadVolumeM3 = oreHoldM3
-		} else if oreM3h > 0 {
-			row.IsEstimate = true
-			if row.EstimateReason == "" {
-				row.EstimateReason = "Haul-Downtime nicht berechenbar"
-			}
+		// Skip the ore entirely if neither path has a reachable destination.
+		if !rawReachable && !refineReachable {
+			continue
 		}
 
+		// ---- Build the row from the available path(s) ----
+		row := models.OreRankRow{
+			OreTypeID:           o.TypeID,
+			OreName:             allOres[i].Name,
+			MiningM3PerHour:     oreM3h,
+			RawNetPerM3:         rawCmp.RawNetPerM3,
+			RefineNetPerM3:      refNet,
+			RawISKPerHour:       oreM3h * rawCmp.RawNetPerM3,
+			RefineISKPerHour:    oreM3h * refNet,
+			BestStationTax:      stationTax,
+			Materials:           refBreakdown,
+			HullYieldMultiplier: hullMul,
+			CrystalMultiplier:   crystalMul,
+			IsEstimate:          oreIsEstimate,
+			EstimateReason:      oreEstimateReason,
+		}
+		// Per-cycle load only means something when actually mining; for a no-miner
+		// row oreHoldM3 may be a generic-cargo fallback, which would mislead.
+		if oreM3h > 0 {
+			row.LoadVolumeM3 = oreHoldM3
+		}
+		if rawReachable {
+			rs := loc.resolve(ctx, oreLoc)
+			row.RawSell = &rs
+		}
+		if refineReachable {
+			row.BestStationID = bestStationID
+			row.BestStationName = bestStationName
+			row.BestStationSystem = bestStationSystem
+		}
+		// Verdict: by effective ISK/h when mining, else by per-m³ refine vs raw net.
+		var refineWins bool
+		switch {
+		case !refineReachable:
+			refineWins = false
+		case !rawReachable:
+			refineWins = true
+		case oreM3h > 0:
+			refineWins = refEff >= rawEff
+		default:
+			refineWins = refNet >= rawCmp.RawNetPerM3
+		}
+		if refineWins {
+			row.Best = "refine"
+			row.EffectiveISKPerHour, row.CycleMinutes, row.FillMinutes = refEff, refCycleMin, refFillMin
+			row.RouteJumps, row.SellSystemName = refJumps, refSellSysName
+		} else {
+			row.Best = "raw"
+			row.EffectiveISKPerHour, row.CycleMinutes, row.FillMinutes = rawEff, rawCycleMin, rawFillMin
+			row.RouteJumps = oreJumps
+			if row.RawSell != nil {
+				row.SellSystemName = row.RawSell.SystemName
+			}
+		}
+		// Delta only means something when both paths are a real choice.
+		if rawReachable && refineReachable {
+			row.DeltaISKPerHour = oreM3h * math.Abs(rawCmp.RawNetPerM3-refNet)
+		}
 		resp.Rows = append(resp.Rows, row)
 	}
 
@@ -501,23 +531,52 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	return resp, nil
 }
 
-// highestBuyPrice returns the highest buy-order price for (region, type), or 0 if none.
-// highestBuyOrder returns the highest buy-order price and its location for (region, type).
-// ok=false when there is no buy order.
-func (s *MiningService) highestBuyOrder(ctx context.Context, regionID, typeID int) (price float64, locationID int64, ok bool) {
+// bestReachableBuyOrder returns the highest buy order for a type whose station's
+// system is reachable from origin under the request's security preference (params).
+// Citadels (location not resolvable to a system) are skipped — they can't anchor a
+// haul leg. Returns the order's price, location, system, one-way travel secs/jumps,
+// and ok=false when no reachable buy order exists. Reuses sysOf (location→system)
+// and travelMemo for memoisation.
+func (s *MiningService) bestReachableBuyOrder(
+	ctx context.Context, regionID, typeID int, origin int64,
+	params *navigation.NavigationParams, travelMemo map[travelKey]*navigation.RouteResult, sysOf map[int64]int64,
+) (price float64, locationID int64, sellSys int64, secs float64, jumps int, ok bool) {
 	orders, err := s.marketRepo.GetMarketOrders(ctx, regionID, typeID)
 	if err != nil {
 		if s.logger != nil {
 			s.logger.Warn("ore ranking: market orders fetch failed", "typeID", typeID, "error", err)
 		}
-		return 0, 0, false
+		return 0, 0, 0, 0, 0, false
 	}
 	for _, o := range orders {
-		if o.IsBuyOrder && (!ok || o.Price > price) {
-			price, locationID, ok = o.Price, o.LocationID, true
+		// Skip strictly-lower prices; equal prices still get a reachability check so
+		// a closer station offering the same price can win the jumps tiebreak below.
+		if !o.IsBuyOrder || o.Price <= 0 || (ok && o.Price < price) {
+			continue
+		}
+		sys, known := sysOf[o.LocationID]
+		if !known {
+			id, e := s.names.GetSystemIDForLocation(ctx, o.LocationID)
+			if e != nil {
+				sysOf[o.LocationID] = 0 // unresolvable (citadel) → unreachable
+				continue
+			}
+			sysOf[o.LocationID] = id
+			sys = id
+		}
+		if sys == 0 {
+			continue
+		}
+		secsTo, jumpsTo, reachable := s.travelSecs(origin, sys, params, travelMemo)
+		if !reachable {
+			continue
+		}
+		// Higher price always wins; on an equal price prefer fewer jumps (less haul).
+		if !ok || o.Price > price || jumpsTo < jumps {
+			price, locationID, sellSys, secs, jumps, ok = o.Price, o.LocationID, sys, secsTo, jumpsTo, true
 		}
 	}
-	return price, locationID, ok
+	return price, locationID, sellSys, secs, jumps, ok
 }
 
 // typeName resolves a type's name (e.g. for a refined mineral), "" on failure.
