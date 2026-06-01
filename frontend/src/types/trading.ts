@@ -385,6 +385,12 @@ export interface OreRankRow {
   crystal_multiplier?: number;
   is_estimate?: boolean;
   estimate_reason?: string;
+  effective_isk_per_hour?: number;
+  load_volume_m3?: number;
+  fill_minutes?: number;
+  cycle_minutes?: number;
+  route_jumps?: number;
+  sell_system_name?: string;
 }
 
 export interface OreRankingResponse {

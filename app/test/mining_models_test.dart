@@ -189,6 +189,22 @@ void main() {
       expect(row.rawSell!.isStructure, isTrue);
       expect(row.rawSell!.stationName, isNull);
     });
+
+    test('parses effective-ISK/h cycle fields; defaults to zero', () {
+      final r = OreRankRow.fromJson(const {
+        'ore_type_id': 1230, 'ore_name': 'Veldspar', 'best': 'refine',
+        'effective_isk_per_hour': 950000, 'cycle_minutes': 12.5,
+        'route_jumps': 3, 'sell_system_name': 'Amarr', 'load_volume_m3': 11500,
+      });
+      expect(r.effectiveIskPerHour, closeTo(950000, 0.1));
+      expect(r.cycleMinutes, closeTo(12.5, 0.01));
+      expect(r.routeJumps, 3);
+      expect(r.sellSystemName, 'Amarr');
+
+      final d = OreRankRow.fromJson(const {'ore_type_id': 1, 'ore_name': 'X', 'best': 'raw'});
+      expect(d.effectiveIskPerHour, 0.0);
+      expect(d.routeJumps, 0);
+    });
   });
 
   group('OreRankingResponse.fromJson', () {

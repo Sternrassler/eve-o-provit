@@ -140,7 +140,7 @@ function MiningPageContent() {
               <p className="text-xs text-muted-foreground">
                 Hinweis: ISK/h berücksichtigt Schiffs-/Skill-Boni und (best-case) Erz-Crystals.
                 Zeilen mit ≈ sind Schätzwerte (Schiffs-Bonus oder Crystal nicht auflösbar). Die
-                Roh-vs-Refine-Entscheidung ist davon unberührt.
+                Roh-vs-Refine-Entscheidung ist davon unberührt. ISK/h ist effektiv inkl. Füllen + Flug zum Verkauf/Reprocess (ein Zyklus ab deinem System).
               </p>
             </div>
           )}

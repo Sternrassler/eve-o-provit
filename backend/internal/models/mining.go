@@ -51,6 +51,13 @@ type OreRankRow struct {
 	CrystalMultiplier   float64 `json:"crystal_multiplier,omitempty"`    // per ore; 1.0 = no crystals used
 	IsEstimate          bool    `json:"is_estimate,omitempty"`           // hull bonus / crystal not fully resolved
 	EstimateReason      string  `json:"estimate_reason,omitempty"`       // short reason, only when IsEstimate
+	// Haul-downtime cycle (effective ISK/h, greedy one cycle from current system):
+	EffectiveISKPerHour float64 `json:"effective_isk_per_hour,omitempty"` // sort key; 0 when not resolvable
+	LoadVolumeM3        float64 `json:"load_volume_m3,omitempty"`         // ore-hold m³ filled per load
+	FillMinutes         float64 `json:"fill_minutes,omitempty"`           // time to fill the hold
+	CycleMinutes        float64 `json:"cycle_minutes,omitempty"`          // fill + legs + stops
+	RouteJumps          int     `json:"route_jumps,omitempty"`            // jumps over the cycle's legs
+	SellSystemName      string  `json:"sell_system_name,omitempty"`       // chosen sell hub (refine) / ore-sell system (raw)
 }
 
 // OreRankingResponse is the ore-ranking result for a region + security band.

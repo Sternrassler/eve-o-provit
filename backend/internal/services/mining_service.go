@@ -10,6 +10,7 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/mining"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/reprocessing"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 )
@@ -21,10 +22,11 @@ type MiningSkillsProvider interface {
 	GetCharacterStandings(ctx context.Context, characterID int, accessToken string) (map[int64]float64, error)
 }
 
-// MiningModulesProvider exposes the active ship's fitted mining module type ids.
-// Subset of FittingServicer, kept narrow for fakeability.
+// MiningModulesProvider exposes the active ship's fitted mining module type ids
+// and the ship's fitting bonuses (warp/align) for the haul-downtime cycle.
 type MiningModulesProvider interface {
 	ActiveShipFittedModuleTypeIDs(ctx context.Context, characterID int, accessToken string) ([]int64, error)
+	GetShipFitting(ctx context.Context, characterID, shipTypeID int, accessToken string) (*FittingData, error)
 }
 
 // ReprocessStationProvider lists a region's NPC reprocessing stations. Abstracted so the
@@ -193,6 +195,40 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 		return nil, err
 	}
 
+	const oreStopSecs = 75.0 // fixed dock/action overhead per stop (shown in UI)
+
+	// Cycle inputs: origin system, ore-hold capacity, ship warp/align.
+	cycleResolved := true
+	var originSys int64
+	if loc, e := s.location.GetCharacterLocation(ctx, characterID, accessToken); e == nil {
+		originSys = loc.SolarSystemID
+	} else {
+		cycleResolved = false
+	}
+	var oreHoldM3 float64
+	if hullResolved && hullTypeID != 0 {
+		if c, found, e := mining.OreHoldCapacity(s.sdeDB, int64(hullTypeID)); e == nil && found {
+			oreHoldM3 = c
+		} else {
+			cycleResolved = false
+		}
+	} else {
+		cycleResolved = false
+	}
+	navParams := &navigation.NavigationParams{AvoidLowSec: req.SecBand == "high"}
+	if hullResolved && hullTypeID != 0 {
+		if fit, e := s.fitting.GetShipFitting(ctx, characterID, hullTypeID, accessToken); e == nil && fit != nil {
+			ws, at := fit.Bonuses.WarpSpeedAUS, fit.Bonuses.AlignTime
+			navParams.WarpSpeed, navParams.AlignTime = &ws, &at
+		} else {
+			cycleResolved = false
+		}
+	} else {
+		cycleResolved = false
+	}
+	travelMemo := map[travelKey]*navigation.RouteResult{}
+	sysOf := map[int64]int64{} // order location → system, memoised across ores
+
 	// 4. Best reprocessing station (lowest tax given the player's owner-corp standing).
 	stations, err := s.stations.GetRegionReprocessStations(ctx, regionID)
 	if err != nil {
@@ -224,11 +260,13 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	// sell-location resolver (memoizes hub stations across ores).
 	loc := newLocResolver(s.names)
 	var bestStationName, bestStationSystem string
+	var reprocessSys int64
 	if bestStationID != 0 {
 		if n, e := s.names.GetStationName(ctx, bestStationID); e == nil && !strings.HasPrefix(n, "Station-") {
 			bestStationName = n
 		}
 		if sysID, e := s.names.GetSystemIDForLocation(ctx, bestStationID); e == nil {
+			reprocessSys = sysID
 			if sn, e2 := s.names.GetSystemName(ctx, sysID); e2 == nil {
 				bestStationSystem = sn
 			}
@@ -345,14 +383,113 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 			rs := loc.resolve(ctx, oreLoc)
 			row.RawSell = &rs
 		}
+
+		// ---- Haul-downtime cycle (greedy): raw 1 leg, refine best-hub 2 legs ----
+		rowResolved := cycleResolved && hullResolved
+		var rawEff, rawCycleMin, rawFillMin float64
+		var rawJumps int
+		var rawSellSys int64
+		if rowResolved && oreOK {
+			if sid, e := s.names.GetSystemIDForLocation(ctx, oreLoc); e == nil {
+				rawSellSys = sid
+				if secs, jumps, ok := s.travelSecs(originSys, rawSellSys, navParams, travelMemo); ok {
+					rawEff, rawCycleMin, rawFillMin = mining.EffectiveISKPerHour(oreHoldM3, oreM3h, cmp.RawNetPerM3, secs, oreStopSecs)
+					rawJumps = jumps
+				} else {
+					rowResolved = false
+				}
+			} else {
+				rowResolved = false
+			}
+		}
+
+		var refEff, refCycleMin, refFillMin float64
+		var refJumps int
+		var refSellSysName string
+		// A reprocess station exists but its system didn't resolve → can't route the
+		// refine haul; fail-loud rather than silently publishing a raw-only verdict.
+		if rowResolved && bestStationID != 0 && reprocessSys == 0 {
+			rowResolved = false
+		}
+		if rowResolved && reprocessSys != 0 {
+			o2rSecs, o2rJumps, ok := s.travelSecs(originSys, reprocessSys, navParams, travelMemo)
+			if !ok {
+				rowResolved = false
+			} else {
+				bySys := make(map[int64]map[int64]systemBuy, len(o.Materials)) // mineralType → system → buy
+				candidates := map[int64]bool{}
+				for _, m := range o.Materials {
+					g, e := s.bestBuyBySystem(ctx, regionID, int(m.MaterialTypeID), sysOf)
+					if e != nil {
+						rowResolved = false
+						break
+					}
+					bySys[m.MaterialTypeID] = g
+					for sysID := range g {
+						candidates[sysID] = true
+					}
+				}
+				bestEff := -1.0
+				for sysID := range candidates {
+					mats := make([]MaterialValue, 0, len(o.Materials))
+					for _, m := range o.Materials {
+						price := bySys[m.MaterialTypeID][sysID].price // 0 if absent
+						mats = append(mats, MaterialValue{Qty: m.Quantity, BuyPrice: price})
+					}
+					hubCmp := CompareOre(OreCompareInput{
+						PortionSize: o.PortionSize, OreVolumeM3: o.VolumeM3, OreBuyPrice: orePrice,
+						Materials: mats, NetYield: net, StationTake: stationTax, SalesTaxRate: salesTaxRate,
+					})
+					hubSecs, hubJumps, hok := s.travelSecs(reprocessSys, sysID, navParams, travelMemo)
+					if !hok {
+						continue
+					}
+					eff, cyc, fil := mining.EffectiveISKPerHour(oreHoldM3, oreM3h, hubCmp.RefineNetPerM3, o2rSecs+hubSecs, 2*oreStopSecs)
+					if eff > bestEff {
+						bestEff, refEff, refCycleMin, refFillMin = eff, eff, cyc, fil
+						refJumps = o2rJumps + hubJumps
+						if sn, e := s.names.GetSystemName(ctx, sysID); e == nil {
+							refSellSysName = sn
+						}
+					}
+				}
+			}
+		}
+
+		if rowResolved && (rawEff > 0 || refEff > 0) {
+			if refEff > rawEff {
+				row.Best = "refine"
+				row.EffectiveISKPerHour, row.CycleMinutes, row.FillMinutes = refEff, refCycleMin, refFillMin
+				row.RouteJumps, row.SellSystemName = refJumps, refSellSysName
+			} else {
+				row.Best = "raw"
+				row.EffectiveISKPerHour, row.CycleMinutes, row.FillMinutes = rawEff, rawCycleMin, rawFillMin
+				row.RouteJumps = rawJumps
+				if row.RawSell != nil {
+					row.SellSystemName = row.RawSell.SystemName
+				}
+			}
+			row.LoadVolumeM3 = oreHoldM3
+		} else if oreM3h > 0 {
+			row.IsEstimate = true
+			if row.EstimateReason == "" {
+				row.EstimateReason = "Haul-Downtime nicht berechenbar"
+			}
+		}
+
 		resp.Rows = append(resp.Rows, row)
 	}
 
 	// 6. Sort: by isk/h when mining, else by per-m³.
+	sortKey := func(r models.OreRankRow) float64 {
+		if r.EffectiveISKPerHour > 0 {
+			return r.EffectiveISKPerHour
+		}
+		return maxFloat(r.RawISKPerHour, r.RefineISKPerHour)
+	}
 	sort.SliceStable(resp.Rows, func(i, j int) bool {
 		if m3h > 0 {
-			return maxFloat(resp.Rows[i].RawISKPerHour, resp.Rows[i].RefineISKPerHour) >
-				maxFloat(resp.Rows[j].RawISKPerHour, resp.Rows[j].RefineISKPerHour)
+			return sortKey(resp.Rows[i]) > sortKey(resp.Rows[j])
 		}
 		return maxFloat(resp.Rows[i].RawNetPerM3, resp.Rows[i].RefineNetPerM3) >
 			maxFloat(resp.Rows[j].RawNetPerM3, resp.Rows[j].RefineNetPerM3)
@@ -393,4 +530,68 @@ func maxFloat(a, b float64) float64 {
 		return a
 	}
 	return b
+}
+
+// travelKey memoises CalculateTravelTime results within one OreRanking request.
+type travelKey struct{ from, to int64 }
+
+// systemBuy is the best buy price for a type in one system, with the order's station.
+type systemBuy struct {
+	price      float64
+	locationID int64
+}
+
+// bestBuyBySystem groups a type's region buy-orders by solar system and keeps the
+// highest price per system (with its station location). Locations that can't be
+// resolved to a system (e.g. citadels) are skipped — they can't anchor a haul leg.
+func (s *MiningService) bestBuyBySystem(ctx context.Context, regionID, typeID int, sysOf map[int64]int64) (map[int64]systemBuy, error) {
+	orders, err := s.marketRepo.GetMarketOrders(ctx, regionID, typeID)
+	if err != nil {
+		return nil, err
+	}
+	out := map[int64]systemBuy{}
+	for _, o := range orders {
+		if !o.IsBuyOrder || o.Price <= 0 {
+			continue
+		}
+		sysID, ok := sysOf[o.LocationID]
+		if !ok {
+			id, e := s.names.GetSystemIDForLocation(ctx, o.LocationID)
+			if e != nil {
+				sysOf[o.LocationID] = 0 // memoise "unresolvable"
+				continue
+			}
+			sysOf[o.LocationID] = id
+			sysID = id
+		}
+		if sysID == 0 {
+			continue
+		}
+		if cur, exists := out[sysID]; !exists || o.Price > cur.price {
+			out[sysID] = systemBuy{price: o.Price, locationID: o.LocationID}
+		}
+	}
+	return out, nil
+}
+
+// travelSecs returns one-way travel seconds + jumps between two systems, memoised.
+// resolved=false when the route can't be computed (the caller marks an estimate).
+func (s *MiningService) travelSecs(from, to int64, params *navigation.NavigationParams, memo map[travelKey]*navigation.RouteResult) (secs float64, jumps int, resolved bool) {
+	if from == to {
+		return 0, 0, true
+	}
+	key := travelKey{from, to}
+	if r, ok := memo[key]; ok {
+		if r == nil {
+			return 0, 0, false
+		}
+		return r.TotalSeconds, r.Jumps, true
+	}
+	r, err := navigation.CalculateTravelTime(s.sdeDB, from, to, params, false)
+	if err != nil {
+		memo[key] = nil
+		return 0, 0, false
+	}
+	memo[key] = r
+	return r.TotalSeconds, r.Jumps, true
 }

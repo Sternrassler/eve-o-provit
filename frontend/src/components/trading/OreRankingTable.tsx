@@ -62,7 +62,7 @@ export function OreRankingTable({ rows }: OreRankingTableProps) {
                 <th scope="col" className="px-4 py-3 text-right font-medium">ISK/h refine</th>
                 <th scope="col" className="px-4 py-3 font-medium">Verdict</th>
                 <th scope="col" className="px-4 py-3 text-right font-medium">Steuer</th>
-                <th scope="col" className="px-4 py-3 text-right font-medium">Δ ISK/h</th>
+                <th scope="col" className="px-4 py-3 text-right font-medium">ISK/h eff.</th>
               </tr>
             </thead>
             <tbody>
@@ -123,8 +123,8 @@ function OreRankRow({ row }: { row: OreRankRow }) {
         <td className="px-4 py-3 text-right">{formatISK(row.refine_isk_per_hour)}</td>
         <td className={cn("px-4 py-3", verdictClass)}>{verdictText}</td>
         <td className="px-4 py-3 text-right">{(row.best_station_tax * 100).toFixed(1)}%</td>
-        <td className="px-4 py-3 text-right font-medium text-green-600 dark:text-green-400">
-          {formatISK(row.delta_isk_per_hour)}
+        <td data-testid="ore-effective-isk" className="px-4 py-3 text-right font-medium text-green-600 dark:text-green-400">
+          {formatISK(row.effective_isk_per_hour ?? row.delta_isk_per_hour)}
         </td>
       </tr>
       {open && (
@@ -132,6 +132,12 @@ function OreRankRow({ row }: { row: OreRankRow }) {
           <td colSpan={7} className="px-4 py-3">
             {isRefine ? (
               <div className="space-y-2">
+                {row.cycle_minutes != null && (
+                  <div className="mb-2 text-xs text-muted-foreground">
+                    Zyklus {row.cycle_minutes.toFixed(1)} min · {row.route_jumps ?? 0} Jumps
+                    {row.sell_system_name ? ` · Verkauf in ${row.sell_system_name}` : ""}
+                  </div>
+                )}
                 <div className="text-sm">
                   <span className="text-muted-foreground">Aufbereiten bei: </span>
                   {formatStation(row.best_station_name, row.best_station_system)}
@@ -160,6 +166,12 @@ function OreRankRow({ row }: { row: OreRankRow }) {
               </div>
             ) : (
               <div className="text-sm">
+                {row.cycle_minutes != null && (
+                  <div className="mb-2 text-xs text-muted-foreground">
+                    Zyklus {row.cycle_minutes.toFixed(1)} min · {row.route_jumps ?? 0} Jumps
+                    {row.sell_system_name ? ` · Verkauf in ${row.sell_system_name}` : ""}
+                  </div>
+                )}
                 <span className="text-muted-foreground">Roh verkaufen bei: </span>
                 {formatSell(row.raw_sell)}
               </div>
