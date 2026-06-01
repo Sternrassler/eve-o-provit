@@ -34,9 +34,12 @@ Er drückt die **Bereitschaft** aus, in Low-Sec zu operieren:
 
 Der Toggle steuert `avoidLowSec` im Routing (Feature #2: `avoidLowSec = !allowLow`).
 
-**Backward-compatible API:** Das Request-Feld `sec_band` bleibt; interpretiert als
-`allowLow := sec_band != "high"`. Die installierte Flutter-App (sendet
-"high"/"low"/"null") funktioniert unverändert; das Web relabelt nur den Regler.
+**Sauberer Neuaufbau (keine Rückwärtskompatibilität nötig):** Das alte
+`sec_band`-Feld (high/low/null) entfällt. `OreRankingRequest` bekommt stattdessen
+`allow_low_sec bool` (`allowLow`). **Web und Flutter** ersetzen den High/Low/Null-
+Radio durch den High-only/High+Low-Toggle; die Flutter-APK wird neu gebaut + auf
+dem Tablet installiert (Flutter ist betroffen). `region_id` bleibt (0 = aktuelles
+System); das Erz-Set richtet sich immer nach dem aktuellen System.
 
 ---
 
@@ -116,18 +119,20 @@ Effekt: nach Rename+Filter trägt keine Belt-Zeile mehr ein „-Grade".
 - `backend/pkg/evedb/reprocessing/reprocessing.go`:
   - `ListOres` resolved Display-Namen via Blueprint-Map und filtert nicht-benennbare
     „-Grade"-Erze (§5).
+- `backend/internal/models/mining.go`: `OreRankingRequest` — `SecBand` raus,
+  `AllowLowSec bool` (`json:"allow_low_sec"`) rein.
 - `backend/internal/services/mining_service.go`:
   - Aktuelles System (bereits via `GetCharacterLocation` vorhanden) →
-    `SystemQuarterAndSec` → `AvailableOreGroups(quarter, sec, allowLow)` **ersetzt**
-    `secBandOreGroups` für die Erz-Auswahl. `allowLow := req.SecBand != "high"`.
-  - `avoidLowSec := !allowLow` (Routing, wie Feature #2).
-- `backend/internal/services/ore_secband.go`: die alte band-basierte Map wird vom
-  neuen Pfad ersetzt (für High/Low). Sie kann als Fallback für den (noch nicht
-  umgestellten) Null-Pfad bleiben oder entfernt werden, falls ungenutzt.
+    `SystemQuarterAndSec` → `AvailableOreGroups(quarter, sec, req.AllowLowSec)`
+    **ersetzt** `secBandOreGroups` für die Erz-Auswahl.
+  - `avoidLowSec := !req.AllowLowSec` (Routing, wie Feature #2).
+- `backend/internal/services/ore_secband.go`: **entfällt** (alte band-basierte Map
+  wird vollständig durch den neuen Pfad ersetzt).
 
-Web/Flutter: keine Pflicht-Änderung (Namen + Erz-Set kommen aus der API). Das Web
-relabelt den Regler optional zu „High-only / High+Low" (kosmetisch, eigener
-kleiner Schritt im Plan).
+**Web** (`OreRankingRequest`-Typ + Mining-Seite): Regler → Toggle
+„High-only / High+Low" (sendet `allow_low_sec`).
+**Flutter** (`OreRankingRequest`-DTO + Mining-Screen): gleicher Toggle; sendet
+`allow_low_sec`. **APK neu bauen + auf Tablet installieren.**
 
 ---
 
@@ -163,7 +168,7 @@ kleiner Schritt im Plan).
 **`internal/services/mining_service_test.go`:**
 - Mit aktuellem System Jita (Fake) → nur Hi-Sec-Caldari-Erze im Ranking
   (Veldspar vorhanden, Hemorphite/Hedbergite **nicht**).
-- `allowLow` aus `sec_band` korrekt abgeleitet; `avoidLowSec` entsprechend.
+- `req.AllowLowSec=false` → `avoidLowSec=true`; `=true` → `avoidLowSec=false`.
 
 ---
 
@@ -171,9 +176,12 @@ kleiner Schritt im Plan).
 
 - `backend/pkg/evedb/mining/availability.go` (+ test) — neu.
 - `backend/pkg/evedb/reprocessing/reprocessing.go` (+ test) — Rename + Filter.
-- `backend/internal/services/mining_service.go` — Erz-Set aus System + allowLow.
-- `backend/internal/services/ore_secband.go` — ersetzt/zurückgebaut.
-- `frontend/src/components/.../mining` Regler-Label (kosmetisch, optional).
+- `backend/internal/models/mining.go` — `OreRankingRequest`: `AllowLowSec bool`.
+- `backend/internal/services/mining_service.go` — Erz-Set aus System + AllowLowSec.
+- `backend/internal/services/ore_secband.go` — **entfernt**.
+- `frontend/src/types/trading.ts` + Mining-Seite/Request — Toggle.
+- `app/lib/api/mining_models.dart` (`OreRankingRequest`) + `mining_screen.dart` —
+  Toggle; **APK-Rebuild + Tablet-Install**.
 
 ---
 
