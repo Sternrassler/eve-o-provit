@@ -410,8 +410,11 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 						eff, cyc, fil = mining.EffectiveISKPerHour(
 							oreHoldM3, oreM3h, hubCmp.RefineNetPerM3, reprocessSecs+hubSecs, 2*oreStopSecs)
 					}
+					// Rank by effective ISK/h only when it's well-defined (ore hold
+					// known); otherwise eff is 0 for every hub, so fall back to
+					// per-m³ net for a deterministic, meaningful choice.
 					score := hubCmp.RefineNetPerM3
-					if oreM3h > 0 {
+					if oreM3h > 0 && oreHoldM3 > 0 {
 						score = eff
 					}
 					if score > bestScore {
@@ -422,6 +425,8 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 						if sn, e := s.names.GetSystemName(ctx, sysID); e == nil {
 							refSellSysName = sn
 						}
+						// Reset length, keep backing array; the prior winner's
+						// materials in it are intentionally discarded.
 						refBreakdown = refBreakdown[:0]
 						for _, m := range o.Materials {
 							sb := bySys[m.MaterialTypeID][sysID]
@@ -497,7 +502,10 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 				row.SellSystemName = row.RawSell.SystemName
 			}
 		}
-		row.DeltaISKPerHour = oreM3h * math.Abs(rawCmp.RawNetPerM3-refNet)
+		// Delta only means something when both paths are a real choice.
+		if rawReachable && refineReachable {
+			row.DeltaISKPerHour = oreM3h * math.Abs(rawCmp.RawNetPerM3-refNet)
+		}
 		resp.Rows = append(resp.Rows, row)
 	}
 
@@ -537,7 +545,9 @@ func (s *MiningService) bestReachableBuyOrder(
 		return 0, 0, 0, 0, 0, false
 	}
 	for _, o := range orders {
-		if !o.IsBuyOrder || o.Price <= 0 || (ok && o.Price <= price) {
+		// Skip strictly-lower prices; equal prices still get a reachability check so
+		// a closer station offering the same price can win the jumps tiebreak below.
+		if !o.IsBuyOrder || o.Price <= 0 || (ok && o.Price < price) {
 			continue
 		}
 		sys, known := sysOf[o.LocationID]
@@ -557,7 +567,10 @@ func (s *MiningService) bestReachableBuyOrder(
 		if !reachable {
 			continue
 		}
-		price, locationID, sellSys, secs, jumps, ok = o.Price, o.LocationID, sys, secsTo, jumpsTo, true
+		// Higher price always wins; on an equal price prefer fewer jumps (less haul).
+		if !ok || o.Price > price || jumpsTo < jumps {
+			price, locationID, sellSys, secs, jumps, ok = o.Price, o.LocationID, sys, secsTo, jumpsTo, true
+		}
 	}
 	return price, locationID, sellSys, secs, jumps, ok
 }
