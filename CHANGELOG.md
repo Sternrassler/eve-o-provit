@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Mining-Rechner: Erz-Varianten zeigen In-Game-Namen + unsere Übersetzung (#167).** Varianten werden jetzt als **„Veldspar II-Grade (Concentrated)"** angezeigt — der **In-Game-Name** (den der EVE-Client zeigt) plus unser unterscheidendes Adjektiv in Klammern. Vorher zeigte die App nur den abgeleiteten Client-Namen („Concentrated Veldspar"), was sich nicht mit dem Übersichts-/Marktfenster im Spiel abgleichen ließ. Das Adjektiv ist das führende Wort des Kompressions-Blueprint-Namens; Basis-Erze (ohne „-Grade") bleiben unverändert. Reine Anzeige — Erz-Verfügbarkeit/Banding läuft über die GroupID, nicht den Namen. Backend-only (Web + Flutter rendern das Namensfeld unverändert).
+
 ## [0.25.2] - 2026-06-01
 
 ### Fixed
