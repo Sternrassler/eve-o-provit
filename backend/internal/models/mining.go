@@ -15,6 +15,7 @@ type SellLocation struct {
 	StationName string `json:"station_name,omitempty"`
 	SystemName  string `json:"system_name,omitempty"`
 	IsStructure bool   `json:"is_structure"`
+	LocationID  int64  `json:"location_id,omitempty"` // station/structure id — in-game waypoint target
 }
 
 // RefineMaterial is one reprocessing output mineral with where to sell it.

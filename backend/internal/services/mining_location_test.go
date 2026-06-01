@@ -48,9 +48,15 @@ func TestResolveSellLocation(t *testing.T) {
 	if npc.StationName != "Caldari Navy Assembly Plant" || npc.SystemName != "Jita" {
 		t.Fatalf("npc resolve: %+v", npc)
 	}
+	if npc.LocationID != 60003760 {
+		t.Errorf("NPC LocationID: got %d, want 60003760", npc.LocationID)
+	}
 
 	cit := r.resolve(ctx, 1_035_000_000_001) // citadel id ≥ 1e12
 	if !cit.IsStructure || cit.StationName != "" || cit.SystemName != "" {
 		t.Fatalf("citadel should resolve to structure-only: %+v", cit)
+	}
+	if cit.LocationID != 1_035_000_000_001 {
+		t.Errorf("citadel LocationID: got %d, want 1035000000001", cit.LocationID)
 	}
 }
