@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -104,29 +105,37 @@ func NewMiningService(
 
 // OreRanking computes the raw-vs-refine ore ranking for the request's region + security band.
 func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessToken string, req models.OreRankingRequest) (*models.OreRankingResponse, error) {
-	// 1. Resolve region (request or current location).
+	// 1. Resolve the current system (origin for ore set + region + routing).
+	curLoc, err := s.location.GetCharacterLocation(ctx, characterID, accessToken)
+	if err != nil {
+		return nil, fmt.Errorf("current location unavailable: %w", err)
+	}
+	originSys := curLoc.SolarSystemID
+
 	regionID := req.RegionID
 	if regionID <= 0 {
-		loc, err := s.location.GetCharacterLocation(ctx, characterID, accessToken)
-		if err != nil {
-			return nil, err
-		}
-		r, err := s.region.GetRegionIDForSystem(ctx, loc.SolarSystemID)
+		r, err := s.region.GetRegionIDForSystem(ctx, originSys)
 		if err != nil {
 			return nil, err
 		}
 		regionID = r
 	}
 
+	quarter, sec, err := mining.SystemQuarterAndSec(s.sdeDB, originSys)
+	if err != nil {
+		return nil, fmt.Errorf("system ore class: %w", err)
+	}
 	resp := &models.OreRankingResponse{
-		RegionID: regionID,
-		SecBand:  req.SecBand,
-		Rows:     []models.OreRankRow{},
+		RegionID:       regionID,
+		SystemSecurity: math.Round(sec*10) / 10,
+		Quarter:        quarter,
+		Rows:           []models.OreRankRow{},
 	}
 
-	// 2. Ore set for the band.
-	bandGroups := secBandOreGroups(req.SecBand)
+	// 2. Ore set that actually spawns in this system (deterministic).
+	bandGroups := mining.AvailableOreGroups(quarter, sec, req.AllowLowSec)
 	if len(bandGroups) == 0 {
+		resp.NotAvailableReason = "In diesem System sind mit der aktuellen Auswahl keine abbaubaren Erze verfügbar (Low-Sec? Null-Sec?)."
 		return resp, nil
 	}
 	allOres, err := reprocessing.ListOres(s.sdeDB)
@@ -199,12 +208,6 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 
 	// Cycle inputs: origin system, ore-hold capacity, ship warp/align.
 	cycleResolved := true
-	var originSys int64
-	if loc, e := s.location.GetCharacterLocation(ctx, characterID, accessToken); e == nil {
-		originSys = loc.SolarSystemID
-	} else {
-		cycleResolved = false
-	}
 	var oreHoldM3 float64
 	if hullResolved && hullTypeID != 0 {
 		if c, found, e := mining.OreHoldCapacity(s.sdeDB, int64(hullTypeID)); e == nil && found {
@@ -215,7 +218,7 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	} else {
 		cycleResolved = false
 	}
-	navParams := &navigation.NavigationParams{AvoidLowSec: req.SecBand == "high"}
+	navParams := &navigation.NavigationParams{AvoidLowSec: !req.AllowLowSec}
 	if hullResolved && hullTypeID != 0 {
 		if fit, e := s.fitting.GetShipFitting(ctx, characterID, hullTypeID, accessToken); e == nil && fit != nil {
 			ws, at := fit.Bonuses.WarpSpeedAUS, fit.Bonuses.AlignTime

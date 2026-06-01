@@ -147,8 +147,8 @@ func TestMiningService_OreRanking_Veldspar(t *testing.T) {
 	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
 
 	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
-		RegionID: 10000002,
-		SecBand:  "high",
+		RegionID:    10000002,
+		AllowLowSec: false,
 	})
 	if err != nil {
 		t.Fatalf("OreRanking error: %v", err)
@@ -281,8 +281,8 @@ func TestMiningService_OreRanking_NoMiningSetup(t *testing.T) {
 	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
 
 	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
-		RegionID: 10000002,
-		SecBand:  "high",
+		RegionID:    10000002,
+		AllowLowSec: false,
 	})
 	if err != nil {
 		t.Fatalf("OreRanking error: %v", err)
@@ -324,7 +324,7 @@ func TestMiningService_OreRanking_EstimateWhenShipUnknown(t *testing.T) {
 	loc := fakeMiningLocation{shipErr: fmt.Errorf("esi down")}
 	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
 
-	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{RegionID: 10000002, SecBand: "high"})
+	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{RegionID: 10000002, AllowLowSec: false})
 	if err != nil {
 		t.Fatalf("OreRanking error: %v", err)
 	}

@@ -1,11 +1,11 @@
 package models
 
 // OreRankingRequest is the input for the ore-ranking endpoint. RegionID <= 0 means
-// "use the character's current region". SecBand filters the ore set to a security band
-// ("high" | "low" | "null"); empty/unknown band yields no ores.
+// "use the character's current region". AllowLowSec controls whether low-sec ores
+// are included in the ranking (true = willing to operate in low-sec too).
 type OreRankingRequest struct {
-	RegionID int    `json:"region_id"`
-	SecBand  string `json:"sec_band"`
+	RegionID    int  `json:"region_id"`
+	AllowLowSec bool `json:"allow_low_sec"` // true = willing to operate in low-sec too
 }
 
 // SellLocation describes where a market order sits. NPC stations resolve to a name +
@@ -61,12 +61,14 @@ type OreRankRow struct {
 	SellSystemName      string  `json:"sell_system_name,omitempty"`       // chosen sell hub (refine) / ore-sell system (raw)
 }
 
-// OreRankingResponse is the ore-ranking result for a region + security band.
+// OreRankingResponse is the ore-ranking result for a region + current system context.
 // NoMiningSetup is true when the active ship has no mining modules (per-m³ values are
 // still populated; isk/h is 0). Rows is always non-nil (never JSON null).
 type OreRankingResponse struct {
-	RegionID      int          `json:"region_id"`
-	SecBand       string       `json:"sec_band"`
-	NoMiningSetup bool         `json:"no_mining_setup"`
-	Rows          []OreRankRow `json:"rows"`
+	RegionID           int          `json:"region_id"`
+	SystemSecurity     float64      `json:"system_security,omitempty"` // current system, displayed sec
+	Quarter            string       `json:"quarter,omitempty"`         // amarr|caldari|gallente|minmatar|""
+	NoMiningSetup      bool         `json:"no_mining_setup"`
+	NotAvailableReason string       `json:"not_available_reason,omitempty"` // set when no ores apply here
+	Rows               []OreRankRow `json:"rows"`
 }
