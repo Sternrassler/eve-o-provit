@@ -153,6 +153,24 @@ describe("OreRankingTable", () => {
     ).toBeInTheDocument();
   });
 
+  it("marks an estimate row and omits the marker on an exact row", () => {
+    const mixed: OreRankRow[] = [
+      makeRow({ ore_type_id: 1230, ore_name: "Veldspar", is_estimate: false, hull_yield_multiplier: 1.495 }),
+      makeRow({ ore_type_id: 1228, ore_name: "Scordite", is_estimate: true, estimate_reason: "Kein Crystal für dieses Erz" }),
+    ];
+    render(<OreRankingTable rows={mixed} />);
+
+    const est = screen
+      .getAllByTestId("ore-ranking-row")
+      .find((r) => r.getAttribute("data-ore-type-id") === "1228")!;
+    expect(within(est).getByTestId("ore-estimate-badge")).toBeInTheDocument();
+
+    const exact = screen
+      .getAllByTestId("ore-ranking-row")
+      .find((r) => r.getAttribute("data-ore-type-id") === "1230")!;
+    expect(within(exact).queryByTestId("ore-estimate-badge")).not.toBeInTheDocument();
+  });
+
   it("renders 'Player-Structure' for a sell location inside a citadel", () => {
     const structureRows: OreRankRow[] = [
       makeRow({

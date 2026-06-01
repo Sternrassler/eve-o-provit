@@ -38,9 +38,11 @@ type MarketBuyProvider interface {
 	GetMarketOrders(ctx context.Context, regionID, typeID int) ([]database.MarketOrder, error)
 }
 
-// MiningLocationProvider resolves the character's current location (for region fallback).
+// MiningLocationProvider resolves the character's current location (for region fallback)
+// and active ship (for the hull mining-yield bonus). Implemented by *CharacterHelper.
 type MiningLocationProvider interface {
 	GetCharacterLocation(ctx context.Context, characterID int, accessToken string) (*CharacterLocation, error)
+	GetActiveShipTypeID(ctx context.Context, characterID int, accessToken string) (int, error)
 }
 
 // MiningRegionProvider resolves a solar system's region id (for region fallback).
@@ -166,6 +168,31 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 		resp.NoMiningSetup = true
 	}
 
+	// Hull ore-mining-yield bonus (role + per-skill-level), applied to every ore.
+	// hullResolved starts false: if the active ship can't be resolved it stays false,
+	// so rows are marked estimate rather than assuming "no bonus" (fail-loud).
+	hullMul := 1.0
+	hullResolved := false
+	hullTypeID, shipErr := s.location.GetActiveShipTypeID(ctx, characterID, accessToken)
+	if shipErr != nil {
+		if s.logger != nil {
+			s.logger.Warn("ore ranking: active ship unavailable for hull bonus", "error", shipErr)
+		}
+	} else {
+		hm, resolved, err := mining.HullMiningYieldMultiplier(s.sdeDB, int64(hullTypeID), skills.SkillLevels)
+		if err != nil {
+			return nil, err
+		}
+		hullMul = hm
+		hullResolved = resolved
+	}
+
+	// Best-case T2 ore crystals apply only if a crystal-capable miner is fitted.
+	crystalCapable, err := mining.CrystalCapable(s.sdeDB, moduleIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	// 4. Best reprocessing station (lowest tax given the player's owner-corp standing).
 	stations, err := s.stations.GetRegionReprocessStations(ctx, regionID)
 	if err != nil {
@@ -231,6 +258,30 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 			OreProcessing:          skills.OreProcessing[o.GroupID],
 		})
 
+		// Per-ore best-case crystal multiplier (1.0 when no crystal-capable miner).
+		crystalMul := 1.0
+		oreIsEstimate := !hullResolved
+		oreEstimateReason := ""
+		if !hullResolved {
+			oreEstimateReason = "Schiffs-Bonus nicht auflösbar"
+		}
+		if crystalCapable {
+			cm, found, cErr := mining.OreCrystalMultiplierT2(s.sdeDB, o.GroupID)
+			if cErr != nil {
+				return nil, cErr
+			}
+			if found {
+				crystalMul = cm
+			} else {
+				// Crystal-capable setup but no crystal for this ore → estimate, never silent 1.0.
+				oreIsEstimate = true
+				if oreEstimateReason == "" {
+					oreEstimateReason = "Kein Crystal für dieses Erz"
+				}
+			}
+		}
+		oreM3h := m3h * hullMul * crystalMul
+
 		orePrice, oreLoc, oreOK := s.highestBuyOrder(ctx, regionID, int(o.TypeID))
 
 		// Materials: each material's highest buy order → CompareOre input + per-mineral breakdown.
@@ -271,20 +322,24 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 		})
 
 		row := models.OreRankRow{
-			OreTypeID:         o.TypeID,
-			OreName:           o.Name,
-			MiningM3PerHour:   m3h,
-			RawNetPerM3:       cmp.RawNetPerM3,
-			RefineNetPerM3:    cmp.RefineNetPerM3,
-			Best:              cmp.Best,
-			RawISKPerHour:     m3h * cmp.RawNetPerM3,
-			RefineISKPerHour:  m3h * cmp.RefineNetPerM3,
-			DeltaISKPerHour:   m3h * cmp.DeltaPerM3,
-			BestStationID:     bestStationID,
-			BestStationTax:    stationTax,
-			BestStationName:   bestStationName,
-			BestStationSystem: bestStationSystem,
-			Materials:         breakdown,
+			OreTypeID:           o.TypeID,
+			OreName:             o.Name,
+			MiningM3PerHour:     oreM3h,
+			RawNetPerM3:         cmp.RawNetPerM3,
+			RefineNetPerM3:      cmp.RefineNetPerM3,
+			Best:                cmp.Best,
+			RawISKPerHour:       oreM3h * cmp.RawNetPerM3,
+			RefineISKPerHour:    oreM3h * cmp.RefineNetPerM3,
+			DeltaISKPerHour:     oreM3h * cmp.DeltaPerM3,
+			BestStationID:       bestStationID,
+			BestStationTax:      stationTax,
+			BestStationName:     bestStationName,
+			BestStationSystem:   bestStationSystem,
+			Materials:           breakdown,
+			HullYieldMultiplier: hullMul,
+			CrystalMultiplier:   crystalMul,
+			IsEstimate:          oreIsEstimate,
+			EstimateReason:      oreEstimateReason,
 		}
 		if oreOK {
 			rs := loc.resolve(ctx, oreLoc)

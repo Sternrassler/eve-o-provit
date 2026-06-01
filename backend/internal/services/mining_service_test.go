@@ -87,6 +87,21 @@ func (f *fakeMiningSkillsProvider) GetCharacterStandings(_ context.Context, _ in
 	return f.standings, nil
 }
 
+// fakeMiningLocation implements MiningLocationProvider: a canned active-ship type id
+// (for the hull mining-yield bonus) and an optional error to exercise the fail-loud path.
+type fakeMiningLocation struct {
+	shipTypeID int
+	shipErr    error
+}
+
+func (f fakeMiningLocation) GetCharacterLocation(_ context.Context, _ int, _ string) (*CharacterLocation, error) {
+	return &CharacterLocation{}, nil
+}
+
+func (f fakeMiningLocation) GetActiveShipTypeID(_ context.Context, _ int, _ string) (int, error) {
+	return f.shipTypeID, f.shipErr
+}
+
 // --- Test ---------------------------------------------------------------
 
 const (
@@ -111,7 +126,11 @@ func TestMiningService_OreRanking_Veldspar(t *testing.T) {
 	}}
 
 	skills := &fakeMiningSkillsProvider{
-		skills:    &MiningReprocessingSkills{OreProcessing: map[int64]int{}}, // all 0
+		// Reprocessing skills all 0; Mining Barge V + Exhumers V so the Hulk hull resolves.
+		skills: &MiningReprocessingSkills{
+			OreProcessing: map[int64]int{},
+			SkillLevels:   map[int64]int{17940: 5, 22551: 5},
+		},
 		standings: map[int64]float64{},
 	}
 	fitting := &fakeMiningModules{ids: []int64{stripMinerITypeID}}
@@ -119,7 +138,9 @@ func TestMiningService_OreRanking_Veldspar(t *testing.T) {
 		{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
 	}}
 
-	svc := NewMiningService(sdeDB, stations, market, skills, fitting, nil, nil, fakeMiningNames{}, logger.NewNoop())
+	// Active ship = Hulk (22544): miningBarge+exhumers bonus at V/V → hullMul 1.495.
+	loc := fakeMiningLocation{shipTypeID: 22544}
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
 
 	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
 		RegionID: 10000002,
@@ -169,16 +190,27 @@ func TestMiningService_OreRanking_Veldspar(t *testing.T) {
 		t.Errorf("Best: got %q, want %q", row.Best, want.Best)
 	}
 
-	// isk/h = m3h × per-m³. Strip Miner I: 150 m³ / 45 s = 12000 m³/h at zero skills.
-	const wantM3H = 150.0 / 45.0 * 3600.0
+	// Base rate: Strip Miner I = 150 m³ / 45 s = 12000 m³/h at zero mining skills.
+	// The Hulk hull applies a 1.495× yield bonus; Strip Miner I has no crystals (mul 1.0).
+	const baseM3H = 150.0 / 45.0 * 3600.0
+	const wantM3H = baseM3H * 1.495
+	if row.HullYieldMultiplier < 1.4949 || row.HullYieldMultiplier > 1.4951 {
+		t.Errorf("HullYieldMultiplier: got %v, want 1.495", row.HullYieldMultiplier)
+	}
+	if row.CrystalMultiplier != 1.0 {
+		t.Errorf("CrystalMultiplier: got %v, want 1.0 (Strip Miner I has no crystals)", row.CrystalMultiplier)
+	}
+	if row.IsEstimate {
+		t.Errorf("row should be exact (Hulk resolved, no crystal needed): %+v", *row)
+	}
 	if !approxEq(row.MiningM3PerHour, wantM3H) {
-		t.Errorf("MiningM3PerHour: got %v, want %v", row.MiningM3PerHour, wantM3H)
+		t.Errorf("MiningM3PerHour with hull bonus: got %v, want %v", row.MiningM3PerHour, wantM3H)
 	}
-	if !approxEq(row.RawISKPerHour, wantM3H*row.RawNetPerM3) {
-		t.Errorf("RawISKPerHour: got %v, want %v", row.RawISKPerHour, wantM3H*row.RawNetPerM3)
+	if !approxEq(row.RawISKPerHour, row.MiningM3PerHour*row.RawNetPerM3) {
+		t.Errorf("RawISKPerHour: got %v, want %v", row.RawISKPerHour, row.MiningM3PerHour*row.RawNetPerM3)
 	}
-	if !approxEq(row.RefineISKPerHour, wantM3H*row.RefineNetPerM3) {
-		t.Errorf("RefineISKPerHour: got %v, want %v", row.RefineISKPerHour, wantM3H*row.RefineNetPerM3)
+	if !approxEq(row.RefineISKPerHour, row.MiningM3PerHour*row.RefineNetPerM3) {
+		t.Errorf("RefineISKPerHour: got %v, want %v", row.RefineISKPerHour, row.MiningM3PerHour*row.RefineNetPerM3)
 	}
 	if row.BestStationID != 60000001 {
 		t.Errorf("BestStationID: got %d, want 60000001", row.BestStationID)
@@ -225,7 +257,8 @@ func TestMiningService_OreRanking_NoMiningSetup(t *testing.T) {
 		{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
 	}}
 
-	svc := NewMiningService(sdeDB, stations, market, skills, fitting, nil, nil, fakeMiningNames{}, logger.NewNoop())
+	loc := fakeMiningLocation{shipTypeID: 601} // Ibis: a real ship with no mining bonus
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
 
 	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
 		RegionID: 10000002,
@@ -246,6 +279,44 @@ func TestMiningService_OreRanking_NoMiningSetup(t *testing.T) {
 		}
 		if r.MiningM3PerHour != 0 {
 			t.Errorf("MiningM3PerHour must be 0 with no mining setup: %v", r.MiningM3PerHour)
+		}
+	}
+}
+
+// TestMiningService_OreRanking_EstimateWhenShipUnknown verifies fail-loud behaviour:
+// when the active ship can't be resolved the hull bonus is unknown, so every row is
+// marked IsEstimate with a reason and the multiplier is not fabricated (stays 1.0).
+func TestMiningService_OreRanking_EstimateWhenShipUnknown(t *testing.T) {
+	sdeDB := testutil.OpenTestDB(t)
+	defer func() { _ = sdeDB.Close() }()
+
+	market := &fakeMiningMarket{buyPriceByType: map[int]float64{veldsparTypeID: 15.0, tritaniumTypeID: 5.0}}
+	skills := &fakeMiningSkillsProvider{
+		skills:    &MiningReprocessingSkills{OreProcessing: map[int64]int{}, SkillLevels: map[int64]int{}},
+		standings: map[int64]float64{},
+	}
+	fitting := &fakeMiningModules{ids: []int64{stripMinerITypeID}}
+	stations := &fakeStations{stations: []database.ReprocessStation{
+		{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
+	}}
+
+	// Active-ship lookup fails → hull bonus unresolved → every row is an estimate.
+	loc := fakeMiningLocation{shipErr: fmt.Errorf("esi down")}
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
+
+	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{RegionID: 10000002, SecBand: "high"})
+	if err != nil {
+		t.Fatalf("OreRanking error: %v", err)
+	}
+	if len(resp.Rows) == 0 {
+		t.Fatal("expected ore rows")
+	}
+	for _, r := range resp.Rows {
+		if !r.IsEstimate || r.EstimateReason == "" {
+			t.Errorf("row must be estimate when ship unknown: %+v", r)
+		}
+		if r.HullYieldMultiplier != 1.0 {
+			t.Errorf("unresolved hull must not fabricate a bonus: %v", r.HullYieldMultiplier)
 		}
 	}
 }

@@ -381,6 +381,10 @@ export interface OreRankRow {
   best_station_system?: string;
   raw_sell?: SellLocation;
   materials?: RefineMaterial[];
+  hull_yield_multiplier?: number;
+  crystal_multiplier?: number;
+  is_estimate?: boolean;
+  estimate_reason?: string;
 }
 
 export interface OreRankingResponse {

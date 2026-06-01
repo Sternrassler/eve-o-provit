@@ -138,9 +138,9 @@ function MiningPageContent() {
               )}
               <OreRankingTable rows={miningMutation.data.rows} />
               <p className="text-xs text-muted-foreground">
-                Hinweis: ISK/h ist eine skills-basierte Untergrenze — Schiffs-Rollenboni
-                (Mining Barge/Exhumer) und Erz-Crystals sind noch nicht eingerechnet. Die
-                Roh-vs-Refine-Entscheidung und das Ranking sind davon unberührt.
+                Hinweis: ISK/h berücksichtigt Schiffs-/Skill-Boni und (best-case) Erz-Crystals.
+                Zeilen mit ≈ sind Schätzwerte (Schiffs-Bonus oder Crystal nicht auflösbar). Die
+                Roh-vs-Refine-Entscheidung ist davon unberührt.
               </p>
             </div>
           )}

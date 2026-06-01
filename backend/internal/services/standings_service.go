@@ -31,6 +31,7 @@ type MiningReprocessingSkills struct {
 	Astrogeology           int
 	Accounting             int           // sales tax (reused via SalesTaxRate)
 	OreProcessing          map[int64]int // ore groupID → processing skill level
+	SkillLevels            map[int64]int // skillTypeID → active level (for hull mining bonuses)
 }
 
 // parseStandings parses an ESI /characters/{id}/standings/ body into a map of
@@ -119,6 +120,10 @@ func (s *SkillsService) GetMiningReprocessingSkills(ctx context.Context, sdeDB *
 			out.OreProcessing[groupID] = lvl
 		}
 	}
+
+	// Expose all skill levels so hull mining-yield bonuses can look up any
+	// scaling skill (Mining Barge / Exhumers / Mining Frigate, …) by type id.
+	out.SkillLevels = levelByType
 
 	return out, nil
 }
