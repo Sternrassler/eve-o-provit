@@ -465,9 +465,13 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 			Materials:           refBreakdown,
 			HullYieldMultiplier: hullMul,
 			CrystalMultiplier:   crystalMul,
-			LoadVolumeM3:        oreHoldM3,
 			IsEstimate:          oreIsEstimate,
 			EstimateReason:      oreEstimateReason,
+		}
+		// Per-cycle load only means something when actually mining; for a no-miner
+		// row oreHoldM3 may be a generic-cargo fallback, which would mislead.
+		if oreM3h > 0 {
+			row.LoadVolumeM3 = oreHoldM3
 		}
 		if rawReachable {
 			rs := loc.resolve(ctx, oreLoc)

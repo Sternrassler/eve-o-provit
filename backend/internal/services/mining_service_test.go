@@ -535,6 +535,82 @@ func TestMiningService_OreRanking_DecoupledRawWhenRefineUnreachable(t *testing.T
 	if row.RawSell == nil {
 		t.Error("RawSell must be set (raw path is the only available path)")
 	}
+	// Only one path is a real choice → no meaningful raw-vs-refine delta.
+	if row.DeltaISKPerHour != 0 {
+		t.Errorf("DeltaISKPerHour must be 0 with only one reachable path: %v", row.DeltaISKPerHour)
+	}
+}
+
+// TestMiningService_OreRanking_DecoupledRefineWhenRawUnreachable is the mirror of the
+// raw-only case: when every raw buy order is in a citadel but a reachable reprocess
+// station + mineral hub exist, the row resolves as "refine" (the !rawReachable verdict
+// branch), with no RawSell and effective ISK/h > 0.
+func TestMiningService_OreRanking_DecoupledRefineWhenRawUnreachable(t *testing.T) {
+	sdeDB := testutil.OpenTestDB(t)
+	defer func() { _ = sdeDB.Close() }()
+
+	// Veldspar raw is citadel-only (unreachable); its mineral Tritanium stays at the
+	// default NPC station (reachable), so only the refine path can resolve.
+	market := &fakeMiningMarket{
+		buyPriceByType: map[int]float64{
+			veldsparTypeID:  15.0,
+			tritaniumTypeID: 5.0,
+		},
+		locByType: map[int]int64{
+			veldsparTypeID: 1_035_000_000_001,
+		},
+	}
+	skills := &fakeMiningSkillsProvider{
+		skills: &MiningReprocessingSkills{
+			OreProcessing: map[int64]int{},
+			SkillLevels:   map[int64]int{17940: 5, 22551: 5},
+		},
+		standings: map[int64]float64{},
+	}
+	fitting := &fakeMiningModules{ids: []int64{stripMinerITypeID}}
+	// Reachable NPC reprocess station → refine path available.
+	stations := &fakeStations{stations: []database.ReprocessStation{
+		{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
+	}}
+	loc := fakeMiningLocation{shipTypeID: 22544}
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
+
+	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{
+		RegionID:    10000002,
+		AllowLowSec: false,
+	})
+	if err != nil {
+		t.Fatalf("OreRanking error: %v", err)
+	}
+
+	var row *models.OreRankRow
+	for i := range resp.Rows {
+		if resp.Rows[i].OreTypeID == veldsparTypeID {
+			row = &resp.Rows[i]
+			break
+		}
+	}
+	if row == nil {
+		t.Fatal("Veldspar row must be present (refine path is reachable even though raw is not)")
+	}
+	if row.Best != "refine" {
+		t.Errorf("Best: got %q, want %q (raw unreachable → refine wins)", row.Best, "refine")
+	}
+	if row.IsEstimate {
+		t.Errorf("IsEstimate must be false (routing failure is not an estimate condition): %+v", *row)
+	}
+	if row.EffectiveISKPerHour <= 0 {
+		t.Errorf("EffectiveISKPerHour must be > 0 (refine path is reachable): %v", row.EffectiveISKPerHour)
+	}
+	if row.BestStationID == 0 {
+		t.Error("BestStationID must be set (reprocess station is reachable)")
+	}
+	if row.RawSell != nil {
+		t.Errorf("RawSell must be nil (raw path is unreachable): %+v", *row.RawSell)
+	}
+	if row.DeltaISKPerHour != 0 {
+		t.Errorf("DeltaISKPerHour must be 0 with only one reachable path: %v", row.DeltaISKPerHour)
+	}
 }
 
 func approxEq(a, b float64) bool { return math.Abs(a-b) < 1e-6 }
