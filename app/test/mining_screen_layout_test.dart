@@ -26,7 +26,6 @@ import 'package:eve_o_provit/features/mining/mining_screen.dart';
 
 OreRankingResponse _fakeResponse() => const OreRankingResponse(
       regionId: 10000002,
-      secBand: 'high',
       noMiningSetup: false,
       rows: [
         OreRankRow(
@@ -59,7 +58,6 @@ OreRankingResponse _fakeResponse() => const OreRankingResponse(
 
 OreRankingResponse _detailResponse() => const OreRankingResponse(
       regionId: 10000002,
-      secBand: 'high',
       noMiningSetup: false,
       rows: [
         OreRankRow(
@@ -130,14 +128,12 @@ OreRankingResponse _detailResponse() => const OreRankingResponse(
 
 OreRankingResponse _noSetupResponse() => const OreRankingResponse(
       regionId: 10000002,
-      secBand: 'high',
       noMiningSetup: true,
       rows: [],
     );
 
 OreRankingResponse _emptyResponse() => const OreRankingResponse(
       regionId: 10000002,
-      secBand: 'null',
       noMiningSetup: false,
       rows: [],
     );
@@ -212,7 +208,7 @@ void main() {
 
     expect(find.byType(VerticalDivider), findsNothing);
     // Input controls present.
-    expect(find.text('High-Sec (≥ 0.5)'), findsOneWidget);
+    expect(find.text('Auch Low-Sec abbauen/verkaufen'), findsOneWidget);
     // Result table also visible in single-pane.
     expect(find.text('Erz-Ranking'), findsOneWidget);
   });
@@ -222,7 +218,7 @@ void main() {
     await _pumpScreen(tester, 1280);
 
     expect(find.byType(VerticalDivider), findsAtLeastNWidgets(1));
-    expect(find.text('High-Sec (≥ 0.5)'), findsOneWidget);
+    expect(find.text('Auch Low-Sec abbauen/verkaufen'), findsOneWidget);
     expect(find.text('Erz-Ranking'), findsOneWidget);
   });
 

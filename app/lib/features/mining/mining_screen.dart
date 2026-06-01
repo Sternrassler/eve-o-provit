@@ -86,12 +86,12 @@ class _InputForm extends ConsumerStatefulWidget {
 }
 
 class _InputFormState extends ConsumerState<_InputForm> {
-  String _secBand = 'high';
+  bool _allowLowSec = false;
 
   Future<void> _calculate() async {
     final request = OreRankingRequest(
       regionId: 0,
-      secBand: _secBand,
+      allowLowSec: _allowLowSec,
     );
     await ref.read(oreRankingProvider.notifier).run(request);
   }
@@ -108,37 +108,20 @@ class _InputFormState extends ConsumerState<_InputForm> {
         const CurrentShipCard(),
         const SizedBox(height: 16),
 
-        // ── Sec-band selector ──────────────────────────────────────────────
-        const Text(
-          'Sicherheitszone',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-        ),
-        const SizedBox(height: 6),
-        RadioGroup<String>(
-          groupValue: _secBand,
-          onChanged: busy ? (_) {} : (v) => setState(() => _secBand = v ?? 'high'),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _SecBandTile(
-                label: 'High-Sec (≥ 0.5)',
-                value: 'high',
-                enabled: !busy,
-              ),
-              _SecBandTile(
-                label: 'Low-Sec (< 0.5)',
-                value: 'low',
-                enabled: !busy,
-                activeColor: const Color(0xFFFF9800),
-              ),
-              _SecBandTile(
-                label: 'Null-Sec (≤ 0.0)',
-                value: 'null',
-                enabled: !busy,
-                activeColor: const Color(0xFFF44336),
-              ),
-            ],
+        // ── Low-Sec toggle ────────────────────────────────────────────────
+        SwitchListTile(
+          value: _allowLowSec,
+          onChanged: busy ? null : (v) => setState(() => _allowLowSec = v),
+          title: const Text(
+            'Auch Low-Sec abbauen/verkaufen',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
           ),
+          subtitle: Text(
+            _allowLowSec ? 'An: High-Sec + Low-Sec' : 'Aus: nur High-Sec',
+            style: const TextStyle(fontSize: 12),
+          ),
+          contentPadding: EdgeInsets.zero,
+          dense: true,
         ),
 
         const SizedBox(height: 16),
@@ -190,6 +173,9 @@ class _ResultPane extends ConsumerWidget {
         if (result.noMiningSetup) {
           return const _NoMiningSetup();
         }
+        if (result.notAvailableReason != null && result.isEmpty) {
+          return _NotAvailable(reason: result.notAvailableReason!);
+        }
         if (result.isEmpty) {
           return const _EmptyResult();
         }
@@ -232,7 +218,7 @@ class _IdleHint extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Sicherheitszone wählen und Erze berechnen',
+              'Zone konfigurieren und Erze berechnen',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color:
@@ -321,6 +307,41 @@ class _EmptyResult extends StatelessWidget {
   }
 }
 
+class _NotAvailable extends StatelessWidget {
+  const _NotAvailable({required this.reason});
+
+  final String reason;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          key: const Key('mining-not-available'),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.info_outline_rounded,
+              size: 56,
+              color: Theme.of(context).colorScheme.onSurface.withAlpha(80),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              reason,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color:
+                        Theme.of(context).colorScheme.onSurface.withAlpha(140),
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Ore ranking table
 // ---------------------------------------------------------------------------
@@ -348,7 +369,9 @@ class OreRankingTable extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Region ${result.regionId} · ${_secBandLabel(result.secBand)}',
+            'Region ${result.regionId}'
+            '${result.quarter.isNotEmpty ? ' · ${result.quarter}' : ''}'
+            ' · ${result.systemSecurity.toStringAsFixed(1)}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 16),
@@ -563,54 +586,6 @@ class _OreRankTile extends StatelessWidget {
 // Small helpers
 // ---------------------------------------------------------------------------
 
-class _SecBandTile extends StatelessWidget {
-  const _SecBandTile({
-    required this.label,
-    required this.value,
-    this.enabled = true,
-    this.activeColor,
-  });
-
-  final String label;
-  final String value;
-  final bool enabled;
-  final Color? activeColor;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = activeColor ?? Theme.of(context).colorScheme.primary;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Radio<String>(
-            value: value,
-            activeColor: color,
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: VisualDensity.compact,
-            enabled: enabled,
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(label, style: const TextStyle(fontSize: 13)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-String _secBandLabel(String band) {
-  switch (band) {
-    case 'low':
-      return 'Low-Sec';
-    case 'null':
-      return 'Null-Sec';
-    default:
-      return 'High-Sec';
-  }
-}
 
 /// "Station — System", dropping empty parts; '—' when both are absent.
 String _formatStation(String? name, String? system) {
