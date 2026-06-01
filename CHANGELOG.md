@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-06-01
+
 ### Fixed
 
 - **Mining-Rechner: echte Erz-Namen statt „-Grade" + Pioneer-Schiffsbonus (#165).** Zwei in v0.25.0 entdeckte Bugs: (1) Das Ranking zeigte den rohen SDE-Namen („Veldspar II-Grade") statt des echten Client-Namens („Concentrated Veldspar") — der Rename aus `ListOres` steuerte nur den IV-Grade-Filter, nicht den angezeigten Namen (`GetOre` lieferte den rohen Namen). (2) Die **Pioneer** (Mining-Destroyer) wurde komplett als „≈ Schätzung" markiert, weil ihr Mining-Bonus (per-Level-Bonus über die Mining-Destroyer-Skill **plus** ein einmaliger Rollen-Bonus) nicht in der unterstützten Effekt-Menge stand; der Rollen-Bonus (einmalig, nicht per Skill-Level) wurde vom Modell gar nicht abgebildet. Beide behoben: echter Name wird angezeigt, Pioneer-Yield exakt (Mining Destroyer V → 2.25×). Andere Nicht-Barge/Exhumer-Hulls (Venture, Orca/Rorqual, Prospect/Endurance) bleiben weiterhin Schätzwert (bekannt aus #157).
