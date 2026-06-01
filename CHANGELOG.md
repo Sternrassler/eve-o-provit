@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.2] - 2026-06-01
+
 ### Fixed
 
 - **Mining-Rechner: erreichbarkeitsbewusste Haul-Downtime, entkoppelt (#166).** Unter „Nur High-Sec" waren **alle** Zeilen fälschlich „≈ Schätzung", weil die effektive ISK/h auf Routen zu Verkaufs-/Reprocess-Stationen baute, die im Low-Sec oder in Citadels liegen (Route scheitert → geschätzt). Zwei Ursachen behoben: (1) **Ziel-Wahl ist jetzt erreichbarkeitsbewusst** — Erz-Verkaufsort, Reprocess-Station und Mineral-Hub werden unter der Sicherheits-Bereitschaft des Spielers (`AvoidLowSec`) gewählt (Citadels ≥ 1e12 sind unerreichbar); bei gleichem Kaufpreis gewinnt die **näher** gelegene Station. (2) **Raw- und Refine-Pfad werden entkoppelt** berechnet: scheitert die Refine-Route, bleibt ein erreichbarer Raw-Pfad unangetastet (Zeile zeigt „roh", keine Schätzung). Eine Zeile wird nur noch **übersprungen**, wenn **kein** erreichbarer Verkaufs-/Reprocess-Ort existiert; `is_estimate` bleibt für Hull/Crystal-Auflösung (#165) reserviert, nicht für Routing. Per-m³-Zeilen erscheinen weiterhin ohne gefittetes Mining-Modul (ISK/h dann 0). Zusätzlich **fail-loud**: stille Fehlerpfade bei Erzraum- und Schiffs-Fitting-Auflösung loggen jetzt `Warn`. Backend-only, Response-Schema unverändert (Web + Flutter ohne Änderung). Zurückgestellt unverändert: Null-Sec (#161), Class K (#162), exakte Belt-Inhalte (#163), Max-Ratio-Zyklus (#158).
