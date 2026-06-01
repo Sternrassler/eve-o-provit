@@ -10,6 +10,7 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/mining"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/navigation"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evedb/reprocessing"
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 )
@@ -21,10 +22,11 @@ type MiningSkillsProvider interface {
 	GetCharacterStandings(ctx context.Context, characterID int, accessToken string) (map[int64]float64, error)
 }
 
-// MiningModulesProvider exposes the active ship's fitted mining module type ids.
-// Subset of FittingServicer, kept narrow for fakeability.
+// MiningModulesProvider exposes the active ship's fitted mining module type ids
+// and the ship's fitting bonuses (warp/align) for the haul-downtime cycle.
 type MiningModulesProvider interface {
 	ActiveShipFittedModuleTypeIDs(ctx context.Context, characterID int, accessToken string) ([]int64, error)
+	GetShipFitting(ctx context.Context, characterID, shipTypeID int, accessToken string) (*FittingData, error)
 }
 
 // ReprocessStationProvider lists a region's NPC reprocessing stations. Abstracted so the
@@ -393,4 +395,72 @@ func maxFloat(a, b float64) float64 {
 		return a
 	}
 	return b
+}
+
+// travelKey memoises CalculateTravelTime results within one OreRanking request.
+type travelKey struct{ from, to int64 } //nolint:unused // used by next task's haul-cycle wiring
+
+// systemBuy is the best buy price for a type in one system, with the order's station.
+type systemBuy struct { //nolint:unused // used by next task's haul-cycle wiring
+	price      float64
+	locationID int64
+}
+
+// bestBuyBySystem groups a type's region buy-orders by solar system and keeps the
+// highest price per system (with its station location). Locations that can't be
+// resolved to a system (e.g. citadels) are skipped — they can't anchor a haul leg.
+//
+//nolint:unused // wired into the ranking loop by the next task
+func (s *MiningService) bestBuyBySystem(ctx context.Context, regionID, typeID int, sysOf map[int64]int64) (map[int64]systemBuy, error) {
+	orders, err := s.marketRepo.GetMarketOrders(ctx, regionID, typeID)
+	if err != nil {
+		return nil, err
+	}
+	out := map[int64]systemBuy{}
+	for _, o := range orders {
+		if !o.IsBuyOrder || o.Price <= 0 {
+			continue
+		}
+		sysID, ok := sysOf[o.LocationID]
+		if !ok {
+			id, e := s.names.GetSystemIDForLocation(ctx, o.LocationID)
+			if e != nil {
+				sysOf[o.LocationID] = 0 // memoise "unresolvable"
+				continue
+			}
+			sysOf[o.LocationID] = id
+			sysID = id
+		}
+		if sysID == 0 {
+			continue
+		}
+		if cur, exists := out[sysID]; !exists || o.Price > cur.price {
+			out[sysID] = systemBuy{price: o.Price, locationID: o.LocationID}
+		}
+	}
+	return out, nil
+}
+
+// travelSecs returns one-way travel seconds + jumps between two systems, memoised.
+// resolved=false when the route can't be computed (the caller marks an estimate).
+//
+//nolint:unused // wired into the ranking loop by the next task
+func (s *MiningService) travelSecs(from, to int64, params *navigation.NavigationParams, memo map[travelKey]*navigation.RouteResult) (secs float64, jumps int, resolved bool) {
+	if from == to {
+		return 0, 0, true
+	}
+	key := travelKey{from, to}
+	if r, ok := memo[key]; ok {
+		if r == nil {
+			return 0, 0, false
+		}
+		return r.TotalSeconds, r.Jumps, true
+	}
+	r, err := navigation.CalculateTravelTime(s.sdeDB, from, to, params, false)
+	if err != nil {
+		memo[key] = nil
+		return 0, 0, false
+	}
+	memo[key] = r
+	return r.TotalSeconds, r.Jumps, true
 }

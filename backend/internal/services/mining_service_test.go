@@ -73,6 +73,10 @@ func (f *fakeMiningModules) ActiveShipFittedModuleTypeIDs(_ context.Context, _ i
 	return f.ids, nil
 }
 
+func (f *fakeMiningModules) GetShipFitting(_ context.Context, _, _ int, _ string) (*FittingData, error) {
+	return nil, nil
+}
+
 // fakeMiningSkillsProvider implements MiningSkillsProvider with fixed skills + standings.
 type fakeMiningSkillsProvider struct {
 	skills    *MiningReprocessingSkills
