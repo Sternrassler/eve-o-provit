@@ -5,6 +5,8 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { OreRankRow, SellLocation } from "@/types/trading";
 import { cn, formatISK } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { openMarketDetails, setWaypoint } from "@/lib/api-client";
 
 interface OreRankingTableProps {
   rows: OreRankRow[];
@@ -79,6 +81,35 @@ export function OreRankingTable({ rows }: OreRankingTableProps) {
 
 function OreRankRow({ row }: { row: OreRankRow }) {
   const [open, setOpen] = useState(false);
+  const { toast } = useToast();
+  const linkCls = "text-left hover:underline underline-offset-2 hover:text-primary transition-colors";
+  const openMarket = async (typeId: number, name: string) => {
+    try {
+      await openMarketDetails(typeId);
+      toast({
+        title: "Markt-Detail an EVE gesendet",
+        description: `${name} — falls nichts passiert: Markt-Fenster im Spiel (Alt+R) öffnen und nochmal klicken.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
+        variant: "destructive",
+      });
+    }
+  };
+  const setRoute = async (destId: number, label: string) => {
+    try {
+      await setWaypoint(destId, { clearOtherWaypoints: true });
+      toast({ title: "Route gesetzt", description: `Waypoint in EVE gesetzt: ${label}` });
+    } catch (err) {
+      toast({
+        title: "Fehler",
+        description: err instanceof Error ? err.message : "Unbekannter Fehler",
+        variant: "destructive",
+      });
+    }
+  };
   const isRefine = row.best === "refine";
   const verdictText = isRefine ? "Reprozessieren" : "Roh verkaufen";
   const verdictClass = isRefine
@@ -106,7 +137,17 @@ function OreRankRow({ row }: { row: OreRankRow }) {
             ) : (
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
-            {row.ore_name}
+            <button
+              type="button"
+              className={linkCls}
+              title="Marktdetails im EVE-Client öffnen"
+              onClick={(e) => {
+                e.stopPropagation();
+                openMarket(row.ore_type_id, row.ore_name);
+              }}
+            >
+              {row.ore_name}
+            </button>
             {row.is_estimate && (
               <span
                 data-testid="ore-estimate-badge"
@@ -140,7 +181,23 @@ function OreRankRow({ row }: { row: OreRankRow }) {
                 )}
                 <div className="text-sm">
                   <span className="text-muted-foreground">Aufbereiten bei: </span>
-                  {formatStation(row.best_station_name, row.best_station_system)}
+                  {row.best_station_id ? (
+                    <button
+                      type="button"
+                      className={linkCls}
+                      title="Route in EVE setzen"
+                      onClick={() =>
+                        setRoute(
+                          row.best_station_id!,
+                          formatStation(row.best_station_name, row.best_station_system)
+                        )
+                      }
+                    >
+                      {formatStation(row.best_station_name, row.best_station_system)}
+                    </button>
+                  ) : (
+                    formatStation(row.best_station_name, row.best_station_system)
+                  )}
                 </div>
                 <div className="text-sm text-muted-foreground">Raffinate verkaufen:</div>
                 <table className="w-full text-xs">
@@ -155,10 +212,34 @@ function OreRankRow({ row }: { row: OreRankRow }) {
                   <tbody>
                     {(row.materials ?? []).map((m) => (
                       <tr key={m.material_type_id}>
-                        <td className="py-1 pr-4">{m.material_name || `Typ ${m.material_type_id}`}</td>
+                        <td className="py-1 pr-4">
+                          <button
+                            type="button"
+                            className={linkCls}
+                            title="Marktdetails im EVE-Client öffnen"
+                            onClick={() =>
+                              openMarket(m.material_type_id, m.material_name || `Typ ${m.material_type_id}`)
+                            }
+                          >
+                            {m.material_name || `Typ ${m.material_type_id}`}
+                          </button>
+                        </td>
                         <td className="py-1 pr-4 text-right">{m.effective_qty.toLocaleString("de-DE")}</td>
                         <td className="py-1 pr-4 text-right">{formatISK(m.buy_price)}</td>
-                        <td className="py-1">{formatSell(m.sell)}</td>
+                        <td className="py-1">
+                          {m.sell.location_id ? (
+                            <button
+                              type="button"
+                              className={linkCls}
+                              title="Route in EVE setzen"
+                              onClick={() => setRoute(m.sell.location_id!, formatSell(m.sell))}
+                            >
+                              {formatSell(m.sell)}
+                            </button>
+                          ) : (
+                            formatSell(m.sell)
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -173,7 +254,18 @@ function OreRankRow({ row }: { row: OreRankRow }) {
                   </div>
                 )}
                 <span className="text-muted-foreground">Roh verkaufen bei: </span>
-                {formatSell(row.raw_sell)}
+                {row.raw_sell?.location_id ? (
+                  <button
+                    type="button"
+                    className={linkCls}
+                    title="Route in EVE setzen"
+                    onClick={() => setRoute(row.raw_sell!.location_id!, formatSell(row.raw_sell))}
+                  >
+                    {formatSell(row.raw_sell)}
+                  </button>
+                ) : (
+                  formatSell(row.raw_sell)
+                )}
               </div>
             )}
           </td>

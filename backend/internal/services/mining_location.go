@@ -53,6 +53,7 @@ func (r *locResolver) resolve(ctx context.Context, locationID int64) models.Sell
 			}
 		}
 	}
+	loc.LocationID = locationID
 	r.cache[locationID] = loc
 	return loc
 }
