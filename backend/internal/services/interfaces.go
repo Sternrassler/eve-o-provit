@@ -17,15 +17,6 @@ type CharacterServicer interface {
 	CalculateTaxRate(ctx context.Context, characterID int, accessToken string) (float64, error)
 }
 
-// NavigationServicer defines the interface for navigation-related operations
-type NavigationServicer interface {
-	// GetSystemIDForLocation resolves a station/structure location ID to its solar system ID
-	GetSystemIDForLocation(ctx context.Context, locationID int64) (int64, error)
-
-	// GetRegionIDForSystem retrieves the region ID for a given solar system
-	GetRegionIDForSystem(ctx context.Context, systemID int64) (int, error)
-}
-
 // RouteCalculatorServicer defines the interface for route calculation
 type RouteCalculatorServicer interface {
 	// Calculate computes profitable trading routes for a region
