@@ -140,6 +140,7 @@ class OreRankRow {
     this.cycleMinutes = 0.0,
     this.routeJumps = 0,
     this.sellSystemName,
+    this.marketLoads,
   });
 
   /// Backend: `ore_type_id`
@@ -218,6 +219,11 @@ class OreRankRow {
   /// Backend: `sell_system_name` — nullable; name of the sell system.
   final String? sellSystemName;
 
+  /// Backend: `market_loads` — how many complete ore-hold loads the best buy
+  /// order can absorb. Absent when not applicable. < 1 means the best price
+  /// won't take a full load → shown ISK/h is optimistic.
+  final double? marketLoads;
+
   factory OreRankRow.fromJson(Map<String, dynamic> json) {
     final rawMaterials = json['materials'] as List<dynamic>? ?? const [];
     return OreRankRow(
@@ -253,6 +259,7 @@ class OreRankRow {
       cycleMinutes: (json['cycle_minutes'] as num?)?.toDouble() ?? 0.0,
       routeJumps: (json['route_jumps'] as num?)?.toInt() ?? 0,
       sellSystemName: json['sell_system_name'] as String?,
+      marketLoads: (json['market_loads'] as num?)?.toDouble(),
     );
   }
 }

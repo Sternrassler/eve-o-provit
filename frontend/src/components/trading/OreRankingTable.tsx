@@ -179,6 +179,17 @@ function OreRankRow({ row }: { row: OreRankRow }) {
                     {row.sell_system_name ? ` · Verkauf in ${row.sell_system_name}` : ""}
                   </div>
                 )}
+                {row.market_loads != null && row.market_loads > 0 && (
+                  row.market_loads >= 1 ? (
+                    <div className="text-sm text-muted-foreground">
+                      Markt: ~{row.market_loads.toFixed(1)} volle Ladungen
+                    </div>
+                  ) : (
+                    <div className="text-sm text-amber-600 dark:text-amber-500">
+                      ⚠ Bestpreis nur ~{row.market_loads.toFixed(2)} Ladungen — ISK/h optimistisch
+                    </div>
+                  )
+                )}
                 <div className="text-sm">
                   <span className="text-muted-foreground">Aufbereiten bei: </span>
                   {row.best_station_id ? (
@@ -252,6 +263,17 @@ function OreRankRow({ row }: { row: OreRankRow }) {
                     Zyklus {row.cycle_minutes.toFixed(1)} min · {row.route_jumps ?? 0} Jumps
                     {row.sell_system_name ? ` · Verkauf in ${row.sell_system_name}` : ""}
                   </div>
+                )}
+                {row.market_loads != null && row.market_loads > 0 && (
+                  row.market_loads >= 1 ? (
+                    <div className="mb-2 text-sm text-muted-foreground">
+                      Markt: ~{row.market_loads.toFixed(1)} volle Ladungen
+                    </div>
+                  ) : (
+                    <div className="mb-2 text-sm text-amber-600 dark:text-amber-500">
+                      ⚠ Bestpreis nur ~{row.market_loads.toFixed(2)} Ladungen — ISK/h optimistisch
+                    </div>
+                  )
                 )}
                 <span className="text-muted-foreground">Roh verkaufen bei: </span>
                 {row.raw_sell?.location_id ? (

@@ -392,6 +392,7 @@ export interface OreRankRow {
   cycle_minutes?: number;
   route_jumps?: number;
   sell_system_name?: string;
+  market_loads?: number;
 }
 
 export interface OreRankingResponse {

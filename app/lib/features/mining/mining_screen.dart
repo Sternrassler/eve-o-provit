@@ -486,6 +486,23 @@ class _OreRankTile extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+        if (row.marketLoads != null && row.marketLoads! > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: row.marketLoads! >= 1
+                ? Text(
+                    'Markt: ~${row.marketLoads!.toStringAsFixed(1)} volle Ladungen',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  )
+                : Text(
+                    '⚠ Bestpreis nur ~${row.marketLoads!.toStringAsFixed(2)} Ladungen — ISK/h optimistisch',
+                    style: const TextStyle(
+                      color: Color(0xFFFFB300),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                  ),
+          ),
         _detailLine(
           context,
           'Aufbereiten bei',
@@ -553,6 +570,23 @@ class _OreRankTile extends StatelessWidget {
               '${row.sellSystemName != null ? ' · Verkauf in ${row.sellSystemName}' : ''}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
+          ),
+        if (row.marketLoads != null && row.marketLoads! > 0)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: row.marketLoads! >= 1
+                ? Text(
+                    'Markt: ~${row.marketLoads!.toStringAsFixed(1)} volle Ladungen',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  )
+                : Text(
+                    '⚠ Bestpreis nur ~${row.marketLoads!.toStringAsFixed(2)} Ladungen — ISK/h optimistisch',
+                    style: const TextStyle(
+                      color: Color(0xFFFFB300),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                  ),
           ),
         _detailLine(context, 'Roh verkaufen bei', _formatSell(row.rawSell)),
       ],

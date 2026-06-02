@@ -201,6 +201,37 @@ void main() {
       expect(d.effectiveIskPerHour, 0.0);
       expect(d.routeJumps, 0);
     });
+
+    test('market_loads: parses double value when present', () {
+      final r = OreRankRow.fromJson(const {
+        'ore_type_id': 1230, 'ore_name': 'Veldspar', 'best': 'refine',
+        'market_loads': 3.7,
+      });
+      expect(r.marketLoads, closeTo(3.7, 0.001));
+    });
+
+    test('market_loads: parses int value (num-robust)', () {
+      final r = OreRankRow.fromJson(const {
+        'ore_type_id': 1230, 'ore_name': 'Veldspar', 'best': 'refine',
+        'market_loads': 2,
+      });
+      expect(r.marketLoads, 2.0);
+    });
+
+    test('market_loads: absent maps to null', () {
+      final r = OreRankRow.fromJson(const {
+        'ore_type_id': 1230, 'ore_name': 'Veldspar', 'best': 'refine',
+      });
+      expect(r.marketLoads, isNull);
+    });
+
+    test('market_loads: < 1 (partial load) parses correctly', () {
+      final r = OreRankRow.fromJson(const {
+        'ore_type_id': 1228, 'ore_name': 'Scordite', 'best': 'raw',
+        'market_loads': 0.42,
+      });
+      expect(r.marketLoads, closeTo(0.42, 0.001));
+    });
   });
 
   group('OreRankingResponse.fromJson', () {
