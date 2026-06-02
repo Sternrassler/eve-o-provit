@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.4] - 2026-06-02
+
 ### Fixed
 
 - **Mining-Rechner: Pyroxeres nur noch in Amarr-/Caldari-High-Sec (#168).** Das Ranking listete Pyroxeres fälschlich in **jedem** High-Sec-System (0.5–0.9). Tatsächlich kommt Pyroxeres im High-Sec **nur in Amarr- und Caldari-Quarter** vor — Gallente/Minmatar haben dort stattdessen Plagioclase (Quelle: EVE-University „Ore"-Tabelle, in-game gegen Bodenwahrheit geprüft: Alentene/Gallente hat kein Pyroxeres, Tar/Ourapheh/Amarr schon). Weder angezeigte Security noch `securityClass` trennen die Fälle — allein der **Empire-Quarter** tut es. `AvailableOreGroups` schärft die High-Sec-Regel entsprechend nach; Low-Sec war bereits korrekt. **Daten-Grenze (unverändert):** die exakte Gürtel-Zusammensetzung *innerhalb* eines Systems kennt nur der In-Game-Client („The Agency"/Survey-Scanner) — SDE/ESI enthalten keine Erz↔Gürtel-Zuordnung. Backend-only.
