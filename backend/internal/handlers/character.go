@@ -7,6 +7,7 @@ import (
 
 	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evesso"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -49,9 +50,9 @@ func (h *CharacterHandler) GetCharacterSkills(c *fiber.Ctx) error {
 		})
 	}
 
-	// Get access token from locals (set by AuthMiddleware)
-	accessToken, ok := c.Locals("access_token").(string)
-	if !ok || accessToken == "" {
+	// Identity from locals (set by AuthMiddleware)
+	authenticatedCharID, accessToken, ok := evesso.AuthFromContext(c)
+	if !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 			"error": "Missing access token",
 		})
@@ -59,8 +60,7 @@ func (h *CharacterHandler) GetCharacterSkills(c *fiber.Ctx) error {
 
 	// Verify that the requested character ID matches the authenticated character
 	// This prevents users from querying other characters' skills
-	authenticatedCharID, ok := c.Locals("character_id").(int)
-	if !ok || authenticatedCharID != characterID {
+	if authenticatedCharID != characterID {
 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 			"error": "Cannot access skills for other characters",
 		})

@@ -15,6 +15,7 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evesso"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -94,14 +95,10 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 	// Create context with optional character info for skill-aware calculations
 	ctx := c.UserContext()
 
-	// Extract required character authentication (set by AuthMiddleware)
-	characterID := c.Locals("character_id")
-	accessToken := c.Locals("access_token")
-
-	if characterID == nil || accessToken == nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "Authentication required for trading operations",
-		})
+	// Required character authentication (set by AuthMiddleware)
+	characterID, accessToken, ok := evesso.AuthFromContext(c)
+	if !ok {
+		return errUnauthorized(c)
 	}
 
 	// Add character context for skill-aware cargo calculations
@@ -156,13 +153,9 @@ func (h *TradingHandler) CalculateRoutes(c *fiber.Ctx) error {
 // @Failure 500 {object} models.ErrorResponse
 // @Router /api/v1/character/location [get]
 func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
-	characterID, ok := c.Locals("character_id").(int)
+	characterID, accessToken, ok := evesso.AuthFromContext(c)
 	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
-	}
-	accessToken, ok := c.Locals("access_token").(string)
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+		return errUnauthorized(c)
 	}
 
 	// Call ESI
@@ -194,13 +187,9 @@ func (h *TradingHandler) GetCharacterLocation(c *fiber.Ctx) error {
 // @Failure 500 {object} models.ErrorResponse
 // @Router /api/v1/character/ship [get]
 func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
-	characterID, ok := c.Locals("character_id").(int)
+	characterID, accessToken, ok := evesso.AuthFromContext(c)
 	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
-	}
-	accessToken, ok := c.Locals("access_token").(string)
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+		return errUnauthorized(c)
 	}
 
 	// Call ESI
@@ -232,13 +221,9 @@ func (h *TradingHandler) GetCharacterShip(c *fiber.Ctx) error {
 // @Failure 500 {object} models.ErrorResponse
 // @Router /api/v1/character/ships [get]
 func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
-	characterID, ok := c.Locals("character_id").(int)
+	characterID, accessToken, ok := evesso.AuthFromContext(c)
 	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
-	}
-	accessToken, ok := c.Locals("access_token").(string)
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+		return errUnauthorized(c)
 	}
 
 	// Call ESI
@@ -270,13 +255,9 @@ func (h *TradingHandler) GetCharacterShips(c *fiber.Ctx) error {
 // @Failure 500 {object} models.ErrorResponse
 // @Router /api/v1/character/wallet [get]
 func (h *TradingHandler) GetCharacterWallet(c *fiber.Ctx) error {
-	characterID, ok := c.Locals("character_id").(int)
+	characterID, accessToken, ok := evesso.AuthFromContext(c)
 	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
-	}
-	accessToken, ok := c.Locals("access_token").(string)
-	if !ok {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "authentication required"})
+		return errUnauthorized(c)
 	}
 
 	balance, err := h.characterHelper.GetWalletBalance(c.Context(), characterID, accessToken)
