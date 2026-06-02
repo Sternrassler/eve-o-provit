@@ -5,6 +5,7 @@ import (
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/models"
 	"github.com/Sternrassler/eve-o-provit/backend/internal/services"
+	"github.com/Sternrassler/eve-o-provit/backend/pkg/evesso"
 )
 
 // HaulingHandler serves the neighborhood hauling-routes endpoint (Issue #45).
@@ -40,15 +41,9 @@ func (h *HaulingHandler) FindRoutes(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "ship_type_id and capital are required"})
 	}
 
-	characterID := c.Locals("character_id")
-	accessToken := c.Locals("access_token")
-	if characterID == nil || accessToken == nil {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Authentication required"})
-	}
-	cid, ok := characterID.(int)
-	tok, ok2 := accessToken.(string)
-	if !ok || !ok2 {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Invalid authentication context"})
+	cid, tok, ok := evesso.AuthFromContext(c)
+	if !ok {
+		return errUnauthorized(c)
 	}
 
 	result, err := h.service.FindRoutes(c.UserContext(), &req, cid, tok)
