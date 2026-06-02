@@ -59,23 +59,6 @@ func New(healthChecker database.HealthChecker, sdeQuerier database.SDEQuerier, m
 	}
 }
 
-// NewWithConcrete creates a handler from concrete types (backward compatibility wrapper)
-//
-// Deprecated: Use New with interfaces instead
-func NewWithConcrete(db *database.DB, sdeRepo *database.SDERepository, marketRepo *database.MarketRepository, esiClient *esi.Client) *Handler {
-	marketService := services.NewMarketService(marketRepo, esiClient)
-
-	return &Handler{
-		healthChecker: db,
-		sdeQuerier:    sdeRepo,
-		marketQuerier: marketRepo,
-		postgresQuery: db,      // DB implements PostgresQuerier
-		regionQuerier: sdeRepo, // SDERepository implements RegionQuerier
-		esiClient:     esiClient,
-		marketService: marketService,
-	}
-}
-
 // Health handles health check requests
 //
 // @Summary Health check

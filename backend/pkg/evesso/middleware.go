@@ -33,22 +33,6 @@ func NewAuthMiddleware(v *TokenValidator) fiber.Handler {
 	}
 }
 
-// NewOptionalAuthMiddleware validates the Bearer token or cookie if present but allows unauthenticated requests.
-func NewOptionalAuthMiddleware(v *TokenValidator) fiber.Handler {
-	return func(c *fiber.Ctx) error {
-		accessToken := bearerOrCookie(c)
-		if accessToken == "" {
-			return c.Next()
-		}
-		charInfo, err := v.Validate(c.Context(), accessToken)
-		if err != nil {
-			return c.Next()
-		}
-		setAuthLocals(c, charInfo, accessToken)
-		return c.Next()
-	}
-}
-
 func setAuthLocals(c *fiber.Ctx, charInfo *CharacterInfo, accessToken string) {
 	c.Locals("character_id", charInfo.CharacterID)
 	c.Locals("character_name", charInfo.CharacterName)
