@@ -67,6 +67,12 @@ func displaySec(sec float64) float64 {
 // security decide the set. allowLow gates low-sec systems: in a low-sec system
 // with allowLow=false the result is empty (the player won't operate there).
 // Null-sec (sec<=0) is out of scope (empty); see issue #161.
+//
+// High-sec is empire-specific (source: EVE-Uni "Ore" distribution table,
+// wiki.eveuniversity.org/Ore, cross-checked against in-game belts): Veldspar +
+// Scordite everywhere; Pyroxeres ONLY in Amarr+Caldari high-sec (0.9–0.5);
+// Plagioclase in Gallente+Minmatar (0.9–0.5) and Caldari (≤0.7). An unknown
+// quarter ("") yields only the quarter-independent Veldspar+Scordite.
 func AvailableOreGroups(quarter string, sec float64, allowLow bool) map[int64]bool {
 	out := map[int64]bool{}
 	d := displaySec(sec)
@@ -74,19 +80,22 @@ func AvailableOreGroups(quarter string, sec float64, allowLow bool) map[int64]bo
 	case d >= 0.5: // high-sec
 		out[grpVeldspar] = true
 		out[grpScordite] = true
-		if d <= 0.9 {
-			out[grpPyroxeres] = true
-		}
 		switch quarter {
+		case "amarr":
+			if d <= 0.9 {
+				out[grpPyroxeres] = true
+			}
+		case "caldari":
+			if d <= 0.9 {
+				out[grpPyroxeres] = true
+			}
+			if d <= 0.7 {
+				out[grpPlagioclase] = true
+			}
 		case "gallente", "minmatar":
 			if d <= 0.9 {
 				out[grpPlagioclase] = true
 			}
-		case "caldari":
-			if d <= 0.7 {
-				out[grpPlagioclase] = true
-			}
-			// amarr: no Plagioclase in high-sec
 		}
 	case d > 0 && allowLow: // low-sec, player willing
 		switch quarter {

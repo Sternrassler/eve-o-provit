@@ -37,15 +37,24 @@ func TestAvailableOreGroups(t *testing.T) {
 	if !has(g, 462, 460, 459) || g[458] || len(g) != 3 {
 		t.Errorf("caldari 0.9: got %v", g)
 	}
-	// Gallente 0.7 hi-sec: + Plagioclase.
+	// Gallente 0.7 hi-sec: Veldspar, Scordite, Plagioclase — NO Pyroxeres (459).
 	g = AvailableOreGroups("gallente", 0.7, false)
-	if !has(g, 462, 460, 459, 458) || len(g) != 4 {
+	if !has(g, 462, 460, 458) || g[459] || len(g) != 3 {
 		t.Errorf("gallente 0.7: got %v", g)
 	}
-	// Amarr 0.6 hi-sec: no Plagioclase.
+	// Amarr 0.6 hi-sec: Veldspar, Scordite, Pyroxeres; no Plagioclase.
 	g = AvailableOreGroups("amarr", 0.6, false)
 	if !has(g, 462, 460, 459) || g[458] {
 		t.Errorf("amarr 0.6: got %v", g)
+	}
+	// Pyroxeres is Amarr/Caldari only — verified in-game (EVE-Uni "Ore" table):
+	// Alentene (Gallente, 0.87→0.9) has Veldspar/Scordite/Plagioclase, NO Pyroxeres;
+	// Ourapheh/Tar (Amarr, ~0.9/0.8) DO have Pyroxeres.
+	if g := AvailableOreGroups("gallente", 0.87, false); g[459] {
+		t.Errorf("gallente 0.9 (Alentene) must NOT have Pyroxeres: %v", g)
+	}
+	if g := AvailableOreGroups("amarr", 0.86, false); !g[459] {
+		t.Errorf("amarr 0.9 (Ourapheh) must have Pyroxeres: %v", g)
 	}
 	// Amarr 0.3 low-sec, allowLow=true: Pyroxeres 459, Kernite 457, Jaspet 456; no Hemorphite 455, no Veldspar.
 	g = AvailableOreGroups("amarr", 0.3, true)
@@ -64,8 +73,9 @@ func TestAvailableOreGroups(t *testing.T) {
 	if g := AvailableOreGroups("amarr", 0.0, true); len(g) != 0 {
 		t.Errorf("null must be empty: %v", g)
 	}
-	// Unknown quarter, hi-sec: quarter-independent ores only.
-	if g := AvailableOreGroups("", 0.8, false); !has(g, 462, 460, 459) || g[458] {
+	// Unknown quarter, hi-sec: only quarter-independent Veldspar+Scordite
+	// (Pyroxeres/Plagioclase are empire-specific, so we can't claim them).
+	if g := AvailableOreGroups("", 0.8, false); !has(g, 462, 460) || g[459] || g[458] || len(g) != 2 {
 		t.Errorf("unknown quarter: got %v", g)
 	}
 }
