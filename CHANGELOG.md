@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Toter Code entfernt (BE + FE, #170).** Reine Aufräumarbeit, **1758 Zeilen gelöscht, 0 hinzugefügt** — kein Verhaltens-, API- oder Wire-Effekt. **Backend** (verifiziert via `deadcode -test ./...`, das danach 0 meldet): toter `NavigationService` samt `NavigationServicer`-Interface (Pass-through, nie konstruiert), die hartkodierte Hauler-Tabelle `ShipType`/`CommonHaulers`/`GetShipType` + `ValidationError` (abgelöst durch die dynamischen Ship/Fitting-Services), die verwaiste `GetShipNavigationSkills`-Query nebst Nav-Typen, der `Deprecated`-Wrapper `NewWithConcrete` und die nie verdrahtete `NewOptionalAuthMiddleware`. **Frontend** (verifiziert via knip): Mock-Daten-Reste (`mock-data/{regions,trading-routes}.ts`), ungenutzte shadcn-Komponenten `navigation-menu`/`switch` samt der dann überflüssigen Radix-Deps, verwaiste `tests/helpers/auth.ts` und die toten Trading-Typen `LoadingState`/`InventorySellRequest`/`InventorySellRoute`.
+
 ## [0.26.0] - 2026-06-02
 
 ### Added
