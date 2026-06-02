@@ -1,7 +1,5 @@
 // types/trading.ts
 
-export type LoadingState = "idle" | "loading" | "success" | "error";
-
 export interface TradingRoute {
   rank?: number; // Optional for API responses
   item_type_id: number;
@@ -252,32 +250,6 @@ export interface HaulingResponse {
   regions_scanned: number[];
   routes: HaulingRoute[]; // pre-sorted by isk_per_hour desc
   skills_applied: SkillsApplied;
-}
-
-export interface InventorySellRequest {
-  type_id: number;
-  quantity: number;
-  buy_price_per_unit: number;
-  region_id: number;
-  min_profit_per_unit: number;
-  security_filter: string; // "all", "highsec", "highlow"
-}
-
-export interface InventorySellRoute {
-  sell_station_id: number;
-  sell_station_name: string;
-  sell_system_id: number;
-  sell_system_name: string;
-  sell_security_status: number;
-  buy_order_price: number;
-  tax_rate: number;
-  net_price_per_unit: number;
-  profit_per_unit: number;
-  available_quantity: number;
-  total_profit: number;
-  route_jumps: number;
-  route_system_ids: number[];
-  min_route_security_status: number;
 }
 
 // Sell-from-Assets (Issue #107)
