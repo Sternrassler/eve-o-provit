@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-06-02
+
 ### Added
 
 - **Mining-Rechner: Markt-Mengen-Cap als „volle Ladungen" pro Zeile (#169).** Jede Erz-Zeile zeigt jetzt, **wie viele komplette Erzraum-Ladungen** (bezogen auf dein aktuelles Schiff) die gewählte Buy-Order aufnimmt — abgeleitet aus deren `VolumeRemain`. **Roh:** Kapazität der Erz-Order; **Refine:** das zuerst erschöpfte Mineral bindet (Minimum über alle Minerale). Trägt der **Bestpreis nicht mal eine volle Ladung** (`< 1`), wird die Zeile fail-loud markiert („⚠ Bestpreis nur ~X Ladungen — ISK/h optimistisch"), denn die ISK/h nimmt bislang an, du könntest unbegrenzt zum Bestpreis verkaufen. **Reine Anzeige** — ISK/h und Ranking unverändert. Neues Response-Feld `market_loads`. Web **und** Flutter. (Nicht im Scope: Order-Book-Tiefe, echtes ISK/h-Capping — bewusst zurückgestellt.)
