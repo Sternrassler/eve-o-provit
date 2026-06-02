@@ -21,6 +21,8 @@ type fakeMiningMarket struct {
 	buyPriceByType map[int]float64
 	// locByType overrides the highest-buy-order station per type (default 60000123).
 	locByType map[int]int64
+	// volByType overrides the highest buy order's VolumeRemain per type (default 1_000_000).
+	volByType map[int]int
 }
 
 func (f *fakeMiningMarket) GetMarketOrders(_ context.Context, _ int, typeID int) ([]database.MarketOrder, error) {
@@ -42,8 +44,14 @@ func (f *fakeMiningMarket) GetMarketOrders(_ context.Context, _ int, typeID int)
 			lowerLoc = l
 		}
 	}
+	topVol := 1_000_000
+	if f.volByType != nil {
+		if v, ok := f.volByType[typeID]; ok {
+			topVol = v
+		}
+	}
 	return []database.MarketOrder{
-		{TypeID: typeID, IsBuyOrder: true, Price: price, VolumeRemain: 1_000_000, LocationID: loc},
+		{TypeID: typeID, IsBuyOrder: true, Price: price, VolumeRemain: topVol, LocationID: loc},
 		// a lower buy order + a sell order, to prove we pick the highest buy.
 		{TypeID: typeID, IsBuyOrder: true, Price: price * 0.5, VolumeRemain: 100, LocationID: lowerLoc},
 		{TypeID: typeID, IsBuyOrder: false, Price: price * 2, VolumeRemain: 100},
@@ -610,6 +618,57 @@ func TestMiningService_OreRanking_DecoupledRefineWhenRawUnreachable(t *testing.T
 	}
 	if row.DeltaISKPerHour != 0 {
 		t.Errorf("DeltaISKPerHour must be 0 with only one reachable path: %v", row.DeltaISKPerHour)
+	}
+}
+
+// TestMiningService_OreRanking_MarketLoadsCap verifies the row reports how many full
+// ore-hold loads the chosen buy order can absorb (VolumeRemain cap), and that a thin
+// order yields <1 load (the fail-loud "best-price ISK/h is optimistic" signal).
+func TestMiningService_OreRanking_MarketLoadsCap(t *testing.T) {
+	sdeDB := testutil.OpenTestDB(t)
+	defer func() { _ = sdeDB.Close() }()
+
+	run := func(veldVol int) *models.OreRankRow {
+		market := &fakeMiningMarket{
+			buyPriceByType: map[int]float64{veldsparTypeID: 15.0, tritaniumTypeID: 5.0},
+			volByType:      map[int]int{veldsparTypeID: veldVol},
+		}
+		skills := &fakeMiningSkillsProvider{
+			skills:    &MiningReprocessingSkills{OreProcessing: map[int64]int{}, SkillLevels: map[int64]int{17940: 5, 22551: 5}},
+			standings: map[int64]float64{},
+		}
+		fitting := &fakeMiningModules{ids: []int64{stripMinerITypeID}}
+		// Reprocess station is a citadel → refine unreachable → raw wins, so MarketLoads
+		// reflects the Veldspar ore order's VolumeRemain deterministically.
+		stations := &fakeStations{stations: []database.ReprocessStation{
+			{StationID: 1_035_000_000_009, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
+		}}
+		loc := fakeMiningLocation{shipTypeID: 22544}
+		svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
+		resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{RegionID: 10000002, AllowLowSec: false})
+		if err != nil {
+			t.Fatalf("OreRanking error: %v", err)
+		}
+		for i := range resp.Rows {
+			if resp.Rows[i].OreTypeID == veldsparTypeID {
+				return &resp.Rows[i]
+			}
+		}
+		t.Fatal("Veldspar row not found")
+		return nil
+	}
+
+	// Fat order → many full loads absorbable at the best price.
+	fat := run(1_000_000_000)
+	if fat.Best != "raw" {
+		t.Fatalf("expected raw verdict (refine unreachable), got %q", fat.Best)
+	}
+	if fat.MarketLoads <= 1 {
+		t.Errorf("fat order: MarketLoads must be > 1, got %v", fat.MarketLoads)
+	}
+	// Thin order → less than one full load at the best price (fail-loud signal).
+	if thin := run(5); thin.MarketLoads <= 0 || thin.MarketLoads >= 1 {
+		t.Errorf("thin order: MarketLoads must be in (0,1), got %v", thin.MarketLoads)
 	}
 }
 
