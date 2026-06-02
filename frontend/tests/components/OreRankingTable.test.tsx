@@ -260,4 +260,28 @@ describe("OreRankingTable", () => {
     fireEvent.click(screen.getByRole("button", { name: /Dodixie IX — Dodixie/ }));
     expect(setWaypointMock).toHaveBeenCalledWith(60011866, { clearOtherWaypoints: true });
   });
+
+  it("shows market_loads >= 1 as a muted 'volle Ladungen' line in the refine detail", () => {
+    const r = makeRow({
+      ore_type_id: 1230, ore_name: "Veldspar", best: "refine",
+      cycle_minutes: 12.5, market_loads: 3.7,
+    });
+    render(<OreRankingTable rows={[r]} />);
+    fireEvent.click(screen.getByTestId("ore-ranking-row"));
+    const detail = screen.getByTestId("ore-ranking-detail");
+    expect(within(detail).getByText(/Markt: ~3\.7 volle Ladungen/)).toBeInTheDocument();
+    expect(within(detail).queryByText(/ISK\/h optimistisch/)).not.toBeInTheDocument();
+  });
+
+  it("shows market_loads < 1 as a warning line in the raw detail", () => {
+    const r = makeRow({
+      ore_type_id: 1228, ore_name: "Scordite", best: "raw",
+      cycle_minutes: 10.0, market_loads: 0.42,
+    });
+    render(<OreRankingTable rows={[r]} />);
+    fireEvent.click(screen.getByTestId("ore-ranking-row"));
+    const detail = screen.getByTestId("ore-ranking-detail");
+    expect(within(detail).getByText(/ISK\/h optimistisch/)).toBeInTheDocument();
+    expect(within(detail).queryByText(/volle Ladungen/)).not.toBeInTheDocument();
+  });
 });

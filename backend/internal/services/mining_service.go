@@ -346,9 +346,14 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 			}
 		}
 		oreM3h := m3h * hullMul * crystalMul
+		// Ore units that fill one full ore hold (0 when hold/volume not resolved).
+		var unitsPerLoad float64
+		if oreHoldM3 > 0 && o.VolumeM3 > 0 {
+			unitsPerLoad = oreHoldM3 / o.VolumeM3
+		}
 
 		// ---- RAW path (reachability-aware): best reachable ore buy order ----
-		orePrice, oreLoc, _, oreSecs, oreJumps, oreOK :=
+		orePrice, oreLoc, _, oreSecs, oreJumps, oreVR, oreOK :=
 			s.bestReachableBuyOrder(ctx, regionID, int(o.TypeID), originSys, navParams, travelMemo, sysOf)
 		rawCmp := CompareOre(OreCompareInput{
 			PortionSize: o.PortionSize, OreVolumeM3: o.VolumeM3, OreBuyPrice: orePrice,
@@ -359,14 +364,20 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 		// no miner fitted (effective ISK/h then stays 0).
 		rawReachable := oreOK
 		var rawEff, rawCycleMin, rawFillMin float64
+		// rawLoads: how many full ore-hold loads the chosen ore buy order absorbs.
+		var rawLoads float64
 		if rawReachable && oreM3h > 0 {
 			rawEff, rawCycleMin, rawFillMin =
 				mining.EffectiveISKPerHour(oreHoldM3, oreM3h, rawCmp.RawNetPerM3, oreSecs, oreStopSecs)
+			if unitsPerLoad > 0 {
+				rawLoads = float64(oreVR) / unitsPerLoad
+			}
 		}
 
 		// ---- REFINE path: reachable reprocess + best reachable hub ----
 		var refNet, refEff, refCycleMin, refFillMin float64
 		var refJumps int
+		var refLoads float64
 		var refSellSysName string
 		var refBreakdown []models.RefineMaterial
 		refineReachable := false
@@ -441,6 +452,25 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 							}
 							refBreakdown = append(refBreakdown, rm)
 						}
+						// refLoads: full ore-hold loads the binding (first-exhausted)
+						// mineral buy order at this hub can absorb.
+						refLoads = 0
+						if oreM3h > 0 && unitsPerLoad > 0 && o.PortionSize > 0 {
+							batchesPerLoad := unitsPerLoad / float64(o.PortionSize)
+							minLoads := math.MaxFloat64
+							for _, m := range o.Materials {
+								perLoad := batchesPerLoad * float64(m.Quantity) * net
+								if perLoad <= 0 {
+									continue
+								}
+								if l := float64(bySys[m.MaterialTypeID][sysID].volumeRemain) / perLoad; l < minLoads {
+									minLoads = l
+								}
+							}
+							if minLoads != math.MaxFloat64 {
+								refLoads = minLoads
+							}
+						}
 						refineReachable = true
 					}
 				}
@@ -498,10 +528,12 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 			row.Best = "refine"
 			row.EffectiveISKPerHour, row.CycleMinutes, row.FillMinutes = refEff, refCycleMin, refFillMin
 			row.RouteJumps, row.SellSystemName = refJumps, refSellSysName
+			row.MarketLoads = refLoads
 		} else {
 			row.Best = "raw"
 			row.EffectiveISKPerHour, row.CycleMinutes, row.FillMinutes = rawEff, rawCycleMin, rawFillMin
 			row.RouteJumps = oreJumps
+			row.MarketLoads = rawLoads
 			if row.RawSell != nil {
 				row.SellSystemName = row.RawSell.SystemName
 			}
@@ -540,13 +572,13 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 func (s *MiningService) bestReachableBuyOrder(
 	ctx context.Context, regionID, typeID int, origin int64,
 	params *navigation.NavigationParams, travelMemo map[travelKey]*navigation.RouteResult, sysOf map[int64]int64,
-) (price float64, locationID int64, sellSys int64, secs float64, jumps int, ok bool) {
+) (price float64, locationID int64, sellSys int64, secs float64, jumps int, volumeRemain int, ok bool) {
 	orders, err := s.marketRepo.GetMarketOrders(ctx, regionID, typeID)
 	if err != nil {
 		if s.logger != nil {
 			s.logger.Warn("ore ranking: market orders fetch failed", "typeID", typeID, "error", err)
 		}
-		return 0, 0, 0, 0, 0, false
+		return 0, 0, 0, 0, 0, 0, false
 	}
 	for _, o := range orders {
 		// Skip strictly-lower prices; equal prices still get a reachability check so
@@ -573,10 +605,11 @@ func (s *MiningService) bestReachableBuyOrder(
 		}
 		// Higher price always wins; on an equal price prefer fewer jumps (less haul).
 		if !ok || o.Price > price || jumpsTo < jumps {
-			price, locationID, sellSys, secs, jumps, ok = o.Price, o.LocationID, sys, secsTo, jumpsTo, true
+			price, locationID, sellSys, secs, jumps, volumeRemain, ok =
+				o.Price, o.LocationID, sys, secsTo, jumpsTo, o.VolumeRemain, true
 		}
 	}
-	return price, locationID, sellSys, secs, jumps, ok
+	return price, locationID, sellSys, secs, jumps, volumeRemain, ok
 }
 
 // typeName resolves a type's name (e.g. for a refined mineral), "" on failure.
@@ -597,10 +630,12 @@ func maxFloat(a, b float64) float64 {
 // travelKey memoises CalculateTravelTime results within one OreRanking request.
 type travelKey struct{ from, to int64 }
 
-// systemBuy is the best buy price for a type in one system, with the order's station.
+// systemBuy is the best buy price for a type in one system, with the order's
+// station and its remaining capacity (units the order can still absorb).
 type systemBuy struct {
-	price      float64
-	locationID int64
+	price        float64
+	locationID   int64
+	volumeRemain int
 }
 
 // bestBuyBySystem groups a type's region buy-orders by solar system and keeps the
@@ -630,7 +665,7 @@ func (s *MiningService) bestBuyBySystem(ctx context.Context, regionID, typeID in
 			continue
 		}
 		if cur, exists := out[sysID]; !exists || o.Price > cur.price {
-			out[sysID] = systemBuy{price: o.Price, locationID: o.LocationID}
+			out[sysID] = systemBuy{price: o.Price, locationID: o.LocationID, volumeRemain: o.VolumeRemain}
 		}
 	}
 	return out, nil

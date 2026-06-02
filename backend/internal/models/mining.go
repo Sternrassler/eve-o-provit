@@ -55,6 +55,7 @@ type OreRankRow struct {
 	// Haul-downtime cycle (effective ISK/h, greedy one cycle from current system):
 	EffectiveISKPerHour float64 `json:"effective_isk_per_hour,omitempty"` // sort key; 0 when not resolvable
 	LoadVolumeM3        float64 `json:"load_volume_m3,omitempty"`         // ore-hold m³ filled per load
+	MarketLoads         float64 `json:"market_loads,omitempty"`           // full ore-hold loads the Best path's best reachable order(s) can absorb (VolumeRemain cap); 0<x<1 means the best price won't even take one load
 	FillMinutes         float64 `json:"fill_minutes,omitempty"`           // time to fill the hold
 	CycleMinutes        float64 `json:"cycle_minutes,omitempty"`          // fill + legs + stops
 	RouteJumps          int     `json:"route_jumps,omitempty"`            // jumps over the cycle's legs
