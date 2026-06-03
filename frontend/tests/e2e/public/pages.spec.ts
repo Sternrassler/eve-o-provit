@@ -9,18 +9,28 @@ test.describe('Public pages load', () => {
     await expect(page.getByRole('link', { name: /character skills/i })).toBeVisible();
   });
 
-  test('main navigation links to existing routes', async ({ page }) => {
+  test('main navigation: Trading group + top-level links, no dead placeholders', async ({ page }) => {
     await page.goto('/');
     const nav = page.locator('nav').first();
+
+    // Top-level links stay direct.
+    await expect(nav.getByRole('link', { name: 'Mining' })).toHaveAttribute('href', '/mining');
+    await expect(nav.getByRole('link', { name: 'Character' })).toHaveAttribute('href', '/character');
+
+    // The static Phase-3 placeholders are no longer advertised in the nav.
+    await expect(nav.getByRole('link', { name: 'Trends' })).toHaveCount(0);
+    await expect(nav.getByRole('link', { name: 'Watchlist' })).toHaveCount(0);
+
+    // The five buy→sell→profit tools now live under the "Trading" dropdown.
+    await nav.getByRole('button', { name: 'Trading' }).click();
     for (const [name, path] of [
-      ['Trading', '/trading'],
-      ['Character', '/character'],
-      ['Multi-Hub', '/multi-hub'],
+      ['Trading Routes', '/trading'],
+      ['Hauling', '/hauling'],
       ['ROI Calculator', '/roi-calculator'],
-      ['Trends', '/trends'],
-      ['Watchlist', '/watchlist'],
+      ['Multi-Hub', '/multi-hub'],
+      ['Sell Assets', '/sell-assets'],
     ] as const) {
-      await expect(nav.getByRole('link', { name }).first()).toHaveAttribute('href', path);
+      await expect(page.getByRole('link', { name }).first()).toHaveAttribute('href', path);
     }
   });
 
