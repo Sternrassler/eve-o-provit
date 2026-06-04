@@ -2,6 +2,8 @@ module github.com/Sternrassler/eve-o-provit/backend
 
 go 1.25.0
 
+toolchain go1.26.4
+
 require (
 	github.com/Sternrassler/eve-esi-client v0.5.0
 	github.com/alicebob/miniredis/v2 v2.35.0
