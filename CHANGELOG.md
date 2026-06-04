@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Mining: veraltete Marktpreise → Live-ESI-Abfrage (Backend).** Der Mining-Erz-Ranking las Order-Books aus der `market_orders`-DB-Momentaufnahme (`MarketRepository.GetMarketOrders`), die **nur on-demand** von Trading-Routen-Abfragen aufgefrischt wird (kein Hintergrund-Refresher) — für eine Region, gegen die länger keine Trading-Abfrage lief, war sie **tagealt** (real beobachtet: Verge Vendor **~3,5 Tage**). Folge: falsche Verkaufsstation/ISK (z. B. Alentene 10.50 statt der aktuellen Best-Order). Mining holt die Order-Books jetzt **live von ESI** (`FetchMarketOrdersForType`, ETag-/Redis-validiert) wie Trading/Multi-Hub/Sell-Assets — pro Request einmal je Typ memoisiert (wiederkehrende Mineral-Typen). ESI-Fehler werden **fail-loud** propagiert (kein stilles Zurückfallen auf alte Daten), Prinzip [[no-silent-fallbacks]].
+
+### Added
+
+- **Mining: aktueller Schiff-Standort in der Antwort (Backend).** `OreRankingResponse` liefert jetzt `origin_system_id`/`origin_system_name` (+ `origin_station_name` falls angedockt) — das System, von dem aus gerankt/geroutet wird. Grundlage für die Standort-Anzeige im UI.
+
 ## [0.28.0] - 2026-06-04
 
 ### Added
