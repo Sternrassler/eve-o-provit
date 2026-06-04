@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TradingTabs } from "@/components/trading/TradingTabs";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -129,6 +130,7 @@ function ROICalculatorContent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <TradingTabs />
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold">
           ROI Calculator & Capital Optimizer

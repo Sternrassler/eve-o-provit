@@ -71,4 +71,22 @@ test.describe('Public pages load', () => {
     // Unauthenticated: a "Login with EVE" affordance is reachable (nav or page body).
     await expect(page.getByRole('button', { name: /login with eve/i }).first()).toBeVisible();
   });
+
+  test('trading sub-tabs link the five tools, active tab is route-aware', async ({ page }) => {
+    await page.goto('/roi-calculator');
+    const tabs = page.getByRole('navigation', { name: 'Trading-Werkzeuge' });
+    for (const [name, path] of [
+      ['Routes', '/trading'],
+      ['Hauling', '/hauling'],
+      ['ROI', '/roi-calculator'],
+      ['Multi-Hub', '/multi-hub'],
+      ['Sell Assets', '/sell-assets'],
+    ] as const) {
+      await expect(tabs.getByRole('link', { name, exact: true })).toHaveAttribute('href', path);
+    }
+    // The tab for the current route is marked active.
+    await expect(
+      tabs.getByRole('link', { name: 'ROI', exact: true }),
+    ).toHaveAttribute('aria-current', 'page');
+  });
 });
