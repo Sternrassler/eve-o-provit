@@ -22,6 +22,11 @@ jobs:
         run: gofmt -l . | tee /dev/stderr | (! grep .)
       - name: go vet
         run: go vet ./...
+      - name: Swagger spec up to date
+        run: |
+          make -C .. swagger
+          git diff --exit-code -- docs \
+            || { echo "::error::backend/docs is stale — run 'make swagger' and commit the result"; exit 1; }
 
   test:
     runs-on: ubuntu-latest

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Swagger-Drift dauerhaft verhindert (Build/CI).** Neues `make swagger`-Target regeneriert die OpenAPI-Spec reproduzierbar via `go run github.com/swaggo/swag/cmd/swag@<pinned>` (Version in `SWAG_VERSION` einmalig gepinnt). `make release` zieht jetzt die Swagger-`@version` automatisch mit (`// @version` = Release-Version) und regeneriert die Spec. Ein CI-Schritt (`lint`-Job) führt `make swagger` aus und failt bei einem Diff in `backend/docs` — so kann eine veraltete Spec nicht mehr committet werden (gleicher Geist wie „nie zwei Schema-Quellen"). Verhindert die Wiederholung der 7-Monats-Drift aus dem vorigen Eintrag.
 - **Swagger/OpenAPI-Doku neu generiert (Backend).** Die unter `/swagger` ausgelieferte API-Spec war seit 2025-11-13 nicht mehr regeneriert (`info.version` hing auf `0.1.0`) und beschrieb weder neuere Endpunkte noch Felder — u. a. fehlte `market_loads` in der Ore-Ranking-Antwort. `swag init -g cmd/api/main.go --parseInternal` neu erzeugt (`docs/{docs.go,swagger.json,swagger.yaml}`), `@version` auf `0.27.0` gesetzt. Reine Doku-Regeneration aus den vorhandenen Annotationen/Structs, kein Verhaltens-/API-Change.
 
 ## [0.27.0] - 2026-06-04
