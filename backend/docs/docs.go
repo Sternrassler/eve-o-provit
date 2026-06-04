@@ -1968,6 +1968,18 @@ const docTemplate = `{
                     "description": "set when no ores apply here",
                     "type": "string"
                 },
+                "origin_station_name": {
+                    "description": "docked station name, if any",
+                    "type": "string"
+                },
+                "origin_system_id": {
+                    "description": "character's current system (ranking origin)",
+                    "type": "integer"
+                },
+                "origin_system_name": {
+                    "description": "resolved name of the current system",
+                    "type": "string"
+                },
                 "quarter": {
                     "description": "amarr|caldari|gallente|minmatar|\"\"",
                     "type": "string"

@@ -125,11 +125,20 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	if err != nil {
 		return nil, fmt.Errorf("system ore class: %w", err)
 	}
+	// Current ship location (best-effort display context; the ranking origin).
+	originName, _ := s.names.GetSystemName(ctx, originSys)
+	var originStation string
+	if curLoc.StationID != nil {
+		originStation, _ = s.names.GetStationName(ctx, *curLoc.StationID)
+	}
 	resp := &models.OreRankingResponse{
-		RegionID:       regionID,
-		SystemSecurity: math.Round(sec*10) / 10,
-		Quarter:        quarter,
-		Rows:           []models.OreRankRow{},
+		RegionID:          regionID,
+		OriginSystemID:    originSys,
+		OriginSystemName:  originName,
+		OriginStationName: originStation,
+		SystemSecurity:    math.Round(sec*10) / 10,
+		Quarter:           quarter,
+		Rows:              []models.OreRankRow{},
 	}
 
 	// 2. Ore set that actually spawns in this system (deterministic).
@@ -236,7 +245,8 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 		}
 	}
 	travelMemo := map[travelKey]*navigation.RouteResult{}
-	sysOf := map[int64]int64{} // order location → system, memoised across ores
+	sysOf := map[int64]int64{}                  // order location → system, memoised across ores
+	ordMemo := map[int][]database.MarketOrder{} // type → live order book, fetched once per request
 
 	// 4. Best reprocessing station (lowest tax given the player's owner-corp standing).
 	stations, err := s.stations.GetRegionReprocessStations(ctx, regionID)
@@ -354,7 +364,7 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 
 		// ---- RAW path (reachability-aware): best reachable ore buy order ----
 		orePrice, oreLoc, _, oreSecs, oreJumps, oreVR, oreOK :=
-			s.bestReachableBuyOrder(ctx, regionID, int(o.TypeID), originSys, navParams, travelMemo, sysOf)
+			s.bestReachableBuyOrder(ctx, regionID, int(o.TypeID), originSys, navParams, travelMemo, sysOf, ordMemo)
 		rawCmp := CompareOre(OreCompareInput{
 			PortionSize: o.PortionSize, OreVolumeM3: o.VolumeM3, OreBuyPrice: orePrice,
 			Materials: nil, NetYield: net, StationTake: stationTax, SalesTaxRate: salesTaxRate,
@@ -386,7 +396,7 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 			candidates := map[int64]bool{}
 			ok := true
 			for _, m := range o.Materials {
-				g, e := s.bestBuyBySystem(ctx, regionID, int(m.MaterialTypeID), sysOf)
+				g, e := s.bestBuyBySystem(ctx, regionID, int(m.MaterialTypeID), sysOf, ordMemo)
 				if e != nil {
 					if s.logger != nil {
 						s.logger.Warn("ore ranking: mineral market fetch failed", "typeID", m.MaterialTypeID, "error", e)
@@ -563,6 +573,22 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	return resp, nil
 }
 
+// ordersFor returns the order book for (region, type), fetched once per request
+// and memoised in ordMemo (mineral types recur across ores). The provider fetches
+// LIVE from ESI — never the stale market_orders snapshot — so the ranking reflects
+// current prices.
+func (s *MiningService) ordersFor(ctx context.Context, regionID, typeID int, ordMemo map[int][]database.MarketOrder) ([]database.MarketOrder, error) {
+	if o, ok := ordMemo[typeID]; ok {
+		return o, nil
+	}
+	o, err := s.marketRepo.GetMarketOrders(ctx, regionID, typeID)
+	if err != nil {
+		return nil, err
+	}
+	ordMemo[typeID] = o
+	return o, nil
+}
+
 // bestReachableBuyOrder returns the highest buy order for a type whose station's
 // system is reachable from origin under the request's security preference (params).
 // Citadels (location not resolvable to a system) are skipped — they can't anchor a
@@ -572,8 +598,9 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 func (s *MiningService) bestReachableBuyOrder(
 	ctx context.Context, regionID, typeID int, origin int64,
 	params *navigation.NavigationParams, travelMemo map[travelKey]*navigation.RouteResult, sysOf map[int64]int64,
+	ordMemo map[int][]database.MarketOrder,
 ) (price float64, locationID int64, sellSys int64, secs float64, jumps int, volumeRemain int, ok bool) {
-	orders, err := s.marketRepo.GetMarketOrders(ctx, regionID, typeID)
+	orders, err := s.ordersFor(ctx, regionID, typeID, ordMemo)
 	if err != nil {
 		if s.logger != nil {
 			s.logger.Warn("ore ranking: market orders fetch failed", "typeID", typeID, "error", err)
@@ -641,8 +668,8 @@ type systemBuy struct {
 // bestBuyBySystem groups a type's region buy-orders by solar system and keeps the
 // highest price per system (with its station location). Locations that can't be
 // resolved to a system (e.g. citadels) are skipped — they can't anchor a haul leg.
-func (s *MiningService) bestBuyBySystem(ctx context.Context, regionID, typeID int, sysOf map[int64]int64) (map[int64]systemBuy, error) {
-	orders, err := s.marketRepo.GetMarketOrders(ctx, regionID, typeID)
+func (s *MiningService) bestBuyBySystem(ctx context.Context, regionID, typeID int, sysOf map[int64]int64, ordMemo map[int][]database.MarketOrder) (map[int64]systemBuy, error) {
+	orders, err := s.ordersFor(ctx, regionID, typeID, ordMemo)
 	if err != nil {
 		return nil, err
 	}
