@@ -1,6 +1,6 @@
 # Makefile – Zentrale Orchestrierung für Projekt-Automationen
 
-.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json secrets-scan secrets-check pr-check release ci-local clean ensure-trivy ensure-gitleaks push-ci pr-quality-gates-ci sde docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-shell-api docker-shell-db docker-shell-redis migrate migrate-up migrate-down migrate-create
+.PHONY: help test test-be test-be-unit test-be-int test-be-bench test-be-examples test-be-ex-cargo test-be-ex-nav test-fe lint lint-be lint-fe lint-ci adr-ref commit-lint release-check security-blockers scan scan-json secrets-scan secrets-check pr-check release ci-local clean ensure-trivy ensure-gitleaks push-ci pr-quality-gates-ci swagger sde docker-up docker-down docker-logs docker-ps docker-build docker-clean docker-shell-api docker-shell-db docker-shell-redis migrate migrate-up migrate-down migrate-create
 
 # Standardwerte
 TRIVY_FAIL_ON ?= HIGH,CRITICAL
@@ -20,6 +20,9 @@ SDE_TARGET := $(BACKEND_DIR)/data/sde/eve-sde.db
 # wird in den Backend-Build injiziert (siehe backend/Dockerfile ARG APP_VERSION).
 APP_VERSION ?= $(shell grep -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | head -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
 export APP_VERSION
+# swaggo/swag version for OpenAPI generation — pinned so `make swagger` is reproducible
+# (local + CI drift-check produce byte-identical output). Bump deliberately.
+SWAG_VERSION ?= v1.16.4
 
 .DEFAULT_GOAL := help
 
@@ -280,7 +283,15 @@ release: ## Version bump + CHANGELOG Transform (Beispiel: make release VERSION=0
 	fi
 	@echo "[make release] Bump Version auf $(VERSION)..."
 	@sed -i "s/^## \[Unreleased\]/## [Unreleased]\n\n## [$(VERSION)] - $$(date +%Y-%m-%d)/" CHANGELOG.md
-	@echo "[make release] CHANGELOG aktualisiert – bitte commit + tag (v$(VERSION)) erstellen"
+	@echo "[make release] Synchronisiere Swagger @version + regeneriere Spec..."
+	@sed -i -E "s|^// @version .*|// @version $(VERSION)|" $(BACKEND_DIR)/cmd/api/main.go
+	@$(MAKE) --no-print-directory swagger
+	@echo "[make release] CHANGELOG + Swagger aktualisiert – bitte commit + tag (v$(VERSION)) erstellen"
+
+swagger: ## Regeneriert die OpenAPI-Spec (backend/docs) aus den swag-Annotationen
+	@echo "[make swagger] Regeneriere OpenAPI-Spec (swag $(SWAG_VERSION))..."
+	@cd $(BACKEND_DIR) && go run github.com/swaggo/swag/cmd/swag@$(SWAG_VERSION) init -g cmd/api/main.go --parseInternal -o docs
+	@echo "[make swagger] ✅ backend/docs aktualisiert"
 
 ci-local: ## Simulation definierter CI-Gates lokal
 	@echo "[make ci-local] Simuliere CI Pipeline lokal..."

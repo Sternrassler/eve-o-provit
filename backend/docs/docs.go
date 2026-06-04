@@ -469,8 +469,7 @@ const docTemplate = `{
                                     "type": "boolean"
                                 },
                                 "destination_id": {
-                                    "type": "integer",
-                                    "format": "int64"
+                                    "type": "integer"
                                 }
                             }
                         }

@@ -1372,7 +1372,6 @@ paths:
             clear_other_waypoints:
               type: boolean
             destination_id:
-              format: int64
               type: integer
           type: object
       produces:
