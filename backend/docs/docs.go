@@ -264,6 +264,44 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/character/wallet": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the authenticated character's wallet balance in ISK (used to prefill ROI capital)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Character"
+                ],
+                "summary": "Get character wallet balance",
+                "responses": {
+                    "200": {
+                        "description": "Object with balance (float, ISK)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/characters/{characterId}/fitting/{shipTypeId}": {
             "get": {
                 "security": [
@@ -441,6 +479,71 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "Waypoint set successfully"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/esi/ui/openwindow/marketdetails": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Opens the market window for a given type_id in the EVE client.\nRequires scope: esi-ui.open_window.v1",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ESI UI"
+                ],
+                "summary": "Open market details window in EVE client",
+                "parameters": [
+                    {
+                        "description": "Type ID to open",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "type_id": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Market details window opened"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -657,6 +760,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/mining/ore-ranking": {
+            "post": {
+                "description": "Given a region (or the character's current region) and a security band,\nranks ores by net ISK per m³ and — when a mining ship is fitted — per hour,\ncomparing selling the raw ore vs reprocessing + selling the materials.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Mining"
+                ],
+                "summary": "Rank asteroid ores by raw-vs-refine net ISK for a region + security band",
+                "parameters": [
+                    {
+                        "description": "Ore ranking parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.OreRankingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.OreRankingResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/sde/regions": {
             "get": {
                 "description": "Get list of all EVE Online regions from SDE",
@@ -675,6 +830,246 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/RegionResponse"
                             }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/trading/assets": {
+            "get": {
+                "description": "Returns the character's assets aggregated by (type, location) with quantity.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trading"
+                ],
+                "summary": "List owned items aggregated by type and location",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.AssetsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/trading/assets/sell-options": {
+            "post": {
+                "description": "For a selected owned item, ranks instant-sell (taker) locations across the\nmajor hubs + the item's current region by net proceeds, with route info.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trading"
+                ],
+                "summary": "Rank taker sell locations for one owned item",
+                "parameters": [
+                    {
+                        "description": "Selected item",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.SellOptionsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.SellOptionsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/trading/hauling/routes": {
+            "post": {
+                "description": "From the character's current region + adjacent regions, finds cross-region\narbitrage routes with an optimal per-trip cargo load (cargo + capital).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trading"
+                ],
+                "summary": "Find profitable station→station hauling routes in the neighborhood",
+                "parameters": [
+                    {
+                        "description": "Hauling parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/HaulingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/HaulingResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/trading/hubs/compare": {
+            "post": {
+                "description": "For a given item, compares buy/sell/spread, skill-adjusted net margin,\nvolume and competition across Jita, Amarr, Dodixie, Rens, Hek.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trading"
+                ],
+                "summary": "Compare an item's station-trading profitability across major hubs",
+                "parameters": [
+                    {
+                        "description": "Item to compare",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/HubComparisonRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/HubComparisonResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/trading/portfolio/optimize": {
+            "post": {
+                "description": "Given region, ship, capital and time budget, suggests how to allocate\ncapital across items (greedy, under liquidity + per-item caps).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Trading"
+                ],
+                "summary": "Optimize capital allocation across items for max daily profit",
+                "parameters": [
+                    {
+                        "description": "Optimization parameters",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PortfolioRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/PortfolioResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "500": {
@@ -986,6 +1381,20 @@ const docTemplate = `{
                 }
             }
         },
+        "CompetitionInfo": {
+            "type": "object",
+            "properties": {
+                "changes_per_hour": {
+                    "type": "number",
+                    "example": 42.5
+                },
+                "source": {
+                    "description": "\"live\" | \"baseline\"",
+                    "type": "string",
+                    "example": "baseline"
+                }
+            }
+        },
         "ErrorResponse": {
             "type": "object",
             "properties": {
@@ -1003,6 +1412,136 @@ const docTemplate = `{
                 }
             }
         },
+        "HaulingItem": {
+            "type": "object",
+            "properties": {
+                "buy_price": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "profit": {
+                    "description": "net profit for this position",
+                    "type": "number"
+                },
+                "profit_per_m3": {
+                    "type": "number"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "sell_price": {
+                    "type": "number"
+                },
+                "type_id": {
+                    "type": "integer"
+                },
+                "unit_volume": {
+                    "type": "number"
+                }
+            }
+        },
+        "HaulingRequest": {
+            "type": "object",
+            "properties": {
+                "avoid_low_sec": {
+                    "type": "boolean"
+                },
+                "capital": {
+                    "type": "number"
+                },
+                "cargo_capacity": {
+                    "description": "Optional: selected ship instance's effective cargo (m³). When \u003e0, overrides the per-type recompute.",
+                    "type": "number"
+                },
+                "max_routes": {
+                    "description": "0 = default 15",
+                    "type": "integer"
+                },
+                "origin_region_id": {
+                    "description": "0 = use character's current region",
+                    "type": "integer"
+                },
+                "ship_type_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "HaulingResponse": {
+            "type": "object",
+            "properties": {
+                "origin_region_id": {
+                    "type": "integer"
+                },
+                "regions_scanned": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "routes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/HaulingRoute"
+                    }
+                },
+                "skills_applied": {
+                    "$ref": "#/definitions/SkillsApplied"
+                }
+            }
+        },
+        "HaulingRoute": {
+            "type": "object",
+            "properties": {
+                "buy_station_id": {
+                    "type": "integer"
+                },
+                "buy_station_name": {
+                    "type": "string"
+                },
+                "buy_system_name": {
+                    "type": "string"
+                },
+                "isk_per_hour": {
+                    "type": "number"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/HaulingItem"
+                    }
+                },
+                "jumps": {
+                    "type": "integer"
+                },
+                "security_risk": {
+                    "description": "\"safe\" | \"caution\" | \"danger\"",
+                    "type": "string"
+                },
+                "sell_station_id": {
+                    "type": "integer"
+                },
+                "sell_station_name": {
+                    "type": "string"
+                },
+                "sell_system_name": {
+                    "type": "string"
+                },
+                "total_capital": {
+                    "type": "number"
+                },
+                "total_profit": {
+                    "type": "number"
+                },
+                "total_volume": {
+                    "type": "number"
+                },
+                "travel_time_min": {
+                    "type": "number"
+                }
+            }
+        },
         "HealthResponse": {
             "type": "object",
             "properties": {
@@ -1013,6 +1552,102 @@ const docTemplate = `{
                 "timestamp": {
                     "type": "string",
                     "example": "2025-11-12T10:00:00Z"
+                }
+            }
+        },
+        "HubComparisonRequest": {
+            "type": "object",
+            "properties": {
+                "type_id": {
+                    "type": "integer",
+                    "example": 34
+                }
+            }
+        },
+        "HubComparisonResult": {
+            "type": "object",
+            "properties": {
+                "best_hub_region_id": {
+                    "type": "integer",
+                    "example": 10000032
+                },
+                "hubs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/HubRow"
+                    }
+                },
+                "item_name": {
+                    "type": "string",
+                    "example": "Tritanium"
+                },
+                "skills_applied": {
+                    "$ref": "#/definitions/SkillsApplied"
+                },
+                "type_id": {
+                    "type": "integer",
+                    "example": 34
+                }
+            }
+        },
+        "HubRow": {
+            "type": "object",
+            "properties": {
+                "buy_price": {
+                    "type": "number",
+                    "example": 5.5
+                },
+                "competition": {
+                    "$ref": "#/definitions/CompetitionInfo"
+                },
+                "daily_volume": {
+                    "type": "number",
+                    "example": 125000
+                },
+                "has_data": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "hub_name": {
+                    "type": "string",
+                    "example": "Jita"
+                },
+                "liquidity_score": {
+                    "type": "integer",
+                    "example": 72
+                },
+                "net_margin_percent": {
+                    "type": "number",
+                    "example": 3.4
+                },
+                "net_profit_per_unit": {
+                    "type": "number",
+                    "example": 0.18
+                },
+                "region_id": {
+                    "type": "integer",
+                    "example": 10000002
+                },
+                "region_name": {
+                    "type": "string",
+                    "example": "The Forge"
+                },
+                "sell_price": {
+                    "type": "number",
+                    "example": 6.1
+                },
+                "spread_percent": {
+                    "type": "number",
+                    "example": 10.9
+                },
+                "system_id": {
+                    "type": "integer",
+                    "example": 30000142
+                },
+                "tier": {
+                    "description": "\"primary\" | \"secondary\"",
+                    "type": "string",
+                    "example": "primary"
                 }
             }
         },
@@ -1129,6 +1764,121 @@ const docTemplate = `{
                 }
             }
         },
+        "PortfolioItem": {
+            "type": "object",
+            "properties": {
+                "buy_station_id": {
+                    "type": "integer"
+                },
+                "buy_station_name": {
+                    "type": "string"
+                },
+                "buy_system_name": {
+                    "description": "Where to execute the haul: buy at the buy station, sell at the sell station.",
+                    "type": "string"
+                },
+                "capital_used": {
+                    "type": "number"
+                },
+                "daily_profit": {
+                    "type": "number"
+                },
+                "isk_per_hour": {
+                    "description": "net daily profit per hour of haul time",
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "roi_percent": {
+                    "description": "daily_profit / capital_used * 100",
+                    "type": "number"
+                },
+                "sell_station_id": {
+                    "type": "integer"
+                },
+                "sell_station_name": {
+                    "type": "string"
+                },
+                "sell_system_name": {
+                    "type": "string"
+                },
+                "trips_per_day": {
+                    "type": "number"
+                },
+                "type_id": {
+                    "type": "integer"
+                },
+                "units": {
+                    "type": "integer"
+                }
+            }
+        },
+        "PortfolioRequest": {
+            "type": "object",
+            "properties": {
+                "capital": {
+                    "description": "ISK budget",
+                    "type": "number"
+                },
+                "cargo_capacity": {
+                    "description": "Optional: selected ship instance's effective cargo (m³). When \u003e0, overrides the per-type fitting recompute.",
+                    "type": "number"
+                },
+                "liquidity_cap_pct": {
+                    "description": "0..100, max share of daily volume per item",
+                    "type": "number"
+                },
+                "max_item_pct": {
+                    "description": "0..100, max share of capital per item",
+                    "type": "number"
+                },
+                "region_id": {
+                    "type": "integer"
+                },
+                "sec_zones": {
+                    "description": "\"high\",\"low\",\"null\"",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ship_type_id": {
+                    "type": "integer"
+                },
+                "time_budget_min": {
+                    "description": "available trading minutes/day",
+                    "type": "number"
+                }
+            }
+        },
+        "PortfolioResult": {
+            "type": "object",
+            "properties": {
+                "diversification_score": {
+                    "description": "0..100",
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/PortfolioItem"
+                    }
+                },
+                "skills_applied": {
+                    "$ref": "#/definitions/SkillsApplied"
+                },
+                "time_used_min": {
+                    "type": "number"
+                },
+                "total_capital_used": {
+                    "type": "number"
+                },
+                "total_daily_profit": {
+                    "type": "number"
+                }
+            }
+        },
         "RegionResponse": {
             "type": "object",
             "properties": {
@@ -1160,6 +1910,31 @@ const docTemplate = `{
                 "spaceship_command": {
                     "type": "integer",
                     "example": 5
+                }
+            }
+        },
+        "SkillsApplied": {
+            "type": "object",
+            "properties": {
+                "accounting": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "applied": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "broker_fee_rate": {
+                    "type": "number",
+                    "example": 0.015
+                },
+                "broker_relations": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "sales_tax_rate": {
+                    "type": "number",
+                    "example": 0.025
                 }
             }
         },
@@ -1308,6 +2083,218 @@ const docTemplate = `{
                 }
             }
         },
+        "models.AssetItem": {
+            "type": "object",
+            "properties": {
+                "location_id": {
+                    "type": "integer"
+                },
+                "location_name": {
+                    "type": "string"
+                },
+                "marketable": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "region_id": {
+                    "type": "integer"
+                },
+                "system_id": {
+                    "type": "integer"
+                },
+                "type_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.AssetsResponse": {
+            "type": "object",
+            "properties": {
+                "assets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AssetItem"
+                    }
+                },
+                "cache_expires_at": {
+                    "type": "string"
+                },
+                "count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.OreRankRow": {
+            "type": "object",
+            "properties": {
+                "best": {
+                    "type": "string"
+                },
+                "best_station_id": {
+                    "type": "integer"
+                },
+                "best_station_name": {
+                    "description": "Where to act:",
+                    "type": "string"
+                },
+                "best_station_system": {
+                    "description": "reprocess station system",
+                    "type": "string"
+                },
+                "best_station_tax": {
+                    "type": "number"
+                },
+                "crystal_multiplier": {
+                    "description": "per ore; 1.0 = no crystals used",
+                    "type": "number"
+                },
+                "cycle_minutes": {
+                    "description": "fill + legs + stops",
+                    "type": "number"
+                },
+                "delta_isk_per_hour": {
+                    "type": "number"
+                },
+                "effective_isk_per_hour": {
+                    "description": "Haul-downtime cycle (effective ISK/h, greedy one cycle from current system):",
+                    "type": "number"
+                },
+                "estimate_reason": {
+                    "description": "short reason, only when IsEstimate",
+                    "type": "string"
+                },
+                "fill_minutes": {
+                    "description": "time to fill the hold",
+                    "type": "number"
+                },
+                "hull_yield_multiplier": {
+                    "description": "Yield accuracy (hull role/skill bonus + best-case ore crystal):",
+                    "type": "number"
+                },
+                "is_estimate": {
+                    "description": "hull bonus / crystal not fully resolved",
+                    "type": "boolean"
+                },
+                "load_volume_m3": {
+                    "description": "ore-hold m³ filled per load",
+                    "type": "number"
+                },
+                "market_loads": {
+                    "description": "full ore-hold loads the Best path's best reachable order(s) can absorb (VolumeRemain cap); 0\u003cx\u003c1 means the best price won't even take one load",
+                    "type": "number"
+                },
+                "materials": {
+                    "description": "per-mineral sell breakdown",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RefineMaterial"
+                    }
+                },
+                "mining_m3_per_hour": {
+                    "type": "number"
+                },
+                "ore_name": {
+                    "type": "string"
+                },
+                "ore_type_id": {
+                    "type": "integer"
+                },
+                "raw_isk_per_hour": {
+                    "type": "number"
+                },
+                "raw_net_per_m3": {
+                    "type": "number"
+                },
+                "raw_sell": {
+                    "description": "where to sell the raw ore",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/models.SellLocation"
+                        }
+                    ]
+                },
+                "refine_isk_per_hour": {
+                    "type": "number"
+                },
+                "refine_net_per_m3": {
+                    "type": "number"
+                },
+                "route_jumps": {
+                    "description": "jumps over the cycle's legs",
+                    "type": "integer"
+                },
+                "sell_system_name": {
+                    "description": "chosen sell hub (refine) / ore-sell system (raw)",
+                    "type": "string"
+                }
+            }
+        },
+        "models.OreRankingRequest": {
+            "type": "object",
+            "properties": {
+                "allow_low_sec": {
+                    "description": "true = willing to operate in low-sec too",
+                    "type": "boolean"
+                },
+                "region_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.OreRankingResponse": {
+            "type": "object",
+            "properties": {
+                "no_mining_setup": {
+                    "type": "boolean"
+                },
+                "not_available_reason": {
+                    "description": "set when no ores apply here",
+                    "type": "string"
+                },
+                "quarter": {
+                    "description": "amarr|caldari|gallente|minmatar|\"\"",
+                    "type": "string"
+                },
+                "region_id": {
+                    "type": "integer"
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.OreRankRow"
+                    }
+                },
+                "system_security": {
+                    "description": "current system, displayed sec",
+                    "type": "number"
+                }
+            }
+        },
+        "models.RefineMaterial": {
+            "type": "object",
+            "properties": {
+                "buy_price": {
+                    "type": "number"
+                },
+                "effective_qty": {
+                    "type": "integer"
+                },
+                "material_name": {
+                    "type": "string"
+                },
+                "material_type_id": {
+                    "type": "integer"
+                },
+                "sell": {
+                    "$ref": "#/definitions/models.SellLocation"
+                }
+            }
+        },
         "models.RouteCalculationRequest": {
             "type": "object",
             "properties": {
@@ -1382,6 +2369,122 @@ const docTemplate = `{
                 },
                 "warning": {
                     "type": "string"
+                }
+            }
+        },
+        "models.SellLocation": {
+            "type": "object",
+            "properties": {
+                "is_structure": {
+                    "type": "boolean"
+                },
+                "location_id": {
+                    "description": "station/structure id — in-game waypoint target",
+                    "type": "integer"
+                },
+                "station_name": {
+                    "type": "string"
+                },
+                "system_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SellOption": {
+            "type": "object",
+            "properties": {
+                "buy_price": {
+                    "type": "number"
+                },
+                "has_data": {
+                    "type": "boolean"
+                },
+                "isk_per_hour": {
+                    "type": "number"
+                },
+                "jumps": {
+                    "type": "integer"
+                },
+                "region_id": {
+                    "type": "integer"
+                },
+                "region_name": {
+                    "type": "string"
+                },
+                "scope": {
+                    "description": "\"hub\" | \"current_region\"",
+                    "type": "string"
+                },
+                "security_risk": {
+                    "description": "\"safe\" | \"caution\" | \"danger\"",
+                    "type": "string"
+                },
+                "station_id": {
+                    "type": "integer"
+                },
+                "station_name": {
+                    "type": "string"
+                },
+                "system_name": {
+                    "type": "string"
+                },
+                "total_net": {
+                    "type": "number"
+                },
+                "travel_time_min": {
+                    "type": "number"
+                },
+                "unit_net": {
+                    "type": "number"
+                }
+            }
+        },
+        "models.SellOptionsRequest": {
+            "type": "object",
+            "properties": {
+                "avoid_low_sec": {
+                    "type": "boolean"
+                },
+                "location_id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "type_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.SellOptionsResponse": {
+            "type": "object",
+            "properties": {
+                "best": {
+                    "$ref": "#/definitions/models.SellOption"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "not_routable_reason": {
+                    "type": "string"
+                },
+                "options": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SellOption"
+                    }
+                },
+                "origin_system_id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "skills_applied": {
+                    "$ref": "#/definitions/SkillsApplied"
+                },
+                "type_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -1550,6 +2653,10 @@ const docTemplate = `{
                     "description": "Sum of all trading fees",
                     "type": "number"
                 },
+                "total_investment": {
+                    "description": "Total ISK needed to purchase cargo (buy_price × quantity)",
+                    "type": "number"
+                },
                 "total_profit": {
                     "type": "number"
                 },
@@ -1609,7 +2716,7 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "0.1.0",
+	Version:          "0.27.0",
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
