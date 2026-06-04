@@ -281,6 +281,8 @@ class OreRankingResponse {
     this.systemSecurity = 0.0,
     this.quarter = '',
     this.notAvailableReason,
+    this.originSystemName,
+    this.originStationName,
   });
 
   /// Backend: `region_id`
@@ -299,6 +301,12 @@ class OreRankingResponse {
   /// Backend: `no_mining_setup` — true when the character has no mining lasers.
   final bool noMiningSetup;
 
+  /// Backend: `origin_system_name` — the character's current system (ranking origin).
+  final String? originSystemName;
+
+  /// Backend: `origin_station_name` — docked station, if any.
+  final String? originStationName;
+
   /// Backend: `rows` — pre-sorted by best ISK/h desc.
   final List<OreRankRow> rows;
 
@@ -313,6 +321,8 @@ class OreRankingResponse {
       quarter: json['quarter'] as String? ?? '',
       notAvailableReason: json['not_available_reason'] as String?,
       noMiningSetup: json['no_mining_setup'] as bool? ?? false,
+      originSystemName: json['origin_system_name'] as String?,
+      originStationName: json['origin_station_name'] as String?,
       rows: rawRows
           .whereType<Map<String, dynamic>>()
           .map(OreRankRow.fromJson)

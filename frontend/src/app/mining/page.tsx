@@ -118,6 +118,16 @@ function MiningPageContent() {
 
           {miningMutation.isSuccess && miningMutation.data && (
             <div className="space-y-4">
+              {miningMutation.data.origin_system_name && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Aktueller Standort: </span>
+                  <span className="font-medium">
+                    {miningMutation.data.origin_station_name
+                      ? `${miningMutation.data.origin_station_name} (${miningMutation.data.origin_system_name})`
+                      : miningMutation.data.origin_system_name}
+                  </span>
+                </p>
+              )}
               {(miningMutation.data.quarter || miningMutation.data.system_security != null) && (
                 <p className="text-sm text-muted-foreground">
                   {[

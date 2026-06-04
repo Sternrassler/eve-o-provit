@@ -374,6 +374,15 @@ class OreRankingTable extends StatelessWidget {
             ' · ${result.systemSecurity.toStringAsFixed(1)}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
+          if (result.originSystemName != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              result.originStationName != null
+                  ? 'Standort: ${result.originStationName} (${result.originSystemName})'
+                  : 'Standort: ${result.originSystemName}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           const SizedBox(height: 16),
           Column(
             key: const Key('mining-ore-table'),

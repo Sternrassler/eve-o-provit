@@ -369,6 +369,9 @@ export interface OreRankRow {
 
 export interface OreRankingResponse {
   region_id: number;
+  origin_system_id?: number;
+  origin_system_name?: string;
+  origin_station_name?: string;
   system_security?: number;
   quarter?: string;
   not_available_reason?: string;
