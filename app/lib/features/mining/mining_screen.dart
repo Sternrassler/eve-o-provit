@@ -18,6 +18,7 @@ import '../../core/breakpoint.dart';
 import '../../core/format.dart';
 import '../trading/current_ship_card.dart';
 import 'mining_providers.dart';
+import 'sold_loads_tally.dart';
 
 // ---------------------------------------------------------------------------
 // Public entry point
@@ -512,6 +513,11 @@ class _OreRankTile extends StatelessWidget {
                     ),
                   ),
           ),
+        if (row.marketLoads != null && row.marketLoads! >= 1)
+          MiningLoadsTally(
+            oreTypeId: row.oreTypeId,
+            total: row.marketLoads!.floor(),
+          ),
         _detailLine(
           context,
           'Aufbereiten bei',
@@ -596,6 +602,11 @@ class _OreRankTile extends StatelessWidget {
                       fontSize: 12,
                     ),
                   ),
+          ),
+        if (row.marketLoads != null && row.marketLoads! >= 1)
+          MiningLoadsTally(
+            oreTypeId: row.oreTypeId,
+            total: row.marketLoads!.floor(),
           ),
         _detailLine(context, 'Roh verkaufen bei', _formatSell(row.rawSell)),
       ],

@@ -36,6 +36,7 @@ class OreRankingNotifier extends AsyncNotifier<OreRankingResponse?> {
 
   /// Runs an ore ranking for [request].
   Future<void> run(OreRankingRequest request) async {
+    ref.read(soldLoadsProvider.notifier).reset(); // reset sold-loads tally on recalc
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final api = ref.read(miningApiProvider);
@@ -49,3 +50,20 @@ final oreRankingProvider =
     AsyncNotifierProvider<OreRankingNotifier, OreRankingResponse?>(
   OreRankingNotifier.new,
 );
+
+/// Per-ore "sold loads" tally (oreTypeId → number of loads marked sold). Reset
+/// on each new ranking (see [OreRankingNotifier.run]) so a recalculation starts
+/// the tally empty. In-memory only.
+class SoldLoadsNotifier extends Notifier<Map<int, int>> {
+  @override
+  Map<int, int> build() => {};
+
+  void setSold(int oreTypeId, int sold) {
+    state = {...state, oreTypeId: sold};
+  }
+
+  void reset() => state = {};
+}
+
+final soldLoadsProvider =
+    NotifierProvider<SoldLoadsNotifier, Map<int, int>>(SoldLoadsNotifier.new);

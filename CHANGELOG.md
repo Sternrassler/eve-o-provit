@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Mining: „Verkaufte Ladungen"-Strichliste (Web + Flutter).** Im aufgeklappten Erz-Detail kann man unter „Markt: ~X volle Ladungen" die bereits verkauften Ladungen abhaken und behält den Überblick: antippbare Pips (eine pro voller Ladung) mit Zähler „Verkauft: X / N"; bei > 24 Ladungen automatisch Zähler mit +/− und Fortschrittsbalken (statt zig Pips). Rein client-seitig/in-memory, **Reset bei jeder Neuberechnung**. Neue Komponente `SoldLoadsTally` (Web) bzw. `MiningLoadsTally` + `soldLoadsProvider` (Flutter).
+
 ## [0.29.0] - 2026-06-04
 
 ### Fixed
