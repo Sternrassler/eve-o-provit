@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-06-04
+
 ### Added
 
 - **Trading-Sub-Tabs (Frontend).** Die fünf Trading-Werkzeuge (Routes · Hauling · ROI · Multi-Hub · Sell Assets) haben jetzt eine gemeinsame **Tab-Leiste** auf jeder der Seiten — man wechselt das Werkzeug direkt, ohne über die Top-Nav zu gehen; die Trading-Sektion liest sich als ein Hub (analog zum Flutter-Client). Jeder Tab bleibt eine echte Route (Deep-Links funktionieren weiter), der aktive Tab ist routen-bewusst (`usePathname`). Neue Komponente `components/trading/TradingTabs`, eingebunden in die fünf Seiten; Top-Nav-Dropdown unverändert. Verifiziert via eslint/tsc/`next build`/vitest + Real-Browser-Check.
