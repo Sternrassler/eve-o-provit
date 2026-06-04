@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
+import { TradingTabs } from "@/components/trading/TradingTabs";
 import { useAuth } from "@/lib/auth-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -27,6 +28,7 @@ function SellAssetsPageContent() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <TradingTabs />
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold">Sell from Assets</h1>
         <p className="text-muted-foreground">
