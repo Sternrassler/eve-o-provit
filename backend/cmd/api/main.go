@@ -44,9 +44,6 @@
 // @tag.name Fitting
 // @tag.description Ship fitting with deterministic bonus calculations
 //
-// @tag.name Calculations
-// @tag.description Deterministic ship bonus calculations (cargo, warp, inertia)
-//
 // @tag.name ESI
 // @tag.description Direct ESI proxy endpoints (UI operations)
 package main
@@ -159,9 +156,6 @@ func setupApp(c *AppContainer) *fiber.App {
 	api.Post("/trading/assets/sell-options", routeCalcLimiter, evesso.NewAuthMiddleware(c.TokenValidator), c.AssetsHandler.SellOptions)
 	api.Post("/mining/ore-ranking", routeCalcLimiter, evesso.NewAuthMiddleware(c.TokenValidator), c.MiningHandler.OreRanking)
 	api.Get("/items/search", c.TradingHandler.SearchItems)
-
-	api.Post("/calculations/cargo", c.CalculationHandler.CalculateCargo)
-	api.Post("/calculations/warp", c.CalculationHandler.CalculateWarp)
 
 	// Protected routes
 	protected := api.Group("", evesso.NewAuthMiddleware(c.TokenValidator))
