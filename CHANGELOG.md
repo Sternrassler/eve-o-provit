@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Swagger/OpenAPI-Doku neu generiert (Backend).** Die unter `/swagger` ausgelieferte API-Spec war seit 2025-11-13 nicht mehr regeneriert (`info.version` hing auf `0.1.0`) und beschrieb weder neuere Endpunkte noch Felder — u. a. fehlte `market_loads` in der Ore-Ranking-Antwort. `swag init -g cmd/api/main.go --parseInternal` neu erzeugt (`docs/{docs.go,swagger.json,swagger.yaml}`), `@version` auf `0.27.0` gesetzt. Reine Doku-Regeneration aus den vorhandenen Annotationen/Structs, kein Verhaltens-/API-Change.
+
 ## [0.27.0] - 2026-06-04
 
 ### Changed

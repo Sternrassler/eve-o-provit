@@ -125,6 +125,16 @@ definitions:
         example: 0
         type: integer
     type: object
+  CompetitionInfo:
+    properties:
+      changes_per_hour:
+        example: 42.5
+        type: number
+      source:
+        description: '"live" | "baseline"'
+        example: baseline
+        type: string
+    type: object
   ErrorResponse:
     properties:
       code:
@@ -137,6 +147,94 @@ definitions:
         example: Detailed error message
         type: string
     type: object
+  HaulingItem:
+    properties:
+      buy_price:
+        type: number
+      name:
+        type: string
+      profit:
+        description: net profit for this position
+        type: number
+      profit_per_m3:
+        type: number
+      quantity:
+        type: integer
+      sell_price:
+        type: number
+      type_id:
+        type: integer
+      unit_volume:
+        type: number
+    type: object
+  HaulingRequest:
+    properties:
+      avoid_low_sec:
+        type: boolean
+      capital:
+        type: number
+      cargo_capacity:
+        description: 'Optional: selected ship instance''s effective cargo (m³). When
+          >0, overrides the per-type recompute.'
+        type: number
+      max_routes:
+        description: 0 = default 15
+        type: integer
+      origin_region_id:
+        description: 0 = use character's current region
+        type: integer
+      ship_type_id:
+        type: integer
+    type: object
+  HaulingResponse:
+    properties:
+      origin_region_id:
+        type: integer
+      regions_scanned:
+        items:
+          type: integer
+        type: array
+      routes:
+        items:
+          $ref: '#/definitions/HaulingRoute'
+        type: array
+      skills_applied:
+        $ref: '#/definitions/SkillsApplied'
+    type: object
+  HaulingRoute:
+    properties:
+      buy_station_id:
+        type: integer
+      buy_station_name:
+        type: string
+      buy_system_name:
+        type: string
+      isk_per_hour:
+        type: number
+      items:
+        items:
+          $ref: '#/definitions/HaulingItem'
+        type: array
+      jumps:
+        type: integer
+      security_risk:
+        description: '"safe" | "caution" | "danger"'
+        type: string
+      sell_station_id:
+        type: integer
+      sell_station_name:
+        type: string
+      sell_system_name:
+        type: string
+      total_capital:
+        type: number
+      total_profit:
+        type: number
+      total_volume:
+        type: number
+      travel_time_min:
+        type: number
+    type: object
   HealthResponse:
     properties:
       status:
@@ -144,6 +242,75 @@ definitions:
         type: string
       timestamp:
         example: "2025-11-12T10:00:00Z"
+        type: string
+    type: object
+  HubComparisonRequest:
+    properties:
+      type_id:
+        example: 34
+        type: integer
+    type: object
+  HubComparisonResult:
+    properties:
+      best_hub_region_id:
+        example: 10000032
+        type: integer
+      hubs:
+        items:
+          $ref: '#/definitions/HubRow'
+        type: array
+      item_name:
+        example: Tritanium
+        type: string
+      skills_applied:
+        $ref: '#/definitions/SkillsApplied'
+      type_id:
+        example: 34
+        type: integer
+    type: object
+  HubRow:
+    properties:
+      buy_price:
+        example: 5.5
+        type: number
+      competition:
+        $ref: '#/definitions/CompetitionInfo'
+      daily_volume:
+        example: 125000
+        type: number
+      has_data:
+        example: true
+        type: boolean
+      hub_name:
+        example: Jita
+        type: string
+      liquidity_score:
+        example: 72
+        type: integer
+      net_margin_percent:
+        example: 3.4
+        type: number
+      net_profit_per_unit:
+        example: 0.18
+        type: number
+      region_id:
+        example: 10000002
+        type: integer
+      region_name:
+        example: The Forge
+        type: string
+      sell_price:
+        example: 6.1
+        type: number
+      spread_percent:
+        example: 10.9
+        type: number
+      system_id:
+        example: 30000142
+        type: integer
+      tier:
+        description: '"primary" | "secondary"'
+        example: primary
         type: string
     type: object
   ItemSearchResult:
@@ -228,6 +395,87 @@ definitions:
         example: 500
         type: number
     type: object
+  PortfolioItem:
+    properties:
+      buy_station_id:
+        type: integer
+      buy_station_name:
+        type: string
+      buy_system_name:
+        description: 'Where to execute the haul: buy at the buy station, sell at the
+          sell station.'
+        type: string
+      capital_used:
+        type: number
+      daily_profit:
+        type: number
+      isk_per_hour:
+        description: net daily profit per hour of haul time
+        type: number
+      name:
+        type: string
+      roi_percent:
+        description: daily_profit / capital_used * 100
+        type: number
+      sell_station_id:
+        type: integer
+      sell_station_name:
+        type: string
+      sell_system_name:
+        type: string
+      trips_per_day:
+        type: number
+      type_id:
+        type: integer
+      units:
+        type: integer
+    type: object
+  PortfolioRequest:
+    properties:
+      capital:
+        description: ISK budget
+        type: number
+      cargo_capacity:
+        description: 'Optional: selected ship instance''s effective cargo (m³). When
+          >0, overrides the per-type fitting recompute.'
+        type: number
+      liquidity_cap_pct:
+        description: 0..100, max share of daily volume per item
+        type: number
+      max_item_pct:
+        description: 0..100, max share of capital per item
+        type: number
+      region_id:
+        type: integer
+      sec_zones:
+        description: '"high","low","null"'
+        items:
+          type: string
+        type: array
+      ship_type_id:
+        type: integer
+      time_budget_min:
+        description: available trading minutes/day
+        type: number
+    type: object
+  PortfolioResult:
+    properties:
+      diversification_score:
+        description: 0..100
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/PortfolioItem'
+        type: array
+      skills_applied:
+        $ref: '#/definitions/SkillsApplied'
+      time_used_min:
+        type: number
+      total_capital_used:
+        type: number
+      total_daily_profit:
+        type: number
+    type: object
   RegionResponse:
     properties:
       region_id:
@@ -251,6 +499,24 @@ definitions:
       spaceship_command:
         example: 5
         type: integer
+    type: object
+  SkillsApplied:
+    properties:
+      accounting:
+        example: 5
+        type: integer
+      applied:
+        example: true
+        type: boolean
+      broker_fee_rate:
+        example: 0.015
+        type: number
+      broker_relations:
+        example: 5
+        type: integer
+      sales_tax_rate:
+        example: 0.025
+        type: number
     type: object
   TypeResponse:
     properties:
@@ -356,6 +622,153 @@ definitions:
         example: 5
         type: integer
     type: object
+  models.AssetItem:
+    properties:
+      location_id:
+        type: integer
+      location_name:
+        type: string
+      marketable:
+        type: boolean
+      name:
+        type: string
+      quantity:
+        type: integer
+      region_id:
+        type: integer
+      system_id:
+        type: integer
+      type_id:
+        type: integer
+    type: object
+  models.AssetsResponse:
+    properties:
+      assets:
+        items:
+          $ref: '#/definitions/models.AssetItem'
+        type: array
+      cache_expires_at:
+        type: string
+      count:
+        type: integer
+    type: object
+  models.OreRankRow:
+    properties:
+      best:
+        type: string
+      best_station_id:
+        type: integer
+      best_station_name:
+        description: 'Where to act:'
+        type: string
+      best_station_system:
+        description: reprocess station system
+        type: string
+      best_station_tax:
+        type: number
+      crystal_multiplier:
+        description: per ore; 1.0 = no crystals used
+        type: number
+      cycle_minutes:
+        description: fill + legs + stops
+        type: number
+      delta_isk_per_hour:
+        type: number
+      effective_isk_per_hour:
+        description: 'Haul-downtime cycle (effective ISK/h, greedy one cycle from
+          current system):'
+        type: number
+      estimate_reason:
+        description: short reason, only when IsEstimate
+        type: string
+      fill_minutes:
+        description: time to fill the hold
+        type: number
+      hull_yield_multiplier:
+        description: 'Yield accuracy (hull role/skill bonus + best-case ore crystal):'
+        type: number
+      is_estimate:
+        description: hull bonus / crystal not fully resolved
+        type: boolean
+      load_volume_m3:
+        description: ore-hold m³ filled per load
+        type: number
+      market_loads:
+        description: full ore-hold loads the Best path's best reachable order(s) can
+          absorb (VolumeRemain cap); 0<x<1 means the best price won't even take one
+          load
+        type: number
+      materials:
+        description: per-mineral sell breakdown
+        items:
+          $ref: '#/definitions/models.RefineMaterial'
+        type: array
+      mining_m3_per_hour:
+        type: number
+      ore_name:
+        type: string
+      ore_type_id:
+        type: integer
+      raw_isk_per_hour:
+        type: number
+      raw_net_per_m3:
+        type: number
+      raw_sell:
+        allOf:
+        - $ref: '#/definitions/models.SellLocation'
+        description: where to sell the raw ore
+      refine_isk_per_hour:
+        type: number
+      refine_net_per_m3:
+        type: number
+      route_jumps:
+        description: jumps over the cycle's legs
+        type: integer
+      sell_system_name:
+        description: chosen sell hub (refine) / ore-sell system (raw)
+        type: string
+    type: object
+  models.OreRankingRequest:
+    properties:
+      allow_low_sec:
+        description: true = willing to operate in low-sec too
+        type: boolean
+      region_id:
+        type: integer
+    type: object
+  models.OreRankingResponse:
+    properties:
+      no_mining_setup:
+        type: boolean
+      not_available_reason:
+        description: set when no ores apply here
+        type: string
+      quarter:
+        description: amarr|caldari|gallente|minmatar|""
+        type: string
+      region_id:
+        type: integer
+      rows:
+        items:
+          $ref: '#/definitions/models.OreRankRow'
+        type: array
+      system_security:
+        description: current system, displayed sec
+        type: number
+    type: object
+  models.RefineMaterial:
+    properties:
+      buy_price:
+        type: number
+      effective_qty:
+        type: integer
+      material_name:
+        type: string
+      material_type_id:
+        type: integer
+      sell:
+        $ref: '#/definitions/models.SellLocation'
+    type: object
   models.RouteCalculationRequest:
     properties:
       align_time:
@@ -412,6 +825,83 @@ definitions:
         type: integer
       warning:
         type: string
+    type: object
+  models.SellLocation:
+    properties:
+      is_structure:
+        type: boolean
+      location_id:
+        description: station/structure id — in-game waypoint target
+        type: integer
+      station_name:
+        type: string
+      system_name:
+        type: string
+    type: object
+  models.SellOption:
+    properties:
+      buy_price:
+        type: number
+      has_data:
+        type: boolean
+      isk_per_hour:
+        type: number
+      jumps:
+        type: integer
+      region_id:
+        type: integer
+      region_name:
+        type: string
+      scope:
+        description: '"hub" | "current_region"'
+        type: string
+      security_risk:
+        description: '"safe" | "caution" | "danger"'
+        type: string
+      station_id:
+        type: integer
+      station_name:
+        type: string
+      system_name:
+        type: string
+      total_net:
+        type: number
+      travel_time_min:
+        type: number
+      unit_net:
+        type: number
+    type: object
+  models.SellOptionsRequest:
+    properties:
+      avoid_low_sec:
+        type: boolean
+      location_id:
+        type: integer
+      quantity:
+        type: integer
+      type_id:
+        type: integer
+    type: object
+  models.SellOptionsResponse:
+    properties:
+      best:
+        $ref: '#/definitions/models.SellOption'
+      name:
+        type: string
+      not_routable_reason:
+        type: string
+      options:
+        items:
+          $ref: '#/definitions/models.SellOption'
+        type: array
+      origin_system_id:
+        type: integer
+      quantity:
+        type: integer
+      skills_applied:
+        $ref: '#/definitions/SkillsApplied'
+      type_id:
+        type: integer
     type: object
   models.TradingRoute:
     properties:
@@ -531,6 +1021,9 @@ definitions:
       total_fees:
         description: Sum of all trading fees
         type: number
+      total_investment:
+        description: Total ISK needed to purchase cargo (buy_price × quantity)
+        type: number
       total_profit:
         type: number
       total_time_minutes:
@@ -580,7 +1073,7 @@ info:
     name: MIT
     url: https://opensource.org/licenses/MIT
   title: EVE-O-Provit API
-  version: 0.1.0
+  version: 0.27.0
 paths:
   /api/v1/calculations/cargo:
     post:
@@ -743,6 +1236,31 @@ paths:
       summary: Get character ships
       tags:
       - Character
+  /api/v1/character/wallet:
+    get:
+      description: Get the authenticated character's wallet balance in ISK (used to
+        prefill ROI capital)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Object with balance (float, ISK)
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get character wallet balance
+      tags:
+      - Character
   /api/v1/characters/{characterId}/fitting/{shipTypeId}:
     get:
       description: |-
@@ -883,6 +1401,49 @@ paths:
       summary: Set autopilot waypoint
       tags:
       - ESI UI
+  /api/v1/esi/ui/openwindow/marketdetails:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Opens the market window for a given type_id in the EVE client.
+        Requires scope: esi-ui.open_window.v1
+      parameters:
+      - description: Type ID to open
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            type_id:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Market details window opened
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Open market details window in EVE client
+      tags:
+      - ESI UI
   /api/v1/health:
     get:
       description: Check API and database health status
@@ -1014,6 +1575,44 @@ paths:
       summary: Get market data staleness
       tags:
       - Market
+  /api/v1/mining/ore-ranking:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Given a region (or the character's current region) and a security band,
+        ranks ores by net ISK per m³ and — when a mining ship is fitted — per hour,
+        comparing selling the raw ore vs reprocessing + selling the materials.
+      parameters:
+      - description: Ore ranking parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.OreRankingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.OreRankingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Rank asteroid ores by raw-vs-refine net ISK for a region + security
+        band
+      tags:
+      - Mining
   /api/v1/sde/regions:
     get:
       description: Get list of all EVE Online regions from SDE
@@ -1033,6 +1632,172 @@ paths:
       summary: List all EVE regions
       tags:
       - SDE
+  /api/v1/trading/assets:
+    get:
+      description: Returns the character's assets aggregated by (type, location) with
+        quantity.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.AssetsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: List owned items aggregated by type and location
+      tags:
+      - Trading
+  /api/v1/trading/assets/sell-options:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        For a selected owned item, ranks instant-sell (taker) locations across the
+        major hubs + the item's current region by net proceeds, with route info.
+      parameters:
+      - description: Selected item
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.SellOptionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SellOptionsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Rank taker sell locations for one owned item
+      tags:
+      - Trading
+  /api/v1/trading/hauling/routes:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        From the character's current region + adjacent regions, finds cross-region
+        arbitrage routes with an optimal per-trip cargo load (cargo + capital).
+      parameters:
+      - description: Hauling parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/HaulingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/HaulingResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Find profitable station→station hauling routes in the neighborhood
+      tags:
+      - Trading
+  /api/v1/trading/hubs/compare:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        For a given item, compares buy/sell/spread, skill-adjusted net margin,
+        volume and competition across Jita, Amarr, Dodixie, Rens, Hek.
+      parameters:
+      - description: Item to compare
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/HubComparisonRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/HubComparisonResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Compare an item's station-trading profitability across major hubs
+      tags:
+      - Trading
+  /api/v1/trading/portfolio/optimize:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Given region, ship, capital and time budget, suggests how to allocate
+        capital across items (greedy, under liquidity + per-item caps).
+      parameters:
+      - description: Optimization parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/PortfolioRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/PortfolioResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Optimize capital allocation across items for max daily profit
+      tags:
+      - Trading
   /api/v1/trading/routes/calculate:
     post:
       consumes:
