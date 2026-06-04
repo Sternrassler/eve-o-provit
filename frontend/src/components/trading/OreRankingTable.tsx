@@ -7,6 +7,7 @@ import { cn, formatISK } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { openMarketDetails, setWaypoint } from "@/lib/api-client";
+import { SoldLoadsTally } from "./SoldLoadsTally";
 
 interface OreRankingTableProps {
   rows: OreRankRow[];
@@ -30,6 +31,17 @@ function formatStation(name?: string, system?: string): string {
  * where to sell (raw ore, or a per-mineral breakdown for the refine path).
  */
 export function OreRankingTable({ rows }: OreRankingTableProps) {
+  // Sold-loads tally per ore (ore_type_id → sold count). Reset on every new
+  // ranking so a recalculation starts the tally empty — done by adjusting state
+  // during render when `rows` changes identity (React's recommended pattern,
+  // avoids an effect).
+  const [sold, setSold] = useState<Record<number, number>>({});
+  const [seenRows, setSeenRows] = useState(rows);
+  if (rows !== seenRows) {
+    setSeenRows(rows);
+    setSold({});
+  }
+
   if (rows.length === 0) {
     return (
       <Card>
@@ -69,7 +81,12 @@ export function OreRankingTable({ rows }: OreRankingTableProps) {
             </thead>
             <tbody>
               {rows.map((row) => (
-                <OreRankRow key={row.ore_type_id} row={row} />
+                <OreRankRow
+                  key={row.ore_type_id}
+                  row={row}
+                  sold={sold[row.ore_type_id] ?? 0}
+                  onSoldChange={(n) => setSold((s) => ({ ...s, [row.ore_type_id]: n }))}
+                />
               ))}
             </tbody>
           </table>
@@ -79,7 +96,15 @@ export function OreRankingTable({ rows }: OreRankingTableProps) {
   );
 }
 
-function OreRankRow({ row }: { row: OreRankRow }) {
+function OreRankRow({
+  row,
+  sold,
+  onSoldChange,
+}: {
+  row: OreRankRow;
+  sold: number;
+  onSoldChange: (n: number) => void;
+}) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const linkCls = "text-left hover:underline underline-offset-2 hover:text-primary transition-colors";
@@ -190,6 +215,13 @@ function OreRankRow({ row }: { row: OreRankRow }) {
                     </div>
                   )
                 )}
+                {row.market_loads != null && row.market_loads >= 1 && (
+                  <SoldLoadsTally
+                    total={Math.floor(row.market_loads)}
+                    sold={sold}
+                    onChange={onSoldChange}
+                  />
+                )}
                 <div className="text-sm">
                   <span className="text-muted-foreground">Aufbereiten bei: </span>
                   {row.best_station_id ? (
@@ -274,6 +306,13 @@ function OreRankRow({ row }: { row: OreRankRow }) {
                       ⚠ Bestpreis nur ~{row.market_loads.toFixed(2)} Ladungen — ISK/h optimistisch
                     </div>
                   )
+                )}
+                {row.market_loads != null && row.market_loads >= 1 && (
+                  <SoldLoadsTally
+                    total={Math.floor(row.market_loads)}
+                    sold={sold}
+                    onChange={onSoldChange}
+                  />
                 )}
                 <span className="text-muted-foreground">Roh verkaufen bei: </span>
                 {row.raw_sell?.location_id ? (
