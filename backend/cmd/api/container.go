@@ -28,17 +28,16 @@ type AppContainer struct {
 	TokenValidator *evesso.TokenValidator
 
 	// Handlers
-	AuthHandler        *evesso.AuthHandler
-	Handlers           *handlers.Handler
-	TradingHandler     *handlers.TradingHandler
-	CharacterHandler   *handlers.CharacterHandler
-	FittingHandler     *handlers.FittingHandler
-	CalculationHandler *handlers.CalculationHandler
-	MultiHubHandler    *handlers.MultiHubHandler
-	PortfolioHandler   *handlers.PortfolioHandler
-	HaulingHandler     *handlers.HaulingHandler
-	AssetsHandler      *handlers.AssetsHandler
-	MiningHandler      *handlers.MiningHandler
+	AuthHandler      *evesso.AuthHandler
+	Handlers         *handlers.Handler
+	TradingHandler   *handlers.TradingHandler
+	CharacterHandler *handlers.CharacterHandler
+	FittingHandler   *handlers.FittingHandler
+	MultiHubHandler  *handlers.MultiHubHandler
+	PortfolioHandler *handlers.PortfolioHandler
+	HaulingHandler   *handlers.HaulingHandler
+	AssetsHandler    *handlers.AssetsHandler
+	MiningHandler    *handlers.MiningHandler
 
 	// Background workers
 	CompetitionCollector *services.CompetitionCollector
@@ -146,7 +145,6 @@ func NewContainer(ctx context.Context) (*AppContainer, error) {
 	c.TradingHandler = handlers.NewTradingHandler(routeService, c.SDERepo, shipService, systemService, characterHelper, cargoService, fittingService)
 	c.CharacterHandler = handlers.NewCharacterHandler(skillsService)
 	c.FittingHandler = handlers.NewFittingHandler(fittingService)
-	c.CalculationHandler = handlers.NewCalculationHandler(c.DB.SDE, fittingService)
 
 	// Multi-Hub Comparison (#43): competition tracking + hub comparison service.
 	competitionRepo := database.NewCompetitionRepository(c.DB.Postgres)

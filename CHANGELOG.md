@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Verwaiste `/calculations/*`-Endpunkte entfernt (Backend).** `POST /api/v1/calculations/cargo` und `POST /api/v1/calculations/warp` (samt `CalculationHandler`, ~260 LOC, und den nur dafür genutzten Modellen `Cargo/WarpCalculationRequest/Response` + Helfer) hatten **keinen Consumer** — weder Web noch Flutter rufen sie auf. Die zugrundeliegenden Domänen-Funktionen (`CalculateWarpTime`/`CalculateCargoFit` in `pkg/evedb/*`, vom Route-Calculator genutzt) bleiben unangetastet. Spec via `make swagger` mit-bereinigt. `deadcode`/`golangci-lint` weiterhin 0, alle BE-Tests grün.
+
 ### Changed
 
 - **Swagger-Drift dauerhaft verhindert (Build/CI).** Neues `make swagger`-Target regeneriert die OpenAPI-Spec reproduzierbar via `go run github.com/swaggo/swag/cmd/swag@<pinned>` (Version in `SWAG_VERSION` einmalig gepinnt). `make release` zieht jetzt die Swagger-`@version` automatisch mit (`// @version` = Release-Version) und regeneriert die Spec. Ein CI-Schritt (`lint`-Job) führt `make swagger` aus und failt bei einem Diff in `backend/docs` — so kann eine veraltete Spec nicht mehr committet werden (gleicher Geist wie „nie zwei Schema-Quellen"). Verhindert die Wiederholung der 7-Monats-Drift aus dem vorigen Eintrag.
