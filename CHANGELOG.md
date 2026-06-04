@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Mining: aktueller Schiff-Standort in der Antwort (Backend).** `OreRankingResponse` liefert jetzt `origin_system_id`/`origin_system_name` (+ `origin_station_name` falls angedockt) — das System, von dem aus gerankt/geroutet wird. Grundlage für die Standort-Anzeige im UI.
+- **Mining: Schiff-Standort im UI (Web + Flutter).** Die Mining-Ansicht zeigt im Ergebnis-Header „Aktueller Standort: \<System\>" (bzw. „\<Station\> (\<System\>)" falls angedockt) aus den neuen `origin_*`-Feldern — Web (`mining/page.tsx`) und Flutter (`mining_screen.dart`).
 
 ## [0.28.0] - 2026-06-04
 
