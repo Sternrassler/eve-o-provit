@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-06-04
+
 ### Changed
 
 - **Navigation gruppiert + tote Platzhalter aus der Nav entfernt (Frontend).** Die flache 9-Punkte-Leiste wurde auf **3 Top-Level-Einträge** verdichtet — ein **„Trading"-Dropdown** (Trading Routes · Hauling · ROI Calculator · Multi-Hub · Sell Assets) plus **Mining** und **Character** —, analog zur Gruppierung im Flutter-Client. Die statischen Phase-3-Platzhalter **Trends** und **Watchlist** (kein Backend, siehe #47/#48) sind nicht mehr in der Nav, damit sie keine funktionierenden Features vortäuschen; die Seiten selbst bleiben als UI-Spec erhalten. Reiner Frontend-Umbau (`navigation.tsx`); die shadcn-`NavigationMenu`-Komponente + Radix-Dep, in #170 als ungenutzt entfernt, sind für das Dropdown wieder eingebunden (jetzt mit echtem Zweck). Verifiziert via eslint/tsc/`next build`/vitest + Real-Browser-Check (Dropdown öffnet, Links korrekt, Platzhalter weg).
