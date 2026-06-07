@@ -56,6 +56,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sternrassler/eve-o-provit/backend/internal/metrics"
 	_ "github.com/Sternrassler/eve-o-provit/backend/internal/models" // For OpenAPI
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/evesso"
 	"github.com/gofiber/fiber/v2"
@@ -106,6 +107,7 @@ func setupApp(c *AppContainer) *fiber.App {
 		AllowMethods:     "GET, POST, OPTIONS",
 		AllowCredentials: true,
 	}))
+	app.Use(metrics.HTTPMiddleware())
 
 	// Prometheus metrics (internal — not rate limited)
 	app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))

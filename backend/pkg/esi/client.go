@@ -7,10 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"time"
 
 	esiclient "github.com/Sternrassler/eve-esi-client/pkg/client"
 	"github.com/redis/go-redis/v9"
+
+	"github.com/Sternrassler/eve-o-provit/backend/internal/metrics"
 )
 
 // Config holds ESI client configuration
@@ -40,6 +43,14 @@ func NewClient(redisClient *redis.Client, cfg Config) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ESI client: %w", err)
 	}
+
+	// Instrument the outbound HTTP transport with Prometheus metrics
+	// (eveoprovit_esi_*). The http.Client mirrors the eve-esi-client default
+	// (30s timeout) — the library only exposes a setter, not its default client.
+	esiClient.SetHTTPClient(&http.Client{
+		Timeout:   30 * time.Second,
+		Transport: metrics.NewESITransport(nil),
+	})
 
 	return &Client{esi: esiClient}, nil
 }
