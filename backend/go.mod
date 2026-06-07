@@ -5,7 +5,7 @@ go 1.25.0
 toolchain go1.26.4
 
 require (
-	github.com/Sternrassler/eve-esi-client v0.5.1
+	github.com/Sternrassler/eve-esi-client v0.6.0
 	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/jackc/pgx/v5 v5.7.6
