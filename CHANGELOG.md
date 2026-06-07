@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **App-spezifische Prometheus-Metriken (Backend).** Drei neue Messschichten unter dem einheitlichen `eveoprovit_`-Namespace: (1) **HTTP** — `eveoprovit_http_requests_total{method,route,status}` + Latenz-Histogramm `eveoprovit_http_request_duration_seconds{method,route}` via Fiber-Middleware (Route-Pattern statt Roh-Pfad gegen Label-Explosion, unmatched → `(unmatched)`, `/metrics`/`/swagger`/Health ausgenommen; Buckets bis 60 s wegen langer Routen-Berechnungen). (2) **ESI** — `eveoprovit_esi_requests_total{status}` + Dauer-Histogramm über einen instrumentierten `http.RoundTripper` (`SetHTTPClient` am eve-esi-client): zählt jeden Transport-Versuch inkl. Retries — die ehrliche Messgröße fürs ESI-Error-Limit (420er sichtbar), `transport_error` für Verbindungsfehler. (3) Bestehende Trading-Metriken (Calc-Duration, Cache-Hits/Misses) bleiben erhalten.
 - **Tooling: `make android-install` (Flutter-App, `app/Makefile`).** Baut die Release-APK mit den Prod-`--dart-define`s (`API_BASE_URL=https://eveonline.sternrassler.de`, `EVE_CLIENT_ID` aus `deployments/.env` → `EVE_MOBILE_CLIENT_ID`, fail-loud wenn Datei/Variable fehlt), installiert sie per `adb install -r` aufs angeschlossene Gerät und verifiziert den Install via `dumpsys` (INTERNET-Permission + `lastUpdateTime`). Macht die beiden bekannten Fehlerklassen mechanisch unmöglich: „APK ohne dart-defines gebaut → leere `client_id` → SSO-Login kaputt" und „APK gebaut, aber nie aufs Gerät deployed".
+
+### Changed
+
+- **Prometheus-Namespace vereinheitlicht:** `trading_*`-Metriken heißen jetzt `eveoprovit_trading_*` (Konvention wie depots `depot_`-Prefix). Kein Konsument betroffen — die Metriken wurden bis heute von keinem Prometheus gescraped.
+
+### Removed
+
+- **Tote Metriken entfernt:** `trading_cache_hit_ratio` und `trading_worker_pool_queue_size` wurden nirgends gesetzt und exportierten irreführende Konstanten (0).
 
 ## [0.30.0] - 2026-06-04
 
