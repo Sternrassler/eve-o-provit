@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-06-07
+
 ### Fixed
 
 - **`/metrics` lieferte 500 (Label-Korruption durch Fiber-Zero-Copy).** Die HTTP-Metrics-Middleware speicherte `c.Method()`/`c.Route().Path` ungekopiert als Prometheus-Label; fasthttp recycelt die Request-Puffer, der nächste Request mutierte das gespeicherte Label (Prod: `method="POS"`) → `Gather()` schlug mit Duplikat-Fehlern fehl → `/metrics` 500 und Prometheus-Scrape tot. Fix: `strings.Clone` vor dem Speichern; Regressionstest simuliert die Puffer-Wiederverwendung (50× alternierende Requests + Gather).
