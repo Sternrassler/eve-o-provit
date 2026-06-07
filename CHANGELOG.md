@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`/metrics` lieferte 500 (Label-Korruption durch Fiber-Zero-Copy).** Die HTTP-Metrics-Middleware speicherte `c.Method()`/`c.Route().Path` ungekopiert als Prometheus-Label; fasthttp recycelt die Request-Puffer, der nächste Request mutierte das gespeicherte Label (Prod: `method="POS"`) → `Gather()` schlug mit Duplikat-Fehlern fehl → `/metrics` 500 und Prometheus-Scrape tot. Fix: `strings.Clone` vor dem Speichern; Regressionstest simuliert die Puffer-Wiederverwendung (50× alternierende Requests + Gather).
+- **ESI-Dauerdrossel durch vergifteten Rate-Limit-State (Hauling-Timeout).** eve-esi-client auf **v0.5.1** gehoben: ein stale `errors_remaining`-Wert in Redis (TTL -1, durch die abgeschafften `X-ESI-Error-Limit-*`-Header nie wieder angehoben) drosselte jeden ESI-Aufruf inkl. Cache-Hits mit 1 s Sleep — Hauling brauchte 73 s, der Client lief in den Timeout. Die Lib behandelt abgelaufene Reset-Fenster jetzt als healthy und versieht den State mit TTLs (Details im eve-esi-client-CHANGELOG).
+
 ## [0.31.0] - 2026-06-07
 
 ### Added

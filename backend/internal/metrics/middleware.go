@@ -40,8 +40,15 @@ func HTTPMiddleware() fiber.Handler {
 			route = "(unmatched)"
 		}
 
-		HTTPRequestsTotal.WithLabelValues(c.Method(), route, strconv.Itoa(status)).Inc()
-		HTTPRequestDuration.WithLabelValues(c.Method(), route).Observe(time.Since(start).Seconds())
+		// fasthttp reuses request buffers across requests (zero-copy strings) —
+		// label values MUST be cloned before Prometheus stores them, otherwise
+		// the next request mutates the stored label (prod: method="POS") and
+		// Gather fails with duplicate-label errors (/metrics → 500).
+		method := strings.Clone(c.Method())
+		route = strings.Clone(route)
+
+		HTTPRequestsTotal.WithLabelValues(method, route, strconv.Itoa(status)).Inc()
+		HTTPRequestDuration.WithLabelValues(method, route).Observe(time.Since(start).Seconds())
 		return err
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
@@ -74,6 +75,38 @@ func TestHTTPMiddleware_CollapsesUnmatchedRoutes(t *testing.T) {
 	got := testutil.ToFloat64(HTTPRequestsTotal.WithLabelValues("GET", "(unmatched)", "404")) - before
 	if got != 2 {
 		t.Errorf("expected 2 unmatched requests collapsed into one label, got %v", got)
+	}
+}
+
+// Fiber/fasthttp reuses request buffers across requests (zero-copy strings).
+// Storing c.Method()/c.Route().Path directly as Prometheus label values lets a
+// later request mutate the stored label (seen in prod: method="POS") — Gather
+// then fails with "was collected before with the same name and label values"
+// and /metrics serves 500. Regression test: many sequential requests with
+// alternating methods must leave the registry gatherable.
+func TestHTTPMiddleware_LabelsSurviveBufferReuse(t *testing.T) {
+	app := newTestApp()
+	app.Post("/api/v1/types/:id", func(c *fiber.Ctx) error {
+		return c.SendString("ok")
+	})
+
+	for range 50 {
+		for _, method := range []string{"POST", "GET"} {
+			resp, err := app.Test(httptest.NewRequest(method, "/api/v1/types/34", nil))
+			if err != nil {
+				t.Fatalf("request failed: %v", err)
+			}
+			_ = resp.Body.Close()
+		}
+	}
+
+	if _, err := prometheus.DefaultGatherer.Gather(); err != nil {
+		t.Fatalf("registry not gatherable after buffer reuse (corrupted labels): %v", err)
+	}
+
+	got := testutil.ToFloat64(HTTPRequestsTotal.WithLabelValues("POST", "/api/v1/types/:id", "200"))
+	if got < 50 {
+		t.Errorf("expected >=50 POST requests under intact label, got %v", got)
 	}
 }
 
