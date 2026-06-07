@@ -1,7 +1,7 @@
 // Package main is the entry point for EVE-O-Provit API
 //
 // @title EVE-O-Provit API
-// @version 0.32.0
+// @version 0.33.0
 // @description REST API for EVE Online trading, manufacturing and profit optimization
 // @description
 // @description Features:
