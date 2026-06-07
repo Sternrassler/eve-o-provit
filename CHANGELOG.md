@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-06-07
+
 ### Changed
 
 - **eve-esi-client v0.5.1 → v0.6.0: Adoption des neuen ESI-Gruppen-Rate-Limitings (`X-Ratelimit-*`).** Die Lib trackt jetzt CCPs Token-Buckets pro Route-Gruppe (z. B. `market-order: 12000/15m`), drosselt proaktiv bei knappem Budget und respektiert `Retry-After` nach 429 (Retry statt Sofort-Fehler). Das Legacy-Error-Limit-Tracking bleibt für nicht migrierte Routen aktiv. Details → eve-esi-client-CHANGELOG v0.6.0.
