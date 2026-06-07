@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **eve-esi-client v0.6.0 → v0.7.0: Fresh-Serve.** Frische ESI-Cache-Einträge (innerhalb des `Expires`-Fensters) werden jetzt ohne Netzwerk-Roundtrip direkt aus Redis serviert statt pro Lookup per Conditional Request (304) revalidiert zu werden; Caching strikt GET-only. Effekt: Wiederholungs-Berechnungen (Hauling/Mining/ROI) im 5-Minuten-Markt-Fenster laufen in Sekundenbruchteilen statt ~30 s, ESI-Last und Rate-Limit-Token-Verbrauch sinken deutlich. Details → eve-esi-client-CHANGELOG v0.7.0.
+
+
 ## [0.32.0] - 2026-06-07
 
 ### Changed
