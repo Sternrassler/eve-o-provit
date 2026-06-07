@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Tooling: `make android-install` (Flutter-App, `app/Makefile`).** Baut die Release-APK mit den Prod-`--dart-define`s (`API_BASE_URL=https://eveonline.sternrassler.de`, `EVE_CLIENT_ID` aus `deployments/.env` → `EVE_MOBILE_CLIENT_ID`, fail-loud wenn Datei/Variable fehlt), installiert sie per `adb install -r` aufs angeschlossene Gerät und verifiziert den Install via `dumpsys` (INTERNET-Permission + `lastUpdateTime`). Macht die beiden bekannten Fehlerklassen mechanisch unmöglich: „APK ohne dart-defines gebaut → leere `client_id` → SSO-Login kaputt" und „APK gebaut, aber nie aufs Gerät deployed".
+
 ## [0.30.0] - 2026-06-04
 
 ### Added
