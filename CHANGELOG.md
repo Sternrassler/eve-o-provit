@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-06-07
+
 ### Added
 
 - **App-spezifische Prometheus-Metriken (Backend).** Drei neue Messschichten unter dem einheitlichen `eveoprovit_`-Namespace: (1) **HTTP** — `eveoprovit_http_requests_total{method,route,status}` + Latenz-Histogramm `eveoprovit_http_request_duration_seconds{method,route}` via Fiber-Middleware (Route-Pattern statt Roh-Pfad gegen Label-Explosion, unmatched → `(unmatched)`, `/metrics`/`/swagger`/Health ausgenommen; Buckets bis 60 s wegen langer Routen-Berechnungen). (2) **ESI** — `eveoprovit_esi_requests_total{status}` + Dauer-Histogramm über einen instrumentierten `http.RoundTripper` (`SetHTTPClient` am eve-esi-client): zählt jeden Transport-Versuch inkl. Retries — die ehrliche Messgröße fürs ESI-Error-Limit (420er sichtbar), `transport_error` für Verbindungsfehler. (3) Bestehende Trading-Metriken (Calc-Duration, Cache-Hits/Misses) bleiben erhalten.
