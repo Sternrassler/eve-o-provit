@@ -172,15 +172,17 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 		standings = map[int64]float64{}
 		resp.StandingsDegraded = true
 	}
-	resp.DegradedReason = miningDegradedReason(resp.SkillsDegraded, resp.StandingsDegraded)
 	salesTaxRate := SalesTaxRate(skills.Accounting)
 
 	moduleIDs, err := s.fitting.ActiveShipFittedModuleTypeIDs(ctx, characterID, accessToken)
+	fittingFetchFailed := false
 	if err != nil {
 		if s.logger != nil {
 			s.logger.Warn("ore ranking: active-ship modules unavailable", "error", err)
 		}
 		moduleIDs = nil
+		fittingFetchFailed = true
+		resp.FittingDegraded = true
 	}
 	m3h, err := mining.MiningRateM3PerHour(s.sdeDB, moduleIDs, mining.MiningSkills{
 		Mining:       skills.Mining,
@@ -189,9 +191,13 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	if err != nil {
 		return nil, err
 	}
-	if m3h == 0 {
+	// m3h == 0 nur dann als "kein Mining-Setup" werten, wenn der Fitting-Abruf
+	// auch wirklich gelang — sonst ist die 0 ein Artefakt des ESI-Fehlers
+	// (transienter Hiccup darf nicht als "du hast kein Mining-Schiff" erscheinen).
+	if m3h == 0 && !fittingFetchFailed {
 		resp.NoMiningSetup = true
 	}
+	resp.DegradedReason = miningDegradedReason(resp.SkillsDegraded, resp.StandingsDegraded, resp.FittingDegraded)
 
 	// Hull ore-mining-yield bonus (role + per-skill-level), applied to every ore.
 	// hullResolved starts false: if the active ship can't be resolved it stays false,
@@ -728,15 +734,19 @@ func (s *MiningService) travelSecs(from, to int64, params *navigation.Navigation
 // miningDegradedReason builds a human-readable explanation when mining skills
 // and/or standings could not be fetched and neutral fallbacks were used. Empty
 // string when nothing is degraded.
-func miningDegradedReason(skillsDegraded, standingsDegraded bool) string {
-	switch {
-	case skillsDegraded && standingsDegraded:
-		return "Skills und Standings konnten nicht von ESI geladen werden (Login/Token prüfen) — gerechnet mit Null-Skills und neutralen Standings. ISK/h und Reprocessing-Werte sind nur grobe Untergrenzen."
-	case skillsDegraded:
-		return "Mining-/Reprocessing-Skills konnten nicht von ESI geladen werden (Login/Token prüfen) — gerechnet mit Null-Skills. ISK/h und Mengen sind eine grobe Untergrenze."
-	case standingsDegraded:
-		return "Standings konnten nicht von ESI geladen werden (Login/Token prüfen) — gerechnet mit neutralen Standings. Die Reprocessing-Steuer kann in Wirklichkeit niedriger sein."
-	default:
+func miningDegradedReason(skillsDegraded, standingsDegraded, fittingDegraded bool) string {
+	var parts []string
+	if skillsDegraded {
+		parts = append(parts, "Mining-/Reprocessing-Skills (gerechnet mit Null-Skills; ISK/h und Mengen nur grobe Untergrenze)")
+	}
+	if standingsDegraded {
+		parts = append(parts, "Standings (gerechnet mit neutralen Standings; Reprocessing-Steuer ggf. zu hoch angesetzt)")
+	}
+	if fittingDegraded {
+		parts = append(parts, "aktuelles Schiff/Module (ISK/h evtl. 0; ein etwaiges \"kein Mining-Setup\" ist hier ungewiss, nicht bestätigt)")
+	}
+	if len(parts) == 0 {
 		return ""
 	}
+	return "Konnte nicht von ESI laden (Login/Token prüfen): " + strings.Join(parts, "; ") + "."
 }

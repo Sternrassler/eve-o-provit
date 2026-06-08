@@ -80,6 +80,7 @@ type OreRankingResponse struct {
 	// instead of presenting degraded results as authoritative.
 	SkillsDegraded    bool         `json:"skills_degraded"`
 	StandingsDegraded bool         `json:"standings_degraded"`
-	DegradedReason    string       `json:"degraded_reason,omitempty"` // human-readable explanation when either flag is set
+	FittingDegraded   bool         `json:"fitting_degraded"`          // active-ship/modules fetch failed → m3h unreliable, NoMiningSetup not asserted
+	DegradedReason    string       `json:"degraded_reason,omitempty"` // human-readable explanation when any flag is set
 	Rows              []OreRankRow `json:"rows"`
 }
