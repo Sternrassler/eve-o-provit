@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Mining: transienter Fitting-Abruf-Fehler wird nicht mehr als „kein Mining-Setup" fehlinterpretiert.** Schlug der ESI-Abruf des aktuellen Schiffs/der Module fehl, wurde still mit `moduleIDs=nil` weitergerechnet → `m3h=0` → `no_mining_setup=true`, also „du hast kein Mining-Schiff" statt „ESI-Hiccup". Jetzt: neues `fitting_degraded`-Flag, `no_mining_setup` wird nur noch bei **erfolgreichem** Abruf mit 0 m³/h gesetzt, und der Grund landet in `degraded_reason` (Banner zeigt ihn automatisch). Letzte verbliebene Silent-Fallback-Stelle im Mining-Pfad, Prinzip [[no-silent-fallbacks]]. `degraded_reason` ist jetzt kompositorisch (Skills/Standings/Fitting in einer Meldung).
+
+
 ### Changed
 
 - **CI/Build härtet die Docker-Hub-Abhängigkeit.** Base-Image `alpine:latest` → `alpine:3.21` gepinnt (reproduzierbare Builds); `deploy.yml` loggt sich optional bei Docker Hub ein (hebt das Anonymous-Pull-Rate-Limit auf Shared-GH-Runnern, das den v0.34.0-Deploy mit `registry-1.docker.io context deadline exceeded` riss) — no-op bis `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`-Secrets gesetzt sind.

@@ -1962,8 +1962,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "degraded_reason": {
-                    "description": "human-readable explanation when either flag is set",
+                    "description": "human-readable explanation when any flag is set",
                     "type": "string"
+                },
+                "fitting_degraded": {
+                    "description": "active-ship/modules fetch failed → m3h unreliable, NoMiningSetup not asserted",
+                    "type": "boolean"
                 },
                 "no_mining_setup": {
                     "type": "boolean"

@@ -98,9 +98,15 @@ func (f *fakeStations) GetRegionReprocessStations(_ context.Context, _ int) ([]d
 	return f.stations, nil
 }
 
-type fakeMiningModules struct{ ids []int64 }
+type fakeMiningModules struct {
+	ids        []int64
+	modulesErr error // when set, ActiveShipFittedModuleTypeIDs fails (exercise fitting-degraded path)
+}
 
 func (f *fakeMiningModules) ActiveShipFittedModuleTypeIDs(_ context.Context, _ int, _ string) ([]int64, error) {
+	if f.modulesErr != nil {
+		return nil, f.modulesErr
+	}
 	return f.ids, nil
 }
 
@@ -712,9 +718,9 @@ func TestMiningService_OreRanking_DegradedFlags(t *testing.T) {
 		wantStandings  bool
 		reasonContains string
 	}{
-		{"both", errESI, errESI, true, true, "Skills und Standings"},
-		{"skills only", errESI, nil, true, false, "Skills konnten nicht"},
-		{"standings only", nil, errESI, false, true, "Standings konnten nicht"},
+		{"both", errESI, errESI, true, true, "Mining-/Reprocessing-Skills"},
+		{"skills only", errESI, nil, true, false, "Mining-/Reprocessing-Skills"},
+		{"standings only", nil, errESI, false, true, "Standings"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -775,5 +781,40 @@ func TestMiningService_OreRanking_NotDegradedByDefault(t *testing.T) {
 	if resp.SkillsDegraded || resp.StandingsDegraded || resp.DegradedReason != "" {
 		t.Errorf("healthy fetch must not be degraded: skills=%v standings=%v reason=%q",
 			resp.SkillsDegraded, resp.StandingsDegraded, resp.DegradedReason)
+	}
+}
+
+// TestMiningService_OreRanking_FittingFetchDegraded: schlägt der Fitting-Abruf
+// fehl (transienter ESI-Fehler), darf das NICHT als "kein Mining-Setup"
+// erscheinen — stattdessen FittingDegraded + Reason, NoMiningSetup bleibt false.
+func TestMiningService_OreRanking_FittingFetchDegraded(t *testing.T) {
+	sdeDB := testutil.OpenTestDB(t)
+	defer func() { _ = sdeDB.Close() }()
+
+	market := &fakeMiningMarket{buyPriceByType: map[int]float64{veldsparTypeID: 15.0, tritaniumTypeID: 5.0}}
+	skills := &fakeMiningSkillsProvider{
+		skills:    &MiningReprocessingSkills{OreProcessing: map[int64]int{}, SkillLevels: map[int64]int{17940: 5, 22551: 5}},
+		standings: map[int64]float64{},
+	}
+	// Fitting-Abruf scheitert → moduleIDs nil → m3h 0, aber NICHT als no-setup werten.
+	fitting := &fakeMiningModules{modulesErr: errESI}
+	stations := &fakeStations{stations: []database.ReprocessStation{{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05}}}
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, fakeMiningLocation{shipTypeID: 22544}, nil, fakeMiningNames{}, logger.NewNoop())
+
+	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{RegionID: 10000002})
+	if err != nil {
+		t.Fatalf("OreRanking error: %v", err)
+	}
+	if !resp.FittingDegraded {
+		t.Error("FittingDegraded must be true when the active-ship/modules fetch fails")
+	}
+	if resp.NoMiningSetup {
+		t.Error("NoMiningSetup must NOT be asserted on a fitting-fetch error (ESI hiccup != no mining ship)")
+	}
+	if !strings.Contains(resp.DegradedReason, "Schiff/Module") {
+		t.Errorf("DegradedReason must mention the ship/modules degradation, got %q", resp.DegradedReason)
+	}
+	if len(resp.Rows) == 0 {
+		t.Error("ranking rows must still be produced (per-m³ values are independent of m3h)")
 	}
 }
