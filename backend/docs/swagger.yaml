@@ -599,6 +599,9 @@ definitions:
     type: object
   models.OreRankingResponse:
     properties:
+      degraded_reason:
+        description: human-readable explanation when either flag is set
+        type: string
       no_mining_setup:
         type: boolean
       not_available_reason:
@@ -622,6 +625,15 @@ definitions:
         items:
           $ref: '#/definitions/models.OreRankRow'
         type: array
+      skills_degraded:
+        description: |-
+          Degradation flags: true when the named ESI input could not be fetched
+          (e.g. expired token) and a neutral fallback was used. The ranking is still
+          returned but the numbers are less accurate — the UI must surface this
+          instead of presenting degraded results as authoritative.
+        type: boolean
+      standings_degraded:
+        type: boolean
       system_security:
         description: current system, displayed sec
         type: number
