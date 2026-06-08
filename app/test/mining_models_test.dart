@@ -334,5 +334,30 @@ void main() {
       expect(resp.isEmpty, isTrue);
       expect(resp.rows, isEmpty);
     });
+
+    test('degraded flags default to false / null when absent', () {
+      final resp = OreRankingResponse.fromJson(sample);
+      expect(resp.skillsDegraded, isFalse);
+      expect(resp.standingsDegraded, isFalse);
+      expect(resp.degradedReason, isNull);
+    });
+
+    test('degraded fields are parsed when present', () {
+      final resp = OreRankingResponse.fromJson(const {
+        'region_id': 10000002,
+        'no_mining_setup': false,
+        'skills_degraded': true,
+        'standings_degraded': true,
+        'degraded_reason':
+            'Skills und Standings konnten nicht von ESI geladen werden.',
+        'rows': [],
+      });
+      expect(resp.skillsDegraded, isTrue);
+      expect(resp.standingsDegraded, isTrue);
+      expect(
+        resp.degradedReason,
+        'Skills und Standings konnten nicht von ESI geladen werden.',
+      );
+    });
   });
 }

@@ -1961,6 +1961,10 @@ const docTemplate = `{
         "models.OreRankingResponse": {
             "type": "object",
             "properties": {
+                "degraded_reason": {
+                    "description": "human-readable explanation when either flag is set",
+                    "type": "string"
+                },
                 "no_mining_setup": {
                     "type": "boolean"
                 },
@@ -1992,6 +1996,13 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/models.OreRankRow"
                     }
+                },
+                "skills_degraded": {
+                    "description": "Degradation flags: true when the named ESI input could not be fetched\n(e.g. expired token) and a neutral fallback was used. The ranking is still\nreturned but the numbers are less accurate — the UI must surface this\ninstead of presenting degraded results as authoritative.",
+                    "type": "boolean"
+                },
+                "standings_degraded": {
+                    "type": "boolean"
                 },
                 "system_security": {
                     "description": "current system, displayed sec",

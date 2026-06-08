@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/Sternrassler/eve-o-provit/backend/internal/database"
@@ -13,6 +14,9 @@ import (
 	"github.com/Sternrassler/eve-o-provit/backend/pkg/logger"
 	_ "github.com/mattn/go-sqlite3"
 )
+
+// errESI is a sentinel for simulating an ESI fetch failure (e.g. expired token).
+var errESI = fmt.Errorf("esi unavailable (401)")
 
 // --- Fakes ---------------------------------------------------------------
 
@@ -105,16 +109,25 @@ func (f *fakeMiningModules) GetShipFitting(_ context.Context, _, _ int, _ string
 }
 
 // fakeMiningSkillsProvider implements MiningSkillsProvider with fixed skills + standings.
+// skillsErr/standingsErr exercise the degradation (fail-loud) path.
 type fakeMiningSkillsProvider struct {
-	skills    *MiningReprocessingSkills
-	standings map[int64]float64
+	skills       *MiningReprocessingSkills
+	standings    map[int64]float64
+	skillsErr    error
+	standingsErr error
 }
 
 func (f *fakeMiningSkillsProvider) GetMiningReprocessingSkills(_ context.Context, _ *sql.DB, _ int, _ string) (*MiningReprocessingSkills, error) {
+	if f.skillsErr != nil {
+		return nil, f.skillsErr
+	}
 	return f.skills, nil
 }
 
 func (f *fakeMiningSkillsProvider) GetCharacterStandings(_ context.Context, _ int, _ string) (map[int64]float64, error) {
+	if f.standingsErr != nil {
+		return nil, f.standingsErr
+	}
 	return f.standings, nil
 }
 
@@ -673,3 +686,94 @@ func TestMiningService_OreRanking_MarketLoadsCap(t *testing.T) {
 }
 
 func approxEq(a, b float64) bool { return math.Abs(a-b) < 1e-6 }
+
+// TestMiningService_OreRanking_DegradedFlags verifies the response flags + reason
+// when skills/standings can't be fetched from ESI (e.g. expired token). The ranking
+// is still produced, but the degradation must be surfaced (no silent fallback).
+func TestMiningService_OreRanking_DegradedFlags(t *testing.T) {
+	sdeDB := testutil.OpenTestDB(t)
+	defer func() { _ = sdeDB.Close() }()
+
+	market := &fakeMiningMarket{buyPriceByType: map[int]float64{
+		veldsparTypeID:  15.0,
+		tritaniumTypeID: 5.0,
+	}}
+	fitting := &fakeMiningModules{ids: []int64{stripMinerITypeID}}
+	stations := &fakeStations{stations: []database.ReprocessStation{
+		{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05},
+	}}
+	loc := fakeMiningLocation{shipTypeID: 22544}
+
+	cases := []struct {
+		name           string
+		skillsErr      error
+		standingsErr   error
+		wantSkills     bool
+		wantStandings  bool
+		reasonContains string
+	}{
+		{"both", errESI, errESI, true, true, "Skills und Standings"},
+		{"skills only", errESI, nil, true, false, "Skills konnten nicht"},
+		{"standings only", nil, errESI, false, true, "Standings konnten nicht"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			skills := &fakeMiningSkillsProvider{
+				skills: &MiningReprocessingSkills{
+					OreProcessing: map[int64]int{},
+					SkillLevels:   map[int64]int{17940: 5, 22551: 5},
+				},
+				standings:    map[int64]float64{},
+				skillsErr:    tc.skillsErr,
+				standingsErr: tc.standingsErr,
+			}
+			svc := NewMiningService(sdeDB, stations, market, skills, fitting, loc, nil, fakeMiningNames{}, logger.NewNoop())
+
+			resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{RegionID: 10000002})
+			if err != nil {
+				t.Fatalf("OreRanking error: %v", err)
+			}
+			if resp.SkillsDegraded != tc.wantSkills {
+				t.Errorf("SkillsDegraded = %v, want %v", resp.SkillsDegraded, tc.wantSkills)
+			}
+			if resp.StandingsDegraded != tc.wantStandings {
+				t.Errorf("StandingsDegraded = %v, want %v", resp.StandingsDegraded, tc.wantStandings)
+			}
+			if resp.DegradedReason == "" {
+				t.Fatal("DegradedReason must be set when degraded")
+			}
+			if !strings.Contains(resp.DegradedReason, tc.reasonContains) {
+				t.Errorf("DegradedReason = %q, want substring %q", resp.DegradedReason, tc.reasonContains)
+			}
+			// Ranking still produced despite degradation.
+			if len(resp.Rows) == 0 {
+				t.Error("expected ranking rows even when degraded")
+			}
+		})
+	}
+}
+
+// TestMiningService_OreRanking_NotDegradedByDefault guards against false positives:
+// a healthy fetch must leave the flags clear and the reason empty.
+func TestMiningService_OreRanking_NotDegradedByDefault(t *testing.T) {
+	sdeDB := testutil.OpenTestDB(t)
+	defer func() { _ = sdeDB.Close() }()
+
+	market := &fakeMiningMarket{buyPriceByType: map[int]float64{veldsparTypeID: 15.0, tritaniumTypeID: 5.0}}
+	skills := &fakeMiningSkillsProvider{
+		skills:    &MiningReprocessingSkills{OreProcessing: map[int64]int{}, SkillLevels: map[int64]int{17940: 5, 22551: 5}},
+		standings: map[int64]float64{},
+	}
+	fitting := &fakeMiningModules{ids: []int64{stripMinerITypeID}}
+	stations := &fakeStations{stations: []database.ReprocessStation{{StationID: 60000001, OwnerCorpID: 1000035, BaseRate: 0.50, BaseTake: 0.05}}}
+	svc := NewMiningService(sdeDB, stations, market, skills, fitting, fakeMiningLocation{shipTypeID: 22544}, nil, fakeMiningNames{}, logger.NewNoop())
+
+	resp, err := svc.OreRanking(context.Background(), 42, "token", models.OreRankingRequest{RegionID: 10000002})
+	if err != nil {
+		t.Fatalf("OreRanking error: %v", err)
+	}
+	if resp.SkillsDegraded || resp.StandingsDegraded || resp.DegradedReason != "" {
+		t.Errorf("healthy fetch must not be degraded: skills=%v standings=%v reason=%q",
+			resp.SkillsDegraded, resp.StandingsDegraded, resp.DegradedReason)
+	}
+}

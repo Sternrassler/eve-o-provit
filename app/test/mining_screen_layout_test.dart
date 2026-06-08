@@ -126,6 +126,30 @@ OreRankingResponse _detailResponse() => const OreRankingResponse(
       ],
     );
 
+OreRankingResponse _degradedResponse() => const OreRankingResponse(
+      regionId: 10000002,
+      noMiningSetup: false,
+      skillsDegraded: true,
+      standingsDegraded: false,
+      degradedReason:
+          'Mining-Skills konnten nicht geladen werden — mit Null-Skills gerechnet.',
+      rows: [
+        OreRankRow(
+          oreTypeId: 1230,
+          oreName: 'Veldspar',
+          miningM3PerHour: 3600,
+          rawIskPerHour: 4200000,
+          refineIskPerHour: 5100000,
+          rawNetPerM3: 1166.67,
+          refineNetPerM3: 1416.67,
+          best: 'refine',
+          deltaIskPerHour: 900000,
+          bestStationId: 60003760,
+          bestStationTax: 0.05,
+        ),
+      ],
+    );
+
 OreRankingResponse _noSetupResponse() => const OreRankingResponse(
       regionId: 10000002,
       noMiningSetup: true,
@@ -159,6 +183,11 @@ class _StubNotifier extends OreRankingNotifier {
 class _DetailNotifier extends OreRankingNotifier {
   @override
   Future<OreRankingResponse?> build() async => _detailResponse();
+}
+
+class _DegradedNotifier extends OreRankingNotifier {
+  @override
+  Future<OreRankingResponse?> build() async => _degradedResponse();
 }
 
 class _NoSetupNotifier extends OreRankingNotifier {
@@ -263,6 +292,30 @@ void main() {
       findsOneWidget,
     );
     expect(find.byKey(const Key('mining-ore-table')), findsNothing);
+  });
+
+  testWidgets(
+      'Degraded result shows the warn banner above the ore table (rows present)',
+      (tester) async {
+    await _pumpScreen(tester, 1280, notifier: _DegradedNotifier.new);
+
+    // Banner is visible alongside the populated table.
+    expect(find.byKey(const Key('mining-degraded-banner')), findsOneWidget);
+    expect(
+      find.text(
+        'Mining-Skills konnten nicht geladen werden — mit Null-Skills gerechnet.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('mining-ore-table')), findsOneWidget);
+    expect(find.text('Veldspar'), findsOneWidget);
+  });
+
+  testWidgets('Non-degraded result does not show the warn banner',
+      (tester) async {
+    await _pumpScreen(tester, 1280);
+
+    expect(find.byKey(const Key('mining-degraded-banner')), findsNothing);
   });
 
   testWidgets('CurrentShipCard is shown at the top of the input form',
