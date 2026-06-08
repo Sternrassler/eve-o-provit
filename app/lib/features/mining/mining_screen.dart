@@ -180,9 +180,12 @@ class _ResultPane extends ConsumerWidget {
         if (result.isEmpty) {
           return const _EmptyResult();
         }
+        final degradedReason = result.degradedReason;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (degradedReason != null && degradedReason.isNotEmpty)
+              _DegradedBanner(reason: degradedReason),
             Expanded(child: OreRankingTable(result: result)),
             const Padding(
               padding: EdgeInsets.only(top: 8),
@@ -335,6 +338,55 @@ class _NotAvailable extends StatelessWidget {
                     color:
                         Theme.of(context).colorScheme.onSurface.withAlpha(140),
                   ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Visible warning shown above the result list when the backend computed the
+/// ranking with degraded inputs (skills and/or standings could not be loaded).
+/// Unlike [_NotAvailable], this renders even when [rows] are present, so the
+/// numbers below are never mistaken for reliable values.
+class _DegradedBanner extends StatelessWidget {
+  const _DegradedBanner({required this.reason});
+
+  final String reason;
+
+  // Amber/orange — consistent with the ≈ estimate marker used elsewhere.
+  static const Color _warnColor = Color(0xFFFFB300);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const Key('mining-degraded-banner'),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: _warnColor.withAlpha(30),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: _warnColor.withAlpha(150)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              size: 20,
+              color: _warnColor,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                reason,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
             ),
           ],
         ),

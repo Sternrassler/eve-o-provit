@@ -283,6 +283,9 @@ class OreRankingResponse {
     this.notAvailableReason,
     this.originSystemName,
     this.originStationName,
+    this.skillsDegraded = false,
+    this.standingsDegraded = false,
+    this.degradedReason,
   });
 
   /// Backend: `region_id`
@@ -310,6 +313,18 @@ class OreRankingResponse {
   /// Backend: `rows` — pre-sorted by best ISK/h desc.
   final List<OreRankRow> rows;
 
+  /// Backend: `skills_degraded` — true when mining/reprocessing skills could
+  /// not be loaded from ESI (ranking computed with null skills).
+  final bool skillsDegraded;
+
+  /// Backend: `standings_degraded` — true when standings could not be loaded
+  /// (ranking computed with neutral standings).
+  final bool standingsDegraded;
+
+  /// Backend: `degraded_reason` — human-readable explanation, set whenever
+  /// [skillsDegraded] or [standingsDegraded] is true.
+  final String? degradedReason;
+
   /// True when the ranked rows list is empty.
   bool get isEmpty => rows.isEmpty;
 
@@ -323,6 +338,9 @@ class OreRankingResponse {
       noMiningSetup: json['no_mining_setup'] as bool? ?? false,
       originSystemName: json['origin_system_name'] as String?,
       originStationName: json['origin_station_name'] as String?,
+      skillsDegraded: json['skills_degraded'] as bool? ?? false,
+      standingsDegraded: json['standings_degraded'] as bool? ?? false,
+      degradedReason: json['degraded_reason'] as String?,
       rows: rawRows
           .whereType<Map<String, dynamic>>()
           .map(OreRankRow.fromJson)

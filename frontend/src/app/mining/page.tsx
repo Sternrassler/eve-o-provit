@@ -149,6 +149,16 @@ function MiningPageContent() {
                   </AlertDescription>
                 </Alert>
               )}
+              {miningMutation.data.degraded_reason && (
+                <div
+                  role="alert"
+                  data-testid="mining-degraded-banner"
+                  className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200"
+                >
+                  <p className="font-medium">Eingeschränkte Datenlage</p>
+                  <p className="mt-1">{miningMutation.data.degraded_reason}</p>
+                </div>
+              )}
               {miningMutation.data.not_available_reason && miningMutation.data.rows.length === 0 && (
                 <Alert>
                   <AlertTitle>Keine Daten verfügbar</AlertTitle>

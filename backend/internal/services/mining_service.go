@@ -155,11 +155,14 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 	// 3. Skills + standings + sales tax + mining rate.
 	skills, err := s.skills.GetMiningReprocessingSkills(ctx, s.sdeDB, characterID, accessToken)
 	if err != nil {
-		// Degrade to zero skills (still rank ores) but log loudly.
+		// Degrade to zero skills (still rank ores) but log loudly AND flag it on
+		// the response — a silent zero-skills fallback would present wildly wrong
+		// yields as authoritative (no-silent-fallbacks).
 		if s.logger != nil {
 			s.logger.Warn("ore ranking: mining skills unavailable, using zero skills", "error", err)
 		}
 		skills = &MiningReprocessingSkills{OreProcessing: map[int64]int{}}
+		resp.SkillsDegraded = true
 	}
 	standings, err := s.skills.GetCharacterStandings(ctx, characterID, accessToken)
 	if err != nil {
@@ -167,7 +170,9 @@ func (s *MiningService) OreRanking(ctx context.Context, characterID int, accessT
 			s.logger.Warn("ore ranking: standings unavailable, using neutral", "error", err)
 		}
 		standings = map[int64]float64{}
+		resp.StandingsDegraded = true
 	}
+	resp.DegradedReason = miningDegradedReason(resp.SkillsDegraded, resp.StandingsDegraded)
 	salesTaxRate := SalesTaxRate(skills.Accounting)
 
 	moduleIDs, err := s.fitting.ActiveShipFittedModuleTypeIDs(ctx, characterID, accessToken)
@@ -718,4 +723,20 @@ func (s *MiningService) travelSecs(from, to int64, params *navigation.Navigation
 	}
 	memo[key] = r
 	return r.TotalSeconds, r.Jumps, true
+}
+
+// miningDegradedReason builds a human-readable explanation when mining skills
+// and/or standings could not be fetched and neutral fallbacks were used. Empty
+// string when nothing is degraded.
+func miningDegradedReason(skillsDegraded, standingsDegraded bool) string {
+	switch {
+	case skillsDegraded && standingsDegraded:
+		return "Skills und Standings konnten nicht von ESI geladen werden (Login/Token prüfen) — gerechnet mit Null-Skills und neutralen Standings. ISK/h und Reprocessing-Werte sind nur grobe Untergrenzen."
+	case skillsDegraded:
+		return "Mining-/Reprocessing-Skills konnten nicht von ESI geladen werden (Login/Token prüfen) — gerechnet mit Null-Skills. ISK/h und Mengen sind eine grobe Untergrenze."
+	case standingsDegraded:
+		return "Standings konnten nicht von ESI geladen werden (Login/Token prüfen) — gerechnet mit neutralen Standings. Die Reprocessing-Steuer kann in Wirklichkeit niedriger sein."
+	default:
+		return ""
+	}
 }

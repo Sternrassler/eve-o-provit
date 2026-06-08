@@ -52,6 +52,42 @@ describe("fetchOreRanking", () => {
     expect(result.rows[1].ore_name).toBe("Scordite");
   });
 
+  it("passes degraded flags and reason through so the UI can warn", async () => {
+    mockJson({
+      region_id: 10000002,
+      quarter: "caldari",
+      system_security: 0.9,
+      no_mining_setup: false,
+      skills_degraded: true,
+      standings_degraded: false,
+      degraded_reason: "Skills konnten nicht von ESI geladen werden — mit Null-Skills gerechnet.",
+      rows: [makeRow()],
+    });
+
+    const result = await fetchOreRanking({ region_id: 0, allow_low_sec: false });
+
+    expect(result.skills_degraded).toBe(true);
+    expect(result.standings_degraded).toBe(false);
+    expect(result.degraded_reason).toMatch(/Null-Skills/);
+    expect(result.rows).toHaveLength(1);
+  });
+
+  it("leaves degraded fields undefined when the backend omits them", async () => {
+    mockJson({
+      region_id: 10000002,
+      quarter: "caldari",
+      system_security: 0.9,
+      no_mining_setup: false,
+      rows: [makeRow()],
+    });
+
+    const result = await fetchOreRanking({ region_id: 0, allow_low_sec: false });
+
+    expect(result.degraded_reason).toBeUndefined();
+    expect(result.skills_degraded).toBeUndefined();
+    expect(result.standings_degraded).toBeUndefined();
+  });
+
   it("throws when the response is not ok", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ error: "unauthorized" }), {

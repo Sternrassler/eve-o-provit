@@ -375,6 +375,13 @@ export interface OreRankingResponse {
   system_security?: number;
   quarter?: string;
   not_available_reason?: string;
+  /** true when mining/reprocessing skills could not be loaded from ESI and
+   *  null skills were assumed — results are a lower bound. */
+  skills_degraded?: boolean;
+  /** true when standings could not be loaded and neutral standings were assumed. */
+  standings_degraded?: boolean;
+  /** Human-readable explanation, set whenever a degraded flag is true. */
+  degraded_reason?: string;
   no_mining_setup: boolean;
   rows: OreRankRow[];
 }

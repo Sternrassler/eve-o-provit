@@ -66,13 +66,20 @@ type OreRankRow struct {
 // NoMiningSetup is true when the active ship has no mining modules (per-m³ values are
 // still populated; isk/h is 0). Rows is always non-nil (never JSON null).
 type OreRankingResponse struct {
-	RegionID           int          `json:"region_id"`
-	OriginSystemID     int64        `json:"origin_system_id,omitempty"`    // character's current system (ranking origin)
-	OriginSystemName   string       `json:"origin_system_name,omitempty"`  // resolved name of the current system
-	OriginStationName  string       `json:"origin_station_name,omitempty"` // docked station name, if any
-	SystemSecurity     float64      `json:"system_security,omitempty"`     // current system, displayed sec
-	Quarter            string       `json:"quarter,omitempty"`             // amarr|caldari|gallente|minmatar|""
-	NoMiningSetup      bool         `json:"no_mining_setup"`
-	NotAvailableReason string       `json:"not_available_reason,omitempty"` // set when no ores apply here
-	Rows               []OreRankRow `json:"rows"`
+	RegionID           int     `json:"region_id"`
+	OriginSystemID     int64   `json:"origin_system_id,omitempty"`    // character's current system (ranking origin)
+	OriginSystemName   string  `json:"origin_system_name,omitempty"`  // resolved name of the current system
+	OriginStationName  string  `json:"origin_station_name,omitempty"` // docked station name, if any
+	SystemSecurity     float64 `json:"system_security,omitempty"`     // current system, displayed sec
+	Quarter            string  `json:"quarter,omitempty"`             // amarr|caldari|gallente|minmatar|""
+	NoMiningSetup      bool    `json:"no_mining_setup"`
+	NotAvailableReason string  `json:"not_available_reason,omitempty"` // set when no ores apply here
+	// Degradation flags: true when the named ESI input could not be fetched
+	// (e.g. expired token) and a neutral fallback was used. The ranking is still
+	// returned but the numbers are less accurate — the UI must surface this
+	// instead of presenting degraded results as authoritative.
+	SkillsDegraded    bool         `json:"skills_degraded"`
+	StandingsDegraded bool         `json:"standings_degraded"`
+	DegradedReason    string       `json:"degraded_reason,omitempty"` // human-readable explanation when either flag is set
+	Rows              []OreRankRow `json:"rows"`
 }
