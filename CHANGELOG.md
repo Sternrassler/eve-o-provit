@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-06-08
+
 ### Fixed
 
 - **Mining: transienter Fitting-Abruf-Fehler wird nicht mehr als „kein Mining-Setup" fehlinterpretiert.** Schlug der ESI-Abruf des aktuellen Schiffs/der Module fehl, wurde still mit `moduleIDs=nil` weitergerechnet → `m3h=0` → `no_mining_setup=true`, also „du hast kein Mining-Schiff" statt „ESI-Hiccup". Jetzt: neues `fitting_degraded`-Flag, `no_mining_setup` wird nur noch bei **erfolgreichem** Abruf mit 0 m³/h gesetzt, und der Grund landet in `degraded_reason` (Banner zeigt ihn automatisch). Letzte verbliebene Silent-Fallback-Stelle im Mining-Pfad, Prinzip [[no-silent-fallbacks]]. `degraded_reason` ist jetzt kompositorisch (Skills/Standings/Fitting in einer Meldung).
