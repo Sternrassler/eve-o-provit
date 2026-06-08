@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **CI/Build härtet die Docker-Hub-Abhängigkeit.** Base-Image `alpine:latest` → `alpine:3.21` gepinnt (reproduzierbare Builds); `deploy.yml` loggt sich optional bei Docker Hub ein (hebt das Anonymous-Pull-Rate-Limit auf Shared-GH-Runnern, das den v0.34.0-Deploy mit `registry-1.docker.io context deadline exceeded` riss) — no-op bis `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`-Secrets gesetzt sind.
+
+
 ## [0.34.0] - 2026-06-08
 
 ### Fixed
