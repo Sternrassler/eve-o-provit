@@ -20,8 +20,8 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo \
 	-ldflags "-X github.com/Sternrassler/eve-o-provit/backend/internal/version.Version=${APP_VERSION}" \
 	-o api ./cmd/api
 
-# Runtime stage
-FROM alpine:latest
+# Runtime stage — pinned (not :latest) for reproducible builds.
+FROM alpine:3.21
 
 RUN apk --no-cache add ca-certificates sqlite-libs wget
 
