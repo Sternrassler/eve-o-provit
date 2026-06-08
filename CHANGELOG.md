@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-06-08
+
 ### Fixed
 
 - **Mining: stille Skills-/Standings-Degradation jetzt sichtbar (no-silent-fallbacks).** Konnte das Erz-Ranking die Mining-/Reprocessing-Skills oder Standings nicht von ESI laden (z. B. abgelaufener Token), rechnete es **still** mit Null-Skills bzw. neutralen Standings weiter — der Owner sah massiv falsche ISK/h-/Yield-Werte ohne Hinweis (real: 3× Standings-401 am 2026-06-07). Die `OreRankingResponse` trägt jetzt `skills_degraded`/`standings_degraded` + eine erklärende `degraded_reason`; Web und Flutter zeigen einen Warn-Banner über der Tabelle (auch bei vorhandenen Zeilen). Das Ranking wird weiter geliefert, aber nicht mehr als verlässlich dargestellt. Spiegelt das `is_estimate`/`not_routable_reason`-Muster derselben Feature-Fläche.
