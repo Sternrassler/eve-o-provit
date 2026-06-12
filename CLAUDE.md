@@ -1,8 +1,16 @@
 # eve-o-provit
 
-Full-Stack Trading Profit Optimizer. Backend Go/Fiber (`backend/`, go 1.24),
-Frontend Next.js 16 (`frontend/`). Detail-Architektur, API-Endpunkte, DB-Schema
-und OAuth2-Flow: [→ ../docs/eve-o-provit.md](../docs/eve-o-provit.md).
+Full-Stack Trading Profit Optimizer mit drei Komponenten: Backend Go/Fiber
+(`backend/`, go 1.25 / toolchain 1.26), Frontend Next.js 16 (`frontend/`) und
+Flutter-Android-Client (`app/`, Galaxy-Tab-Ziel). Detail-Architektur,
+API-Endpunkte, DB-Schema und OAuth2-Flow:
+[→ ../docs/eve-o-provit.md](../docs/eve-o-provit.md).
+
+## Layout
+
+- `backend/cmd/` Entrypoints (`api`, `test-sde`), `backend/internal/` Services + Handler (database, esi, handlers, metrics, models, services, version), `backend/pkg/` shared, `backend/migrations/` + `backend/sql/` DB.
+- `frontend/` Next.js 16.
+- `app/` Flutter-Client — **eigenes Makefile**, nicht das Root-Makefile.
 
 ## Commands
 
@@ -13,6 +21,16 @@ und OAuth2-Flow: [→ ../docs/eve-o-provit.md](../docs/eve-o-provit.md).
 - `make test-fe-e2e` — Playwright E2E (headless).
 - `make lint` — Backend (`gofmt`-Check + `go vet`) + Frontend (ESLint).
 - `make pr-check` — lokales PR-Gate: `lint + test + scan + secrets-check`.
+- DB-Migrationen: `make migrate-up` (ausstehende ausführen) · `make migrate-create NAME=...` (neue anlegen) · `make test-migrations` (Migrations-Integrationstests via Testcontainers).
+- Docker-Dev: `make docker-up` (Services + SDE, Image-Rebuild) · `make docker-logs` · `make docker-shell-api|db|redis`.
+- Swagger/OpenAPI: `make swagger` regeneriert die Spec in `backend/docs` aus den swag-Annotationen.
+
+### Flutter-App (`app/`)
+
+Nicht über das Root-Makefile, sondern `cd app && make ...`:
+
+- `make test` — Widget-/Unit-Tests · `make analyze` — `flutter analyze`.
+- `make android-install` — Release-APK bauen + via `adb` aufs Gerät spielen (braucht `EVE_MOBILE_CLIENT_ID` aus dem Deploy-Env).
 
 ## Gotchas
 
