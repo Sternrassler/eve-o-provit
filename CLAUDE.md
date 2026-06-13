@@ -35,6 +35,9 @@ Nicht über das Root-Makefile, sondern `cd app && make ...`:
 ## Gotchas
 
 - `make scan`/`secrets-check` brauchen **Trivy** bzw. **Gitleaks** (`make ensure-trivy` / `ensure-gitleaks` installieren sie bei Bedarf).
+- **Swagger-Drift-Gate** in CI (`ci.yml`): führt `make swagger` aus und bricht via `git diff` auf `backend/docs` ab. Nach Änderungen an swag-Annotationen `make swagger` laufen lassen und das Ergebnis committen, sonst rote CI.
 - Conventional Commits erzwungen via `.githooks` (`git config core.hooksPath .githooks`).
 - Release: SemVer lebt nur in `CHANGELOG.md` + git-Tag (`vX.Y.Z`) — keine `VERSION`-Datei. `make release-check` prüft die CHANGELOG-Konsistenz; `make release VERSION=x.y.z` transformiert den `[Unreleased]`-Block.
+- **Deploy ist tag-getrieben** (kein release-please): Push eines `v*`-Tags triggert `deploy.yml` (baut + pusht Docker-Images), nachgelagert läuft `smoke-test.yml`.
 - Deployment via Docker Compose unter `deployments/` — Frontend :9000, Backend :9001, Postgres :5432, Redis :6379.
+- Backend exponiert Prometheus-Metriken unter `/metrics` (Port 9001, Namespace `eveoprovit_`, nicht rate-limited).
