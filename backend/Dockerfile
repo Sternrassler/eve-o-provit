@@ -25,10 +25,16 @@ FROM alpine:3.21
 
 RUN apk --no-cache add ca-certificates sqlite-libs wget
 
-WORKDIR /root/
+# Run as non-root (hardening). The api writes nothing to disk — it reads the
+# read-only SDE mount and talks to postgres/redis; /tmp is a tmpfs at runtime —
+# so a plain unprivileged user needs no writable paths in the image.
+RUN adduser -D -u 10001 appuser
+WORKDIR /app
 
-# Copy binary from builder
-COPY --from=builder /app/api .
+# Copy binary from builder, owned by the non-root user
+COPY --from=builder --chown=appuser:appuser /app/api .
+
+USER appuser
 
 EXPOSE 8080
 
