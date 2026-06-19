@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-06-19
+
 ### Security
 
 - **Next.js 16.0.0 → 16.0.11 — schließt die RCE „React2Shell" (CVE-2025-55182 / CVE-2025-66478, CVSS 10.0).** Pre-Auth-RCE via RSC/Flight-Deserialisierung; am 2026-06-17 in Produktion ausgenutzt, um im Frontend-Container einen Cryptominer (`/tmp/XXcaLafo`, XMRig) zu starten, der den Host 17h auslastete (Incident-Doku im hetzner-Repo). 16.0.11 enthält den Fix aus 16.0.7 plus spätere Patches (gleiche Minor → minimales Breaking-Risiko). `npm run build` grün (14 Routen), 104/104 Unit-Tests grün. **Hinweis:** das Frontend wurde seit dem Incident bewusst gestoppt — dieser Release bringt es gepatcht zurück.
