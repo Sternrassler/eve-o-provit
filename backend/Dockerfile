@@ -21,7 +21,7 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo \
 	-o api ./cmd/api
 
 # Runtime stage — pinned (not :latest) for reproducible builds.
-FROM alpine:3.21
+FROM alpine:3.24
 
 RUN apk --no-cache add ca-certificates sqlite-libs wget
 
