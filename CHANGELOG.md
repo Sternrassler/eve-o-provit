@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Backend-Container läuft non-root (Hardening).** Das `eve-o-provit-backend`-Image lief als root; jetzt als unprivilegierter `appuser` (uid 10001). Die API schreibt nichts auf Platte (liest die read-only SDE-Mount, spricht Postgres/Redis; `/tmp` ist zur Laufzeit tmpfs) → keine beschreibbaren Pfade im Image nötig. Teil der Incident-2026-06-18-Härtung (Defense-in-Depth zusätzlich zu cap_drop/read-only-rootfs/no-new-privileges im hetzner-Compose). `docker build` + Non-root-Lauf (uid 10001) verifiziert.
+
 ## [0.35.0] - 2026-06-08
 
 ### Fixed
