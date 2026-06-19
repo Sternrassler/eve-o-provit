@@ -45,7 +45,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.0",
-    "@vitest/coverage-v8": "^4.0.7",
+    "@vitest/coverage-v8": "^4.1.9",
     "@vitest/ui": "^4.0.7",
     "eslint": "^9",
     "eslint-config-next": "16.0.11",
