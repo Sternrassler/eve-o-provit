@@ -1,0 +1,43 @@
+# Automated dependency updates.
+# Added after the 2026-06-18 incident: Next.js 16.0.0 sat unpatched for ~6 months
+# while a CVSS-10 RCE (React2Shell) was public — that gap is what got exploited.
+# Dependabot surfaces such updates as reviewable PRs so it can't happen silently again.
+version: 2
+updates:
+  # Frontend (Next.js) — the surface that was RCE'd. Group the React/Next stack so a
+  # security bump lands as one coherent, reviewable PR.
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      next-react:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "react-server-dom*"
+          - "eslint-config-next"
+
+  # Backend (Go modules)
+  - package-ecosystem: "gomod"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+
+  # Container base images (alpine pins etc.)
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+
+  # CI workflow actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
