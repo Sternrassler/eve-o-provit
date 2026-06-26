@@ -35,7 +35,7 @@ jobs:
     env:
       HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
       # Authenticate to Docker Hub to lift the anonymous pull rate limit on
       # shared GH runners (the base-image pull that timed out the v0.34.0 deploy:
@@ -79,7 +79,7 @@ jobs:
     env:
       HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
       - name: Log in to Docker Hub (optional, raises base-image pull limit)
         if: ${{ env.HAS_DOCKERHUB == 'true' }}
