@@ -11,8 +11,8 @@ github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERo
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/PuerkitoBio/purell v1.1.1/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
 github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578/go.mod h1:uGdkoq3SwY9Y+13GIhn11/XLaGBb4BfwItxLd5jeuXE=
-github.com/Sternrassler/eve-esi-client v0.7.0 h1:GBd+2TrZQhJIjZneL5ed6sZZbdPqPYrrT1Tyl0RkaLk=
-github.com/Sternrassler/eve-esi-client v0.7.0/go.mod h1:+FdYmvFXlzZjuE9wXRY/cRGesq9ruDpQZk7W5MlL4TE=
+github.com/Sternrassler/eve-esi-client v0.7.1 h1:vkH2N25NzlXfYk8C6CTo5hkAYfst3LDhidq4sN+OYcs=
+github.com/Sternrassler/eve-esi-client v0.7.1/go.mod h1:+FdYmvFXlzZjuE9wXRY/cRGesq9ruDpQZk7W5MlL4TE=
 github.com/agiledragon/gomonkey/v2 v2.3.1/go.mod h1:ap1AmDzcVOAz1YpeJ3TCzIgstoaWLA6jbbgxfB4w2iY=
 github.com/alicebob/miniredis/v2 v2.38.0 h1:nZAzCR+Lj+Vxk4ZXzm2NuKq2O33RXj1XxJ2e2uP9jiw=
 github.com/alicebob/miniredis/v2 v2.38.0/go.mod h1:TcL7YfarKPGDAthEtl5NBeHZfeUQj6OXMm/+iu5cLMM=
