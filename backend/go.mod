@@ -10,7 +10,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.13
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/lestrrat-go/jwx/v2 v2.1.6
-	github.com/mattn/go-sqlite3 v1.14.46
+	github.com/mattn/go-sqlite3 v1.14.47
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.16.0
 	github.com/stretchr/testify v1.11.1
