@@ -2,6 +2,7 @@
 /dist/
 /build/
 /tmp/
+/app/android/build/
 
 # Dependency caches
 node_modules/
